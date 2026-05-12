@@ -1,0 +1,36 @@
+name: CI/CD Frontend Angular
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'front/**' # Solo se ejecuta si los archivos dentro del backend cambian
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'front/**'
+
+jobs:
+  build-front:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+
+      - name: Instalar Dependencias
+        run: npm ci
+        working-directory:./front
+
+      - name: Compilar Angular
+        run: npm run build --prod
+        working-directory:./front
+
+      - name: Construir Imagen Docker Frontend
+        run: docker build -t trazzo-front:latest./front
