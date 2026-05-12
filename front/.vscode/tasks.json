@@ -3,9 +3,8 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "shell",
-      "command": "pnpm run start",
-      "label": "pnpm: start",
+      "type": "npm",
+      "script": "start",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",
@@ -22,9 +21,8 @@
       }
     },
     {
-      "type": "shell",
-      "command": "pnpm test",
-      "label": "pnpm: test",
+      "type": "npm",
+      "script": "test",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",

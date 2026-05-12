@@ -1,24 +1,18 @@
 # Etapa 1: Compilación (Builder)
-FROM node:24-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
 
-# Habilitar pnpm via corepack
-RUN corepack enable pnpm
-
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json package-lock.json./
 
 # 2. Instalar dependencias de forma limpia
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
-RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract
+RUN npm ci
 
 # 3. Copiar el resto del código fuente del frontend
 COPY . .
 
 # 4. Compilar la aplicación Angular para producción
-RUN pnpm run build --configuration=production
+RUN npm run build --configuration=production
 
 # Etapa 2: Servidor Web Ligero (Runtime)
 FROM nginx:alpine
