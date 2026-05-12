@@ -1,0 +1,2125 @@
+openapi: 3.0.3
+info:
+  title: Trazzo SaaS Integrated API Contract
+  description: |
+    Contrato API para la plataforma multi-tenant Trazzo.
+    ## Arquitectura de bases de datos
+      ```
+      master_db          → Usuarios Trazzo, RolesMaster, Tenants, Plans, Permissions (catálogo)
+      tenant_{slug}_db   → TenantUsers, Roles (tenant), RolePermissions, Persons, ...
+      ```
+
+      ## Separación de rutas por contexto
+      | Prefijo       | Contexto         | Requiere          | Base de datos    |
+      |---------------|-----------------|-------------------|-----------------|
+      | `/saas/users` | Panel Trazzo    | MasterRole válido | `master_db`      |
+      | `/usuarios`   | Panel Tenant    | TenantRole válido | `tenant_{slug}_db` |
+  # Cubre Autenticación, Gestión de Usuarios y Control de Asistencia Biométrica.
+  version: 2.0.0
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Servidor Central de Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT firmado por Spring Boot. El payload incluye:
+        - `sub`: user id
+        - `tenant_id`: UUID del tenant (null para usuarios Trazzo)
+        - `context`: `MASTER` | `TENANT`
+        - `must_change_password`: boolean
+    tenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: |
+        UUID del tenant. Obligatorio en todas las rutas `/usuarios/*`.
+        Omitir en rutas `/saas/*`. El backend valida que coincida con
+        el `tenant_id` embebido en el JWT.
+
+  parameters:
+    # ─── Parámetros de ruta ────────────────────────────────────────────────
+    UsuarioId:
+      name: id
+      in: path
+      required: true
+      description: ID único del usuario (TenantUser) a operar.
+      schema:
+        type: integer
+        example: 42
+
+    MasterUserId:
+      name: id
+      in: path
+      required: true
+      description: ID único del usuario Trazzo (Users en master_db).
+      schema:
+        type: integer
+        example: 7
+    
+    TenantIdHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      description: UUID del tenant al que pertenece la solicitud.
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-0000-0000-0000-000000000001"
+
+    # ─── Query params de paginación ────────────────────────────────────────
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Número de página (base 0).
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      description: Cantidad de registros por página.
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      description: "Campo de ordenamiento. Ejemplos: `father_surname,asc` | `ultimo_acceso,desc`"
+      schema:
+        type: string
+        example: "father_surname,asc"
+
+    # ─── Query params de filtro y scope ───────────────────────────────────
+    ScopeParam:
+      name: scope
+      in: query
+      required: false
+      description: |
+        Alcance de visibilidad. Solo relevante para usuarios con el permiso
+        `VIEW_TENANT_USERS` pero sin `VIEW_ALL_TENANT_USERS`.
+        - `MY_ASSIGNMENTS` *(default)*: usuarios de las sedes/áreas/departamentos
+          a los que el solicitante está asignado.
+        - `SEDE`: todos los usuarios de la sede indicada en `sede_id`.
+        - `AREA`: todos los usuarios del área indicada en `area_id`.
+        - `DEPARTAMENTO`: todos los usuarios del departamento indicado en `departamento_id`.
+        Ignorado si el solicitante tiene `VIEW_ALL_TENANT_USERS`.
+      schema:
+        type: string
+        enum: [MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO]
+        default: MY_ASSIGNMENTS
+
+    SedeIdParam:
+      name: sede_id
+      in: query
+      required: false
+      description: Filtra usuarios de una sede específica. Requerido cuando `scope=SEDE`.
+      schema:
+        type: integer
+        example: 3
+
+    AreaIdParam:
+      name: area_id
+      in: query
+      required: false
+      description: Filtra usuarios de un área específica. Requerido cuando `scope=AREA`.
+      schema:
+        type: integer
+        example: 7
+
+    DepartamentoIdParam:
+      name: departamento_id
+      in: query
+      required: false
+      description: Requerido cuando `scope=DEPARTAMENTO`.
+      schema:
+        type: integer
+        example: 2
+  
+    StatusParam:
+      name: status
+      in: query
+      required: false
+      description: Filtra por estado del usuario.
+      schema:
+        type: string
+        enum: [ACTIVO, LICENCIA, INACTIVO]
+
+    RoleIdParam:
+      name: role_id
+      in: query
+      required: false
+      description: Filtra por rol asignado (ID del rol en tenant_db).
+      schema:
+        type: integer
+        example: 2
+
+    SearchParam:
+      name: search
+      in: query
+      required: false
+      description: "Búsqueda libre por nombre, apellido o email (ILIKE)."
+      schema:
+        type: string
+        example: "mendoza"
+
+    # ─── Query param exclusivo de ADMIN_SAAS ──────────────────────────────
+    TenantIdFilterParam:
+      name: tenant_id
+      in: query
+      required: false
+      description: |
+        **Solo disponible para `ADMIN_SAAS`.**
+        Filtra usuarios de un tenant específico.
+        Si se omite, devuelve usuarios de todos los tenants.
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # ==========================================
+    # SECCIÓN: ROLES Y PERMISOS (Catálogo de Seguridad)
+    # ==========================================
+    PermissionProfile:
+      type: object
+      description: "Permiso del catálogo Trazzo (Permissions en tenant_db)."
+      properties:
+        id:
+          type: integer
+          example: 15
+        name:
+          type: string
+          example: "VIEW_USUARIOS"
+        descripcion:
+          type: string
+          example: "Permite visualizar el listado de usuarios del tenant."
+        master_features_code:
+          type: string
+          nullable: true
+          description: "Código de feature en master_db que habilita este permiso según plan."
+          example: "FEATURE_USER_MGMT"
+        context:
+          type: string
+          enum: [MASTER, TENANT]
+          description: "Contexto donde aplica el permiso. MASTER = solo usuarios Trazzo."
+          example: "TENANT"
+
+    TenantRoleProfile:
+      type: object
+      description: "Rol creado y personalizado dentro del tenant (Roles en tenant_db)."
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: "Director"
+        descripcion:
+          type: string
+          nullable: true
+          example: "Rol para directores de sede con visibilidad total del tenant."
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissionProfile'
+
+    MasterRoleProfile:
+      type: object
+      description: "Rol del equipo Trazzo (RolesMaster en master_db)."
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "admin_trazzo"
+        descripcion:
+          type: string
+          nullable: true
+    # ==========================================
+    # SECCIÓN: COMPONENTES DE SEGURIDAD Y AUTH
+    # ==========================================
+    PersonaBase:
+      type: object
+      description: "Datos personales (Persons en master_db, compartido entre contextos)."
+      properties:
+        id:
+          type: integer
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+        document_type:
+          type: string
+          enum: [DNI, CARNET_EXTRANJERIA, PASAPORTE, OTRO]
+        document_value:
+          type: string
+          example: "76543210"
+        name:
+          type: string
+          example: "Josselin Anais"
+        father_surname:
+          type: string
+          example: "Rojas"
+        mother_surname:
+          type: string
+          example: "Luque"
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+          example: "1990-01-01"
+    
+    MetodoRecuperacionEntry:
+      type: object
+      properties:
+        method_type:
+          type: string
+          enum: [EMAIL, PHONE]
+        method_value:
+          type: string
+          example: "admincolegio@colegio.edu.pe"
+    
+    TenantUserProfile:
+      type: object
+      description: |
+        Perfil completo de un usuario de tenant.
+        Combina datos de `Users` (master_db) + `TenantUser` (tenant_db) + `Persons`.
+      properties:
+        # Datos de TenantUser (tenant_db)
+        id:
+          type: integer
+          description: "ID del TenantUser en tenant_db."
+          example: 42
+        email:
+          type: string
+          nullable: true
+          example: "ana.is@colegio.edu.pe"
+        phone:
+          type: string
+          nullable: true
+          example: "987654321"
+        estado:
+          type: string
+          enum: [ACTIVO, LICENCIA, INACTIVO]
+          example: "ACTIVO"
+        must_change_password:
+          type: boolean
+          description: "True si el usuario aún no ha cambiado su contraseña temporal."
+          example: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        # Datos de Persons (master_db)
+        persona:
+          $ref: '#/components/schemas/PersonaBase'
+        # Contacto (Metodo de Recuperación en master_db)
+        MetodoRecuperacion:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetodoRecuperacionEntry'
+        # Rol asignado (TenantUserRol → Roles en tenant_db)
+        rol:
+          $ref: '#/components/schemas/TenantRoleProfile'
+        # Asignaciones organizacionales
+        sedes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nombre:
+                type: string
+        areas:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nombre:
+                type: string
+        departamentos:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nombre:
+                type: string
+    
+    MasterUserProfile:
+      type: object
+      description: "Perfil de un usuario Trazzo (Users en master_db)."
+      properties:
+        id:
+          type: integer
+          example: 7
+        email:
+          type: string
+          nullable: true
+          example: "admin@trazzo.pe"
+        phone:
+          type: string
+          nullable: true
+          example: "987654321"
+        tenant_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: "null para usuarios puramente SaaS sin asignación a tenant."
+        must_change_password:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+        persona:
+          $ref: '#/components/schemas/PersonaBase'
+        MetodoRecuperacion:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetodoRecuperacionEntry'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterRoleProfile'
+        tenant_info:
+          type: object
+          nullable: true
+          description: "Datos del tenant al que pertenece. Presente para admin_trazzo con permiso VIEW_ALL_TENANTS."
+          properties:
+            id:
+              type: string
+              format: uuid
+            nombre:
+              type: string
+            slug:
+              type: string
+              example: "colegio-santa-rosa"
+    
+    # ── Listas paginadas ──────────────────────────────────────────────────
+    TenantUserListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantUserProfile'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        scope_aplicado:
+          type: string
+          enum: [ALL_TENANT, MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO, SELF]
+          description: "Scope efectivamente aplicado por el backend."
+          example: "MY_ASSIGNMENTS"
+    
+    MasterUserListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterUserProfile'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    # ── Request bodies para creación ─────────────────────────────────────
+    CrearTenantUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - role_id
+      description: |
+        Crea un usuario de tenant. La **contraseña no se recibe**: el backend
+        genera una contraseña temporal aleatoria y la envía al `email`
+        (workflow de activación). El usuario queda con `must_change_password = true`.
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CARNET_EXTRANJERIA, PASAPORTE, OTRO]
+          example: "DNI"
+        document_value:
+          type: string
+          description: "Clave de búsqueda para reutilizar Persona existente en master_db."
+          example: "76543210"
+        name:
+          type: string
+          example: "Josselin Anais"
+        father_surname:
+          type: string
+          example: "Rojas"
+        mother_surname:
+          type: string
+          example: "Luque"
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+        email:
+          type: string
+          format: email
+          description: "Email principal (credencial de login). Debe ser único en el tenant."
+          example: "ana.rojas@colegio.edu.pe"
+        emails_adicionales:
+          type: array
+          nullable: true
+          description: "Email secundarios utilizados para recuperación de contraseña."
+          items:
+            type: string
+            format: email
+        phone:
+          type: string
+          nullable: true
+          example: "+51987654321"
+        phones_adicionales:
+          type: array
+          nullable: true
+          description: "Teléfonos secundarios utilizados para recuperación de contraseña."
+          items:
+            type: string
+        role_id:
+          type: integer
+          description: |
+            ID del TenantRole a asignar. Debe existir en `tenant_db`.
+            El rol asignado no puede tener más permisos que el rol del usuario
+            que ejecuta la creación (regla anti-escalation).
+          example: 3
+        sede_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+          example: [1]
+        area_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+          example: [7]
+        departamento_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+
+    CrearMasterUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - role_ids
+      description: |
+        Crea un usuario del equipo Trazzo en `master_db`. Solo accesible con
+        MasterRole que tenga permiso `CREATE_MASTER_USER`.
+        La contraseña se genera automáticamente y se envía por email
+        (mismo workflow de activación).
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CARNET_EXTRANJERIA, PASAPORTE, OTRO]
+        document_value:
+          type: string
+        name:
+          type: string
+        father_surname:
+          type: string
+        mother_surname:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        role_ids:
+          type: array
+          items:
+            type: integer
+          description: "IDs de MasterRoles a asignar."
+          example: [1]
+    
+    # ── Request bodies para actualización ────────────────────────────────
+    ActualizarTenantUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - role_id
+      description: |
+        **PUT — Actualización completa del usuario de tenant.**
+        Reemplaza todos los datos editables. La contraseña y el `estado`
+        (status laboral) no se modifican por este endpoint.
+        `document_value` y `document_type` son inmutables una vez creados;
+        si se envían valores distintos, se responde `422`.
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CARNET_EXTRANJERIA, PASAPORTE, OTRO]
+        document_value:
+          type: string
+          description: "Solo para verificación. No se modifica."
+        name:
+          type: string
+        father_surname:
+          type: string
+        mother_surname:
+          type: string
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+        email:
+          type: string
+          format: email
+        emails_adicionales:
+          type: array
+          nullable: true
+          items:
+            type: string
+            format: email
+        phone:
+          type: string
+          nullable: true
+        phones_adicionales:
+          type: array
+          nullable: true
+          items:
+            type: string
+        role_id:
+          type: integer
+          description: "Reemplaza el rol actual. Sujeto a regla anti-escalation."
+        cargo:
+          type: string
+          nullable: true
+        sede_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+        area_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+        departamento_ids:
+          type: array
+          nullable: true
+          items:
+            type: integer
+
+    PatchTenantUsuarioRequest:
+      type: object
+      minProperties: 1
+      description: |
+        **PATCH — Actualización parcial (merge-patch, RFC 7396).**
+        Solo los campos enviados se modifican. Los arrays reemplazan la colección completa.
+
+        **Casos de uso principales:**
+        - Cambiar `estado`: `ACTIVO → LICENCIA`, `LICENCIA → ACTIVO`, `ACTIVO → INACTIVO` (baja funcional).
+          `INACTIVO → ACTIVO` equivale a reactivación y genera auditoría `REACTIVACION`.
+        - Reasignar `role_id` (sujeto a anti-escalation y permiso `ASSIGN_ROLES`).
+        - Actualizar `cargo`, teléfono o foto.
+
+        **Campos bloqueados en PATCH** (siempre `403` si se intenta):
+        - `document_type`, `document_value` (inmutables).
+        - `role_id` por usuarios sin permiso `ASSIGN_ROLES`.
+      properties:
+        name:
+          type: string
+        father_surname:
+          type: string
+        mother_surname:
+          type: string
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        cargo:
+          type: string
+          nullable: true
+        estado:
+          type: string
+          enum: [ACTIVO, LICENCIA, INACTIVO]
+          description: |
+            Cambio de estado laboral.
+            - `INACTIVO`: baja funcional (soft-delete). El usuario no puede iniciar sesión.
+            - `ACTIVO` sobre un usuario `INACTIVO`: reactivación. Registra auditoría `REACTIVACION`.
+        role_id:
+          type: integer
+          description: "Requiere permiso `ASSIGN_ROLES`. Sujeto a anti-escalation."
+        sede_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        area_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+        departamento_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+
+    AsignarRolRequest:
+      type: object
+      required:
+        - role_id
+      description: |
+        **PUT /usuarios/{id}/rol — Endpoint dedicado para reasignación de rol.**
+        Útil para el modal de gestión de roles en el frontend,
+        sin necesidad de enviar todos los datos del usuario.
+        Sujeto a regla anti-escalation y requiere permiso `ASSIGN_ROLES`.
+      properties:
+        role_id:
+          type: integer
+          example: 5
+
+    CambiarPasswordRequest:
+      type: object
+      description: |
+        Cambio de contraseña.
+         - Para primer login forzado (`must_change_password = true`) o reset administrativo, `current_password` puede omitirse.
+         - Para cambio voluntario, `current_password` es obligatoria.
+         - `new_password` es requerida cuando el usuario está definiendo su nueva contraseña; en reset administrativo el backend puede generar una temporal.
+      properties:
+        current_password:
+          type: string
+          format: password
+          description: "Obligatoria para cambios voluntarios. Omitir en primer login forzado o reset administrativo."
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          description: "Nueva contraseña en texto plano. Spring Boot aplica BCrypt."
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admincolegio@colegio.edu.pe
+        password:
+          type: string
+          format: password
+          example: "SuperSecret123!"
+
+    RegistroUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - phone
+        - password
+        - role_ids
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CARNET_EXTRANJERIA, PASAPORTE, OTRO]
+          description: "Tipo de documento de identidad oficial."
+          example: "DNI"
+        document_value:
+          type: string
+          description: "Número del documento. Usado como llave de búsqueda para la Persona."
+          example: "76543210"
+        name:
+          type: string
+          example: "Carlos"
+        father_surname:
+          type: string
+          example: "Mendoza"
+        mother_surname:
+          type: string
+          example: "González"
+        phone:
+          type: string
+          example: "+51987654321"
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+          description: "URL pública o de acceso de la imagen de perfil alojada en Cloudflare R2."
+          example: "https://r2.trazzo.pe/profiles/76543210.jpg"
+        email:
+          type: string
+          format: email
+          description: "Correo que servirá como credencial de inicio de sesión."
+          example: "carlos.mendoza@colegio.edu.pe"
+        password:
+          type: string
+          format: password
+          description: "Contraseña en texto plano para que Spring Boot la encripte."
+        birth_date:
+          type: string
+          format: date
+          description: "Fecha de nacimiento del usuario."
+          nullable: true
+          example: "1990-01-01"
+        role_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista de IDs de los roles que se asignarán al usuario (Tabla pivote UserRoles)."
+          example: [1, 3]
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: "JWT Token firmado para acceso a endpoints protegidos."
+        tokenType:
+          type: string
+          example: "Bearer"
+        usuario:
+          $ref: "#/components/schemas/UsuarioProfile"
+
+    # --- ESQUEMAS DE SALIDA ---
+    PersonaProfile:
+      type: object
+      description: "Datos personales desvinculados de las credenciales de acceso."
+      properties:
+        id:
+          type: integer
+        document_type:
+          type: string
+        document_value:
+          type: string
+        first_name:
+          type: string
+        father_surname:
+          type: string
+        mother_surname:
+          type: string
+        phone:
+          type: string
+        img_url:
+          type: string
+
+    RoleProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        permissions:
+          type: object
+          description: "JSONB con los permisos específicos."
+
+    UsuarioProfile:
+      type: object
+      description: "Representación segura del usuario para el Frontend (Excluye campos hash y metadatos internos)."
+      properties:
+        id:
+          type: integer
+          example: 42
+        nombre:
+          type: string
+          example: "Carlos"
+        apellido_paterno:
+          type: string
+          example: "Mendoza"
+        apellido_materno:
+          type: string
+          example: "González"
+        email:
+          type: string
+          example: "carlos.mendoza@colegio.edu.pe"
+        status:
+          type: string
+          enum: [ACTIVO, SUSPENDIDO, INACTIVO]
+          example: "ACTIVO"
+        ultimo_acceso:
+          type: string
+          format: date-time
+        rol:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleProfile"
+    UsuarioProfileExtended:
+      allOf:
+        - $ref: "#/components/schemas/UsuarioProfile"
+        - type: object
+          description: "Perfil extendido con datos de persona y asignaciones org."
+          properties:
+            persona:
+              type: object
+              description: "Datos personales asociados (tabla Personas)."
+              properties:
+                document_type:
+                  type: string
+                  enum: [DNI, CE, PASAPORTE]
+                document_value:
+                  type: string
+                  example: "76543210"
+                phone:
+                  type: string
+                  nullable: true
+                  example: "+51987654321"
+                img_url:
+                  type: string
+                  format: uri
+                  nullable: true
+            sedes:
+              type: array
+              description: "Sedes a las que está asignado el usuario."
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  nombre:
+                    type: string
+            areas:
+              type: array
+              description: "Áreas a las que está asignado el usuario."
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  nombre:
+                    type: string
+            departamentos:
+              type: array
+              description: "Departamentos a los que está asignado el usuario."
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  nombre:
+                    type: string
+            tenant_id:
+              type: string
+              format: uuid
+              description: "Presente solo en respuestas para ADMIN_SAAS."
+              nullable: true
+
+    UsuarioListResponse:
+      type: object
+      description: "Respuesta paginada de la lista de usuarios."
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsuarioProfileExtended"
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+        totalElements:
+          type: integer
+          example: 145
+        totalPages:
+          type: integer
+          example: 8
+        scope_aplicado:
+          type: string
+          description: "Scope efectivamente aplicado al resolver la consulta."
+          enum: [GLOBAL, TENANT, SEDE, AREA, MY_AREAS, SELF]
+          example: "MY_AREAS"
+    # ==========================================
+    # SECCIÓN: COMPONENTES DE ASISTENCIA BIOMÉTRICA
+    # ==========================================
+    MarcacionRequest:
+      type: object
+      required:
+        - templateCifrado
+        - llaveAesCifrada
+        - timestampLocal
+        - dispositivoId
+      properties:
+        templateCifrado:
+          type: string
+          description: Plantilla biométrica capturada por el middleware, cifrada localmente con AES-256-GCM.
+        llaveAesCifrada:
+          type: string
+          description: Llave simétrica AES cifrada con la llave pública RSA-2048 de Spring Boot.
+        timestampLocal:
+          type: string
+          format: date-time
+          description: Hora exacta capturada en el hardware local.
+        dispositivoId:
+          type: string
+          description: Número de serie del escáner ZKTeco físico.
+
+    MarcacionSyncRequest:
+      type: array
+      items:
+        $ref: "#/components/schemas/MarcacionRequest"
+      description: Lote de marcaciones acumuladas en el IndexedDB (Modo Offline).
+
+    PublicKeyResponse:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          description: Llave pública RSA-2048 del servidor en formato PEM.
+        kid:
+          type: string
+          description: Identificador de llave (Key ID) para gestión de caché persistente (SQLite local).
+
+    # ─── Request bodies para actualización ───────────────────────────────
+    ActualizarUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - phone
+        - role_ids
+      description: |
+        **Actualización completa (PUT).**
+        Todos los campos son requeridos. Reemplaza completamente el recurso.
+        La contraseña NO se actualiza por este endpoint;
+        usar `PATCH /usuarios/{id}/password` para ese caso.
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CE, PASAPORTE]
+          example: "DNI"
+        document_value:
+          type: string
+          example: "76543210"
+        name:
+          type: string
+          example: "Carlos"
+        father_surname:
+          type: string
+          example: "Mendoza"
+        mother_surname:
+          type: string
+          example: "González"
+        email:
+          type: string
+          format: email
+          example: "carlos.mendoza@colegio.edu.pe"
+        phone:
+          type: string
+          nullable: true
+          example: "+51987654321"
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+          example: "https://r2.trazzo.pe/profiles/76543210.jpg"
+        role_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista completa de IDs de roles. Reemplaza los roles anteriores."
+          example: [2]
+        sede_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista completa de IDs de sedes asignadas."
+          example: [1, 2]
+        area_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista completa de IDs de áreas asignadas."
+          example: [3, 7]
+        departamento_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista completa de IDs de departamentos asignados."
+          example: [1, 2]
+
+    PatchUsuarioRequest:
+      type: object
+      description: |
+        **Actualización parcial (PATCH).**
+        Solo se envían los campos a modificar. Los campos omitidos conservan su valor actual.
+        Los arrays (`role_ids`, `sede_ids`, `area_ids`) cuando se incluyen **reemplazan** la colección completa.
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          example: "Carlos Alberto"
+        father_surname:
+          type: string
+          example: "Mendoza"
+        mother_surname:
+          type: string
+          example: "González"
+        email:
+          type: string
+          format: email
+          example: "carlos.mendoza@colegio.edu.pe"
+        phone:
+          type: string
+          nullable: true
+          example: "+51987654321"
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+        status:
+          type: string
+          enum: [ACTIVO, SUSPENDIDO, INACTIVO]
+          description: "Cambio de estado del usuario. INACTIVO equivale a soft-delete funcional (suspensión operativa, no elimina el registro)."
+          example: "SUSPENDIDO"
+        role_ids:
+          type: array
+          items:
+            type: integer
+          description: "Reemplaza los roles actuales del usuario."
+          example: [3]
+        sede_ids:
+          type: array
+          items:
+            type: integer
+          description: "Reemplaza las sedes asignadas."
+        area_ids:
+          type: array
+          items:
+            type: integer
+          description: "Reemplaza las áreas asignadas."
+        departamento_ids:
+          type: array
+          items:
+            type: integer
+          description: "Reemplaza los departamentos asignados."
+
+    SoftDeleteResponse:
+      type: object
+      description: "Respuesta de confirmación tras el soft-delete."
+      properties:
+        id:
+          type: integer
+          example: 42
+        status:
+          type: string
+          example: "INACTIVO"
+        deleted_at:
+          type: string
+          format: date-time
+          description: "Timestamp del momento en que se aplicó la baja lógica."
+        deleted_by:
+          type: integer
+          description: "ID del usuario que ejecutó la baja."
+          example: 1
+
+    
+    # ==========================================
+    # SECCIÓN: COMPONENTES COMUNES / ERRORES
+    # ==========================================
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          description: "Lista de errores de validación campo a campo (útil en 422)."
+          nullable: true
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+# Forzamos por defecto que todas las transacciones utilicen Validación Dual del Tenant
+security:
+  - bearerAuth: []
+    tenantHeader: []
+
+paths:
+  # ----------------------------------------
+  # MÓDULO: AUTENTICACIÓN Y ACCESOS
+  # ----------------------------------------
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Autenticar usuario e iniciar sesión
+      description: Valida credenciales contra el esquema del Tenant, actualiza 'ultimo_acceso' en BD y genera JWT.
+      security:
+        - tenantHeader: [] # Solo requiere la cabecera del colegio para saber a dónde apuntar
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Autenticación exitosa.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Credenciales erróneas o cuenta suspendida.
+
+  # ----------------------------------------
+  # MÓDULO: TENANT: /usuarios
+  # Contexto: tenant_{slug}_db · Requiere X-Tenant-ID
+  # ----------------------------------------
+  /usuarios:
+    get:
+      tags:
+        - Usuarios (Tenant)
+      summary: Listar usuarios del tenant con visibilidad basada en permisos
+      operationId: listarTenantUsuarios
+      description: |
+        Devuelve lista paginada de usuarios. El **scope** se resuelve automáticamente
+        en el backend según los permisos del JWT:
+
+        | Permiso del solicitante          | Scope por defecto  | Puede especificar scope |
+        |----------------------------------|--------------------|------------------------|
+        | `VIEW_ALL_TENANT_USERS`          | Todo el tenant     | No es necesario        |
+        | `VIEW_USUARIOS` (sin VIEW_ALL)   | Solo sus asignaciones (`MY_ASSIGNMENTS`) | Sí, via `scope` |
+        | Ninguno de los anteriores        | `403 Forbidden`    | No                     |
+
+        ### Lógica de `MY_ASSIGNMENTS`
+        El backend recupera las sedes, áreas y departamentos a los que el usuario
+        autenticado está asignado (tabla `Usuario_tenant`, `Areas`, `Departamento`,
+        `Sedes`) y filtra los TenantUsers que compartan al menos una asignación.
+
+        ### Ampliación de scope (usuarios sin `VIEW_ALL_TENANT_USERS`)
+        Si el solicitante tiene `VIEW_USUARIOS` puede ampliar usando `scope=SEDE|AREA|DEPARTAMENTO`
+        con el ID correspondiente. El backend valida que el ID pertenezca al tenant
+        y que el solicitante tenga asignación en esa entidad.
+
+        **Permisos requeridos:** `VIEW_USUARIOS` o `VIEW_ALL_TENANT_USERS`
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/SedeIdParam'
+        - $ref: '#/components/parameters/AreaIdParam'
+        - $ref: '#/components/parameters/DepartamentoIdParam'
+        - $ref: '#/components/parameters/StatusParam'
+        - $ref: '#/components/parameters/RoleIdParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        "200":
+          description: Lista paginada de usuarios según el scope resuelto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserListResponse'
+        "400":
+          description: "`scope=SEDE` sin `sede_id`, o `scope=AREA` sin `area_id`, etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: |
+            Sin permiso `VIEW_USUARIOS`, o intento de ampliar scope
+            a una sede/área a la que el solicitante no está asignado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token ausente o inválido.
+    post:
+      tags:
+        - Usuarios (Tenant)
+      summary: Registrar un nuevo usuario en el tenant
+      operationId: crearTenantUsuario
+      description: |
+        Crea un usuario dentro del tenant activo. Flujo:
+        1. Busca en `master_db` si ya existe una `Persona` con el `document_value`.
+           Si existe, la reutiliza. Si no, la crea.
+        2. Crea el registro `Users` en `master_db` (con `tenant_id`).
+        3. Crea el registro `TenantUser` en `tenant_{slug}_db`.
+        4. Asigna el rol indicado (valida anti-escalation).
+        5. Genera contraseña temporal → envía email → marca `must_change_password = true`.
+
+        **Permisos requeridos:** `CREATE_USER`
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearTenantUsuarioRequest'
+      responses:
+        "201":
+          description: Usuario creado. Se envió email con contraseña temporal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "400":
+          description: Datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: |
+            Sin permiso `CREATE_USER`, o el `role_id` indicado tiene más permisos
+            que el rol del solicitante (privilege escalation).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: El email ya está registrado en este tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: |
+            Error semántico: `role_id` inexistente, `sede_id` de otro tenant, etc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UsuarioId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    get:
+      tags:
+        - Usuarios (Tenant)
+      summary: Obtener un usuario de tenant por ID
+      operationId: getTenantUsuarioById
+      description: |
+        Devuelve el perfil extendido de un TenantUser.
+        El backend valida que el usuario pertenezca al tenant del JWT.
+
+        **Regla de visibilidad:** aplica las mismas reglas que `GET /usuarios`.
+        Si el solicitante solo tiene `VIEW_USUARIOS` (sin `VIEW_ALL_TENANT_USERS`),
+        solo puede ver usuarios dentro de su scope de asignaciones.
+
+        **Permisos requeridos:** `VIEW_USUARIOS` o `VIEW_ALL_TENANT_USERS`
+      responses:
+        "200":
+          description: Perfil extendido del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "403":
+          description: El usuario no está dentro del scope del solicitante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado en este tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Usuarios (Tenant)
+      summary: Actualizar completamente un usuario de tenant
+      operationId: reemplazarTenantUsuario
+      description: |
+        Reemplaza todos los datos editables del usuario.
+        Genera registro en `Auditoria_sistema` con `valor_anterior` y `valor_nuevo` en JSONB.
+
+        **Campos inmutables:** `document_type`, `document_value`.
+        **No modifica:** `estado` (usar PATCH), contraseña (usar endpoint dedicado).
+
+        **Permisos requeridos:** `EDIT_USER`
+        **Restricción de scope:** el usuario objetivo debe estar dentro del scope del solicitante.
+        **Anti-escalation:** si se cambia `role_id`, el nuevo rol no puede tener más permisos
+        que el rol del solicitante.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarTenantUsuarioRequest'
+      responses:
+        "200":
+          description: Usuario actualizado. Retorna perfil completo actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "400":
+          description: Datos de entrada inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: |
+            Sin permiso `EDIT_USER`, usuario fuera de scope,
+            o intento de privilege escalation en `role_id`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Conflicto de email con otro usuario del tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "`role_id`, `sede_ids` o `area_ids` con IDs inválidos para este tenant."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Usuarios (Tenant)
+      summary: Actualizar parcialmente un usuario de tenant
+      operationId: patchTenantUsuario
+      description: |
+        Actualiza solo los campos enviados (merge-patch, RFC 7396).
+        Los arrays reemplazan la colección completa cuando se incluyen.
+
+        **Casos de uso especiales:**
+        - `{ "estado": "INACTIVO" }`: baja funcional. El usuario no puede iniciar sesión.
+          Genera auditoría `DELETE_LOGICO`. Equivalente a soft-delete.
+        - `{ "estado": "ACTIVO" }` sobre usuario `INACTIVO`: **reactivación**.
+          Genera auditoría `REACTIVACION`. Requiere permiso `REACTIVATE_USER`.
+        - `{ "estado": "LICENCIA" }`: el usuario sigue existiendo pero no puede marcar
+          asistencia. No es una baja.
+        - `{ "role_id": X }`: requiere permiso `ASSIGN_ROLES` y anti-escalation.
+
+        **Permisos requeridos:** `EDIT_USER` (para campos personales),
+        `ASSIGN_ROLES` (si se incluye `role_id`),
+        `REACTIVATE_USER` (si `estado` pasa de `INACTIVO` a `ACTIVO`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchTenantUsuarioRequest'
+            examples:
+              baja_logica:
+                summary: Baja lógica (soft-delete)
+                value:
+                  estado: "INACTIVO"
+              reactivacion:
+                summary: Reactivación
+                value:
+                  estado: "ACTIVO"
+              licencia:
+                summary: Poner en licencia
+                value:
+                  estado: "LICENCIA"
+              reasignar_area:
+                summary: Reasignar áreas
+                value:
+                  area_ids: [5, 9]
+              actualizar_cargo:
+                summary: Actualizar cargo
+                value:
+                  cargo: "Subdirector Académico"
+      responses:
+        "200":
+          description: Usuario actualizado parcialmente. Retorna perfil completo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "400":
+          description: Body vacío o campo con formato inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: |
+            Alguno de:
+            - Sin permiso `EDIT_USER`.
+            - `role_id` sin permiso `ASSIGN_ROLES`.
+            - Reactivación sin permiso `REACTIVATE_USER`.
+            - Privilege escalation en `role_id`.
+            - Usuario fuera del scope del solicitante.
+            - Intento de modificar `document_type` o `document_value`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: |
+            Alguno de:
+            - El usuario ya tiene el estado solicitado.
+            - Conflicto de email.
+            - El solicitante intenta darse de baja a sí mismo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: IDs de rol, sede o área inválidos para este tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Usuarios (Tenant)
+      summary: Baja lógica de un usuario de tenant (soft-delete)
+      operationId: softDeleteTenantUsuario
+      description: |
+        Aplica baja lógica: establece `estado = INACTIVO` y registra `deleted_at`
+        y `deleted_by` en `TenantUser`.
+
+        El usuario **no se elimina físicamente**. Sus registros de asistencia,
+        incidencias y auditoría se conservan durante la vigencia del tenant (3 años
+        desde cancelación del tenant).
+
+        **Post-delete:**
+        - El usuario no puede iniciar sesión (Spring Security rechaza `INACTIVO`).
+        - El registro aparece en `GET /usuarios?status=INACTIVO`.
+        - Reversible via `PATCH /usuarios/{id}` con `{ "estado": "ACTIVO" }`.
+
+        **Restricciones:**
+        - El solicitante no puede darse de baja a sí mismo → `409`.
+        - El usuario ya tiene `estado = INACTIVO` → `409`.
+        - Sin permiso `DELETE_USER` → `403`.
+
+        Genera registro en `Auditoria_sistema` tipo `DELETE`.
+
+        **Permisos requeridos:** `DELETE_USER`
+      parameters:
+        - name: motivo
+          in: query
+          required: false
+          description: "Motivo de la baja (máx 255 caracteres). Almacenado en auditoría."
+          schema:
+            type: string
+            maxLength: 255
+            example: "Trabajador retirado de la institución"
+      responses:
+        "200":
+          description: Baja lógica aplicada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftDeleteResponse'
+        "403":
+          description: Sin permiso `DELETE_USER` o usuario fuera de scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado en el tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: El solicitante intenta darse de baja a sí mismo, o el usuario ya está `INACTIVO`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+ 
+  # ── Rol dedicado ──────────────────────────────────────────────────────
+  /usuarios/{id}/rol:
+    parameters:
+      - $ref: '#/components/parameters/UsuarioId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    put:
+      tags:
+        - Usuarios (Tenant)
+      summary: Reasignar el rol de un usuario de tenant
+      operationId: asignarRolTenantUsuario
+      description: |
+        Endpoint dedicado para reasignación de rol, diseñado para el modal
+        de gestión de roles en el frontend Angular. Evita enviar todo el perfil
+        del usuario solo para cambiar el rol.
+
+        Aplica la misma regla anti-escalation que PUT y PATCH:
+        el nuevo rol no puede tener más permisos que el rol del solicitante.
+
+        Genera registro en `Auditoria_sistema` con `valor_anterior`
+        (rol anterior) y `valor_nuevo` (rol nuevo).
+
+        **Permisos requeridos:** `ASSIGN_ROLES`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsignarRolRequest'
+      responses:
+        "200":
+          description: Rol reasignado. Retorna el perfil completo actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "403":
+          description: Sin permiso `ASSIGN_ROLES` o privilege escalation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario o rol no encontrado en este tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: El `role_id` no existe en este tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  # Endpoint para cambio de contraseña
+  /usuarios/{id}/password:
+    parameters:
+      - $ref: '#/components/parameters/UsuarioId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+ 
+    patch:
+      tags:
+        - Usuarios
+      summary: Cambiar contraseña de un usuario
+      operationId: changePassword
+      description: |
+        **Dos flujos posibles:**
+
+        **Flujo 1 — Primer login (forzado):** el JWT tiene `must_change_password = true`.
+        El solicitante es el mismo usuario (`id` del path == `sub` del JWT).
+        No se requiere `current_password`. Al completar, el backend marca
+        `must_change_password = false` y el usuario accede normalmente.
+
+        **Flujo 2 — Cambio voluntario:** `must_change_password = false`.
+        `current_password` es obligatoria. Si es incorrecta → `403`.
+
+        **Flujo 3 — Reset administrativo:** el solicitante es distinto al usuario objetivo
+        y tiene permiso `RESET_PASSWORD`. No requiere `current_password`. El sistema
+        genera nueva contraseña temporal → envía email → marca `must_change_password = true`.
+        En este caso `new_password` se ignora (el backend genera la contraseña).
+
+        Genera registro en `Auditoria_sistema` tipo `UPDATE` (solo el campo `password_hash`,
+        sin valores en `valor_anterior` / `valor_nuevo` por seguridad).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambiarPasswordRequest'
+      responses:
+        "204":
+          description: Contraseña actualizada exitosamente. Sin cuerpo de respuesta.
+        "400":
+          description: Nueva contraseña no cumple políticas mínimas de seguridad.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: |
+            `current_password` incorrecta (cuando es requerida),
+            o el rol no tiene permiso `RESET_PASSWORD` para resetear contraseñas de terceros.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT ausente, expirado o inválido.
+   # Endpoint auxiliar para que los trabajadores puedan ver su propio perfil sin necesidad de conocer su ID
+  /usuarios/me:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener el perfil del usuario autenticado
+      operationId: getUsuarioMe
+      description: |
+        Shortcut que devuelve el perfil del usuario que porta el JWT.
+        Accesible por **todos los roles** incluyendo `TRABAJADOR`.
+        Equivale a `GET /usuarios/{mi_id}` pero sin necesidad de conocer el propio ID.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      responses:
+        "200":
+          description: Perfil del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "401":
+          description: Token JWT ausente, expirado o inválido.
+ 
+    patch:
+      tags:
+        - Usuarios
+      summary: El usuario actualiza su propio perfil
+      operationId: patchUsuarioMe
+      description: |
+        Permite auto-edición de datos no sensibles. Cualquier usuario de tenant
+        puede usar este endpoint sin permisos adicionales.
+
+        **Campos permitidos:** `phone`, `img_url`.
+        **Campos bloqueados** (siempre `403`): `email`, `role_id`,
+        `estado`, `sede_ids`, `area_ids`, `departamento_ids`.
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                phone:
+                  type: string
+                  nullable: true
+                  example: "+51987654321"
+                img_url:
+                  type: string
+                  format: uri
+                  nullable: true
+                  example: "https://r2.trazzo.pe/profiles/76543210.jpg"
+      responses:
+        "200":
+          description: Perfil actualizado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantUserProfile'
+        "400":
+          description: Body vacío o formato inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Intento de modificar un campo restringido para auto-edición.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT ausente, expirado o inválido.
+  # ----------------------------------------
+  # MÓDULO: SAAS: /saas/users
+  # Contexto: master_db · Sin X-Tenant-ID · Requiere MasterRole
+  # ----------------------------------------
+  /saas/users:
+    post:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Crear un usuario Trazzo en master_db
+      operationId: crearMasterUsuario
+      description: |
+        Crea un usuario del equipo Trazzo en `master_db`. Exclusivo para
+        usuarios con MasterRole y permiso `CREATE_MASTER_USER`.
+        Mismo workflow de contraseña temporal que el endpoint de tenant.
+        **No requiere ni acepta `X-Tenant-ID`.**
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearMasterUsuarioRequest'
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Usuario Trazzo creado. Email con contraseña temporal enviado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterUserProfile'
+        "403":
+          description: Sin permiso `CREATE_MASTER_USER`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: Email ya registrado en `master_db`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Listar usuarios Trazzo (y opcionalmente filtrar por tenant)
+      operationId: listarMasterUsuarios
+      description: |
+        Lista usuarios de `master_db`. Con el parámetro `tenant_id` puede
+        filtrar usuarios asociados a un tenant específico para visualización
+        desde el panel SaaS.
+
+        El campo `tenant_info` (nombre + slug) se incluye siempre en la
+        respuesta para facilitar la visualización en el frontend.
+
+        **Permisos requeridos:** `VIEW_MASTER_USERS`
+      parameters:
+        - $ref: '#/components/parameters/TenantIdFilterParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista paginada de usuarios master.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterUserListResponse'
+        "403":
+          description: Sin permiso `VIEW_MASTER_USERS`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /saas/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MasterUserId'
+
+    get:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Obtener un usuario Trazzo por ID
+      operationId: getMasterUsuarioById
+      security:
+        - bearerAuth: []
+      description: |
+        Devuelve el perfil de un usuario de `master_db`.
+        **Permisos requeridos:** `VIEW_MASTER_USERS`
+      responses:
+        "200":
+          description: Perfil del usuario Trazzo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterUserProfile'
+        "403":
+          description: Sin permiso `VIEW_MASTER_USERS`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado en master_db.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Actualizar parcialmente un usuario Trazzo
+      operationId: patchMasterUsuario
+      security:
+        - bearerAuth: []
+      description: |
+        Actualiza campos del usuario Trazzo. La lógica de inactivación
+        (`estado = INACTIVO`) aplica igual que en el módulo tenant.
+        **Permisos requeridos:** `EDIT_MASTER_USER`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                father_surname:
+                  type: string
+                mother_surname:
+                  type: string
+                img_url:
+                  type: string
+                  format: uri
+                  nullable: true
+                phone_primary:
+                  type: string
+                  nullable: true
+                role_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: "Reemplaza los MasterRoles del usuario."
+      responses:
+        "200":
+          description: Usuario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterUserProfile'
+        "403":
+          description: Sin permiso `EDIT_MASTER_USER`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Baja lógica de un usuario Trazzo
+      operationId: softDeleteMasterUsuario
+      security:
+        - bearerAuth: []
+      description: |
+        Soft-delete en `master_db`. Mismo comportamiento que el endpoint
+        de tenant pero operando sobre `Users.deleted_at`.
+        **Permisos requeridos:** `DELETE_MASTER_USER`
+      parameters:
+        - name: motivo
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+      responses:
+        "200":
+          description: Baja lógica aplicada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftDeleteResponse'
+        "403":
+          description: Sin permiso `DELETE_MASTER_USER` o auto-baja.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Usuario no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: El solicitante intenta darse de baja a sí mismo, o ya está inactivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /saas/users/me:
+    get:
+      tags:
+        - Usuarios SaaS (Master)
+      summary: Perfil del usuario Trazzo autenticado
+      operationId: getMiPerfilMaster
+      security:
+        - bearerAuth: []
+      description: |
+        Accesible por cualquier usuario con MasterRole.
+        Equivale a `GET /saas/users/{mi_id}`.
+      responses:
+        "200":
+          description: Perfil del usuario Trazzo autenticado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterUserProfile'
+        "401":
+          description: Token ausente o inválido.
+  # ----------------------------------------
+  # MÓDULO: SEGURIDAD CRIPTOGRÁFICA (MIDDLEWARE SUPPORT)
+  # ----------------------------------------
+  /security/public-key:
+    get:
+      tags:
+        - Seguridad Criptográfica
+      summary: Obtener llave pública RSA del servidor
+      description: Expone la llave pública necesaria para que el Middleware C# encripte las huellas. Respaldado por caché en Redis.
+      security: [] # Endpoint totalmente público
+      responses:
+        "200":
+          description: Llave pública entregada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicKeyResponse"
+
+  # ----------------------------------------
+  # MÓDULO: CONTROL DE ASISTENCIA
+  # ----------------------------------------
+  /asistencia/marcar:
+    post:
+      tags:
+        - Asistencia Biométrica
+      summary: Registrar marcación síncrona ordinaria
+      description: Procesa una única huella digital descifrando la carga útil y ejecutando emparejamiento con SourceAFIS.
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarcacionRequest"
+      responses:
+        "200":
+          description: Marcación procesada correctamente (Entrada/Salida registrada).
+        "403":
+          description: Conflicto de incongruencia de Tenant.
+
+  /asistencia/sync:
+    post:
+      tags:
+        - Asistencia Biométrica
+      summary: Sincronizar lote de marcaciones almacenadas offline
+      description: Recibe arrays de huellas encoladas en IndexedDB durante la caída del internet de la sede.
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarcacionSyncRequest"
+      responses:
+        "202":
+          description: Lote aceptado para procesamiento asíncrono en segundo plano.

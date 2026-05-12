@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: trazzo-db-dev
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: trazzo_db
