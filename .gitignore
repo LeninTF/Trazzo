@@ -75,3 +75,10 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# .NET build output
+**/bin/
+**/obj/
+
+# ZKTeco native SDK DLLs
+middleware/Trazzo.Biometric.Agent/Native/x64/*.dll
