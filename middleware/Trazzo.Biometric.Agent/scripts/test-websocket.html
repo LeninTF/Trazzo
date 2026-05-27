@@ -1,0 +1,489 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba del agente biometrico Trazzo</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #f4f6f8;
+      color: #1f2933;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 650;
+      margin: 0 0 16px;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    button {
+      border: 1px solid #9aa8b6;
+      background: #ffffff;
+      border-radius: 6px;
+      color: #1f2933;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 9px 12px;
+    }
+
+    button:hover {
+      background: #eef3f8;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .status-box {
+      background: #ffffff;
+      border: 1px solid #d5dde5;
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+
+    .status-box span {
+      display: block;
+      margin-top: 4px;
+      font-weight: 650;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .fingerprint-panel {
+      background: #ffffff;
+      border: 1px solid #d5dde5;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .fingerprint-status {
+      min-height: 20px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #52616f;
+    }
+
+    .fingerprint-preview {
+      display: grid;
+      min-height: 390px;
+      place-items: center;
+      background: #f8fafc;
+      border: 1px dashed #b9c6d3;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .fingerprint-preview img {
+      display: none;
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      max-height: 390px;
+      image-rendering: pixelated;
+    }
+
+    .fingerprint-empty {
+      color: #71808f;
+      font-size: 13px;
+    }
+
+    .quality-panel {
+      margin-top: 14px;
+      border-top: 1px solid #d5dde5;
+      padding-top: 12px;
+      font-size: 13px;
+    }
+
+    .quality-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 7px 0;
+    }
+
+    .quality-row strong {
+      max-width: 170px;
+      text-align: right;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      min-height: 420px;
+      overflow: auto;
+      padding: 16px;
+      background: #111827;
+      color: #d1e7dd;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    @media (max-width: 900px) {
+      .status-grid,
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Prueba del agente biometrico Trazzo</h1>
+    <div class="status-grid">
+      <div class="status-box">Estado de conexion<span id="connectionStatus">Desconectado</span></div>
+      <div class="status-box">Estado de operacion<span id="operationStatus">Inactivo</span></div>
+      <div class="status-box">Progreso de enrolamiento<span id="enrollmentProgress">-</span></div>
+      <div class="status-box">Estado del lector<span id="readerStatus">Sin consultar</span></div>
+    </div>
+    <div class="toolbar">
+      <button id="connect">Conectar</button>
+      <button id="health" disabled>Verificar agente</button>
+      <button id="deviceStatus" disabled>Estado del lector</button>
+      <button id="capture" disabled>Capturar huella</button>
+      <button id="identify" disabled>Identificar huella</button>
+      <button id="enroll" disabled>Enrolar huella</button>
+      <button id="cancelEnroll" disabled>Cancelar enrolamiento</button>
+      <button id="clear">Limpiar</button>
+    </div>
+    <div class="content">
+      <section>
+        <h2>Registros</h2>
+        <pre id="output"></pre>
+      </section>
+      <section class="fingerprint-panel">
+        <h2>Imagen de la huella</h2>
+        <div class="fingerprint-status" id="fingerprintStatus">Sin captura todavÃ­a</div>
+        <div class="fingerprint-preview">
+          <img id="fingerprintImage" alt="Huella capturada">
+          <span class="fingerprint-empty" id="fingerprintEmpty">Sin imagen</span>
+        </div>
+        <div class="quality-panel">
+          <div class="quality-row"><span>Tamaño de template</span><strong id="templateSize">-</strong></div>
+          <div class="quality-row"><span>Vista de template</span><strong id="templatePreview">-</strong></div>
+          <div class="quality-row"><span>Área detectada</span><strong id="qualityCoverage">-</strong></div>
+          <div class="quality-row"><span>Contraste</span><strong id="qualityContrast">-</strong></div>
+          <div class="quality-row"><span>Centrada</span><strong id="qualityCentered">-</strong></div>
+          <div class="quality-row"><span>Mensaje de calidad</span><strong id="qualityMessage">-</strong></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const connectionStatusEl = document.getElementById("connectionStatus");
+    const operationStatusEl = document.getElementById("operationStatus");
+    const enrollmentProgressEl = document.getElementById("enrollmentProgress");
+    const readerStatusEl = document.getElementById("readerStatus");
+    const outputEl = document.getElementById("output");
+    const connectButton = document.getElementById("connect");
+    const healthButton = document.getElementById("health");
+    const deviceStatusButton = document.getElementById("deviceStatus");
+    const captureButton = document.getElementById("capture");
+    const identifyButton = document.getElementById("identify");
+    const enrollButton = document.getElementById("enroll");
+    const cancelEnrollButton = document.getElementById("cancelEnroll");
+    const clearButton = document.getElementById("clear");
+    const fingerprintStatusEl = document.getElementById("fingerprintStatus");
+    const fingerprintImageEl = document.getElementById("fingerprintImage");
+    const fingerprintEmptyEl = document.getElementById("fingerprintEmpty");
+    const templateSizeEl = document.getElementById("templateSize");
+    const templatePreviewEl = document.getElementById("templatePreview");
+    const qualityCoverageEl = document.getElementById("qualityCoverage");
+    const qualityContrastEl = document.getElementById("qualityContrast");
+    const qualityCenteredEl = document.getElementById("qualityCentered");
+    const qualityMessageEl = document.getElementById("qualityMessage");
+    const visualCooldownMilliseconds = 700;
+    let ws;
+    let operationInProgress = false;
+    let readerConnected = false;
+    let enrollmentInProgress = false;
+
+    function write(line) {
+      const timestamp = new Date().toISOString();
+      outputEl.textContent += `[${timestamp}] ${line}\n`;
+    }
+
+    function isConnected() {
+      return ws && ws.readyState === WebSocket.OPEN;
+    }
+
+    function setConnected(connected) {
+      connectionStatusEl.textContent = connected ? "Conectado a ws://localhost:9001" : "Desconectado";
+      updateButtons();
+    }
+
+    function updateButtons() {
+      const connected = isConnected();
+      healthButton.disabled = !connected;
+      deviceStatusButton.disabled = !connected;
+      captureButton.disabled = !connected || !readerConnected || operationInProgress;
+      identifyButton.disabled = !connected || !readerConnected || operationInProgress;
+      enrollButton.disabled = !connected || !readerConnected || operationInProgress;
+      cancelEnrollButton.disabled = !connected || !enrollmentInProgress;
+    }
+
+    function setOperation(status, inProgress, enrollment = false) {
+      operationStatusEl.textContent = status;
+      operationInProgress = inProgress;
+      enrollmentInProgress = enrollment;
+      updateButtons();
+    }
+
+    function send(type) {
+      const payload = { type };
+      write(`> ${JSON.stringify(payload)}`);
+      ws.send(JSON.stringify(payload));
+    }
+
+    function clearFingerprintImage(message = "Sin imagen") {
+      fingerprintImageEl.removeAttribute("src");
+      fingerprintImageEl.style.display = "none";
+      fingerprintEmptyEl.style.display = "inline";
+      fingerprintEmptyEl.textContent = message;
+    }
+
+    function clearQuality() {
+      templateSizeEl.textContent = "-";
+      templatePreviewEl.textContent = "-";
+      qualityCoverageEl.textContent = "-";
+      qualityContrastEl.textContent = "-";
+      qualityCenteredEl.textContent = "-";
+      qualityMessageEl.textContent = "-";
+    }
+
+    function showQuality(quality) {
+      if (!quality) {
+        qualityCoverageEl.textContent = "-";
+        qualityContrastEl.textContent = "-";
+        qualityCenteredEl.textContent = "-";
+        qualityMessageEl.textContent = "-";
+        return;
+      }
+
+      qualityCoverageEl.textContent = `${Number(quality.foregroundCoveragePercent ?? 0).toFixed(2)}%`;
+      qualityContrastEl.textContent = Number(quality.contrastScore ?? 0).toFixed(2);
+      qualityCenteredEl.textContent = quality.isCentered ? "SÃ­" : "No";
+      qualityMessageEl.textContent = quality.message || "-";
+    }
+
+    function showTemplate(payload) {
+      const template = payload.templateBase64 || payload.registeredTemplateBase64 || "";
+      const size = payload.templateSize || payload.registeredTemplateSize || 0;
+      templateSizeEl.textContent = size > 0 ? `${size} bytes` : "-";
+      templatePreviewEl.textContent = template ? `${template.slice(0, 20)}...` : "-";
+    }
+
+    function redactPayload(value) {
+      if (Array.isArray(value)) {
+        return value.map(redactPayload);
+      }
+
+      if (!value || typeof value !== "object") {
+        return value;
+      }
+
+      const clone = {};
+      for (const [key, current] of Object.entries(value)) {
+        if (["templateBase64", "registeredTemplateBase64", "fingerprintImageBase64", "fingerprintImageDataUrl"].includes(key)) {
+          clone[key] = typeof current === "string" && current.length > 20 ? `${current.slice(0, 20)}...` : current;
+        } else {
+          clone[key] = redactPayload(current);
+        }
+      }
+
+      return clone;
+    }
+
+    function finishOperation(message) {
+      fingerprintStatusEl.textContent = `${message} Capture nuevamente si desea otro intento.`;
+      setTimeout(() => {
+        setOperation("Inactivo", false, false);
+      }, visualCooldownMilliseconds);
+    }
+
+    function handleResponse(payload) {
+      if (payload.type === "device.status.result") {
+        readerConnected = Boolean(payload.isConnected);
+        readerStatusEl.textContent = readerConnected
+          ? `Conectado | SDK inicializado: ${payload.isInitialized ? "Sí" : "No"} | Dispositivo abierto: ${payload.isDeviceOpen ? "Sí" : "No"} | Lectores: ${payload.deviceCount ?? 0}`
+          : `Desconectado | SDK inicializado: ${payload.isInitialized ? "Sí" : "No"} | Dispositivo abierto: ${payload.isDeviceOpen ? "Sí" : "No"} | Lectores: ${payload.deviceCount ?? 0}`;
+
+        if (!readerConnected) {
+          fingerprintStatusEl.textContent = "Lector desconectado. Conecte el ZK9500 y vuelva a consultar el estado.";
+          clearFingerprintImage("Lector desconectado");
+        }
+
+        updateButtons();
+        return;
+      }
+
+      if (payload.type === "fingerprint.enroll.progress") {
+        enrollmentProgressEl.textContent = `${payload.step}/${payload.totalSteps}`;
+        fingerprintStatusEl.textContent = payload.message || "Enrolamiento en progreso.";
+        setOperation("Enrolando huella", true, true);
+        return;
+      }
+
+      if (payload.type === "fingerprint.capture.result" || payload.type === "fingerprint.identify.result" || payload.type === "fingerprint.enroll.result") {
+        showQuality(payload.quality);
+        showTemplate(payload);
+
+        if (!payload.success) {
+          clearFingerprintImage("La operacion falló. Intente nuevamente.");
+        } else if (payload.fingerprintImageDataUrl) {
+          fingerprintImageEl.src = payload.fingerprintImageDataUrl;
+          fingerprintImageEl.style.display = "block";
+          fingerprintEmptyEl.style.display = "none";
+        } else {
+          clearFingerprintImage("Imagen desactivada");
+        }
+
+        if (payload.type === "fingerprint.enroll.result") {
+          enrollmentProgressEl.textContent = payload.success ? `${payload.capturedSamples || 0}/3` : "-";
+        }
+
+        finishOperation(payload.message || "Captura finalizada.");
+      }
+    }
+
+    connectButton.addEventListener("click", () => {
+      connectionStatusEl.textContent = "Conectando...";
+      ws = new WebSocket("ws://localhost:9001");
+
+      ws.onopen = () => {
+        setConnected(true);
+        write("Conectado");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          write(`< ${JSON.stringify(redactPayload(payload), null, 2)}`);
+          handleResponse(payload);
+        } catch {
+          write(`< ${event.data}`);
+        }
+      };
+
+      ws.onerror = () => {
+        write("Error de WebSocket");
+      };
+
+      ws.onclose = () => {
+        readerConnected = false;
+        readerStatusEl.textContent = "Sin consultar";
+        setOperation("Inactivo", false, false);
+        setConnected(false);
+        write("Desconectado");
+      };
+    });
+
+    healthButton.addEventListener("click", () => send("health.check"));
+    deviceStatusButton.addEventListener("click", () => send("device.status"));
+    captureButton.addEventListener("click", () => {
+      if (operationInProgress || !isConnected()) {
+        return;
+      }
+
+      if (!readerConnected) {
+        fingerprintStatusEl.textContent = "Lector desconectado. Conecte el ZK9500 y vuelva a consultar el estado.";
+        return;
+      }
+
+      setOperation("Esperando huella", true, false);
+      fingerprintStatusEl.textContent = "Esperando huella...";
+      write("Esperando respuesta...");
+      send("fingerprint.capture");
+    });
+    identifyButton.addEventListener("click", () => {
+      if (operationInProgress || !isConnected()) {
+        return;
+      }
+
+      if (!readerConnected) {
+        fingerprintStatusEl.textContent = "Lector desconectado. Conecte el ZK9500 y vuelva a consultar el estado.";
+        return;
+      }
+
+      setOperation("Identificando huella", true, false);
+      fingerprintStatusEl.textContent = "Esperando huella para identificaciÃ³n...";
+      write("Esperando respuesta...");
+      send("fingerprint.identify");
+    });
+    enrollButton.addEventListener("click", () => {
+      if (operationInProgress || !isConnected()) {
+        return;
+      }
+
+      if (!readerConnected) {
+        fingerprintStatusEl.textContent = "Lector desconectado. Conecte el ZK9500 y vuelva a consultar el estado.";
+        return;
+      }
+
+      enrollmentProgressEl.textContent = "0/3";
+      setOperation("Enrolando huella", true, true);
+      fingerprintStatusEl.textContent = "Esperando instrucciones de enrolamiento...";
+      write("Esperando respuesta...");
+      send("fingerprint.enroll.start");
+    });
+    cancelEnrollButton.addEventListener("click", () => {
+      if (!enrollmentInProgress || !isConnected()) {
+        return;
+      }
+
+      send("fingerprint.enroll.cancel");
+    });
+    clearButton.addEventListener("click", () => {
+      outputEl.textContent = "";
+      readerConnected = false;
+      readerStatusEl.textContent = "Sin consultar";
+      setOperation("Inactivo", false, false);
+      enrollmentProgressEl.textContent = "-";
+      fingerprintStatusEl.textContent = "Sin captura todavÃ­a";
+      clearFingerprintImage("Sin imagen");
+      clearQuality();
+    });
+
+    clearFingerprintImage();
+    clearQuality();
+    updateButtons();
+  </script>
+</body>
+</html>
+
+

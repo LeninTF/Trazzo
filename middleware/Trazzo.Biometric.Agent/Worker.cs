@@ -5,6 +5,7 @@ namespace Trazzo.Biometric.Agent;
 public sealed class Worker(
     IWebSocketServerService webSocketServer,
     IBiometricScannerService scannerService,
+    ICryptographyService cryptoService,
     ILogger<Worker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -13,6 +14,7 @@ public sealed class Worker(
 
         try
         {
+            await cryptoService.InitializeAsync(stoppingToken);
             await scannerService.InitializeAsync(stoppingToken);
             await webSocketServer.StartAsync(stoppingToken);
         }
