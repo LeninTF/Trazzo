@@ -1,0 +1,360 @@
+openapi: 3.0.3
+info:
+  title: Trazzo SaaS Integrated API Contract
+  description: Contrato API para la plataforma multi-tenant Trazzo.
+  # Cubre Autenticación, Gestión de Usuarios y Control de Asistencia Biométrica.
+  version: 1.0.0
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Servidor Central de Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+
+  schemas:
+    # ==========================================
+    # SECCIÓN: COMPONENTES DE SEGURIDAD Y AUTH
+    # ==========================================
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admincolegio@colegio.edu.pe
+        password:
+          type: string
+          format: password
+          example: "SuperSecret123!"
+
+    RegistroUsuarioRequest:
+      type: object
+      required:
+        - document_type
+        - document_value
+        - name
+        - father_surname
+        - mother_surname
+        - email
+        - password
+        - role_ids
+      properties:
+        document_type:
+          type: string
+          enum: [DNI, CE, PASAPORTE]
+          description: "Tipo de documento de identidad oficial."
+          example: "DNI"
+        document_value:
+          type: string
+          description: "Número del documento. Usado como llave de búsqueda para la Persona."
+          example: "76543210"
+        name:
+          type: string
+          example: "Carlos"
+        father_surname:
+          type: string
+          example: "Mendoza"
+        mother_surname:
+          type: string
+          example: "González"
+        phone:
+          type: string
+          nullable: true
+          example: "+51987654321"
+        img_url:
+          type: string
+          format: uri
+          nullable: true
+          description: "URL pública o de acceso de la imagen de perfil alojada en Cloudflare R2."
+          example: "https://r2.trazzo.pe/profiles/76543210.jpg"
+        email:
+          type: string
+          format: email
+          description: "Correo que servirá como credencial de inicio de sesión."
+          example: "carlos.mendoza@colegio.edu.pe"
+        password:
+          type: string
+          format: password
+          description: "Contraseña en texto plano para que Spring Boot la encripte."
+        role_ids:
+          type: array
+          items:
+            type: integer
+          description: "Lista de IDs de los roles que se asignarán al usuario (Tabla pivote UserRoles)."
+          example: [1, 3]
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: "JWT Token firmado para acceso a endpoints protegidos."
+        tokenType:
+          type: string
+          example: "Bearer"
+        usuario:
+          $ref: "#/components/schemas/UsuarioProfile"
+
+    # --- ESQUEMAS DE SALIDA ---
+    PersonaProfile:
+      type: object
+      description: "Datos personales desvinculados de las credenciales de acceso."
+      properties:
+        id:
+          type: integer
+        document_type:
+          type: string
+        document_value:
+          type: string
+        first_name:
+          type: string
+        father_surname:
+          type: string
+        mother_surname:
+          type: string
+        phone:
+          type: string
+        img_url:
+          type: string
+
+    RoleProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        permissions:
+          type: object
+          description: "JSONB con los permisos específicos."
+
+    UsuarioProfile:
+      type: object
+      description: "Representación segura del usuario para el Frontend (Excluye campos hash y metadatos internos)."
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        apellidos:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+          example: "ACTIVO"
+        ultimo_acceso:
+          type: string
+          format: date-time
+        rol:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleProfile'
+
+    # ==========================================
+    # SECCIÓN: COMPONENTES DE ASISTENCIA BIOMÉTRICA
+    # ==========================================
+    MarcacionRequest:
+      type: object
+      required:
+        - templateCifrado
+        - llaveAesCifrada
+        - timestampLocal
+        - dispositivoId
+      properties:
+        templateCifrado:
+          type: string
+          description: Plantilla biométrica capturada por el middleware, cifrada localmente con AES-256-GCM.
+        llaveAesCifrada:
+          type: string
+          description: Llave simétrica AES cifrada con la llave pública RSA-2048 de Spring Boot.
+        timestampLocal:
+          type: string
+          format: date-time
+          description: Hora exacta capturada en el hardware local.
+        dispositivoId:
+          type: string
+          description: Número de serie del escáner ZKTeco físico.
+
+    MarcacionSyncRequest:
+      type: array
+      items:
+        $ref: "#/components/schemas/MarcacionRequest"
+      description: Lote de marcaciones acumuladas en el IndexedDB (Modo Offline).
+
+    PublicKeyResponse:
+      type: object
+      properties:
+        publicKey:
+          type: string
+          description: Llave pública RSA-2048 del servidor en formato PEM.
+        kid:
+          type: string
+          description: Identificador de llave (Key ID) para gestión de caché persistente (SQLite local).
+
+    # ==========================================
+    # SECCIÓN: COMPONENTES COMUNES / ERRORES
+    # ==========================================
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+
+# Forzamos por defecto que todas las transacciones utilicen Validación Dual del Tenant
+security:
+  - bearerAuth: []
+  - tenantHeader: []
+
+paths:
+  # ----------------------------------------
+  # MÓDULO: AUTENTICACIÓN Y ACCESOS
+  # ----------------------------------------
+  /auth/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Autenticar usuario e iniciar sesión
+      description: Valida credenciales contra el esquema del Tenant, actualiza 'ultimo_acceso' en BD y genera JWT.
+      security:
+        - tenantHeader: [] # Solo requiere la cabecera del colegio para saber a dónde apuntar
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Autenticación exitosa.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Credenciales erróneas o cuenta suspendida.
+
+  /usuarios:
+    post:
+      tags:
+        - Usuarios
+      summary: Registrar un nuevo usuario administrativo o docente
+      description: Crea un registro en la tabla 'usuarios' aplicando hashing seguro a la contraseña antes de guardar.
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroUsuarioRequest"
+      responses:
+        "201":
+          description: Usuario (y persona si corresponde) creado con éxito.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioProfile"
+        "400":
+          description: Datos inválidos o conflicto de datos (Email ya registrado).
+        "403":
+          description: Incongruencia de Tenant (X-Tenant-ID no coincide con el Token).
+
+  # ----------------------------------------
+  # MÓDULO: SEGURIDAD CRIPTOGRÁFICA (MIDDLEWARE SUPPORT)
+  # ----------------------------------------
+  /security/public-key:
+    get:
+      tags:
+        - Seguridad Criptográfica
+      summary: Obtener llave pública RSA del servidor
+      description: Expone la llave pública necesaria para que el Middleware C# encripte las huellas. Respaldado por caché en Redis.
+      security: [] # Endpoint totalmente público
+      responses:
+        "200":
+          description: Llave pública entregada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicKeyResponse"
+
+  # ----------------------------------------
+  # MÓDULO: CONTROL DE ASISTENCIA
+  # ----------------------------------------
+  /asistencia/marcar:
+    post:
+      tags:
+        - Asistencia Biométrica
+      summary: Registrar marcación síncrona ordinaria
+      description: Procesa una única huella digital descifrando la carga útil y ejecutando emparejamiento con SourceAFIS.
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarcacionRequest"
+      responses:
+        "200":
+          description: Marcación procesada correctamente (Entrada/Salida registrada).
+        "403":
+          description: Conflicto de incongruencia de Tenant.
+
+  /asistencia/sync:
+    post:
+      tags:
+        - Asistencia Biométrica
+      summary: Sincronizar lote de marcaciones almacenadas offline
+      description: Recibe arrays de huellas encoladas en IndexedDB durante la caída del internet de la sede.
+      parameters:
+        - name: X-Tenant-ID
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarcacionSyncRequest"
+      responses:
+        "202":
+          description: Lote aceptado para procesamiento asíncrono en segundo plano.
