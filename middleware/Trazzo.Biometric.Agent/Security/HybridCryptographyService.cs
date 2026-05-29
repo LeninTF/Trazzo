@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Trazzo.Biometric.Agent.Contracts;
@@ -7,6 +8,8 @@ namespace Trazzo.Biometric.Agent.Security;
 
 public sealed class HybridCryptographyService : ICryptographyService, IDisposable
 {
+    private static readonly HttpClient SharedKeyFetchClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+
     private readonly Func<CancellationToken, Task<string?>> _keyFetcher;
     private readonly ILogger<HybridCryptographyService> _logger;
     private readonly string _cacheFilePath;
@@ -175,6 +178,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         ILogger<HybridCryptographyService> logger)
     {
         string? url = configuration["Security:BackendPublicKeyUrl"];
+        string? agentToken = configuration["Queue:AgentToken"];
 
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -186,9 +190,12 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 
         return async (ct) =>
         {
-            using HttpClient http = new();
-            http.Timeout = TimeSpan.FromSeconds(10);
-            string json = await http.GetStringAsync(url, ct);
+            using HttpRequestMessage request = new(HttpMethod.Get, url);
+            if (!string.IsNullOrWhiteSpace(agentToken))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", agentToken);
+
+            using HttpResponseMessage response = await SharedKeyFetchClient.SendAsync(request, ct);
+            string json = await response.Content.ReadAsStringAsync(ct);
             using JsonDocument doc = JsonDocument.Parse(json);
             return doc.RootElement.GetProperty("publicKey").GetString();
         };

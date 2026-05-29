@@ -5,18 +5,31 @@ public sealed record FingerprintEnrollResult(
     bool Success,
     string Message,
     string? RegisteredTemplateBase64,
+    EncryptedPayload? EncryptedRegisteredTemplate,
     int RegisteredTemplateSize,
+    string? DeviceId,
     int CapturedSamples,
     DateTimeOffset CapturedAtUtc)
 {
-    public static FingerprintEnrollResult Succeeded(byte[] registeredTemplate, int registeredTemplateSize, int capturedSamples)
+    public static FingerprintEnrollResult Succeeded(
+        byte[] registeredTemplate,
+        int registeredTemplateSize,
+        int capturedSamples,
+        string? deviceId = null,
+        EncryptedPayload? encryptedTemplate = null)
     {
+        string? plainBase64 = encryptedTemplate is null
+            ? Convert.ToBase64String(registeredTemplate.AsSpan(0, registeredTemplateSize))
+            : null;
+
         return new FingerprintEnrollResult(
             "fingerprint.enroll.result",
             true,
             "Huella enrolada correctamente.",
-            Convert.ToBase64String(registeredTemplate.AsSpan(0, registeredTemplateSize)),
+            plainBase64,
+            encryptedTemplate,
             registeredTemplateSize,
+            deviceId,
             capturedSamples,
             DateTimeOffset.UtcNow);
     }
@@ -28,7 +41,9 @@ public sealed record FingerprintEnrollResult(
             false,
             message,
             null,
+            null,
             0,
+            null,
             capturedSamples,
             DateTimeOffset.UtcNow);
     }

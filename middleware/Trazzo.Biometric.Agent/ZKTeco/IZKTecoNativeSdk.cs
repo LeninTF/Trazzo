@@ -20,6 +20,8 @@ public interface IZKTecoNativeSdk
 
     bool TryGetParameter(IntPtr deviceHandle, int parameterCode, out int value);
 
+    bool TryGetParameterString(IntPtr deviceHandle, int parameterCode, out string value);
+
     IntPtr DBInit();
 
     int DBFree(IntPtr databaseHandle);
