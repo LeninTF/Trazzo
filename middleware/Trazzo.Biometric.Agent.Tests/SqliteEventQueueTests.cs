@@ -119,6 +119,22 @@ public sealed class SqliteEventQueueTests
     }
 
     [Fact]
+    public async Task PruneAsync_EliminaEventosFailedAntiguos()
+    {
+        using SqliteEventQueue queue = CreateQueue();
+        await queue.EnqueueAsync(MakeEvent("capture"));
+        IReadOnlyList<BiometricEvent> pending = await queue.GetPendingAsync();
+        long id = pending[0].Id;
+
+        for (int i = 0; i < 5; i++)
+            await queue.MarkFailedAsync(id);
+
+        await queue.PruneAsync(TimeSpan.Zero);
+
+        Assert.Equal(0, await queue.GetPendingCountAsync());
+    }
+
+    [Fact]
     public async Task PruneAsync_ConservaEventosPendientes()
     {
         using SqliteEventQueue queue = CreateQueue();

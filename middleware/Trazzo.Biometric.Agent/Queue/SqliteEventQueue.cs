@@ -160,13 +160,14 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         cmd.CommandText = """
             DELETE FROM biometric_events
-            WHERE status = 'sent' AND sent_at_utc < @cutoff
+            WHERE (status = 'sent' AND sent_at_utc < @cutoff)
+               OR (status = 'failed' AND created_at_utc < @cutoff)
             """;
         cmd.Parameters.AddWithValue("@cutoff", (DateTimeOffset.UtcNow - maxAge).ToString("O"));
 
         int deleted = await cmd.ExecuteNonQueryAsync(cancellationToken);
         if (deleted > 0)
-            _logger.LogInformation("Cola biométrica: {Count} evento(s) enviado(s) eliminado(s).", deleted);
+            _logger.LogInformation("Cola biométrica: {Count} evento(s) limpiado(s) (enviados/fallidos).", deleted);
     }
 
     public void Dispose() => _keepAliveConnection?.Dispose();
@@ -199,10 +200,12 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
     private static string BuildConnectionString(IConfiguration configuration)
     {
-        string dbPath = configuration["Queue:DatabasePath"]
-            ?? Path.Combine(
+        string? configuredPath = configuration["Queue:DatabasePath"];
+        string dbPath = string.IsNullOrWhiteSpace(configuredPath)
+            ? Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "TrazzoAgent", "events.db");
+                "TrazzoAgent", "events.db")
+            : configuredPath;
 
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
         return $"Data Source={dbPath}";

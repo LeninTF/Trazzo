@@ -1,0 +1,25 @@
+<Project Sdk="WixToolset.Sdk/4.0.6">
+  <PropertyGroup>
+    <OutputName>Trazzo.Biometric.Agent</OutputName>
+    <OutputType>Package</OutputType>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion>1.0.0</ProductVersion>
+    <AgentProject>..\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj</AgentProject>
+    <AgentPublishDir>$(MSBuildThisFileDirectory)obj\publish</AgentPublishDir>
+    <GeneratedWxs>$(MSBuildThisFileDirectory)obj\$(Configuration)\Product.Generated.wxs</GeneratedWxs>
+    <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
+    <Compile Include="$(GeneratedWxs)" />
+  </ItemGroup>
+
+  <Target Name="PublishAgentForMsi" BeforeTargets="CoreCompile">
+    <Exec Command="dotnet publish &quot;$(AgentProject)&quot; -c $(Configuration) -r win-x64 --self-contained false -o &quot;$(AgentPublishDir)&quot;" />
+    <Warning
+      Condition="!Exists('$(AgentPublishDir)\Native\x64\libzkfpcsharp.dll')"
+      Text="libzkfpcsharp.dll no existe en $(AgentPublishDir)\Native\x64\. Coloca la DLL oficial x64 en Trazzo.Biometric.Agent\Native\x64\libzkfpcsharp.dll antes de compilar el MSI si debe incluirse." />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts\GenerateInstallerWxs.ps1&quot; -PublishDir &quot;$(AgentPublishDir)&quot; -OutputPath &quot;$(GeneratedWxs)&quot;" />
+  </Target>
+</Project>

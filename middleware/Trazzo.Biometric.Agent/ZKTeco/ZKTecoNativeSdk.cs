@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text;
 
 namespace Trazzo.Biometric.Agent.ZKTeco;
 
@@ -52,6 +53,9 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
 
     public bool TryGetParameter(IntPtr deviceHandle, int parameterCode, out int value) =>
         TryInvokeGetParameter(deviceHandle, parameterCode, out value);
+
+    public bool TryGetParameterString(IntPtr deviceHandle, int parameterCode, out string value) =>
+        TryInvokeGetParameterString(deviceHandle, parameterCode, out value);
 
     public IntPtr DBInit() => InvokeStatic<IntPtr>("DBInit");
 
@@ -132,7 +136,44 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
     private bool TryInvokeGetParameter(IntPtr deviceHandle, int parameterCode, out int value)
     {
         value = 0;
+
+        if (!TryInvokeGetParameterBytes(deviceHandle, parameterCode, 4, out byte[] parameterBuffer, out _))
+        {
+            return false;
+        }
+
+        value = BitConverter.ToInt32(parameterBuffer, 0);
+        return value > 0;
+    }
+
+    private bool TryInvokeGetParameterString(IntPtr deviceHandle, int parameterCode, out string value)
+    {
+        value = string.Empty;
+
+        if (!TryInvokeGetParameterBytes(deviceHandle, parameterCode, 256, out byte[] parameterBuffer, out int parameterSize))
+        {
+            return false;
+        }
+
+        int length = parameterSize > 0 && parameterSize <= parameterBuffer.Length
+            ? parameterSize
+            : parameterBuffer.Length;
+
+        value = Encoding.UTF8.GetString(parameterBuffer, 0, length).TrimEnd('\0', ' ', '\r', '\n', '\t');
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private bool TryInvokeGetParameterBytes(
+        IntPtr deviceHandle,
+        int parameterCode,
+        int bufferSize,
+        out byte[] parameterBuffer,
+        out int parameterSize)
+    {
         EnsureLoaded();
+
+        parameterBuffer = new byte[bufferSize];
+        parameterSize = parameterBuffer.Length;
 
         MethodInfo? method = _zkfp2Type!.GetMethod("GetParameters", BindingFlags.Public | BindingFlags.Static);
         if (method is null)
@@ -140,8 +181,6 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
             return false;
         }
 
-        byte[] parameterBuffer = new byte[4];
-        int parameterSize = parameterBuffer.Length;
         object?[] args = [deviceHandle, parameterCode, parameterBuffer, parameterSize];
         object? result;
 
@@ -159,8 +198,8 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
             return false;
         }
 
-        value = BitConverter.ToInt32(parameterBuffer, 0);
-        return value > 0;
+        parameterSize = args[3] is int updatedSize ? updatedSize : parameterSize;
+        return true;
     }
 
     private void EnsureLoaded()

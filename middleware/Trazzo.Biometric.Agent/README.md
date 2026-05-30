@@ -1,124 +1,265 @@
 # Trazzo Biometric Agent
 
-Middleware local de Windows que conecta el lector ZKTeco ZK9500 con el frontend de Trazzo. Corre como un servicio en segundo plano y expone un WebSocket local en `ws://localhost:9001/` al que el navegador se conecta directamente.
+Middleware local de Windows para conectar el lector biométrico **ZKTeco ZK9500** con Trazzo.
 
-El flujo básico es simple: el frontend pide una captura, el agente habla con el lector por USB, obtiene la plantilla biométrica, la cifra con AES-256-GCM usando la llave pública del backend Spring Boot, y devuelve el resultado cifrado. Si el backend no está disponible, el evento queda en cola local y se reenvía automáticamente cuando vuelve la conexión.
+El agente corre como un Windows Service y expone un WebSocket local en:
 
----
+```text
+ws://localhost:9001/
+```
+
+El frontend se conecta a ese WebSocket, solicita una operación biométrica y el agente se encarga de hablar con el lector por USB. Cuando captura una huella, genera el template biométrico, lo cifra si la clave pública del backend está configurada y deja el evento en una cola local si el backend no está disponible.
+
+## Estado Actual
+
+El middleware ya tiene:
+
+- Servicio Windows instalable por MSI.
+- Integración con ZKTeco ZK9500 usando `libzkfpcsharp.dll`.
+- WebSocket local para el frontend.
+- Captura simple, identificación y enrolamiento de huella.
+- Validación de calidad de huella.
+- Cifrado híbrido AES-256-GCM + RSA-OAEP.
+- Cola offline con SQLite.
+- Reintento automático con backoff.
+- Restricción opcional por origen WebSocket.
+- Página local de prueba: `scripts/test-websocket.html`.
+
+## Estructura
+
+La solución contiene tres proyectos:
+
+```text
+Trazzo.Biometric.Agent
+Trazzo.Biometric.Agent.Tests
+Trazzo.Biometric.Agent.Installer
+```
+
+`Trazzo.Biometric.Agent` es el servicio real.
+
+`Trazzo.Biometric.Agent.Tests` contiene las pruebas xUnit.
+
+`Trazzo.Biometric.Agent.Installer` genera el MSI con WiX Toolset v4.
 
 ## Requisitos
 
-- Windows x64
-- .NET SDK 10
-- ZKTeco ZK9500 conectado y visible en el Administrador de dispositivos
-- DLL oficial del SDK ZKTeco (`libzkfpcsharp.dll`, versión x64)
+- Windows 10 o superior.
+- .NET SDK 10.
+- Lector ZKTeco ZK9500 conectado por USB.
+- SDK oficial ZKFinger para Windows.
+- DLL del SDK:
 
----
-
-## Configuración inicial
-
-### 1. Copiar la DLL del SDK
-
-Copia la DLL x64 del SDK oficial de ZKTeco en:
-
-```
-Native\x64\libzkfpcsharp.dll
+```text
+Trazzo.Biometric.Agent\Native\x64\libzkfpcsharp.dll
 ```
 
-Esta DLL no está en el repositorio porque tiene licencia privada de ZKTeco. Si falta o no puede cargarse, el agente lo indica en los logs y en la respuesta de estado.
+La DLL no debe asumirse como parte pública del repositorio porque pertenece al SDK de ZKTeco. Para generar el MSI completo, debe existir antes del build.
 
-### 2. Configurar el backend
+En esta máquina se usó:
 
-Abre `appsettings.json` y completa las URLs del backend Spring Boot:
+```text
+C:\Users\PC\Downloads\KZFingerSDK\ZKFingerSDK_Windows_Standard\ZKFinger Standard SDK 5.3.0.33\C#\lib\x64\libzkfpcsharp.dll
+```
+
+## Preparar la DLL de ZKTeco
+
+Si la DLL no está en el proyecto, cópiala así:
+
+```powershell
+Copy-Item `
+  -LiteralPath "C:\Users\PC\Downloads\KZFingerSDK\ZKFingerSDK_Windows_Standard\ZKFinger Standard SDK 5.3.0.33\C#\lib\x64\libzkfpcsharp.dll" `
+  -Destination ".\Trazzo.Biometric.Agent\Native\x64\libzkfpcsharp.dll" `
+  -Force
+```
+
+Verifica que quedó en su lugar:
+
+```powershell
+Test-Path .\Trazzo.Biometric.Agent\Native\x64\libzkfpcsharp.dll
+```
+
+Debe devolver:
+
+```text
+True
+```
+
+## Configuración
+
+La configuración principal está en:
+
+```text
+Trazzo.Biometric.Agent\appsettings.json
+```
+
+Valores importantes:
 
 ```json
 {
+  "Agent": {
+    "WebSocketUrl": "http://localhost:9001/",
+    "AllowedOrigins": []
+  },
   "Security": {
-    "BackendPublicKeyUrl": "https://api.trazzo.com/api/security/public-key"
+    "BackendPublicKeyUrl": ""
   },
   "Queue": {
-    "BackendUrl": "https://api.trazzo.com/api/asistencias/sync",
+    "DatabasePath": "",
+    "BackendUrl": "",
+    "AgentToken": "",
     "RetryIntervalSeconds": 30
   }
 }
 ```
 
-- **`BackendPublicKeyUrl`**: endpoint desde donde el agente descarga la llave pública RSA al arrancar. Se usa para cifrar los templates biométricos antes de enviarlos.
-- **`BackendUrl`**: endpoint al que el agente reenvía automáticamente los eventos que quedaron en cola mientras el backend no estaba disponible.
+En desarrollo puedes dejar `BackendPublicKeyUrl` y `BackendUrl` vacíos. El agente funciona, pero los templates pueden viajar en Base64 plano y no se reenvían eventos al backend.
 
-Si dejas estas URLs vacías, el agente funciona en modo desarrollo: los templates viajan en Base64 plano y no se activa la cola de reenvío. Nunca uses ese modo en producción.
+En producción deben configurarse:
 
----
+- `Security:BackendPublicKeyUrl`: endpoint que entrega la clave pública RSA.
+- `Queue:BackendUrl`: endpoint del backend que recibe eventos offline.
+- `Queue:AgentToken`: token del agente si el backend lo exige.
+- `Agent:AllowedOrigins`: dominios permitidos para conectarse al WebSocket.
 
-## Ejecutar
+## Generar el MSI
 
-Antes de iniciar, cierra cualquier proceso de ZKTeco que pueda tener el lector ocupado:
-
-```powershell
-taskkill /F /IM ISSOnline_App.exe
-taskkill /F /IM ISSOnline.exe
-taskkill /F /IM iZHost.exe
-taskkill /F /IM ZKOnlineProtect.exe
-```
-
-Verifica que Windows detecta el lector:
+Desde la raíz del middleware:
 
 ```powershell
-Get-PnpDevice -PresentOnly | Where-Object {$_.FriendlyName -match 'ZK9500'} | Format-Table Status,Class,FriendlyName -AutoSize
+.\Trazzo.Biometric.Agent\scripts\Install-Agent.ps1 -BuildMsi
 ```
 
-Compila y ejecuta:
+Ese comando hace todo el flujo:
+
+1. Ejecuta `dotnet publish -c Release` del agente.
+2. Copia la salida publicada al proyecto WiX.
+3. Incluye `Native\x64\libzkfpcsharp.dll` si existe.
+4. Genera el MSI.
+
+El instalador queda en:
+
+```text
+Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+```
+
+El MSI instala en:
+
+```text
+C:\Program Files\Trazzo\BiometricAgent\
+```
+
+Estructura esperada:
+
+```text
+C:\Program Files\Trazzo\BiometricAgent\
+  Trazzo.Biometric.Agent.exe
+  appsettings.json
+  Native\x64\libzkfpcsharp.dll
+  *.dll
+  *.json
+```
+
+## Instalar Como Servicio
+
+El MSI registra el servicio automáticamente. Debe instalarse como administrador porque es una instalación per-machine y registra un Windows Service.
+
+Ejecuta PowerShell como administrador:
 
 ```powershell
-dotnet build
-dotnet run
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
 ```
 
-Al arrancar deberías ver algo así en la consola:
+También puedes instalarlo en modo silencioso:
 
-```
-Agente biométrico de Trazzo iniciado.
-WebSocket escuchando en ws://localhost:9001/
-Clave pública RSA-2048 actualizada. Cifrado AES-256-GCM + RSA-2048-OAEP habilitado.
-SDK inicializado.
-Cantidad de lectores: 1.
-Lector abierto en el índice 0.
+```powershell
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi /qn
 ```
 
-Si la URL de la llave pública no está configurada o el backend no responde todavía, verás una advertencia pero el agente sigue funcionando en modo sin cifrado.
+Servicio instalado:
 
----
-
-## Probar con el WebSocket
-
-La forma más rápida de probar es abrir el archivo incluido:
-
-```
-scripts/test-websocket.html
+```text
+Nombre interno : TrazzoAgent
+Display name   : Trazzo Biometric Agent
+Inicio         : Automatic
+Cuenta         : LocalSystem
 ```
 
-Tiene botones para cada operación y muestra las respuestas en pantalla.
+El servicio arranca automáticamente al terminar la instalación.
 
-También puedes probarlo desde la consola del navegador:
+## Verificar Que Está Corriendo
 
-```javascript
-const ws = new WebSocket("ws://localhost:9001");
+Revisa el servicio:
 
-ws.onopen = () => ws.send(JSON.stringify({ type: "health.check" }));
-ws.onmessage = (e) => console.log(JSON.parse(e.data));
+```powershell
+Get-Service -Name TrazzoAgent
 ```
 
----
+Debe estar en:
 
-## Mensajes soportados
+```text
+Running
+```
 
-### `health.check`
+Revisa el puerto WebSocket:
 
-Confirma que el agente está corriendo.
+```powershell
+Get-NetTCPConnection -LocalPort 9001
+```
+
+Debe existir un listener en `9001`.
+
+También puedes probar el endpoint HTTP de salud:
+
+```powershell
+Invoke-RestMethod http://localhost:9001/health
+```
+
+## Probar Con El HTML Local
+
+Abre:
+
+```text
+Trazzo.Biometric.Agent\scripts\test-websocket.html
+```
+
+Prueba en este orden:
+
+1. `health.check`
+2. `device.status`
+3. `fingerprint.capture`
+4. `fingerprint.identify`
+5. `fingerprint.enroll.start`
+
+Si el HTML muestra “WebSocket desconectado”, significa que no hay servicio escuchando en `ws://localhost:9001/`.
+
+En ese caso revisa:
+
+```powershell
+Get-Service -Name TrazzoAgent
+Get-NetTCPConnection -LocalPort 9001
+```
+
+## Probar Sin Instalar
+
+Para desarrollo rápido puedes correr el agente desde consola:
+
+```powershell
+dotnet run --project .\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj --configuration Release
+```
+
+Déjalo abierto mientras pruebas `scripts/test-websocket.html`.
+
+Esta forma no registra el servicio. Solo sirve para pruebas locales.
+
+## Mensajes WebSocket
+
+### health.check
 
 ```json
 { "type": "health.check" }
 ```
+
+Respuesta esperada:
 
 ```json
 {
@@ -128,261 +269,105 @@ Confirma que el agente está corriendo.
 }
 ```
 
-### `device.status`
-
-Hace una verificación viva contra el SDK. No usa estado cacheado.
+### device.status
 
 ```json
 { "type": "device.status" }
 ```
 
+Respuesta esperada con lector conectado:
+
 ```json
 {
   "type": "device.status.result",
   "success": true,
-  "message": "Lector biométrico encontrado.",
-  "deviceCount": 1,
   "isSdkAvailable": true,
   "isInitialized": true,
   "isDeviceOpen": true,
-  "isConnected": true
+  "isConnected": true,
+  "deviceCount": 1,
+  "message": "Lector biométrico conectado."
 }
 ```
 
-Cuando el lector está desconectado:
-
-```json
-{
-  "type": "device.status.result",
-  "success": false,
-  "message": "Lector biométrico desconectado.",
-  "deviceCount": 0,
-  "isDeviceOpen": false,
-  "isConnected": false
-}
-```
-
-### `fingerprint.capture`
-
-Captura simple. Útil para pruebas manuales o cuando el frontend solo necesita el template sin identificar.
+### fingerprint.capture
 
 ```json
 { "type": "fingerprint.capture" }
 ```
 
-Respuesta cuando el cifrado está configurado:
+Hace una captura simple. Si el cifrado está activo, devuelve `encryptedTemplate`. Si no hay clave RSA configurada, devuelve `templateBase64`.
 
-```json
-{
-  "type": "fingerprint.capture.result",
-  "success": true,
-  "message": "Huella capturada correctamente.",
-  "templateBase64": null,
-  "encryptedTemplate": {
-    "encryptedTemplateBase64": "...",
-    "encryptedAesKeyBase64": "...",
-    "ivBase64": "...",
-    "tagBase64": "..."
-  },
-  "templateSize": 1186,
-  "deviceId": "ZK9500-12345",
-  "capturedAtUtc": "2026-05-27T00:00:00Z"
-}
-```
-
-En modo desarrollo (sin llave RSA configurada), `encryptedTemplate` es `null` y `templateBase64` contiene el template en Base64 plano.
-
-### `fingerprint.identify`
-
-Captura temporal para marcar asistencia. Una sola lectura, sin DBMerge, sin guardar nada localmente.
+### fingerprint.identify
 
 ```json
 { "type": "fingerprint.identify" }
 ```
 
-La respuesta tiene la misma estructura que `fingerprint.capture.result` pero con `type: "fingerprint.identify.result"`.
+Captura una huella para asistencia. No hace `DBMerge`. Si hay cifrado activo, el evento también queda en cola offline.
 
-### `fingerprint.enroll.start`
-
-Inicia el enrolamiento de un empleado nuevo. Requiere tres capturas válidas. El agente envía progreso entre cada paso:
+### fingerprint.enroll.start
 
 ```json
 { "type": "fingerprint.enroll.start" }
 ```
 
-Progreso intermedio (llega uno por cada paso):
+Hace enrolamiento con tres muestras válidas y luego fusiona las muestras con `DBMerge`.
 
-```json
-{
-  "type": "fingerprint.enroll.progress",
-  "step": 1,
-  "totalSteps": 3,
-  "message": "Muestra 1 de 3 capturada. Retire el dedo."
-}
-```
-
-Resultado final exitoso:
-
-```json
-{
-  "type": "fingerprint.enroll.result",
-  "success": true,
-  "message": "Huella enrolada correctamente.",
-  "registeredTemplateBase64": null,
-  "encryptedRegisteredTemplate": {
-    "encryptedTemplateBase64": "...",
-    "encryptedAesKeyBase64": "...",
-    "ivBase64": "...",
-    "tagBase64": "..."
-  },
-  "registeredTemplateSize": 1186,
-  "capturedSamples": 3,
-  "deviceId": "ZK9500-12345",
-  "capturedAtUtc": "2026-05-27T00:00:00Z"
-}
-```
-
-El backend de Trazzo guarda la plantilla cifrada y la asocia al trabajador. Los tres templates individuales nunca se devuelven ni se persisten.
-
-### `fingerprint.enroll.cancel`
-
-Cancela un enrolamiento activo.
+### fingerprint.enroll.cancel
 
 ```json
 { "type": "fingerprint.enroll.cancel" }
 ```
 
-### `queue.status`
+Cancela un enrolamiento en progreso.
 
-Consulta cuántos eventos biométricos están pendientes de reenvío al backend.
+### queue.status
 
 ```json
 { "type": "queue.status" }
 ```
 
-```json
-{
-  "type": "queue.status.result",
-  "success": true,
-  "pendingCount": 3
-}
+Devuelve cuántos eventos siguen pendientes de reenvío al backend.
+
+## Seguridad
+
+El agente usa cifrado híbrido:
+
+1. Descarga una clave pública RSA desde `Security:BackendPublicKeyUrl`.
+2. Genera una clave AES-256 por captura.
+3. Cifra el template con AES-256-GCM.
+4. Cifra la clave AES con RSA-OAEP.
+5. Envía ciphertext, clave AES cifrada, IV y tag.
+
+Si no puede descargar la clave pública, intenta usar cache local:
+
+```text
+%PROGRAMDATA%\TrazzoAgent\public_key.cache
 ```
 
-Útil para mostrar en el frontend un indicador de sincronización pendiente, por ejemplo cuando hubo corte de internet.
+Si no hay endpoint ni cache, el agente arranca en modo desarrollo sin cifrado. Esto no debe usarse en producción.
 
----
+## Cola Offline
 
-## Cifrado de templates
+Cuando hay cifrado activo, los eventos biométricos exitosos se guardan en:
 
-El agente implementa cifrado híbrido para proteger los datos biométricos en tránsito:
-
-1. Al arrancar, descarga la llave pública RSA-2048 del backend desde `Security:BackendPublicKeyUrl`.
-2. Si el endpoint no responde (sin internet, backend caído), usa una copia cacheada en disco en `%PROGRAMDATA%\TrazzoAgent\public_key.cache`.
-3. Si tampoco hay caché, arranca sin cifrado y lo indica en los logs.
-4. Cada 24 horas refresca la llave en segundo plano sin reiniciar el servicio.
-
-Para cada captura exitosa:
-
-- Genera una llave AES-256 efímera y un nonce de 96 bits aleatorios.
-- Cifra el template con AES-256-GCM.
-- Cifra la llave AES con RSA-2048-OAEP usando la llave pública del backend.
-- Devuelve los cuatro campos (`encryptedTemplateBase64`, `encryptedAesKeyBase64`, `ivBase64`, `tagBase64`).
-
-El backend descifra en orden inverso: primero la llave AES con su llave privada RSA, luego el template con AES-GCM verificando el tag de autenticación.
-
-El endpoint que expone Spring Boot:
-
-```
-GET /api/security/public-key
-```
-
-Respuesta:
-
-```json
-{
-  "publicKey": "<SubjectPublicKeyInfo en Base64>",
-  "kid": "<identificador de la clave>"
-}
-```
-
-El agente usa `publicKey` e ignora `kid`.
-
----
-
-## Identificación del lector (DeviceId)
-
-Todas las respuestas biométricas incluyen el campo `deviceId` con el número de serie del ZK9500 leído directamente del hardware:
-
-```json
-"deviceId": "ZK9500-12345"
-```
-
-Este campo permite al backend verificar que la captura proviene de un lector registrado y no de una fuente externa, lo que es parte de la protección anti-spoofing.
-
----
-
-## Cola offline (Store & Forward)
-
-Cada vez que el agente realiza una captura o enrolamiento exitoso con cifrado activo, guarda automáticamente el evento en una base de datos SQLite local en:
-
-```
+```text
 %PROGRAMDATA%\TrazzoAgent\events.db
 ```
 
-Un proceso en segundo plano revisa la cola cada `Queue:RetryIntervalSeconds` segundos e intenta reenviar los eventos al backend. Cuando el POST es exitoso, marca el evento como enviado. Después de 5 intentos fallidos, el evento queda en estado `failed` y deja de reintentarse.
+El servicio `EventForwarderService` reintenta enviarlos al backend. Si el backend falla, usa backoff exponencial con jitter. Después de varios intentos fallidos, el evento queda marcado como `failed`.
 
-Los eventos enviados con más de 7 días de antigüedad se eliminan automáticamente para no crecer indefinitely.
+## Calidad De Huella
 
-Este mecanismo garantiza que no se pierda ningún registro de asistencia aunque el internet se corte durante la jornada. El frontend puede consultar cuántos registros están pendientes con `queue.status` y mostrar un indicador visual al usuario.
+El SDK puede generar un template aunque la huella esté mal colocada. Por eso el agente valida:
 
-El endpoint de Spring Boot que recibe estos eventos:
+- Tamaño mínimo del template.
+- Cobertura de área oscura.
+- Contraste.
+- Posición centrada del dedo.
 
-```
-POST /api/asistencias/sync
-```
-
-Body enviado:
-
-```json
-{
-  "templateCifrado": "<base64 de IV[12 bytes] + Tag[16 bytes] + Ciphertext>",
-  "llaveCifrada": "<base64 de la llave AES cifrada con RSA-2048-OAEP>",
-  "timestampLocal": "2026-05-27T00:00:00+00:00",
-  "dispositivoId": "ZK9500-12345"
-}
-```
-
-El campo `templateCifrado` empaqueta IV, tag de autenticación y ciphertext en un solo Base64 concatenado. El backend extrae los primeros 12 bytes como IV, los siguientes 16 como tag AES-GCM, y el resto como ciphertext.
-
----
-
-## Validación de calidad
-
-El SDK puede generar una plantilla aunque la huella esté incompleta. Por eso el agente aplica su propia validación sobre la imagen en escala de grises:
-
-- Tamaño mínimo de plantilla (bytes)
-- Porcentaje de área oscura detectada como huella (cobertura)
-- Contraste entre el fondo y la huella
-- Posición centrada del dedo en el sensor
-
-Si no pasa la validación, la respuesta devuelve `success: false` y el campo `quality` con el detalle:
-
-```json
-{
-  "type": "fingerprint.capture.result",
-  "success": false,
-  "message": "Huella incompleta o mal posicionada. Coloque el dedo completo y centrado sobre el lector.",
-  "quality": {
-    "isAcceptable": false,
-    "foregroundCoveragePercent": 7.4,
-    "contrastScore": 31.2,
-    "isCentered": false,
-    "message": "Área de huella insuficiente."
-  }
-}
-```
-
-Configuración recomendada para asistencia real:
+Configuración recomendada:
 
 ```json
 {
@@ -399,154 +384,145 @@ Configuración recomendada para asistencia real:
 }
 ```
 
-Ajusta estos valores con pruebas reales porque la presión del dedo, la iluminación interna del sensor y el estado del cristal pueden variar entre equipos.
+Estos valores deben ajustarse con pruebas reales del lector y usuarios.
 
----
+## Control De Sesión
 
-## Control de sesión
+El agente solo captura cuando una operación fue iniciada por WebSocket. Si alguien deja el dedo sobre el lector sin operación activa, la lectura se ignora.
 
-El agente solo acepta lecturas dentro de una operación iniciada por WebSocket. Si no hay operación activa, cualquier dedo colocado en el lector se ignora.
-
-Estados internos:
+Estados principales:
 
 | Estado | Significado |
-|--------|-------------|
+| --- | --- |
 | `Idle` | Listo para recibir una operación |
 | `Capturing` | Captura simple en progreso |
 | `Identifying` | Identificación en progreso |
 | `Enrolling` | Enrolamiento en progreso |
 | `Cooldown` | Pausa corta después de una operación |
 
-Solo se permite iniciar si el estado es `Idle`. Si el usuario manda varias solicitudes seguidas, el agente responde `Ya hay una operación biométrica en progreso.`
+Solo se permite una operación biométrica a la vez.
 
-Después de cada resultado (éxito, timeout, error o cancelación), el agente limpia el estado, drena lecturas residuales y queda en `Cooldown` brevemente antes de volver a `Idle`.
+## Compatibilidad Validada
 
-Si `RequireFingerLiftBeforeNextCapture` está en `true`, el agente verifica que el dedo no esté apoyado antes de iniciar una operación nueva. Si detecta un dedo pegado, responde `Retire el dedo del lector y vuelva a colocarlo.`
+El desarrollo actual está pensado para:
 
----
+- ZKTeco ZK9500.
+- ZKFingerSDK para Windows.
+- Template ZKTeco Finger V10.0.
+- Imagen del sensor consultada desde el SDK.
+- Fallback documentado para ZK9500: 300 x 400 px.
 
-## Reconexión del lector
+Durante prueba real en esta máquina, el lector respondió correctamente:
 
-Si el ZK9500 se desconecta físicamente durante una captura, la sesión se cancela y el agente responde con el error correspondiente. El SDK y los handles se limpian internamente.
-
-Cuando el lector se vuelve a conectar, el mensaje `device.status` hace una verificación viva: detecta el dispositivo, abre el handle y reasigna los buffers sin necesidad de reiniciar `dotnet run`.
-
----
-
-## Imagen de huella (solo pruebas locales)
-
-Por defecto `IncludeFingerprintImageInResponses` está en `false` y el agente nunca devuelve la imagen raw de la huella. Esto es obligatorio en producción.
-
-Para desarrollo local puedes activarlo temporalmente:
-
-```json
-{
-  "Biometric": {
-    "IncludeFingerprintImageInResponses": true
-  }
-}
+```text
+DeviceId : ZK9500-1967251700027
+Estado   : conectado
+SDK      : inicializado
+WebSocket: ws://localhost:9001/
 ```
 
-Cuando está activo, la respuesta incluye:
+## Errores Comunes
 
-```json
-{
-  "fingerprintImageBase64": "...",
-  "fingerprintImageMimeType": "image/png",
-  "fingerprintImageDataUrl": "data:image/png;base64,..."
-}
-```
+### WebSocket desconectado
 
-El archivo `scripts/test-websocket.html` muestra esta imagen en pantalla cuando está presente.
+No hay agente escuchando en `localhost:9001`.
 
----
-
-## Errores comunes
-
-**`No se encontró la DLL del SDK ZKTeco o no se pudo cargar.`**
-Verifica que `Native\x64\libzkfpcsharp.dll` existe y es la versión x64 del SDK oficial.
-
-**`No se encontró ningún lector biométrico.`**
-El ZK9500 no está conectado, Windows no lo detecta, o un proceso de ZKTeco ya tiene el lector ocupado. Cierra `ISSOnline_App.exe`, `iZHost.exe` y similares.
-
-**`Tiempo de espera agotado. Coloque el dedo en el lector.`**
-El usuario no puso el dedo dentro del tiempo máximo configurado (`CaptureTimeoutSeconds`).
-
-**`Ya hay una captura de huella en progreso.`**
-Espera a que termine la operación actual antes de enviar otra solicitud.
-
-**El agente arranca sin cifrado activado.**
-Verifica que `Security:BackendPublicKeyUrl` está configurada y que el endpoint de Spring Boot responde correctamente. El agente intenta reconectarse al refrescar la llave cada 24 horas, pero también puedes reiniciarlo para que lo intente de inmediato.
-
----
-
-## Publicar como servicio de Windows
-
-Una vez validado con `dotnet run`, publica y registra el servicio:
+Revisa:
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained false -o publish\
-
-sc create "TrazzoAgent" binPath="C:\ruta\a\publish\Trazzo.Biometric.Agent.exe" start=auto
-sc start "TrazzoAgent"
+Get-Service -Name TrazzoAgent
+Get-NetTCPConnection -LocalPort 9001
 ```
 
-Para detenerlo o eliminarlo:
+### No se encontró la DLL del SDK
+
+Falta:
+
+```text
+Native\x64\libzkfpcsharp.dll
+```
+
+Copia la DLL oficial del SDK y vuelve a generar el MSI.
+
+### No se encontró ningún lector biométrico
+
+Posibles causas:
+
+- El ZK9500 no está conectado.
+- Windows no reconoce el dispositivo.
+- Otro proceso de ZKTeco tiene ocupado el lector.
+
+Procesos que conviene cerrar si interfieren:
 
 ```powershell
-sc stop "TrazzoAgent"
-sc delete "TrazzoAgent"
+taskkill /F /IM ISSOnline_App.exe
+taskkill /F /IM ISSOnline.exe
+taskkill /F /IM iZHost.exe
+taskkill /F /IM ZKOnlineProtect.exe
 ```
 
----
+### Error MSI 1925
 
-## Configuración completa de referencia
+El MSI necesita privilegios de administrador porque instala para todos los usuarios y registra un servicio.
 
-```json
-{
-  "Agent": {
-    "WebSocketUrl": "http://localhost:9001/"
-  },
-  "Biometric": {
-    "CaptureTimeoutSeconds": 5,
-    "CapturePollingIntervalMilliseconds": 80,
-    "PostCaptureCooldownMilliseconds": 700,
-    "RequireFingerLiftBeforeNextCapture": true,
-    "TemplateBufferSize": 2048,
-    "IncludeFingerprintImageInResponses": false,
-    "Quality": {
-      "MinimumTemplateSize": 400,
-      "MinimumForegroundCoveragePercent": 18,
-      "MaximumForegroundCoveragePercent": 75,
-      "MinimumContrastScore": 25,
-      "RequireCenteredFingerprint": true,
-      "CenterTolerancePercent": 28
-    }
-  },
-  "Enrollment": {
-    "RequiredSamples": 3,
-    "SampleTimeoutSeconds": 8,
-    "RequireFingerLiftBetweenSamples": true
-  },
-  "Security": {
-    "BackendPublicKeyUrl": "https://api.trazzo.com/api/security/public-key"
-  },
-  "Queue": {
-    "BackendUrl": "https://api.trazzo.com/api/asistencias/sync",
-    "RetryIntervalSeconds": 30
-  }
-}
+Ejecuta PowerShell como administrador y vuelve a instalar.
+
+### Error MSI 1603
+
+Revisa el log del MSI. En este proyecto, la causa más común fue instalar sin privilegios elevados.
+
+Ejemplo con log:
+
+```powershell
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi /l*v install.log
 ```
 
----
+## Comandos Útiles
+
+Compilar todo:
+
+```powershell
+dotnet build .\Trazzo.Middleware.slnx -c Release
+```
+
+Ejecutar pruebas:
+
+```powershell
+dotnet test --no-restore --no-build
+```
+
+Generar MSI:
+
+```powershell
+.\Trazzo.Biometric.Agent\scripts\Install-Agent.ps1 -BuildMsi
+```
+
+Instalar MSI:
+
+```powershell
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+```
+
+Detener servicio:
+
+```powershell
+Stop-Service -Name TrazzoAgent
+```
+
+Iniciar servicio:
+
+```powershell
+Start-Service -Name TrazzoAgent
+```
+
+Desinstalar MSI:
+
+```powershell
+msiexec /x .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+```
 
 ## Pendiente
 
-Estas cosas están diseñadas pero aún no implementadas:
-
-**Instalador MSI**
-Empaquetado como instalador Windows (.msi) que registra el servicio automáticamente, copia la DLL del SDK y configura los permisos necesarios. Actualmente hay que hacer `sc create` a mano.
-
-**Auto-updater silencioso**
-El agente debería verificar periódicamente si hay una versión nueva disponible y actualizarse sin intervención del usuario. Por ahora hay que hacer `dotnet publish` y reemplazar el ejecutable a mano.
-
+- Firmar digitalmente el MSI para entornos corporativos.
+- Leer la versión del MSI desde la versión del ensamblado en lugar de dejar `1.0.0` fijo.
+- Implementar un auto-updater silencioso si se requiere despliegue masivo.

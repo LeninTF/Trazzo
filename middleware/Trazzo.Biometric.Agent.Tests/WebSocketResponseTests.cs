@@ -69,9 +69,79 @@ public sealed class WebSocketResponseTests
         Assert.Equal("Mensaje JSON inválido.", root.GetProperty("message").GetString());
     }
 
+    [Fact]
+    public async Task HandleMessageAsync_ForQueueStatus_ReturnsPendingCount()
+    {
+        FakeEventQueue queue = new() { PendingCount = 3 };
+        LocalWebSocketServerService server = CreateServer(eventQueue: queue);
+
+        object response = await server.HandleMessageAsync("""{ "type": "queue.status" }""", CancellationToken.None);
+        using JsonDocument document = ToJsonDocument(response);
+
+        JsonElement root = document.RootElement;
+        Assert.Equal("queue.status.result", root.GetProperty("type").GetString());
+        Assert.True(root.GetProperty("success").GetBoolean());
+        Assert.Equal(3, root.GetProperty("pendingCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForCaptureWithEncryptedTemplate_EnqueuesEvent()
+    {
+        EncryptedPayload enc = new("cipher", "key", "iv", "tag");
+        FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded([1, 2, 3], 3, encryptedTemplate: enc, deviceId: "ZK9500-1");
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(captureResult: captureResult, eventQueue: queue);
+
+        await server.HandleMessageAsync("""{ "type": "fingerprint.capture" }""", CancellationToken.None);
+
+        Assert.Single(queue.Enqueued);
+        Assert.Equal("capture", queue.Enqueued[0].EventType);
+        Assert.Equal("ZK9500-1", queue.Enqueued[0].DeviceId);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForCaptureWithoutEncryptedTemplate_DoesNotEnqueue()
+    {
+        FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded([1, 2, 3], 3);
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(captureResult: captureResult, eventQueue: queue);
+
+        await server.HandleMessageAsync("""{ "type": "fingerprint.capture" }""", CancellationToken.None);
+
+        Assert.Empty(queue.Enqueued);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForUnsupportedType_ReturnsErrorJson()
+    {
+        LocalWebSocketServerService server = CreateServer();
+
+        object response = await server.HandleMessageAsync("""{ "type": "tipo.inexistente" }""", CancellationToken.None);
+        using JsonDocument document = ToJsonDocument(response);
+
+        JsonElement root = document.RootElement;
+        Assert.Equal("error", root.GetProperty("type").GetString());
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("Tipo de mensaje WebSocket no soportado.", root.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollCancel_RetornaTipoEnrollResult()
+    {
+        LocalWebSocketServerService server = CreateServer();
+
+        object response = await server.HandleMessageAsync("""{ "type": "fingerprint.enroll.cancel" }""", CancellationToken.None);
+        using JsonDocument document = ToJsonDocument(response);
+
+        JsonElement root = document.RootElement;
+        Assert.Equal("fingerprint.enroll.result", root.GetProperty("type").GetString());
+        Assert.False(root.GetProperty("success").GetBoolean());
+    }
+
     private static LocalWebSocketServerService CreateServer(
         int deviceCount = 0,
-        FingerprintCaptureResult? captureResult = null)
+        FingerprintCaptureResult? captureResult = null,
+        FakeEventQueue? eventQueue = null)
     {
         FakeBiometricScannerService scanner = new()
         {
@@ -91,6 +161,7 @@ public sealed class WebSocketResponseTests
         return new LocalWebSocketServerService(
             scanner,
             new FakeAgentHealthService(),
+            eventQueue ?? new FakeEventQueue(),
             new ConfigurationBuilder().Build(),
             NullLogger<LocalWebSocketServerService>.Instance);
     }

@@ -88,9 +88,36 @@ public sealed class LocalWebSocketServerService(
     {
         if (!context.Request.IsWebSocketRequest)
         {
-            context.Response.StatusCode = 400;
+            if (context.Request.HttpMethod == "GET" &&
+                context.Request.Url?.AbsolutePath is "/" or "/health")
+            {
+                byte[] body = JsonSerializer.SerializeToUtf8Bytes(
+                    healthService.GetHealthResult(), JsonOptions);
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                context.Response.ContentLength64 = body.Length;
+                await context.Response.OutputStream.WriteAsync(body, cancellationToken);
+            }
+            else
+            {
+                context.Response.StatusCode = 400;
+            }
+
             context.Response.Close();
             return;
+        }
+
+        string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
+        if (allowedOrigins.Length > 0)
+        {
+            string? origin = context.Request.Headers["Origin"];
+            if (!Array.Exists(allowedOrigins, o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
+            {
+                logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
+                context.Response.StatusCode = 403;
+                context.Response.Close();
+                return;
+            }
         }
 
         using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null)).WebSocket;
@@ -105,20 +132,38 @@ public sealed class LocalWebSocketServerService(
         using SemaphoreSlim sendLock = new(1, 1);
         List<Task> pendingOperations = [];
 
-        while (webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
+        try
         {
-            WebSocketReceiveResult receiveResult = await webSocket.ReceiveAsync(buffer, cancellationToken);
-            if (receiveResult.MessageType == WebSocketMessageType.Close)
+            while (webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
-                await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "El cliente cerró la conexión.", cancellationToken);
-                return;
-            }
+                using MemoryStream messageStream = new();
+                WebSocketReceiveResult receiveResult;
 
-            string json = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
-            pendingOperations.RemoveAll(task => task.IsCompleted);
-            pendingOperations.Add(Task.Run(
-                () => ProcessClientMessageAsync(json, webSocket, sendLock, cancellationToken),
-                CancellationToken.None));
+                do
+                {
+                    receiveResult = await webSocket.ReceiveAsync(buffer, cancellationToken);
+                    if (receiveResult.MessageType == WebSocketMessageType.Close)
+                    {
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "El cliente cerró la conexión.", cancellationToken);
+                        return;
+                    }
+
+                    messageStream.Write(buffer, 0, receiveResult.Count);
+                }
+                while (!receiveResult.EndOfMessage);
+
+                string json = Encoding.UTF8.GetString(messageStream.ToArray());
+                pendingOperations.RemoveAll(task => task.IsCompleted);
+                pendingOperations.Add(Task.Run(
+                    () => ProcessClientMessageAsync(json, webSocket, sendLock, cancellationToken),
+                    CancellationToken.None));
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (WebSocketException)
+        {
         }
     }
 

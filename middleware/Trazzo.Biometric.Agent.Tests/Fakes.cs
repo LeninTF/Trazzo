@@ -1,4 +1,6 @@
+using System.Net;
 using Trazzo.Biometric.Agent.Contracts;
+using Trazzo.Biometric.Agent.Queue;
 using Trazzo.Biometric.Agent.Services;
 using Trazzo.Biometric.Agent.ZKTeco;
 
@@ -21,6 +23,9 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int CaptureResult { get; init; }
 
     public byte[] CapturedTemplate { get; init; } = [];
+
+    // Serial por defecto que simula un ZK9500 real
+    public int DeviceSerial { get; init; } = 12345;
 
     public int InitCalls { get; private set; }
 
@@ -59,15 +64,23 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public bool TryGetParameter(IntPtr deviceHandle, int parameterCode, out int value)
     {
+        // ZK9500: 300×400 px (FAP20) según hardware selection guide
         value = parameterCode switch
         {
-            1 => 256,
-            2 => 288,
-            106 => 256 * 288,
+            1 => 300,
+            2 => 400,
+            106 => 300 * 400,
+            1103 => DeviceSerial,
             _ => 0
         };
 
         return value > 0;
+    }
+
+    public bool TryGetParameterString(IntPtr deviceHandle, int parameterCode, out string value)
+    {
+        value = parameterCode == 1103 ? DeviceSerial.ToString() : string.Empty;
+        return value.Length > 0;
     }
 
     public IntPtr DBInit()
@@ -94,11 +107,12 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     {
         Array.Fill(imageBuffer, (byte)220);
 
-        const int width = 256;
-        int startX = 78;
-        int endX = 178;
-        int startY = 74;
-        int endY = 214;
+        // ZK9500: imagen de 300×400 px; área oscura centrada simulando una huella real
+        const int width = 300;
+        int startX = 100;
+        int endX = 200;
+        int startY = 130;
+        int endY = 270;
 
         for (int y = startY; y < endY; y++)
         {
@@ -112,6 +126,15 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
             }
         }
     }
+}
+
+internal sealed class FakeCryptographyService : ICryptographyService
+{
+    public bool IsConfigured => false;
+
+    public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public EncryptedPayload? TryEncryptTemplate(byte[] template, int templateSize) => null;
 }
 
 internal sealed class FakeBiometricScannerService : IBiometricScannerService
@@ -162,6 +185,42 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 
+internal sealed class FakeEventQueue : IEventQueue
+{
+    public List<BiometricEvent> Enqueued { get; } = [];
+    public List<long[]> SentIds { get; } = [];
+    public List<long> FailedIds { get; } = [];
+    public IReadOnlyList<BiometricEvent> PendingToReturn { get; init; } = [];
+    public int PendingCount { get; init; }
+
+    public Task EnqueueAsync(BiometricEvent biometricEvent, CancellationToken cancellationToken = default)
+    {
+        Enqueued.Add(biometricEvent);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<BiometricEvent>> GetPendingAsync(int limit = 50, CancellationToken cancellationToken = default)
+        => Task.FromResult(PendingToReturn);
+
+    public Task MarkSentAsync(IEnumerable<long> ids, CancellationToken cancellationToken = default)
+    {
+        SentIds.Add([.. ids]);
+        return Task.CompletedTask;
+    }
+
+    public Task MarkFailedAsync(long id, CancellationToken cancellationToken = default)
+    {
+        FailedIds.Add(id);
+        return Task.CompletedTask;
+    }
+
+    public Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(PendingCount);
+
+    public Task PruneAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+}
+
 internal sealed class FakeAgentHealthService : IAgentHealthService
 {
     public object GetHealthResult()
@@ -172,5 +231,22 @@ internal sealed class FakeAgentHealthService : IAgentHealthService
             success = true,
             message = "El agente biométrico de Trazzo está en ejecución."
         };
+    }
+}
+
+internal sealed class MockHttpMessageHandler : HttpMessageHandler
+{
+    public HttpRequestMessage? LastRequest { get; private set; }
+    public string? LastRequestBody { get; private set; }
+    public HttpStatusCode ResponseStatusCode { get; init; } = HttpStatusCode.OK;
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        LastRequest = request;
+        LastRequestBody = request.Content is not null
+            ? await request.Content.ReadAsStringAsync(cancellationToken)
+            : null;
+        return new HttpResponseMessage(ResponseStatusCode);
     }
 }

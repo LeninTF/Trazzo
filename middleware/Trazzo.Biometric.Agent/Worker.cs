@@ -34,7 +34,6 @@ public sealed class Worker(
         logger.LogInformation("Deteniendo el agente biométrico de Trazzo.");
 
         await webSocketServer.StopAsync(cancellationToken);
-        await scannerService.DisposeAsync();
 
         await base.StopAsync(cancellationToken);
     }

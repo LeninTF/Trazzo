@@ -1,0 +1,45 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="Trazzo Biometric Agent"
+      Manufacturer="Trazzo"
+      Version="$(var.ProductVersion)"
+      Language="1034"
+      Scope="perMachine"
+      InstallerVersion="500"
+      Compressed="yes"
+      UpgradeCode="212DE720-3B16-4993-8D3C-625A69983856">
+
+    <MajorUpgrade
+        Schedule="afterInstallInitialize"
+        DowngradeErrorMessage="Ya existe una version mas reciente de Trazzo Biometric Agent instalada." />
+
+    <MediaTemplate EmbedCab="yes" />
+    <Launch Condition="VersionNT &gt;= 603" Message="Trazzo Biometric Agent requiere Windows 10 o superior." />
+
+    <UI Id="WixUI_ProgressOnly">
+      <Dialog Id="TrazzoProgressDlg" Width="370" Height="100" Title="[ProductName]">
+        <Control Id="Title" Type="Text" X="15" Y="12" Width="340" Height="15" Transparent="yes" NoPrefix="yes" TabSkip="no" Text="Instalando [ProductName]" />
+        <Control Id="StatusLabel" Type="Text" X="15" Y="35" Width="340" Height="10" Text="Espere mientras Windows instala el agente biometrico." />
+        <Control Id="ProgressBar" Type="ProgressBar" X="15" Y="55" Width="340" Height="15" ProgressBlocks="yes">
+          <Subscribe Event="SetProgress" Attribute="Progress" />
+        </Control>
+      </Dialog>
+
+      <InstallUISequence>
+        <Show Dialog="TrazzoProgressDlg" Before="ExecuteAction" />
+      </InstallUISequence>
+    </UI>
+
+    <Feature Id="MainFeature" Title="Trazzo Biometric Agent" Level="1">
+      <ComponentGroupRef Id="PublishedFiles" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="TrazzoFolder" Name="Trazzo">
+        <Directory Id="INSTALLFOLDER" Name="BiometricAgent" />
+      </Directory>
+    </StandardDirectory>
+  </Fragment>
+</Wix>

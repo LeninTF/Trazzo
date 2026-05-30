@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -27,6 +28,21 @@ public sealed class EventForwarderService : BackgroundService
         _isEnabled = true;
     }
 
+    internal EventForwarderService(
+        IEventQueue queue,
+        HttpClient httpClient,
+        string backendUrl,
+        string? agentToken,
+        int retryIntervalSeconds,
+        ILogger<EventForwarderService> logger)
+    {
+        _queue = queue;
+        _logger = logger;
+        _retryIntervalSeconds = retryIntervalSeconds;
+        _sender = BuildHttpSender(backendUrl, agentToken, httpClient);
+        _isEnabled = true;
+    }
+
     public EventForwarderService(
         IEventQueue queue,
         IConfiguration configuration,
@@ -37,6 +53,7 @@ public sealed class EventForwarderService : BackgroundService
         _retryIntervalSeconds = configuration.GetValue<int>("Queue:RetryIntervalSeconds", 30);
 
         string? backendUrl = configuration["Queue:BackendUrl"];
+        string? agentToken = configuration["Queue:AgentToken"];
 
         if (string.IsNullOrWhiteSpace(backendUrl))
         {
@@ -47,7 +64,7 @@ public sealed class EventForwarderService : BackgroundService
         }
         else
         {
-            _sender = BuildHttpSender(backendUrl);
+            _sender = BuildHttpSender(backendUrl, agentToken, SharedHttpClient);
             _isEnabled = true;
         }
     }
@@ -56,13 +73,22 @@ public sealed class EventForwarderService : BackgroundService
     {
         if (!_isEnabled) return;
 
+        int consecutiveFailures = 0;
+
         while (!stoppingToken.IsCancellationRequested)
         {
-            await TryForwardPendingAsync(stoppingToken);
+            bool hadFailures = await TryForwardPendingAsync(stoppingToken);
+            consecutiveFailures = hadFailures ? consecutiveFailures + 1 : 0;
+
+            // Backoff exponencial: base * 2^(failures-1), máximo 5 minutos, más ±10% de jitter
+            double delaySeconds = Math.Min(
+                _retryIntervalSeconds * Math.Pow(2, Math.Max(0, consecutiveFailures - 1)),
+                300);
+            double jitter = delaySeconds * 0.1 * (Random.Shared.NextDouble() * 2 - 1);
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(_retryIntervalSeconds), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds + jitter), stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -71,12 +97,14 @@ public sealed class EventForwarderService : BackgroundService
         }
     }
 
-    internal async Task TryForwardPendingAsync(CancellationToken cancellationToken)
+    // Retorna true si hubo errores de envío al backend; false si la cola estaba vacía o todo se envió.
+    internal async Task<bool> TryForwardPendingAsync(CancellationToken cancellationToken)
     {
+        bool hadFailures = false;
         try
         {
             IReadOnlyList<BiometricEvent> pending = await _queue.GetPendingAsync(50, cancellationToken);
-            if (pending.Count == 0) return;
+            if (pending.Count == 0) return false;
 
             _logger.LogInformation(
                 "Cola biométrica: reenviando {Count} evento(s) pendiente(s) al backend.",
@@ -92,10 +120,15 @@ public sealed class EventForwarderService : BackgroundService
                 {
                     bool sent = await _sender(evt, cancellationToken);
                     if (sent) sentIds.Add(evt.Id);
-                    else await _queue.MarkFailedAsync(evt.Id, cancellationToken);
+                    else
+                    {
+                        hadFailures = true;
+                        await _queue.MarkFailedAsync(evt.Id, cancellationToken);
+                    }
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
+                    hadFailures = true;
                     _logger.LogWarning(ex, "Error al reenviar evento biométrico Id={Id}.", evt.Id);
                     await _queue.MarkFailedAsync(evt.Id, cancellationToken);
                 }
@@ -115,10 +148,14 @@ public sealed class EventForwarderService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error al procesar la cola de eventos biométricos.");
+            return true;
         }
+
+        return hadFailures;
     }
 
-    private static Func<BiometricEvent, CancellationToken, Task<bool>> BuildHttpSender(string backendUrl)
+    private static Func<BiometricEvent, CancellationToken, Task<bool>> BuildHttpSender(
+        string backendUrl, string? agentToken, HttpClient httpClient)
     {
         return async (evt, ct) =>
         {
@@ -144,7 +181,11 @@ public sealed class EventForwarderService : BackgroundService
                 Encoding.UTF8,
                 "application/json");
 
-            using HttpResponseMessage response = await SharedHttpClient.PostAsync(backendUrl, content, ct);
+            using HttpRequestMessage request = new(HttpMethod.Post, backendUrl) { Content = content };
+            if (!string.IsNullOrWhiteSpace(agentToken))
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", agentToken);
+
+            using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
         };
     }

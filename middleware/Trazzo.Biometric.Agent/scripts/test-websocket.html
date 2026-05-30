@@ -187,7 +187,7 @@
       </section>
       <section class="fingerprint-panel">
         <h2>Imagen de la huella</h2>
-        <div class="fingerprint-status" id="fingerprintStatus">Sin captura todavÃ­a</div>
+        <div class="fingerprint-status" id="fingerprintStatus">Sin captura todavía</div>
         <div class="fingerprint-preview">
           <img id="fingerprintImage" alt="Huella capturada">
           <span class="fingerprint-empty" id="fingerprintEmpty">Sin imagen</span>
@@ -297,7 +297,7 @@
 
       qualityCoverageEl.textContent = `${Number(quality.foregroundCoveragePercent ?? 0).toFixed(2)}%`;
       qualityContrastEl.textContent = Number(quality.contrastScore ?? 0).toFixed(2);
-      qualityCenteredEl.textContent = quality.isCentered ? "SÃ­" : "No";
+      qualityCenteredEl.textContent = quality.isCentered ? "Sí" : "No";
       qualityMessageEl.textContent = quality.message || "-";
     }
 
@@ -441,7 +441,7 @@
       }
 
       setOperation("Identificando huella", true, false);
-      fingerprintStatusEl.textContent = "Esperando huella para identificaciÃ³n...";
+      fingerprintStatusEl.textContent = "Esperando huella para identificación...";
       write("Esperando respuesta...");
       send("fingerprint.identify");
     });
@@ -474,7 +474,7 @@
       readerStatusEl.textContent = "Sin consultar";
       setOperation("Inactivo", false, false);
       enrollmentProgressEl.textContent = "-";
-      fingerprintStatusEl.textContent = "Sin captura todavÃ­a";
+      fingerprintStatusEl.textContent = "Sin captura todavía";
       clearFingerprintImage("Sin imagen");
       clearQuality();
     });
