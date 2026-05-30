@@ -1,1 +1,226 @@
-<p>shop works!</p>
+<main class="checkout-page">
+	<div class="checkout-topbar">
+		<button type="button" class="back-button btn btn-outline-primary rounded-pill shadow-sm" (click)="goBack()" aria-label="Volver a la pantalla anterior">
+			<i class="bi bi-arrow-left-short"></i>
+			Volver
+		</button>
+	</div>
+
+	<section class="checkout-hero">
+		<div class="hero-copy animate-fade-up">
+			<p class="eyebrow">Pago seguro</p>
+			<h1>Completa tus datos para activar el servicio</h1>
+			<p class="intro">
+				Revisa la información antes de continuar. El acceso quedará asociado a la empresa y al
+				administrador indicado.
+			</p>
+			<div class="progress-block">
+				<div class="progress-meta">
+					<div class="d-flex align-items-center gap-2">
+						<i class="bi bi-graph-up-arrow progress-icon"></i>
+						<span>Avance del formulario</span>
+					</div>
+					<strong>{{ completionLabel() }}</strong>
+				</div>
+				<div class="progress progress-track" role="img" [attr.aria-label]="'Progreso del formulario al ' + progressPercent() + ' por ciento'">
+					<span [style.width.%]="progressPercent()"></span>
+				</div>
+				<div class="progress-steps" aria-hidden="true">
+					<span class="is-done"><i class="bi bi-check-lg"></i></span>
+					<span class="is-active"><i class="bi bi-1-circle-fill"></i></span>
+					<span><i class="bi bi-2-circle"></i></span>
+				</div>
+			</div>
+		</div>
+
+		<aside class="summary-card animate-slide-in" aria-label="Resumen de pago">
+			<p class="summary-label">Plan seleccionado</p>
+			<h2>Control de asistencia</h2>
+			<dl>
+				<div>
+					<dt><i class="bi bi-people-fill"></i> Usuarios incluidos</dt>
+					<dd>Hasta 50</dd>
+				</div>
+				<div>
+					<dt><i class="bi bi-headset"></i> Soporte</dt>
+					<dd>Prioritario</dd>
+				</div>
+				<div>
+					<dt><i class="bi bi-shield-check"></i> Estado</dt>
+					<dd>Activo tras pago</dd>
+				</div>
+			</dl>
+		</aside>
+	</section>
+
+	<form class="checkout-form">
+		<details class="form-card accordion animate-fade-up" [open]="activeSection() === 1" (toggle)="onSectionToggle(1, $event)">
+			<summary (click)="setSection(1)">
+				<span class="section-number"><i class="bi bi-person-circle"></i></span>
+				<div>
+					<h2>Datos de contacto*</h2>
+					<p>Información principal de la persona que realiza el pago.</p>
+				</div>
+				<i class="bi bi-chevron-down section-chevron"></i>
+			</summary>
+
+			<div class="accordion-body">
+				<div class="grid two-columns">
+					<label>
+						Nombres
+						<input type="text" name="firstName" [value]="formState().firstName" (input)="updateTextField('firstName', $event)" placeholder="Ej. María" />
+					</label>
+					<label>
+						Apellido paterno
+						<input type="text" name="lastNamePaterno" [value]="formState().lastNamePaterno" (input)="updateTextField('lastNamePaterno', $event)" placeholder="Ej. Pérez" />
+					</label>
+					<label>
+						Apellido materno
+						<input type="text" name="lastNameMaterno" [value]="formState().lastNameMaterno" (input)="updateTextField('lastNameMaterno', $event)" placeholder="Ej. Gómez" />
+					</label>
+					<label>
+						Tipo documento
+						<select name="documentType" [value]="formState().documentType" (change)="updateTextField('documentType', $event)">
+							<option value="">Seleccione</option>
+							<option value="DNI">DNI</option>
+							<option value="CE">CE</option>
+							<option value="PAS">Pasaporte</option>
+						</select>
+					</label>
+					<label>
+						Número de documento
+						<input type="text" name="documentNumber" [value]="formState().documentNumber" (input)="updateTextField('documentNumber', $event)" placeholder="12345678" />
+					</label>
+					<label>
+						Email
+						<input type="email" name="email" [value]="formState().email" (input)="updateTextField('email', $event)" placeholder="correo@empresa.com" />
+					</label>
+					<label>
+						Celular
+						<input type="tel" name="phone" [value]="formState().phone" (input)="updateTextField('phone', $event)" placeholder="+34 600 000 000" />
+					</label>
+				</div>
+			</div>
+		</details>
+
+		<details class="form-card accordion animate-fade-up delay-1" [open]="activeSection() === 2" (toggle)="onSectionToggle(2, $event)">
+			<summary (click)="setSection(2)">
+				<span class="section-number"><i class="bi bi-building"></i></span>
+				<div>
+					<h2>Datos de facturación*</h2>
+					<p>Datos fiscales y de empresa para emitir el comprobante.</p>
+				</div>
+				<i class="bi bi-chevron-down section-chevron"></i>
+			</summary>
+
+			<div class="accordion-body">
+				<div class="grid two-columns">
+					<label class="full-width">
+						RUC
+						<input type="text" name="ruc" [value]="formState().ruc" (input)="updateTextField('ruc', $event)" placeholder="20XXXXXXXXX" />
+					</label>
+					<label>
+						Empresa
+						<input type="text" name="companyName" [value]="formState().companyName" (input)="updateTextField('companyName', $event)" placeholder="Nombre comercial" />
+					</label>
+					<label>
+						Razón social
+						<input type="text" name="businessName" [value]="formState().businessName" (input)="updateTextField('businessName', $event)" placeholder="Razón social completa" />
+					</label>
+					<label class="full-width">
+						Dirección
+						<input type="text" name="address" [value]="formState().address" (input)="updateTextField('address', $event)" placeholder="Calle, número, ciudad y código postal" />
+					</label>
+				</div>
+			</div>
+		</details>
+
+		<details class="form-card accordion animate-fade-up delay-2" [open]="activeSection() === 3" (toggle)="onSectionToggle(3, $event)">
+			<summary (click)="setSection(3)">
+				<span class="section-number"><i class="bi bi-shield-lock"></i></span>
+				<div>
+					<h2>Confirmaciones</h2>
+					<p>Marca las condiciones necesarias antes de continuar.</p>
+				</div>
+				<i class="bi bi-chevron-down section-chevron"></i>
+			</summary>
+
+			<div class="accordion-body">
+				<div class="checkbox-list">
+					<label class="checkbox-item">
+						<input type="checkbox" name="anotherAdmin" [checked]="formState().anotherAdmin" (change)="updateCheckboxField('anotherAdmin', $event)" />
+						<span>
+							<strong>Otra persona es administrador</strong>
+							<small>El acceso principal quedará asignado a un responsable diferente.</small>
+						</span>
+					</label>
+
+					<label class="checkbox-item">
+						<input type="checkbox" name="terms" [checked]="formState().terms" (change)="updateCheckboxField('terms', $event)" />
+						<span>
+							<strong>Acepto los términos y condiciones</strong>
+							<small>He leído y acepto la política de uso y contratación del servicio.</small>
+						</span>
+					</label>
+				</div>
+			</div>
+		</details>
+
+		<details *ngIf="formState().anotherAdmin" class="form-card accordion animate-fade-up delay-3" [open]="activeSection() === 4" (toggle)="onSectionToggle(4, $event)">
+			<summary (click)="setSection(4)">
+				<span class="section-number"><i class="bi bi-person-badge"></i></span>
+				<div>
+					<h2>Datos del administrador</h2>
+					<p>Registra a la persona que administrará la plataforma.</p>
+				</div>
+				<i class="bi bi-chevron-down section-chevron"></i>
+			</summary>
+
+			<div class="accordion-body">
+				<div class="grid two-columns">
+					<label>
+						Nombres
+						<input type="text" name="adminFirstName" [value]="formState().adminFirstName" (input)="updateTextField('adminFirstName', $event)" placeholder="Ej. Ana María" />
+					</label>
+					<label>
+						Apellido paterno
+						<input type="text" name="adminLastNamePaterno" [value]="formState().adminLastNamePaterno" (input)="updateTextField('adminLastNamePaterno', $event)" placeholder="Ej. Pérez" />
+					</label>
+					<label>
+						Apellido materno
+						<input type="text" name="adminLastNameMaterno" [value]="formState().adminLastNameMaterno" (input)="updateTextField('adminLastNameMaterno', $event)" placeholder="Ej. Gómez" />
+					</label>
+					<label>
+						Tipo documento
+						<select name="adminDocumentType" [value]="formState().adminDocumentType" (change)="updateTextField('adminDocumentType', $event)">
+							<option value="">Seleccione</option>
+							<option value="DNI">DNI</option>
+							<option value="CE">CE</option>
+							<option value="PAS">Pasaporte</option>
+						</select>
+					</label>
+					<label>
+						Número de documento
+						<input type="text" name="adminDocumentNumber" [value]="formState().adminDocumentNumber" (input)="updateTextField('adminDocumentNumber', $event)" placeholder="12345678" />
+					</label>
+					<label>
+						Email
+						<input type="email" name="adminEmail" [value]="formState().adminEmail" (input)="updateTextField('adminEmail', $event)" placeholder="admin@empresa.com" />
+					</label>
+					<label>
+						Celular
+						<input type="tel" name="adminPhone" [value]="formState().adminPhone" (input)="updateTextField('adminPhone', $event)" placeholder="+34 600 000 000" />
+					</label>
+				</div>
+			</div>
+		</details>
+
+		<div class="checkout-actions animate-fade-up delay-3">
+			<p>Al pulsar continuar, revisaremos los datos antes de finalizar el alta.</p>
+			<button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+				<i class="bi bi-lock-fill me-2"></i>
+				Continuar con el pago
+			</button>
+		</div>
+	</form>
+</main>
