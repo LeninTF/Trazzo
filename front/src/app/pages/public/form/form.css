@@ -1,0 +1,297 @@
+.contact-page {
+	--page-blue: #1e40af;
+	--page-blue-deep: #17307d;
+	--page-blue-soft: #e8f0ff;
+	--page-ink: #0f172a;
+	--page-muted: #64748b;
+	--page-border: rgba(30, 64, 175, 0.12);
+	min-height: 100vh;
+	padding: 24px 16px 32px;
+	background:
+		radial-gradient(circle at top left, rgba(96, 165, 250, 0.16), transparent 24%),
+		radial-gradient(circle at 90% 8%, rgba(30, 64, 175, 0.08), transparent 20%),
+		linear-gradient(180deg, #ffffff 0%, #f3f7ff 58%, #eef4ff 100%);
+	color: var(--page-ink);
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.contact-shell {
+	max-width: 820px;
+	margin: 0 auto;
+	padding-top: 1rem;
+}
+
+.contact-back {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-bottom: 1rem;
+	padding: 0.75rem 1rem;
+	border-radius: 999px;
+	border: 1px solid rgba(30, 64, 175, 0.12);
+	background: rgba(255, 255, 255, 0.9);
+	color: var(--page-blue);
+	font-size: 0.9rem;
+	font-weight: 700;
+	text-decoration: none;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+	transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.contact-back:hover {
+	transform: translateY(-1px);
+	border-color: rgba(30, 64, 175, 0.2);
+	background: #fff;
+	box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+}
+
+.contact-card {
+	position: relative;
+	overflow: hidden;
+	padding: 30px;
+	border: 1px solid var(--page-border);
+	border-radius: 30px;
+	background: rgba(255, 255, 255, 0.96);
+	box-shadow: 0 24px 60px rgba(15, 23, 42, 0.09);
+	backdrop-filter: blur(10px);
+}
+
+.contact-card::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 0.35rem;
+	background: linear-gradient(90deg, var(--page-blue), #60a5fa);
+	pointer-events: none;
+}
+
+.contact-card-head {
+	margin-bottom: 24px;
+}
+
+.eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin: 0 0 0.85rem;
+	padding: 0.5rem 0.85rem;
+	border-radius: 999px;
+	background: rgba(30, 64, 175, 0.08);
+	color: var(--page-blue);
+	font-size: 0.8rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.card-note {
+	display: inline-flex;
+	margin: 0 0 0.7rem;
+	padding: 0.42rem 0.75rem;
+	border-radius: 999px;
+	background: var(--page-blue-soft);
+	color: var(--page-blue-deep);
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+
+.eyebrow-dot {
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--page-blue), #60a5fa);
+	box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
+}
+
+.contact-card h1 {
+	margin: 0;
+	color: var(--page-ink);
+	font-size: clamp(2.1rem, 4vw, 3.15rem);
+	font-weight: 800;
+	letter-spacing: -0.04em;
+}
+
+.intro {
+	max-width: 46ch;
+	margin: 10px 0 0;
+	color: var(--page-muted);
+	font-size: 1.02rem;
+	line-height: 1.6;
+}
+
+.contact-form {
+	display: grid;
+	gap: 18px;
+}
+
+.form-section {
+	padding: 20px;
+	border-radius: 24px;
+	background: linear-gradient(180deg, rgba(247, 250, 255, 0.96), rgba(243, 247, 255, 0.9));
+	border: 1px solid rgba(30, 64, 175, 0.1);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.section-head {
+	margin-bottom: 15px;
+	padding-left: 0.95rem;
+	border-left: 3px solid var(--page-blue);
+}
+
+.section-head h2 {
+	margin: 0;
+	color: var(--page-ink);
+	font-size: 1.02rem;
+	font-weight: 800;
+}
+
+.section-head p {
+	margin: 0.25rem 0 0;
+	color: var(--page-muted);
+	font-size: 0.88rem;
+	line-height: 1.45;
+}
+
+.field-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.field-grid label,
+.contact-check {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+	color: var(--page-ink);
+	font-size: 0.92rem;
+	font-weight: 700;
+}
+
+.field-grid .full-width {
+	grid-column: 1 / -1;
+}
+
+.field-grid input,
+.field-grid select,
+.field-grid textarea {
+	width: 100%;
+	padding: 0.95rem 1rem;
+	border: 1px solid rgba(30, 64, 175, 0.14);
+	border-radius: 1rem;
+	background: rgba(255, 255, 255, 0.98);
+	color: var(--page-ink);
+	font: inherit;
+	font-weight: 500;
+	outline: none;
+	transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.field-grid input:hover,
+.field-grid select:hover,
+.field-grid textarea:hover {
+	border-color: rgba(30, 64, 175, 0.24);
+}
+
+.field-grid input:focus,
+.field-grid select:focus,
+.field-grid textarea:focus {
+	border-color: rgba(30, 64, 175, 0.38);
+	background: #fff;
+	box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+	transform: translateY(-1px);
+}
+
+.field-grid textarea {
+	min-height: 150px;
+	resize: vertical;
+}
+
+.contact-check {
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 0.75rem;
+	padding: 1rem 1.05rem;
+	border-radius: 1rem;
+	background: rgba(30, 64, 175, 0.05);
+	border: 1px solid rgba(30, 64, 175, 0.08);
+	font-weight: 600;
+}
+
+.contact-check input {
+	width: 1rem;
+	height: 1rem;
+	margin-top: 0.16rem;
+	accent-color: var(--page-blue);
+}
+
+.contact-check span {
+	color: var(--page-muted);
+	font-size: 0.88rem;
+	font-weight: 500;
+	line-height: 1.5;
+}
+
+.form-actions {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	align-items: center;
+	padding-top: 6px;
+}
+
+.form-actions .btn {
+	min-width: 10rem;
+	box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.form-actions .btn-outline-primary {
+	border-color: rgba(30, 64, 175, 0.16);
+	background: rgba(255, 255, 255, 0.98);
+	color: var(--page-blue);
+}
+
+.form-actions .btn-outline-primary:hover {
+	background: rgba(30, 64, 175, 0.06);
+	border-color: rgba(30, 64, 175, 0.22);
+}
+
+.form-actions .btn-primary {
+	background: linear-gradient(135deg, var(--page-blue), #2563eb);
+	border-color: transparent;
+}
+
+.form-actions .btn-primary:hover {
+	background: linear-gradient(135deg, var(--page-blue-deep), #1d4ed8);
+}
+
+@media (max-width: 767.98px) {
+	.contact-page {
+		padding: 16px 14px 32px;
+	}
+
+	.contact-card {
+		padding: 22px;
+		border-radius: 24px;
+	}
+
+	.form-section {
+		padding: 16px;
+	}
+
+	.field-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.form-actions {
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+
+	.form-actions .btn {
+		width: 100%;
+		min-width: 0;
+	}
+}
