@@ -8,52 +8,63 @@
 
 	<section class="checkout-hero">
 		<div class="hero-copy animate-fade-up">
-			<p class="eyebrow">Pago seguro</p>
-			<h1>Completa tus datos para activar el servicio</h1>
-			<p class="intro">
-				Revisa la información antes de continuar. El acceso quedará asociado a la empresa y al
-				administrador indicado.
-			</p>
-			<div class="progress-block">
+			<header class="hero-header">
+				<p class="eyebrow">Pago seguro</p>
+				<h1>Completa tus datos para activar el servicio</h1>
+				<p class="intro">
+					Revisa la información antes de continuar. El acceso quedará asociado a la empresa y al
+					administrador indicado.
+				</p>
+			</header>
+
+			<div class="progress-block" aria-hidden="false">
 				<div class="progress-meta">
 					<div class="d-flex align-items-center gap-2">
-						<i class="bi bi-graph-up-arrow progress-icon"></i>
+						<i class="bi bi-graph-up-arrow progress-icon" aria-hidden="true"></i>
 						<span>Avance del formulario</span>
 					</div>
 					<strong>{{ completionLabel() }}</strong>
 				</div>
-				<div class="progress progress-track" role="img" [attr.aria-label]="'Progreso del formulario al ' + progressPercent() + ' por ciento'">
+				<div class="progress progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" [attr.aria-valuemin]="0" [attr.aria-valuemax]="100" [attr.aria-label]="'Progreso del formulario al ' + progressPercent() + ' por ciento'">
 					<span [style.width.%]="progressPercent()"></span>
 				</div>
-				<div class="progress-steps" aria-hidden="true">
-					<span class="is-done"><i class="bi bi-check-lg"></i></span>
-					<span class="is-active"><i class="bi bi-1-circle-fill"></i></span>
-					<span><i class="bi bi-2-circle"></i></span>
-				</div>
+				<nav class="progress-steps" aria-label="Pasos del formulario">
+					<ol class="list-unstyled d-flex gap-2 m-0">
+						<li class="is-done" aria-current="false"><i class="bi bi-check-lg"></i></li>
+						<li class="is-active" aria-current="step"><i class="bi bi-1-circle-fill"></i></li>
+						<li aria-current="false"><i class="bi bi-2-circle"></i></li>
+					</ol>
+				</nav>
 			</div>
 		</div>
 
 		<aside class="summary-card animate-slide-in" aria-label="Resumen de pago">
-			<p class="summary-label">Plan seleccionado</p>
-			<h2>Control de asistencia</h2>
+			<div class="d-flex justify-content-between align-items-start mb-3">
+				<div>
+					<p class="summary-label">Plan seleccionado</p>
+					<h2>Control de asistencia</h2>
+				</div>
+				<span class="badge bg-primary align-self-start">Activo</span>
+			</div>
+
 			<dl>
 				<div>
-					<dt><i class="bi bi-people-fill"></i> Usuarios incluidos</dt>
+					<dt><i class="bi bi-people-fill" aria-hidden="true"></i> Usuarios incluidos</dt>
 					<dd>Hasta 50</dd>
 				</div>
 				<div>
-					<dt><i class="bi bi-headset"></i> Soporte</dt>
+					<dt><i class="bi bi-headset" aria-hidden="true"></i> Soporte</dt>
 					<dd>Prioritario</dd>
 				</div>
 				<div>
-					<dt><i class="bi bi-shield-check"></i> Estado</dt>
+					<dt><i class="bi bi-shield-check" aria-hidden="true"></i> Estado</dt>
 					<dd>Activo tras pago</dd>
 				</div>
 			</dl>
 		</aside>
 	</section>
 
-	<form class="checkout-form">
+	<form class="checkout-form" novalidate>
 		<details class="form-card accordion animate-fade-up" [open]="activeSection() === 1" (toggle)="onSectionToggle(1, $event)">
 			<summary (click)="setSection(1)">
 				<span class="section-number"><i class="bi bi-person-circle"></i></span>

@@ -545,3 +545,95 @@ input:focus {
 		gap: 14px;
 	}
 }
+
+/* -----------------------
+   Enhancements: animations
+   and microinteractions
+   ----------------------- */
+
+/* progress fill shimmer and smoother transitions */
+.progress-track > span {
+	transition: width 420ms cubic-bezier(.2,.9,.3,1), background-position 900ms linear;
+	background-size: 200% 100%;
+	position: relative;
+}
+
+.progress-track > span::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+	mix-blend-mode: overlay;
+	transform: translateX(-30%);
+	animation: shimmer 2.2s linear infinite;
+	pointer-events: none;
+}
+
+/* active step pulse */
+.progress-steps .is-active {
+	animation: stepPulse 1200ms ease-in-out infinite;
+}
+
+/* hover lift for summary items */
+.summary-card dl div {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 12px;
+	border-radius: 12px;
+	transition: transform 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+.summary-card dl div:hover {
+	transform: translateY(-6px);
+	background: linear-gradient(180deg, rgba(59,130,246,0.03), rgba(30,64,175,0.02));
+	box-shadow: 0 18px 30px rgba(30,64,175,0.06);
+}
+
+/* interactive section badges */
+.section-number:hover {
+	transform: scale(1.06) translateY(-2px);
+	box-shadow: 0 10px 24px rgba(30,64,175,0.12);
+}
+
+.accordion summary {
+	border-radius: 14px;
+}
+
+.section-chevron {
+	transition: transform 320ms cubic-bezier(.2,.9,.3,1), color 180ms ease;
+}
+
+.form-card:hover {
+	transform: translateY(-6px);
+	box-shadow: 0 26px 56px rgba(15,23,42,0.08);
+	transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+input[type='text'],
+input[type='email'],
+input[type='tel'],
+select,
+textarea {
+	transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+input:focus, textarea:focus {
+	transform: translateY(-2px);
+}
+
+/* button microinteraction */
+.checkout-actions button {
+	will-change: transform;
+}
+
+@keyframes shimmer {
+	0% { transform: translateX(-30%); }
+	100% { transform: translateX(130%); }
+}
+
+@keyframes stepPulse {
+	0% { transform: scale(1); }
+	50% { transform: scale(1.06); }
+	100% { transform: scale(1); }
+}
