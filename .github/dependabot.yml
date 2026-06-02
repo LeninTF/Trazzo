@@ -32,16 +32,16 @@ updates:
         patterns:
           - "*"
 
-  # 3. Configuración para el Middleware (C# / .NET)
-  - package-ecosystem: "nuget"
-    directory: "/middleware"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-    groups:
-      dotnet-updates:
-        patterns:
-          - "*"
+  # 3. Configuración para el Middleware (C# / .NET) TODO IMPLEMENTAR EN CONJUNTO CON T-MIDDLEWARE
+#  - package-ecosystem: "nuget"
+#    directory: "/middleware"
+#    schedule:
+#      interval: "weekly"
+#      day: "monday"
+#    groups:
+#      dotnet-updates:
+#        patterns:
+#          - "*"
 
   # 4. Configuración para los propios Workflows de GitHub Actions
   - package-ecosystem: "github-actions"
