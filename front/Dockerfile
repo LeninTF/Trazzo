@@ -9,8 +9,7 @@ RUN corepack enable pnpm
 COPY package.json pnpm-lock.yaml ./
 
 # 2. Instalar dependencias de forma limpia
-RUN pnpm config set ignore-scripts false && \
-    pnpm install --frozen-lockfile
+RUN pnpm install
 
 # 3. Copiar el resto del código fuente del frontend
 COPY . .
