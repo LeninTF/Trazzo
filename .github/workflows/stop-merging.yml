@@ -19,6 +19,8 @@ jobs:
         with:
           # Inyecta el token nativo de GitHub para autenticarse contra la API de seguridad
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          GIT_BRANCH: 'master'
+          BYPASS_PREFIX: 'fix' # GitHub permitirá fusionar es un PR cuyo título empiece con esta palabra.
 
           # Nivel de severidad para congelar la rama.
           # Opciones comunes: 'critical' o 'high,critical'
