@@ -1,5 +1,5 @@
 # Etapa 1: Compilación (Builder)
-FROM node:24-alpine AS build
+FROM node:24-slim AS build
 WORKDIR /app
 
 # Habilitar pnpm via corepack
