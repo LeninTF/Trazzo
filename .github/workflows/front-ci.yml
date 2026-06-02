@@ -13,6 +13,7 @@ on:
 jobs:
   build-front:
     runs-on: ubuntu-latest
+    name: Compilar y Analizar Frontend
     steps:
       - name: Instalar pnpm
         uses: pnpm/action-setup@v3
@@ -32,8 +33,14 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: ./front
 
+#      Detector de Dependencias Circulares
+      - name: Auditoría de Dependencias Circulares (Madge)
+        run: npx madge --circular --extensions ts ./src
+        working-directory: ./front
+
+#      Si no hay dependencias circulares, procedemos a compilar
       - name: Compilar Angular
-        run: pnpm run build -- --configuration=production
+        run: pnpm run build --configuration=production
         working-directory: ./front
 
       - name: Iniciar sesión en GitHub Container Registry

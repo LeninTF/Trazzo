@@ -4,13 +4,22 @@ on:
   pull_request:
     branches: [ "master" ]
 
+# Permisos necesarios para que la acción pueda leer las alertas de seguridad de tu repo
+permissions:
+  contents: read
+  security-events: read
+
 jobs:
   check-dependabot-alerts:
     runs-on: ubuntu-latest
     name: Verificar salud de la rama Master
     steps:
-      - name: Consultar Alertas Activas
+      - name: Consultar Alertas Activas de Dependabot
         uses: bennycode/stop-merging@v1.0.1
         with:
+          # Inyecta el token nativo de GitHub para autenticarse contra la API de seguridad
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          severity: critical # Congela nuevos PRs solo si master tiene vulnerabilidades CRÍTICAS
+
+          # Nivel de severidad para congelar la rama.
+          # Opciones comunes: 'critical' o 'high,critical'
+          severity: critical

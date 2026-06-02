@@ -740,18 +740,16 @@ components:
 
     CambiarPasswordRequest:
       type: object
-      required:
-        - new_password
       description: |
-        Cambio de contraseña. Si `must_change_password = true` (primer login),
-        este endpoint es el único accesible hasta que el usuario cambie la contraseña.
-        La contraseña temporal **no se requiere en ese caso** — el JWT ya la valida.
-        Para cambios voluntarios posteriores, `current_password` es obligatoria.
+        Cambio de contraseña.
+         - Para primer login forzado (`must_change_password = true`) o reset administrativo, `current_password` puede omitirse.
+         - Para cambio voluntario, `current_password` es obligatoria.
+         - `new_password` es requerida cuando el usuario está definiendo su nueva contraseña; en reset administrativo el backend puede generar una temporal.
       properties:
         current_password:
           type: string
           format: password
-          description: "Obligatoria para cambios voluntarios. Omitir en primer login forzado."
+          description: "Obligatoria para cambios voluntarios. Omitir en primer login forzado o reset administrativo."
         new_password:
           type: string
           format: password
@@ -1214,7 +1212,7 @@ components:
 # Forzamos por defecto que todas las transacciones utilicen Validación Dual del Tenant
 security:
   - bearerAuth: []
-  - tenantHeader: []
+    tenantHeader: []
 
 paths:
   # ----------------------------------------
@@ -1767,7 +1765,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UsuarioProfileExtended'
+                $ref: '#/components/schemas/TenantUserProfile'
         "401":
           description: Token JWT ausente, expirado o inválido.
  
@@ -1808,7 +1806,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UsuarioProfileExtended'
+                $ref: '#/components/schemas/TenantUserProfile'
         "400":
           description: Body vacío o formato inválido.
           content:
