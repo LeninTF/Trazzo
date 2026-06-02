@@ -2,16 +2,16 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
-# Activar pnpm nativamente a través de corepack
-RUN corepack enable pnpm
+# Habilitar pnpm via corepack
+RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml ./
 
-# 2. Instalar dependencias de forma limpia
-RUN pnpm ci
+# 3. Instalar dependencias de forma limpia
+RUN pnpm install --frozen-lockfile
 
-# 3. Copiar el resto del código fuente del frontend
+# 4. Copiar el resto del código fuente del frontend
 COPY . .
 
 # 4. Compilar la aplicación Angular para producción
