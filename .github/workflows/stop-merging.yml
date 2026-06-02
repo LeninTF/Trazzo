@@ -7,10 +7,10 @@ on:
 jobs:
   check-dependabot-alerts:
     runs-on: ubuntu-latest
-    name: Verificar salud de la rama Mmaster
+    name: Verificar salud de la rama Master
     steps:
       - name: Consultar Alertas Activas
-        uses: bennycode/stop-merging@v1
+        uses: bennycode/stop-merging@v1.0.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          severity: critical # Congela nuevos PRs solo si maaster tiene vulnerabilidades CRÍTICAS
+          severity: critical # Congela nuevos PRs solo si master tiene vulnerabilidades CRÍTICAS

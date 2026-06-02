@@ -10,11 +10,11 @@ jobs:
     name: Revisar historial de commits
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Crítico: Necesita todo el historial del PR para validar todos los commits nuevos
 
       - name: Ejecutar Commitlint
         uses: wagoid/commitlint-github-action@v6
         with:
-          configFile: commitlint.config.js
+          configFile: commitlint.config.mjs
