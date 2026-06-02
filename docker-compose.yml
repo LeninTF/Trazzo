@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  trazzo-backend:
+    # 1. Se descarga la imagen del registro.
+    image: ghcr.io/LeninTF/trazzo/trazzo-back:main
+    container_name: trazzo-backend
+    restart: unless-stopped
+    # ports:
+    #   - "8080:8080" # Solo si necesitamos acceso directo, normalmente va a ir detrás del proxy
+    env_file:
+      - .env # Aquí se inyectan las credenciales de BD y JWT en producción
+    networks:
+      - trazzo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+  trazzo-frontend:
+    image: ghcr.io/LeninTF/trazzo/trazzo-front:main
+    container_name: trazzo-frontend
+    restart: unless-stopped
+    networks:
+      - trazzo-network
+    depends_on:
+      trazzo-backend:
+        condition: service_healthy # Espera a que Spring Boot esté 100% arriba para iniciar
+  
+  # TODO: El túnel de Cloudflare se ejecuta como un contenedor separado que se conecta a la misma red interna, lo que le permite enrutar tráfico hacia el backend sin exponer puertos directamente al host.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: trazzo-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=token_generado_en_cloudfare # Este token se obtiene al crear el túnel en el dashboard de Cloudflare
+    networks:
+      - trazzo-network
+  
+networks:
+  trazzo-network:
+    driver: bridge

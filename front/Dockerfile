@@ -2,17 +2,20 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
+# Activar pnpm nativamente a través de corepack
+RUN corepack enable pnpm
+
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
-COPY package.json package-lock.json./
+COPY package.json pnpm-lock.yaml ./
 
 # 2. Instalar dependencias de forma limpia
-RUN npm ci
+RUN pnpm ci
 
 # 3. Copiar el resto del código fuente del frontend
 COPY . .
 
 # 4. Compilar la aplicación Angular para producción
-RUN npm run build --configuration=production
+RUN pnpm run build --configuration=production
 
 # Etapa 2: Servidor Web Ligero (Runtime)
 FROM nginx:alpine

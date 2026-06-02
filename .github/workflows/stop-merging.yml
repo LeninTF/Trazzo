@@ -1,0 +1,16 @@
+name: Gobernanza - Freno de Emergencia (Code Freeze)
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  check-dependabot-alerts:
+    runs-on: ubuntu-latest
+    name: Verificar salud de la rama Mmaster
+    steps:
+      - name: Consultar Alertas Activas
+        uses: bennycode/stop-merging@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          severity: critical # Congela nuevos PRs solo si maaster tiene vulnerabilidades CRÍTICAS

@@ -7,10 +7,10 @@ COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
 # Asegurar permisos de ejecución para el wrapper
-RUN chmod +x./mvnw
+RUN chmod +x ./mvnw
 
 # 2. Descargar las dependencias (optimización de caché de Docker)
-RUN./mvnw dependency:go-offline
+RUN ./mvnw dependency:go-offline
 
 # 3. Copiar el código fuente del proyecto
 COPY src/ ./src/

@@ -2,11 +2,11 @@ name: CI/CD Backend Spring Boot
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'back/**'  # Solo se ejecuta si los archivos dentro del backend cambian
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'back/**'
 
@@ -26,6 +26,26 @@ jobs:
 
       - name: Compilar y Testear (Maven)
         run: mvn -f back/pom.xml clean verify
+      
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Construir Imagen Docker Backend
-        run: docker build -t trazzo-back:latest ./back
+      - name: Extraer metadatos (etiquetas) para Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/trazzo-back
+
+      - name: Construir y Empujar (Push) Imagen Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./back
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha # Usa el caché nativo de GitHub Actions
+          cache-to: type=gha,mode=max

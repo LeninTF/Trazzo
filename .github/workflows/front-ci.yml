@@ -2,11 +2,11 @@ name: CI/CD Frontend Angular
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'front/**' # Solo se ejecuta si los archivos dentro del frontend cambian
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
     paths:
       - 'front/**'
 
@@ -14,6 +14,10 @@ jobs:
   build-front:
     runs-on: ubuntu-latest
     steps:
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 11
       - name: Checkout del código
         uses: actions/checkout@v4
 
@@ -21,16 +25,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24.15.0'
-          cache: 'npm'
-          cache-dependency-path: front/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: front/pnpm-lock.yaml
 
       - name: Instalar Dependencias
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         working-directory: ./front
 
       - name: Compilar Angular
-        run: npm run build -- --configuration=production
+        run: pnpm run build -- --configuration=production
         working-directory: ./front
 
-      - name: Construir Imagen Docker Frontend
-        run: docker build -t trazzo-front:latest ./front
+      - name: Iniciar sesión en GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extraer metadatos (etiquetas) para Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/trazzo-front
+
+      - name: Construir y Empujar (Push) Imagen Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha # Usa el caché nativo de GitHub Actions
+          cache-to: type=gha,mode=max
