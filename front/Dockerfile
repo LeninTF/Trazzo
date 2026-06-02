@@ -6,13 +6,11 @@ WORKDIR /app
 RUN corepack enable pnpm
 
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml ./
 
 # 2. Instalar dependencias de forma limpia
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
-RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract
+RUN pnpm config set ignore-scripts false && \
+    pnpm install --frozen-lockfile
 
 # 3. Copiar el resto del código fuente del frontend
 COPY . .
