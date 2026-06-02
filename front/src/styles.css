@@ -22,10 +22,7 @@ html {
 
 /* Global design tokens */
 :root {
-	--primary: #1E40AF; /* azul intenso */
-	--accent: #60A5FA;
-	--bg-light: #f5f7fa;
-	--success: #34c759;
+	--primary: #1E40AF;
 	--muted: #6b7280;
 }
 
@@ -71,24 +68,6 @@ header.hero .navbar .btn-primary,
 	border-color: var(--primary) !important;
 	color: #fff !important;
 	box-shadow: 0 8px 20px rgba(30,64,175,0.12) !important;
-}
-
-.pricing .card .btn,
-.pricing .card .btn-outline-primary,
-.pricing .featured-plan .btn-white {
-	box-shadow: none !important;
-}
-
-/* Strong override for outline button border color */
-.pricing .card .btn-outline-primary {
-	border: 2px solid var(--primary) !important;
-	color: var(--primary) !important;
-}
-
-/* Ensure featured plan button contrast */
-.pricing .featured-plan .btn-white {
-	background: #ffffff !important;
-	color: var(--primary) !important;
 }
 
 /* If still not visible, increase z-index for navbar */
