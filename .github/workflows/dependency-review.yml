@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Ejecutar Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate # Bloqueará el PR si la vulnerabilidad es Moderada, Alta o Crítica
           deny-licenses: GPL-3.0, AGPL-3.0 # Opcional: Bloquea licencias víricas que te obliguen a hacer Trazzo open-source
