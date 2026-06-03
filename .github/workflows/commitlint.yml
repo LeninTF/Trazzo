@@ -12,7 +12,7 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0 # Crítico: Necesita todo el historial del PR para validar todos los commits nuevos
+          fetch-depth: 0 # Crítico: Necesita el historial del PR para validar todos los commits nuevos
 
       - name: Ejecutar Commitlint
         uses: wagoid/commitlint-github-action@v6
