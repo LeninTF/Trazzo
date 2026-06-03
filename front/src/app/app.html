@@ -1,1 +1,17 @@
-<router-outlet></router-outlet>
+@if (router.url.startsWith('/admin')) {
+	<div class="app-shell">
+		<aside class="app-shell__sidebar">
+			<app-sidebar></app-sidebar>
+		</aside>
+
+		<header class="app-shell__header">
+			<app-header></app-header>
+		</header>
+
+		<main class="app-shell__content">
+			<router-outlet></router-outlet>
+		</main>
+	</div>
+} @else {
+	<router-outlet></router-outlet>
+}

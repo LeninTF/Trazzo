@@ -1,0 +1,52 @@
+:host {
+	display: block;
+	min-height: 100vh;
+	background: #f4f8ff;
+	--sidebar-width: 274px;
+	--header-height: 72px;
+}
+
+.app-shell {
+	min-height: 100vh;
+	background:
+		radial-gradient(circle at top right, rgba(30, 64, 175, 0.08), transparent 30%),
+		linear-gradient(180deg, #f7faff 0%, #f3f7fd 100%);
+	color: #1f2937;
+}
+
+.app-shell__sidebar {
+	position: fixed;
+	inset: 0 auto 0 0;
+	width: var(--sidebar-width);
+	z-index: 1030;
+	background: transparent;
+}
+
+.app-shell__header {
+	position: fixed;
+	top: 0;
+	left: var(--sidebar-width);
+	right: 0;
+	height: var(--header-height);
+	z-index: 1020;
+	background: transparent;
+}
+
+.app-shell__content {
+	min-height: 100vh;
+	padding-top: calc(var(--header-height) + 1rem);
+	padding-left: calc(var(--sidebar-width) + 1.5rem);
+	padding-right: 1.5rem;
+	padding-bottom: 1.5rem;
+}
+
+@media (max-width: 1199.98px) {
+	:host {
+		--sidebar-width: 248px;
+	}
+
+	.app-shell__content {
+		padding-left: calc(var(--sidebar-width) + 1rem);
+	}
+}
+
