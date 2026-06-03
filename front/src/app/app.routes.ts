@@ -4,6 +4,7 @@ import { Form } from './pages/public/form/form';
 import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
+import { Login } from './auth/login/login';
 
 export const routes: Routes = [
     {
@@ -13,6 +14,10 @@ export const routes: Routes = [
     {
         path: 'shop',
         component: Shop
+    },
+    {
+        path: 'login',
+        component: Login
     },
     {
         path: 'contacto',
