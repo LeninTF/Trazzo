@@ -1,15 +1,18 @@
 # Etapa 1: Compilación (Builder)
-FROM node:24-slim AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # Habilitar pnpm via corepack
 RUN corepack enable pnpm
 
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 
 # 2. Instalar dependencias de forma limpia
-RUN pnpm install
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
+RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract
 
 # 3. Copiar el resto del código fuente del frontend
 COPY . .

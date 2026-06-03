@@ -35,7 +35,7 @@ services:
     container_name: trazzo-db-local
     environment:
       POSTGRES_USER: root
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: trazzo_db
     networks:
       - trazzo-local-net

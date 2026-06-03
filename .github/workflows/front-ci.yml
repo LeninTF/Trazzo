@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: front/pnpm-lock.yaml
 
       - name: Instalar Dependencias
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: ./front
 
 #      Detector de Dependencias Circulares
