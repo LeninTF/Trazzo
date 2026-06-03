@@ -1,0 +1,18 @@
+# Ignorar dependencias locales
+node_modules/
+.pnpm-store/
+
+# Ignorar builds locales previos
+dist/
+out/
+.angular/
+
+# Ignorar archivos de control de versiones y editores
+.git/
+.vscode/
+.idea/
+
+# Ignorar logs y debugs
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
