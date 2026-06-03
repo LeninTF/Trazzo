@@ -2,11 +2,17 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
-# 1. Habilitar pnpm via corepack
-RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
+# Habilitar pnpm via corepack
+RUN corepack enable pnpm
 
-# 2. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
-COPY package.json pnpm-lock.yaml ./
+# 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
+COPY package.json pnpm-lock.yaml .npmrc ./
+
+# 2. Instalar dependencias de forma limpia
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
+RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract
 
 # 3. Instalar dependencias de forma limpia
 RUN pnpm install --frozen-lockfile
