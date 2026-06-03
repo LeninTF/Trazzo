@@ -40,8 +40,8 @@ jobs:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -f back/pom.xml -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
-          -Dsonar.projectKey=methodsync-trazzo \
-          -Dsonar.organization=methodsync \
+          -Dsonar.projectKey=LeninTF_Trazzo \
+          -Dsonar.organization=methodsync-trazzo \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.qualitygate.wait=true
 
