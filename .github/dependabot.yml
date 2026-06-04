@@ -2,10 +2,12 @@ version: 2
 updates:
   # 1. Configuración para el Backend (Java / Maven)
   - package-ecosystem: "maven"
-    directory: "/back" # Asegúrate de que esta ruta apunte a la carpeta de tu backend
+    directory: "/back" # Esta ruta apunta a la carpeta del backend
     schedule:
       interval: "weekly"
       day: "monday"
+    commit-message:
+      prefix: "chore(back)"
     groups:
       # Agrupará todas las dependencias de Spring Boot en un solo Pull Request
       spring-boot-updates:
@@ -18,10 +20,12 @@ updates:
 
   # 2. Configuración para el Frontend (Angular / pnpm)
   - package-ecosystem: "npm" # CRÍTICO: Se usa 'npm' aunque uses pnpm
-    directory: "/front" # Asegúrate de que esta ruta apunte a la carpeta de tu frontend
+    directory: "/front" # Esta ruta apunta a la carpeta del frontend
     schedule:
       interval: "weekly"
       day: "monday"
+    commit-message:
+      prefix: "chore(front)"
     groups:
       # Agrupará todas las dependencias del ecosistema Angular en un solo PR
       angular-updates:
@@ -32,12 +36,14 @@ updates:
         patterns:
           - "*"
 
-  # 3. Configuración para el Middleware (C# / .NET) TODO IMPLEMENTAR EN CONJUNTO CON T-MIDDLEWARE
+  # 3. Configuración para el Middleware (C# / .NET)
 #  - package-ecosystem: "nuget"
 #    directory: "/middleware"
 #    schedule:
 #      interval: "weekly"
 #      day: "monday"
+#    commit-message:
+#      prefix: "chore(middleware)"
 #    groups:
 #      dotnet-updates:
 #        patterns:
@@ -49,6 +55,8 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    commit-message:
+      prefix: "ci(actions)"
     groups:
       actions-updates:
         patterns:
