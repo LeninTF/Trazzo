@@ -145,7 +145,7 @@ Las pruebas de aceptación validan que el sistema cumple las expectativas del us
 
 | Escenario | Criterio de aceptación |
 |---|---|
-| Registro de asistencia con huella | Alumno apoya dedo, sistema registra en < 3 segundos |
+| Registro de asistencia con huella | Personal apoya dedo, sistema registra en < 3 segundos |
 | Fallo de internet durante registro | Sistema continúa operando, datos guardados localmente y sincronizados al recuperar conexión |
 | Lector desconectado | Sistema muestra mensaje claro, no se bloquea |
 
