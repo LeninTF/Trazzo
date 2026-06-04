@@ -12,6 +12,7 @@ import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
 import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
 import { Sedes } from './features/admin-tenant/sedes/sedes';
 import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
+import { Planes } from './features/admin-tenant/planes/planes';
 
 export const routes: Routes = [
     {
@@ -73,7 +74,7 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/planes',
-        component: Section
+        component: Planes
     },
     {
         path: 'tenant/directorio-personal',
