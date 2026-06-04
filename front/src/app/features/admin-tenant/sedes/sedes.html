@@ -67,7 +67,12 @@
                   </ul>
                 </div>
               </div>
-              <h2 class="sede-card__title">{{ sede.nombre }}</h2>
+              <h2 class="sede-card__title">
+                {{ sede.nombre }}
+                <span class="sede-card__estado" [class.estado--activo]="sede.estado === 'activo'" [class.estado--inactivo]="sede.estado === 'inactivo'">
+                  {{ sede.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+                </span>
+              </h2>
               <p class="sede-card__descripcion" *ngIf="sede.descripcion">
                 {{ sede.descripcion }}
               </p>
@@ -204,6 +209,13 @@
         <div class="form-group">
           <label class="form-label">Descripción</label>
           <textarea class="form-control" [(ngModel)]="sedeForm.descripcion" placeholder="Ej: Centro de operaciones logísticas en la región de Valencia." rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" [(ngModel)]="sedeForm.estado">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
         </div>
       </div>
       <div class="sede-modal__footer">

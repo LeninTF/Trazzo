@@ -20,6 +20,7 @@ interface Sede {
   nombre: string;
   descripcion: string;
   usuarios: number;
+  estado: 'activo' | 'inactivo';
   areas: Area[];
 }
 
@@ -38,6 +39,7 @@ export class Sedes {
       nombre: 'Centro Logístico Valencia',
       descripcion: 'Centro de operaciones logísticas en la región de Valencia.',
       usuarios: 120,
+      estado: 'activo',
       areas: [
         {
           id: 1,
@@ -63,6 +65,7 @@ export class Sedes {
       nombre: 'Corporativo Madrid',
       descripcion: 'Sede central de la corporación en Madrid.',
       usuarios: 340,
+      estado: 'activo',
       areas: [
         {
           id: 3,
@@ -89,6 +92,7 @@ export class Sedes {
       nombre: 'Hub Barcelona',
       descripcion: 'Centro de innovación y atención al cliente en Barcelona.',
       usuarios: 200,
+      estado: 'activo',
       areas: [
         {
           id: 5,
@@ -134,7 +138,8 @@ export class Sedes {
   sedeForm = {
     id: 0,
     nombre: '',
-    descripcion: ''
+    descripcion: '',
+    estado: 'activo' as 'activo' | 'inactivo'
   };
   sedeEditando: boolean = false;
 
@@ -158,7 +163,7 @@ export class Sedes {
 
   abrirModalSede(): void {
     this.sedeEditando = false;
-    this.sedeForm = { id: 0, nombre: '', descripcion: '' };
+    this.sedeForm = { id: 0, nombre: '', descripcion: '', estado: 'activo' };
   }
 
   editarSede(sede: Sede): void {
@@ -166,7 +171,8 @@ export class Sedes {
     this.sedeForm = {
       id: sede.id,
       nombre: sede.nombre,
-      descripcion: sede.descripcion
+      descripcion: sede.descripcion,
+      estado: sede.estado
     };
     const modalElement = document.getElementById('modalSede');
     if (modalElement) {
@@ -187,7 +193,8 @@ export class Sedes {
         this.sedes[index] = {
           ...this.sedes[index],
           nombre: this.sedeForm.nombre,
-          descripcion: this.sedeForm.descripcion
+          descripcion: this.sedeForm.descripcion,
+          estado: this.sedeForm.estado
         };
       }
     } else {
@@ -196,6 +203,7 @@ export class Sedes {
         nombre: this.sedeForm.nombre,
         descripcion: this.sedeForm.descripcion,
         usuarios: 0,
+        estado: this.sedeForm.estado,
         areas: []
       };
       this.sedes.push(nuevaSede);
@@ -213,7 +221,7 @@ export class Sedes {
   }
 
   private limpiarFormularioSede(): void {
-    this.sedeForm = { id: 0, nombre: '', descripcion: '' };
+    this.sedeForm = { id: 0, nombre: '', descripcion: '', estado: 'activo' };
     this.sedeEditando = false;
   }
 
