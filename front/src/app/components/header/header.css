@@ -68,7 +68,7 @@
 
 .icon-button:hover {
 	background: rgba(30, 64, 175, 0.08);
-	color: #173c97;
+	color: #0f2a6e;
 	transform: translateY(-1px);
 }
 
@@ -124,6 +124,6 @@
 	border: 0;
 	border-radius: 50%;
 	background: rgba(30, 64, 175, 0.08);
-	color: #173c97;
+	color: #0f2a6e;
 }
 

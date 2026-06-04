@@ -70,16 +70,12 @@
           </div>
           <span class="puntuality-value">{{ indicePuntualidad }}%</span>
         </div>
-        <div class="progress puntuality-progress">
-          <div
-            class="progress-bar rounded-pill"
-            role="progressbar"
-            [style.width.%]="indicePuntualidad"
-            [attr.aria-valuenow]="indicePuntualidad"
-            aria-valuemin="0"
-            aria-valuemax="100"
-          ></div>
-        </div>
+        <progress
+          class="progress puntuality-progress rounded-pill"
+          [value]="indicePuntualidad"
+          max="100"
+          [attr.aria-label]="'Puntualidad: ' + indicePuntualidad + '%'"
+        ></progress>
       </div>
 
       <!-- Puntualidad por Rol -->
@@ -91,17 +87,13 @@
               <span class="rol-name">{{ rol.nombre }}</span>
               <span class="rol-percent" [style.color]="rol.color">{{ rol.porcentaje }}%</span>
             </div>
-            <div class="progress rol-progress">
-              <div
-                class="progress-bar rounded-pill"
-                role="progressbar"
-                [style.width.%]="rol.porcentaje"
-                [style.background]="rol.color"
-                [attr.aria-valuenow]="rol.porcentaje"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              ></div>
-            </div>
+            <progress
+              class="progress rol-progress rounded-pill"
+              [value]="rol.porcentaje"
+              max="100"
+              [style.accent-color]="rol.color"
+              [attr.aria-label]="'Puntualidad: ' + rol.porcentaje + '%'"
+            ></progress>
           </div>
         }
       </div>

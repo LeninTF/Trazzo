@@ -27,7 +27,7 @@
 	</header>
 
 	<main id="top">
-		<input class="compare-toggle" type="checkbox" id="compareToggle" aria-hidden="true" />
+		<input class="compare-toggle" type="checkbox" id="compareToggle" />
 		<section class="hero-section pt-5">
 			<div class="container pt-5">
 				<div class="row align-items-center g-5 py-4 py-lg-5">
@@ -270,7 +270,7 @@
 
 		<div class="compare-modal" aria-hidden="true">
 			<label class="compare-modal-backdrop" for="compareToggle" aria-label="Cerrar comparación"></label>
-			<div class="compare-modal-dialog compare-shell" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle">
+			<dialog class="compare-modal-dialog compare-shell" open aria-labelledby="compareModalTitle">
 				<div class="compare-modal-header row align-items-end g-3 mb-4">
 					<div class="col-lg-8">
 						<h2 id="compareModalTitle" class="h3 fw-bold text-dark mb-2">Compare los planes antes de decidir</h2>
@@ -319,7 +319,7 @@
 						</tbody>
 					</table>
 				</div>
-			</div>
+			</dialog>
 		</div>
 
 		<footer class="site-footer">
