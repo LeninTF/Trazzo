@@ -13,6 +13,7 @@ import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/regl
 import { Sedes } from './features/admin-tenant/sedes/sedes';
 import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
 import { Planes } from './features/admin-tenant/planes/planes';
+import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
 
 export const routes: Routes = [
     {
@@ -78,7 +79,7 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/directorio-personal',
-        component: Section
+        component: DirectorioPersonal
     },
     {
         path: 'tenant/gestion-horarios',
