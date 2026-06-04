@@ -69,11 +69,8 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test",
-          "options": {
-            "codeCoverage": true
-          }
-}
+          "builder": "@angular/build:unit-test"
+        }
       }
     }
   }
