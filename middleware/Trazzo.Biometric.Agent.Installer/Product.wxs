@@ -45,7 +45,7 @@
       <Directory Id="TrazzoAgentDataDir" Name="TrazzoAgent" />
     </StandardDirectory>
 
-    <SetProperty Id="TRAZZO_AGENT_DATA_DIR" Value="[TrazzoAgentDataDir]" Before="WixRemoveFoldersEx" Sequence="execute" />
+    <Property Id="TRAZZO_AGENT_DATA_DIR" Value="[TrazzoAgentDataDir]" />
 
     <ComponentGroup Id="DataCleanup">
       <Component Id="cmp_DataCleanup" Directory="TrazzoAgentDataDir" Guid="F7A3B2C1-D4E5-4F60-A8B9-C0D1E2F34567">
