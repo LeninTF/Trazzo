@@ -171,6 +171,43 @@
   color: #6b7da3;
 }
 
+.roles-sidebar__item-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.15rem;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.roles-sidebar__item:hover .roles-sidebar__item-actions,
+.roles-sidebar__item.is-active .roles-sidebar__item-actions {
+  opacity: 1;
+}
+
+.roles-sidebar__item-btn {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #8b96ac;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.roles-sidebar__item-btn:hover {
+  background: rgba(30, 64, 175, 0.08);
+  color: #173c97;
+}
+
+.roles-sidebar__item-btn--danger:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
 .roles-sidebar__item-check {
   flex: 0 0 auto;
   color: #173c97;

@@ -230,6 +230,7 @@ export class GestionRoles {
   rolSeleccionado = 'administrador';
   nuevoRolNombre = '';
   nuevoRolDescripcion = '';
+  editandoRol: Rol | null = null;
   mostrarModalRol = false;
   mensajeGuardado = false;
 
@@ -331,16 +332,33 @@ export class GestionRoles {
   }
 
   abrirModalNuevoRol(): void {
+    this.editandoRol = null;
     this.nuevoRolNombre = '';
     this.nuevoRolDescripcion = '';
     this.mostrarModalRol = true;
   }
 
-  cerrarModalNuevoRol(): void {
-    this.mostrarModalRol = false;
+  abrirModalEditarRol(rol: Rol): void {
+    this.editandoRol = rol;
+    this.nuevoRolNombre = rol.nombre;
+    this.nuevoRolDescripcion = rol.descripcion;
+    this.mostrarModalRol = true;
   }
 
-  agregarRol(): void {
+  cerrarModalNuevoRol(): void {
+    this.mostrarModalRol = false;
+    this.editandoRol = null;
+  }
+
+  guardarRol(): void {
+    if (this.editandoRol) {
+      this.guardarEdicionRol();
+    } else {
+      this.agregarRol();
+    }
+  }
+
+  private agregarRol(): void {
     const nombre = this.nuevoRolNombre.trim();
     if (!nombre) return;
 
@@ -370,5 +388,34 @@ export class GestionRoles {
 
     this.rolSeleccionado = id;
     this.mostrarModalRol = false;
+    this.editandoRol = null;
+  }
+
+  private guardarEdicionRol(): void {
+    if (!this.editandoRol) return;
+    const nombre = this.nuevoRolNombre.trim();
+    if (!nombre) return;
+
+    this.editandoRol.nombre = nombre;
+    this.editandoRol.descripcion = this.nuevoRolDescripcion.trim() || this.editandoRol.descripcion;
+
+    this.mostrarModalRol = false;
+    this.editandoRol = null;
+  }
+
+  eliminarRol(rolId: string): void {
+    const rol = this.roles.find(r => r.id === rolId);
+    if (!rol) return;
+
+    const confirmar = confirm(`¿Eliminar el rol «${rol.nombre}»? Esta acción no se puede deshacer.`);
+    if (!confirmar) return;
+
+    this.roles = this.roles.filter(r => r.id !== rolId);
+    delete this.permisos[rolId];
+    delete this.respaldoPermisos[rolId];
+
+    if (this.rolSeleccionado === rolId) {
+      this.rolSeleccionado = this.roles.length > 0 ? this.roles[0].id : '';
+    }
   }
 }

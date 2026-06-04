@@ -30,11 +30,14 @@
               <span class="roles-sidebar__item-label">{{ rol.nombre }}</span>
               <span class="roles-sidebar__item-desc">{{ rol.descripcion }}</span>
             </span>
-            @if (rolSeleccionado === rol.id) {
-              <span class="roles-sidebar__item-check">
-                <i class="bi bi-check2"></i>
-              </span>
-            }
+            <span class="roles-sidebar__item-actions">
+              <button type="button" class="roles-sidebar__item-btn" (click)="$event.stopPropagation(); abrirModalEditarRol(rol)" title="Editar rol">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="roles-sidebar__item-btn roles-sidebar__item-btn--danger" (click)="$event.stopPropagation(); eliminarRol(rol.id)" title="Eliminar rol">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </span>
           </button>
         }
       </nav>
@@ -135,7 +138,7 @@
     <div class="modal-overlay" (click)="cerrarModalNuevoRol()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <div class="modal-card__header">
-          <h3>Nuevo Rol</h3>
+          <h3>{{ editandoRol ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
           <button type="button" class="modal-card__close" (click)="cerrarModalNuevoRol()">
             <i class="bi bi-x-lg"></i>
           </button>
@@ -147,7 +150,7 @@
             class="modal-card__input"
             placeholder="Ej: Supervisor de piso"
             [(ngModel)]="nuevoRolNombre"
-            (keyup.enter)="agregarRol()"
+            (keyup.enter)="guardarRol()"
           />
           <label class="modal-card__label modal-card__label--mt">Descripción</label>
           <textarea
@@ -159,7 +162,7 @@
         </div>
         <div class="modal-card__footer">
           <button type="button" class="btn-roles btn-roles--outline" (click)="cerrarModalNuevoRol()">Cancelar</button>
-          <button type="button" class="btn-roles btn-roles--primary" (click)="agregarRol()" [disabled]="!nuevoRolNombre.trim()">Crear Rol</button>
+          <button type="button" class="btn-roles btn-roles--primary" (click)="guardarRol()" [disabled]="!nuevoRolNombre.trim()">{{ editandoRol ? 'Guardar Cambios' : 'Crear Rol' }}</button>
         </div>
       </div>
     </div>
