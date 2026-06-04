@@ -8,6 +8,8 @@ import { Login } from './auth/login/login';
 import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
 import { Section } from './features/admin-tenant/section/section';
+import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
+import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
 
 export const routes: Routes = [
     {
@@ -49,11 +51,11 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/incidencias',
-        component: Section
+        component: Incidencias
     },
     {
         path: 'tenant/reglas-asistencia',
-        component: Section
+        component: ReglasAsistencia
     },
     {
         path: 'tenant/sedes',
