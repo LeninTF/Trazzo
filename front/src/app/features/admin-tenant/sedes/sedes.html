@@ -1,47 +1,46 @@
-<!-- sedes.html -->
 <div class="sedes-wrapper">
-  
+
   <!-- HEADER -->
   <header class="sedes-header">
     <div>
-      <h1 class="sedes-title">Gestión de Sedes y Departamentos</h1>
-      <p class="sedes-subtitle">Administre la jerarquía estructural de su organización, defina centros operativos y asigne equipos de trabajo de manera centralizada.</p>
+      <h1 class="sedes-title">Gestión de Sedes, Áreas y Departamentos</h1>
+      <p class="sedes-subtitle">Administre la jerarquía estructural de su organización: sedes, áreas operativas y departamentos.</p>
     </div>
   </header>
 
   <div class="sedes-grid">
-    
+
     <!-- PANEL LATERAL DE ESTADÍSTICAS -->
     <aside class="sidebar-panel">
       <h4 class="sidebar-panel__title">
-        <i class="bi bi-bar-chart-fill me-2"></i> Análisis de Distribución Estructural
+        <i class="bi bi-bar-chart-fill me-2"></i> Resumen Estructural
       </h4>
-      
+
       <div class="stat-card">
         <div class="stat-card__body">
           <small class="stat-card__label">TOTAL SEDES</small>
           <h2 class="stat-card__value">{{ totalSedes }}</h2>
         </div>
       </div>
-      
+
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">TOTAL ÁREAS</small>
+          <h2 class="stat-card__value">{{ totalAreas }}</h2>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">TOTAL USUARIOS</small>
+          <h2 class="stat-card__value">{{ totalUsuarios }}</h2>
+        </div>
+      </div>
+
       <div class="stat-card">
         <div class="stat-card__body">
           <small class="stat-card__label">TOTAL DEPARTAMENTOS</small>
           <h2 class="stat-card__value">{{ totalDepartamentos }}</h2>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-card__body">
-          <small class="stat-card__label">RATIO PERSONAL / SEDE</small>
-          <h2 class="stat-card__value">{{ ratioPersonalPorSede }}</h2>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-card__body">
-          <small class="stat-card__label">CRECIMIENTO ANUAL</small>
-          <h2 class="stat-card__value">{{ crecimientoAnual }}</h2>
         </div>
       </div>
     </aside>
@@ -49,7 +48,7 @@
     <!-- CONTENIDO PRINCIPAL: GRID DE SEDES -->
     <div class="sedes-main">
       <div class="sedes-cards-grid">
-        
+
         <!-- SEDES DINÁMICAS -->
         <div *ngFor="let sede of sedes" class="sede-card">
           <div class="sede-card__header">
@@ -69,45 +68,66 @@
                 </div>
               </div>
               <h2 class="sede-card__title">{{ sede.nombre }}</h2>
-              <p class="sede-card__address">
-                <i class="bi bi-geo-alt-fill me-1"></i> {{ sede.direccion }}
+              <p class="sede-card__descripcion" *ngIf="sede.descripcion">
+                {{ sede.descripcion }}
               </p>
             </div>
           </div>
 
           <div class="sede-card__metrics">
             <div class="metric">
-              <h4 class="metric__value">{{ sede.personal }}</h4>
-              <small class="metric__label">PERSONAL</small>
+              <h4 class="metric__value">{{ sede.areas.length }}</h4>
+              <small class="metric__label">ÁREAS</small>
             </div>
             <div class="metric">
-              <h4 class="metric__value">{{ sede.departamentos.length }}</h4>
-              <small class="metric__label">DEPTS</small>
+              <h4 class="metric__value">{{ sede.usuarios }}</h4>
+              <small class="metric__label">USUARIOS</small>
             </div>
             <div class="metric">
-              <h4 class="metric__value">{{ sede.capacidad }}%</h4>
-              <small class="metric__label">CAPACIDAD</small>
+              <h4 class="metric__value">{{ totalDepartamentosPorSede(sede) }}</h4>
+              <small class="metric__label">DEPARTAMENTOS</small>
             </div>
           </div>
 
-          <div class="sede-card__departamentos">
-            <h6 class="departamentos-title">Departamentos</h6>
-            <div class="departamentos-list">
-              <div *ngFor="let depto of sede.departamentos" class="departamento-item">
-                <span class="departamento-item__name">
-                  {{ depto.nombre }}
-                  <i class="bi bi-pencil-square" (click)="editarDepartamento(sede.id, depto.id)" title="Editar"></i>
-                  <i class="bi bi-trash" (click)="eliminarDepartamento(sede.id, depto.id)" title="Eliminar"></i>
-                </span>
-                <span class="departamento-item__personas">{{ depto.personas }} personas</span>
+          <!-- ÁREAS -->
+          <div class="sede-card__areas">
+            <div class="sede-card__section-header">
+              <h6 class="section-title">Áreas</h6>
+              <button class="btn btn--sm btn--outline-primary" (click)="abrirModalArea(sede.id)">
+                <i class="bi bi-plus-circle"></i> Añadir Área
+              </button>
+            </div>
+            <div class="areas-list">
+              <div *ngFor="let area of sede.areas" class="area-item">
+                <div class="area-item__header">
+                  <div class="area-item__info">
+                    <div class="area-item__name">
+                      <i class="bi bi-diagram-2 me-1"></i> {{ area.nombre }}
+                      <i class="bi bi-pencil-square" (click)="editarArea(sede.id, area.id)" title="Editar área"></i>
+                      <i class="bi bi-trash" (click)="eliminarArea(sede.id, area.id)" title="Eliminar área"></i>
+                    </div>
+                    <p class="area-item__descripcion" *ngIf="area.descripcion">{{ area.descripcion }}</p>
+                  </div>
+                  <div class="area-item__actions">
+                    <span class="area-item__count">{{ area.departamentos.length }} deptos</span>
+                  </div>
+                </div>
+                <div class="area-item__departamentos">
+                  <div *ngFor="let depto of area.departamentos" class="departamento-item">
+                    <span class="departamento-item__name">
+                      <i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i>
+                      {{ depto.nombre }}
+                      <i class="bi bi-pencil-square" (click)="editarDepartamento(sede.id, area.id, depto.id)" title="Editar"></i>
+                      <i class="bi bi-trash" (click)="eliminarDepartamento(sede.id, area.id, depto.id)" title="Eliminar"></i>
+                    </span>
+                    <span class="departamento-item__descripcion" *ngIf="depto.descripcion">{{ depto.descripcion }}</span>
+                  </div>
+                  <button class="btn btn--link btn--sm" (click)="abrirModalDepartamento(area.id, sede.id)">
+                    <i class="bi bi-plus-circle me-1"></i> Añadir Departamento
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div class="sede-card__footer">
-            <button class="btn btn--outline-primary w-100" (click)="abrirModalDepartamento(sede.id)">
-              <i class="bi bi-plus-circle me-2"></i> Añadir Departamento
-            </button>
           </div>
         </div>
 
@@ -115,8 +135,8 @@
         <div class="sede-card sede-card--new">
           <div class="sede-card__body-new">
             <i class="bi bi-plus-circle"></i>
-            <h4>Nueva Sede Regional</h4>
-            <p>Expanda su presencia operativa registrando un nuevo centro.</p>
+            <h4>Nueva Sede</h4>
+            <p>Registre un nuevo centro operativo en su organización.</p>
             <button class="btn btn--success" data-bs-toggle="modal" data-bs-target="#modalSede">
               <i class="bi bi-building-add me-2"></i> Registrar Sede
             </button>
@@ -138,30 +158,35 @@
         </div>
       </div>
       <div class="footer-item">
+        <i class="bi bi-diagram-2"></i>
+        <div>
+          <span class="footer-item__label">ÁREAS</span>
+          <span class="footer-item__value">{{ totalAreas }} áreas</span>
+        </div>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-people"></i>
+        <div>
+          <span class="footer-item__label">USUARIOS</span>
+          <span class="footer-item__value">{{ totalUsuarios }} usuarios</span>
+        </div>
+      </div>
+      <div class="footer-item">
         <i class="bi bi-diagram-3"></i>
         <div>
           <span class="footer-item__label">DEPARTAMENTOS</span>
           <span class="footer-item__value">{{ totalDepartamentos }} departamentos</span>
         </div>
       </div>
-      <div class="footer-item">
-        <i class="bi bi-people"></i>
-        <div>
-          <span class="footer-item__label">PERSONAL TOTAL</span>
-          <span class="footer-item__value">{{ totalPersonal }} empleados</span>
-        </div>
-      </div>
     </div>
     <p class="footer-note">
       <i class="bi bi-info-circle me-1"></i>
-      Los cambios en sedes y departamentos se reflejan automáticamente en todos los módulos del sistema.
+      Los cambios en sedes, áreas y departamentos se reflejan automáticamente en todos los módulos del sistema.
     </p>
   </footer>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL: REGISTRAR/EDITAR SEDE               -->
-<!-- ========================================== -->
+<!-- MODAL: REGISTRAR/EDITAR SEDE -->
 <div class="modal fade" id="modalSede" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalSedeLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content sede-modal">
@@ -177,18 +202,8 @@
           <input type="text" class="form-control" [(ngModel)]="sedeForm.nombre" placeholder="Ej: Centro Logístico Valencia">
         </div>
         <div class="form-group">
-          <label class="form-label">Dirección <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="sedeForm.direccion" placeholder="Ej: Calle Principal 123, Ciudad">
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Personal</label>
-            <input type="number" class="form-control" [(ngModel)]="sedeForm.personal">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Capacidad (%)</label>
-            <input type="number" class="form-control" [(ngModel)]="sedeForm.capacidad" placeholder="0-100">
-          </div>
+          <label class="form-label">Descripción</label>
+          <textarea class="form-control" [(ngModel)]="sedeForm.descripcion" placeholder="Ej: Centro de operaciones logísticas en la región de Valencia." rows="3"></textarea>
         </div>
       </div>
       <div class="sede-modal__footer">
@@ -201,9 +216,44 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL: REGISTRAR/EDITAR DEPARTAMENTO       -->
-<!-- ========================================== -->
+<!-- MODAL: REGISTRAR/EDITAR ÁREA -->
+<div class="modal fade" id="modalArea" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalAreaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content sede-modal">
+      <div class="sede-modal__header">
+        <h4 class="sede-modal__title">
+          <i class="bi bi-diagram-2 me-2"></i> {{ areaEditando ? 'Editar Área' : 'Añadir Área' }}
+        </h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="sede-modal__body">
+        <div class="form-group">
+          <label class="form-label">Sede</label>
+          <select class="form-select" [(ngModel)]="areaForm.sedeId" (change)="onSedeChangeForArea()">
+            <option [value]="0" disabled>Seleccione una sede</option>
+            <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre del Área <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="areaForm.nombre" placeholder="Ej: Operaciones">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-control" [(ngModel)]="areaForm.descripcion" placeholder="Ej: Área encargada de la gestión operativa y de almacén." rows="3"></textarea>
+        </div>
+      </div>
+      <div class="sede-modal__footer">
+        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--primary" (click)="guardarArea()">
+          <i class="bi bi-check-lg me-2"></i> {{ areaEditando ? 'Actualizar' : 'Añadir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REGISTRAR/EDITAR DEPARTAMENTO -->
 <div class="modal fade" id="modalDepartamento" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalDepartamentoLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content sede-modal">
@@ -216,9 +266,16 @@
       <div class="sede-modal__body">
         <div class="form-group">
           <label class="form-label">Sede</label>
-          <select class="form-select" [(ngModel)]="deptoForm.sedeId">
+          <select class="form-select" [(ngModel)]="sedeIdParaDepto" (change)="onSedeChangeForDepto(sedeIdParaDepto)">
             <option [value]="0" disabled>Seleccione una sede</option>
             <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Área</label>
+          <select class="form-select" [(ngModel)]="deptoForm.areaId">
+            <option [value]="0" disabled>Seleccione un área</option>
+            <option *ngFor="let area of areasDeSedeSeleccionada" [value]="area.id">{{ area.nombre }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -226,8 +283,8 @@
           <input type="text" class="form-control" [(ngModel)]="deptoForm.nombre" placeholder="Ej: Ventas Globales">
         </div>
         <div class="form-group">
-          <label class="form-label">Número de Personas</label>
-          <input type="number" class="form-control" [(ngModel)]="deptoForm.personas" placeholder="Ej: 180">
+          <label class="form-label">Descripción</label>
+          <textarea class="form-control" [(ngModel)]="deptoForm.descripcion" placeholder="Ej: Ventas internacionales y nacionales." rows="3"></textarea>
         </div>
       </div>
       <div class="sede-modal__footer">

@@ -213,32 +213,122 @@
   letter-spacing: 0.04em;
 }
 
-/* Departamentos */
-.sede-card__departamentos {
+/* Descripción de la sede */
+.sede-card__descripcion {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+/* Áreas dentro de la sede */
+.sede-card__areas {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-color);
 }
 
-.departamentos-title {
+.sede-card__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-dark);
-  margin: 0 0 12px 0;
+  margin: 0;
 }
 
-.departamentos-list {
+.areas-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
+}
+
+.area-item {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.15s;
+}
+
+.area-item:hover {
+  border-color: var(--primary);
+}
+
+.area-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--bg-light);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.area-item__info {
+  flex: 1;
+}
+
+.area-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.area-item__name i {
+  cursor: pointer;
+  opacity: 0.6;
+  margin-left: 6px;
+  transition: all 0.15s;
+}
+
+.area-item__name i:hover {
+  opacity: 1;
+}
+
+.area-item__name .bi-pencil-square:hover {
+  color: var(--primary);
+}
+
+.area-item__name .bi-trash:hover {
+  color: var(--danger);
+}
+
+.area-item__descripcion {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.area-item__actions {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.area-item__count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.area-item__departamentos {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .departamento-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   transition: all 0.15s;
 }
 
@@ -256,7 +346,7 @@
 .departamento-item__name i {
   cursor: pointer;
   opacity: 0.6;
-  margin-left: 8px;
+  margin-left: 6px;
   transition: all 0.15s;
 }
 
@@ -272,9 +362,8 @@
   color: var(--danger);
 }
 
-.departamento-item__personas {
+.departamento-item__descripcion {
   font-size: 12px;
-  font-weight: 600;
   color: var(--text-muted);
 }
 
@@ -366,6 +455,25 @@
   box-shadow: 0 4px 12px rgba(22, 58, 150, 0.2);
 }
 
+.btn--sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.btn--link {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.btn--link:hover {
+  text-decoration: underline;
+}
+
 .btn--success {
   background: var(--success);
   color: white;
@@ -424,12 +532,6 @@
   margin-bottom: 20px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
 .form-label {
   font-size: 13px;
   font-weight: 600;
@@ -447,6 +549,11 @@
   font-size: 14px;
   color: var(--text-dark);
   transition: all 0.15s;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
 }
 
 .form-control:focus,
@@ -579,15 +686,10 @@
   
   .sede-card__header,
   .sede-card__metrics,
-  .sede-card__departamentos,
+  .sede-card__areas,
   .sede-card__footer {
     padding-left: 16px;
     padding-right: 16px;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 0;
   }
   
   .sede-modal__footer {

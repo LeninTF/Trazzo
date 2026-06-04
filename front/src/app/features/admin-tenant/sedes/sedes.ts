@@ -2,20 +2,25 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-// Interfaces
 interface Departamento {
   id: number;
   nombre: string;
-  personas: number;
+  descripcion: string;
+}
+
+interface Area {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  departamentos: Departamento[];
 }
 
 interface Sede {
   id: number;
   nombre: string;
-  direccion: string;
-  personal: number;
-  capacidad: number;
-  departamentos: Departamento[];
+  descripcion: string;
+  usuarios: number;
+  areas: Area[];
 }
 
 @Component({
@@ -26,353 +31,349 @@ interface Sede {
   styleUrl: './sedes.css',
 })
 export class Sedes {
-  
-  // ==========================================
-  // DATOS PRINCIPALES
-  // ==========================================
+
   sedes: Sede[] = [
     {
       id: 1,
       nombre: 'Centro Logístico Valencia',
-      direccion: 'Polígono Industrial de Riba-roja, 46394, Valencia',
-      personal: 890,
-      capacidad: 68,
-      departamentos: [
-        { id: 1, nombre: 'Operaciones de Alota', personas: 540 },
-        { id: 2, nombre: 'Control de Inventario', personas: 210 }
+      descripcion: 'Centro de operaciones logísticas en la región de Valencia.',
+      usuarios: 120,
+      areas: [
+        {
+          id: 1,
+          nombre: 'Operaciones',
+          descripcion: 'Área encargada de la gestión operativa y de almacén.',
+          departamentos: [
+            { id: 1, nombre: 'Operaciones de Alota', descripcion: 'Gestión de alota y distribución.' },
+            { id: 2, nombre: 'Control de Inventario', descripcion: 'Control y seguimiento de inventario.' }
+          ]
+        },
+        {
+          id: 2,
+          nombre: 'Administración',
+          descripcion: 'Área administrativa y de gestión de personal.',
+          departamentos: [
+            { id: 3, nombre: 'Recursos Humanos', descripcion: 'Gestión de personal y nóminas.' }
+          ]
+        }
       ]
     },
     {
       id: 2,
       nombre: 'Corporativo Madrid',
-      direccion: 'Calle Castellana 25, 28046, Madrid',
-      personal: 1240,
-      capacidad: 85,
-      departamentos: [
-        { id: 3, nombre: 'Ventas Globales', personas: 180 },
-        { id: 4, nombre: 'Recursos Humanos', personas: 32 },
-        { id: 5, nombre: 'Ingeniería & DevOps', personas: 450 }
+      descripcion: 'Sede central de la corporación en Madrid.',
+      usuarios: 340,
+      areas: [
+        {
+          id: 3,
+          nombre: 'Comercial',
+          descripcion: 'Área de ventas y desarrollo de negocio.',
+          departamentos: [
+            { id: 4, nombre: 'Ventas Globales', descripcion: 'Ventas internacionales y nacionales.' },
+            { id: 5, nombre: 'Marketing', descripcion: 'Estrategias de marketing y publicidad.' }
+          ]
+        },
+        {
+          id: 4,
+          nombre: 'Tecnología',
+          descripcion: 'Área de ingeniería y desarrollo tecnológico.',
+          departamentos: [
+            { id: 6, nombre: 'Ingeniería & DevOps', descripcion: 'Desarrollo de software y operaciones.' },
+            { id: 7, nombre: 'Data Science', descripcion: 'Análisis de datos e inteligencia de negocio.' }
+          ]
+        }
       ]
     },
     {
       id: 3,
       nombre: 'Hub Barcelona',
-      direccion: 'Carrer de Sancho de Ávila 65, 08018, Barcelona',
-      personal: 640,
-      capacidad: 92,
-      departamentos: [
-        { id: 6, nombre: 'Atención al Cliente', personas: 310 },
-        { id: 7, nombre: 'UX/UI Design Lab', personas: 45 },
-        { id: 8, nombre: 'Data Science', personas: 120 }
+      descripcion: 'Centro de innovación y atención al cliente en Barcelona.',
+      usuarios: 200,
+      areas: [
+        {
+          id: 5,
+          nombre: 'Atención al Cliente',
+          descripcion: 'Área de soporte y atención al cliente.',
+          departamentos: [
+            { id: 8, nombre: 'Atención al Cliente', descripcion: 'Soporte telefónico y digital.' },
+            { id: 9, nombre: 'UX/UI Design Lab', descripcion: 'Diseño de experiencia de usuario.' }
+          ]
+        }
       ]
     }
   ];
 
-  // ==========================================
-  // CONTADORES Y GETTERS
-  // ==========================================
   get totalSedes(): number {
     return this.sedes.length;
   }
 
+  get totalAreas(): number {
+    return this.sedes.reduce((total, sede) => total + sede.areas.length, 0);
+  }
+
   get totalDepartamentos(): number {
-    return this.sedes.reduce((total, sede) => total + sede.departamentos.length, 0);
+    return this.sedes.reduce((total, sede) =>
+      total + sede.areas.reduce((sub, area) => sub + area.departamentos.length, 0), 0);
   }
 
-  get totalPersonal(): number {
-    return this.sedes.reduce((total, sede) => total + sede.personal, 0);
+  get totalUsuarios(): number {
+    return this.sedes.reduce((total, sede) => total + sede.usuarios, 0);
   }
 
-  get ratioPersonalPorSede(): number {
-    return Math.round(this.totalPersonal / this.totalSedes);
+  totalDepartamentosPorSede(sede: Sede): number {
+    return sede.areas.reduce((total, area) => total + area.departamentos.length, 0);
   }
 
-  get crecimientoAnual(): string {
-    return '+14%';
+  sedeIdParaDepto: number = 0;
+
+  get areasDeSedeSeleccionada(): Area[] {
+    const sede = this.sedes.find(s => s.id === this.sedeIdParaDepto);
+    return sede ? sede.areas : [];
   }
 
-  // ==========================================
-  // FORMULARIOS
-  // ==========================================
-  // Formulario Sede
   sedeForm = {
     id: 0,
     nombre: '',
-    direccion: '',
-    personal: 0,
-    capacidad: 0
+    descripcion: ''
   };
   sedeEditando: boolean = false;
 
-  // Formulario Departamento
-  deptoForm = {
+  areaForm = {
     sedeId: 0,
     id: 0,
     nombre: '',
-    personas: 0
+    descripcion: ''
+  };
+  areaEditando: boolean = false;
+  private sedeIdAreaSeleccionada: number = 0;
+
+  deptoForm = {
+    areaId: 0,
+    id: 0,
+    nombre: '',
+    descripcion: ''
   };
   deptoEditando: boolean = false;
-  private sedeIdSeleccionada: number = 0;
+  private areaIdSeleccionada: number = 0;
 
-  // ==========================================
-  // MÉTODOS PARA SEDES
-  // ==========================================
-  
-  /**
-   * Abre modal para nueva sede
-   */
   abrirModalSede(): void {
     this.sedeEditando = false;
-    this.sedeForm = {
-      id: 0,
-      nombre: '',
-      direccion: '',
-      personal: 0,
-      capacidad: 0
-    };
+    this.sedeForm = { id: 0, nombre: '', descripcion: '' };
   }
 
-  /**
-   * Editar sede existente
-   */
   editarSede(sede: Sede): void {
     this.sedeEditando = true;
     this.sedeForm = {
       id: sede.id,
       nombre: sede.nombre,
-      direccion: sede.direccion,
-      personal: sede.personal,
-      capacidad: sede.capacidad
+      descripcion: sede.descripcion
     };
-    
-    // Abrir modal
     const modalElement = document.getElementById('modalSede');
     if (modalElement) {
-      // @ts-ignore
-      const modal = new bootstrap.Modal(modalElement);
+      const modal = new (window as any).bootstrap.Modal(modalElement);
       modal.show();
     }
   }
 
-  /**
-   * Guardar sede (crear o actualizar)
-   */
   guardarSede(): void {
-    if (!this.sedeForm.nombre || !this.sedeForm.direccion) {
-      alert(' Por favor complete los campos obligatorios');
+    if (!this.sedeForm.nombre) {
+      alert('Por favor complete el nombre de la sede');
       return;
     }
 
     if (this.sedeEditando) {
-      // Actualizar sede existente
       const index = this.sedes.findIndex(s => s.id === this.sedeForm.id);
       if (index !== -1) {
         this.sedes[index] = {
           ...this.sedes[index],
           nombre: this.sedeForm.nombre,
-          direccion: this.sedeForm.direccion,
-          personal: this.sedeForm.personal,
-          capacidad: this.sedeForm.capacidad
+          descripcion: this.sedeForm.descripcion
         };
-        console.log(' Sede actualizada:', this.sedeForm.nombre);
       }
     } else {
-      // Crear nueva sede
       const nuevaSede: Sede = {
         id: Date.now(),
         nombre: this.sedeForm.nombre,
-        direccion: this.sedeForm.direccion,
-        personal: this.sedeForm.personal || 0,
-        capacidad: this.sedeForm.capacidad || 0,
-        departamentos: []
+        descripcion: this.sedeForm.descripcion,
+        usuarios: 0,
+        areas: []
       };
       this.sedes.push(nuevaSede);
-      console.log(' Nueva sede creada:', nuevaSede.nombre);
     }
 
-    // Limpiar formulario y cerrar modal
     this.limpiarFormularioSede();
     this.cerrarModal('modalSede');
   }
 
-  /**
-   * Eliminar sede
-   */
   eliminarSede(id: number): void {
     const sede = this.sedes.find(s => s.id === id);
-    if (sede && confirm(`¿Eliminar la sede "${sede.nombre}" y todos sus departamentos?`)) {
+    if (sede && confirm(`¿Eliminar la sede "${sede.nombre}" y todas sus áreas y departamentos?`)) {
       this.sedes = this.sedes.filter(s => s.id !== id);
-      console.log(` Sede ${id} eliminada`);
     }
   }
 
-  /**
-   * Limpiar formulario de sede
-   */
   private limpiarFormularioSede(): void {
-    this.sedeForm = {
-      id: 0,
-      nombre: '',
-      direccion: '',
-      personal: 0,
-      capacidad: 0
-    };
+    this.sedeForm = { id: 0, nombre: '', descripcion: '' };
     this.sedeEditando = false;
   }
 
-  // ==========================================
-  // MÉTODOS PARA DEPARTAMENTOS
-  // ==========================================
-  
-  /**
-   * Abre modal para nuevo departamento
-   */
-  abrirModalDepartamento(sedeId: number): void {
-    this.deptoEditando = false;
-    this.sedeIdSeleccionada = sedeId;
-    this.deptoForm = {
-      sedeId: sedeId,
-      id: 0,
-      nombre: '',
-      personas: 0
-    };
-    
-    const modalElement = document.getElementById('modalDepartamento');
+  abrirModalArea(sedeId: number): void {
+    this.areaEditando = false;
+    this.sedeIdAreaSeleccionada = sedeId;
+    this.areaForm = { sedeId: sedeId, id: 0, nombre: '', descripcion: '' };
+    const modalElement = document.getElementById('modalArea');
     if (modalElement) {
-      // @ts-ignore
-      const modal = new bootstrap.Modal(modalElement);
+      const modal = new (window as any).bootstrap.Modal(modalElement);
       modal.show();
     }
   }
 
-  /**
-   * Editar departamento existente
-   */
-  editarDepartamento(sedeId: number, deptoId: number): void {
+  editarArea(sedeId: number, areaId: number): void {
     const sede = this.sedes.find(s => s.id === sedeId);
-    const departamento = sede?.departamentos.find(d => d.id === deptoId);
-    
-    if (departamento) {
-      this.deptoEditando = true;
-      this.deptoForm = {
-        sedeId: sedeId,
-        id: deptoId,
-        nombre: departamento.nombre,
-        personas: departamento.personas
-      };
-      
-      const modalElement = document.getElementById('modalDepartamento');
+    const area = sede?.areas.find(a => a.id === areaId);
+    if (area) {
+      this.areaEditando = true;
+      this.areaForm = { sedeId, id: areaId, nombre: area.nombre, descripcion: area.descripcion };
+      const modalElement = document.getElementById('modalArea');
       if (modalElement) {
-        // @ts-ignore
-        const modal = new bootstrap.Modal(modalElement);
+        const modal = new (window as any).bootstrap.Modal(modalElement);
         modal.show();
       }
     }
   }
 
-  /**
-   * Guardar departamento (crear o actualizar)
-   */
-  guardarDepartamento(): void {
-    const sede = this.sedes.find(s => s.id === this.deptoForm.sedeId);
-    
-    if (!sede) {
-      alert(' Sede no encontrada');
-      return;
-    }
+  guardarArea(): void {
+    const sede = this.sedes.find(s => s.id === this.areaForm.sedeId);
+    if (!sede) { alert('Sede no encontrada'); return; }
+    if (!this.areaForm.nombre) { alert('El nombre del área es obligatorio'); return; }
 
-    if (!this.deptoForm.nombre) {
-      alert(' El nombre del departamento es obligatorio');
-      return;
-    }
-
-    if (this.deptoEditando) {
-      // Actualizar departamento existente
-      const index = sede.departamentos.findIndex(d => d.id === this.deptoForm.id);
+    if (this.areaEditando) {
+      const index = sede.areas.findIndex(a => a.id === this.areaForm.id);
       if (index !== -1) {
-        sede.departamentos[index] = {
-          id: this.deptoForm.id,
-          nombre: this.deptoForm.nombre,
-          personas: this.deptoForm.personas || 0
+        sede.areas[index] = {
+          ...sede.areas[index],
+          nombre: this.areaForm.nombre,
+          descripcion: this.areaForm.descripcion
         };
-        console.log(' Departamento actualizado:', this.deptoForm.nombre);
       }
     } else {
-      // Crear nuevo departamento
-      const nuevoDepartamento: Departamento = {
+      sede.areas.push({
         id: Date.now(),
-        nombre: this.deptoForm.nombre,
-        personas: this.deptoForm.personas || 0
-      };
-      sede.departamentos.push(nuevoDepartamento);
-      console.log(' Nuevo departamento creado:', nuevoDepartamento.nombre);
+        nombre: this.areaForm.nombre,
+        descripcion: this.areaForm.descripcion,
+        departamentos: []
+      });
     }
 
-    // Actualizar el total de personal de la sede
-    this.actualizarPersonalSede(sede.id);
+    this.limpiarFormularioArea();
+    this.cerrarModal('modalArea');
+  }
 
-    // Limpiar y cerrar modal
+  eliminarArea(sedeId: number, areaId: number): void {
+    const sede = this.sedes.find(s => s.id === sedeId);
+    const area = sede?.areas.find(a => a.id === areaId);
+    if (area && confirm(`¿Eliminar el área "${area.nombre}" y todos sus departamentos?`)) {
+      if (sede) {
+        sede.areas = sede.areas.filter(a => a.id !== areaId);
+      }
+    }
+  }
+
+  private limpiarFormularioArea(): void {
+    this.areaForm = { sedeId: 0, id: 0, nombre: '', descripcion: '' };
+    this.areaEditando = false;
+    this.sedeIdAreaSeleccionada = 0;
+  }
+
+  abrirModalDepartamento(areaId: number, sedeId: number): void {
+    this.deptoEditando = false;
+    this.areaIdSeleccionada = areaId;
+    this.sedeIdParaDepto = sedeId;
+    this.deptoForm = { areaId, id: 0, nombre: '', descripcion: '' };
+    const modalElement = document.getElementById('modalDepartamento');
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  editarDepartamento(sedeId: number, areaId: number, deptoId: number): void {
+    const sede = this.sedes.find(s => s.id === sedeId);
+    const area = sede?.areas.find(a => a.id === areaId);
+    const departamento = area?.departamentos.find(d => d.id === deptoId);
+    if (departamento) {
+      this.deptoEditando = true;
+      this.sedeIdParaDepto = sedeId;
+      this.deptoForm = { areaId, id: deptoId, nombre: departamento.nombre, descripcion: departamento.descripcion };
+      const modalElement = document.getElementById('modalDepartamento');
+      if (modalElement) {
+        const modal = new (window as any).bootstrap.Modal(modalElement);
+        modal.show();
+      }
+    }
+  }
+
+  guardarDepartamento(): void {
+    const sede = this.sedes.find(s => s.areas.some(a => a.id === this.deptoForm.areaId));
+    const area = sede?.areas.find(a => a.id === this.deptoForm.areaId);
+    if (!area) { alert('Área no encontrada'); return; }
+    if (!this.deptoForm.nombre) { alert('El nombre del departamento es obligatorio'); return; }
+
+    if (this.deptoEditando) {
+      const index = area.departamentos.findIndex(d => d.id === this.deptoForm.id);
+      if (index !== -1) {
+        area.departamentos[index] = {
+          id: this.deptoForm.id,
+          nombre: this.deptoForm.nombre,
+          descripcion: this.deptoForm.descripcion
+        };
+      }
+    } else {
+      area.departamentos.push({
+        id: Date.now(),
+        nombre: this.deptoForm.nombre,
+        descripcion: this.deptoForm.descripcion
+      });
+    }
+
     this.limpiarFormularioDepartamento();
     this.cerrarModal('modalDepartamento');
   }
 
-  /**
-   * Eliminar departamento
-   */
-  eliminarDepartamento(sedeId: number, deptoId: number): void {
+  eliminarDepartamento(sedeId: number, areaId: number, deptoId: number): void {
     const sede = this.sedes.find(s => s.id === sedeId);
-    const departamento = sede?.departamentos.find(d => d.id === deptoId);
-    
+    const area = sede?.areas.find(a => a.id === areaId);
+    const departamento = area?.departamentos.find(d => d.id === deptoId);
     if (departamento && confirm(`¿Eliminar el departamento "${departamento.nombre}"?`)) {
-      if (sede) {
-        sede.departamentos = sede.departamentos.filter(d => d.id !== deptoId);
-        this.actualizarPersonalSede(sedeId);
-        console.log(` Departamento ${deptoId} eliminado`);
+      if (area) {
+        area.departamentos = area.departamentos.filter(d => d.id !== deptoId);
       }
     }
   }
 
-  /**
-   * Actualiza el contador de personal de una sede
-   */
-  private actualizarPersonalSede(sedeId: number): void {
+  private limpiarFormularioDepartamento(): void {
+    this.deptoForm = { areaId: 0, id: 0, nombre: '', descripcion: '' };
+    this.deptoEditando = false;
+    this.areaIdSeleccionada = 0;
+  }
+
+  onSedeChangeForArea(): void {
+    this.areaForm.sedeId = Number(this.areaForm.sedeId);
+  }
+
+  onSedeChangeForDepto(sedeId: number): void {
     const sede = this.sedes.find(s => s.id === sedeId);
-    if (sede) {
-      const totalPersonal = sede.departamentos.reduce((total, depto) => total + depto.personas, 0);
-      sede.personal = totalPersonal;
-      
-      // Actualizar capacidad (ejemplo: basado en un máximo de 2000 personas)
-      const capacidadMaxima = 2000;
-      sede.capacidad = Math.min(100, Math.round((totalPersonal / capacidadMaxima) * 100));
+    if (sede && sede.areas.length > 0) {
+      this.deptoForm.areaId = sede.areas[0].id;
+    } else {
+      this.deptoForm.areaId = 0;
     }
   }
 
-  /**
-   * Limpiar formulario de departamento
-   */
-  private limpiarFormularioDepartamento(): void {
-    this.deptoForm = {
-      sedeId: 0,
-      id: 0,
-      nombre: '',
-      personas: 0
-    };
-    this.deptoEditando = false;
-    this.sedeIdSeleccionada = 0;
-  }
-
-  // ==========================================
-  // MÉTODOS UTILITARIOS
-  // ==========================================
-  
-  /**
-   * Cerrar modal por ID
-   */
   private cerrarModal(modalId: string): void {
     const modalElement = document.getElementById(modalId);
     if (modalElement) {
-      // @ts-ignore
-      const modal = bootstrap.Modal.getInstance(modalElement);
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
       modal?.hide();
     }
   }
