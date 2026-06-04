@@ -26,6 +26,7 @@ public sealed class ZKTecoScannerService(
     private const double DefaultMaximumForegroundCoveragePercent = 75;
     private const double DefaultMinimumContrastScore = 25;
     private const double DefaultCenterTolerancePercent = 28;
+    private const double DefaultContrastThresholdOffset = 15;
 
     private readonly SemaphoreSlim _sdkLock = new(1, 1);
     private readonly SemaphoreSlim _operationLock = new(1, 1);
@@ -37,8 +38,7 @@ public sealed class ZKTecoScannerService(
     private readonly bool _includeFingerprintImageInResponses = configuration.GetValue("Biometric:IncludeFingerprintImageInResponses", false);
     private readonly bool _requireFingerLiftBeforeNextCapture = configuration.GetValue("Biometric:RequireFingerLiftBeforeNextCapture", true);
     private readonly int _minimumTemplateSize = GetPositiveConfigurationValue(configuration, "Biometric:Quality:MinimumTemplateSize", DefaultMinimumTemplateSize);
-    // ZKTeco DBMerge requiere exactamente 3 muestras; se garantiza el mínimo aquí
-    private readonly int _enrollmentSamples = Math.Max(DefaultEnrollmentSamples, GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples));
+    private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
     private readonly int _enrollmentSampleTimeoutSeconds = GetPositiveConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds);
     private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", true);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
@@ -46,7 +46,8 @@ public sealed class ZKTecoScannerService(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MaximumForegroundCoveragePercent", DefaultMaximumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumContrastScore", DefaultMinimumContrastScore),
         configuration.GetValue("Biometric:Quality:RequireCenteredFingerprint", true),
-        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:CenterTolerancePercent", DefaultCenterTolerancePercent));
+        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:CenterTolerancePercent", DefaultCenterTolerancePercent),
+        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:ContrastThresholdOffset", DefaultContrastThresholdOffset));
 
     private byte[] _imageBuffer = new byte[DefaultImageWidth * DefaultImageHeight];
     private byte[] _templateBuffer = new byte[DefaultTemplateBufferSize];
@@ -407,6 +408,14 @@ public sealed class ZKTecoScannerService(
 
             if (captureResult == 0 && templateSize > 0)
             {
+                if (templateSize > _templateBuffer.Length)
+                {
+                    logger.LogWarning(
+                        "SDK reportó templateSize={TemplateSize} mayor que el buffer ({BufferSize}). Captura rechazada.",
+                        templateSize, _templateBuffer.Length);
+                    return CapturedSample.Failed("Error interno: tamaño de plantilla excede el buffer.", BiometricOperationState.Error);
+                }
+
                 if (!IsOperationActive(operationId))
                 {
                     logger.LogWarning("Lectura ignorada porque la sesión ya no está activa.");
@@ -1079,37 +1088,12 @@ public sealed class ZKTecoScannerService(
             : fallback;
     }
 
-    private sealed record CapturedSample(
-        bool Success,
-        string Message,
-        byte[] Template,
-        int TemplateSize,
-        FingerprintQualityResult? Quality,
-        FingerprintImagePayload? Image,
-        BiometricOperationState FinalState)
+    private static int ClampEnrollmentSamples(int configured, ILogger logger)
     {
-        public static CapturedSample Succeeded(byte[] template, int templateSize, FingerprintQualityResult quality, FingerprintImagePayload? image)
-        {
-            return new CapturedSample(true, "Huella capturada correctamente.", template, templateSize, quality, image, BiometricOperationState.Completed);
-        }
-
-        public static CapturedSample Failed(string message, BiometricOperationState finalState, FingerprintQualityResult? quality = null, FingerprintImagePayload? image = null)
-        {
-            return new CapturedSample(false, message, [], 0, quality, image, finalState);
-        }
-    }
-
-    private enum BiometricOperationState
-    {
-        Idle,
-        Capturing,
-        Identifying,
-        Enrolling,
-        Cooldown,
-        Completed,
-        Rejected,
-        TimedOut,
-        Cancelled,
-        Error
+        if (configured != DefaultEnrollmentSamples)
+            logger.LogWarning(
+                "Enrollment:RequiredSamples={Configured} se ignoró. ZKTeco DBMerge requiere exactamente {Required} muestras.",
+                configured, DefaultEnrollmentSamples);
+        return DefaultEnrollmentSamples;
     }
 }

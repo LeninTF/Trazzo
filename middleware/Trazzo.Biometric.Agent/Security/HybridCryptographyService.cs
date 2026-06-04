@@ -16,6 +16,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     private RSA? _rsaPublicKey;
     private readonly object _keyLock = new();
     private Timer? _refreshTimer;
+    private volatile bool _disposed;
 
     internal HybridCryptographyService(
         Func<CancellationToken, Task<string?>> keyFetcher,
@@ -98,6 +99,8 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 
     public void Dispose()
     {
+        _disposed = true;
+        _refreshTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         _refreshTimer?.Dispose();
         _refreshTimer = null;
         lock (_keyLock)
@@ -109,10 +112,11 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 
     private async Task TryRefreshKeyAsync()
     {
+        if (_disposed) return;
         try
         {
             string? base64Key = await _keyFetcher(CancellationToken.None);
-            if (base64Key is not null)
+            if (base64Key is not null && !_disposed)
                 ApplyKey(base64Key);
         }
         catch (Exception ex)

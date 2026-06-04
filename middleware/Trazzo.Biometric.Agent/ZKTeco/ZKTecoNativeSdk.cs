@@ -16,13 +16,13 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
             if (_zkfp2Type is null)
             {
                 LoadError = "No se encontró la DLL del SDK ZKTeco o no se pudo cargar.";
-                logger.LogWarning("{Message}", LoadError);
+                logger.LogError("{Message}", LoadError);
             }
         }
         catch (Exception ex)
         {
             LoadError = $"No se encontró la DLL del SDK ZKTeco o no se pudo cargar. {ex.Message}";
-            logger.LogWarning(ex, "No se pudo cargar el SDK ZKTeco.");
+            logger.LogError(ex, "No se pudo cargar el SDK ZKTeco.");
         }
     }
 

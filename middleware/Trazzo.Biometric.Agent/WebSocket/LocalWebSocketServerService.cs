@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
@@ -18,6 +20,10 @@ public sealed class LocalWebSocketServerService(
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpListener _listener = new();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _clientLastOperationTime = new();
+    private readonly int _rateLimitSeconds = configuration.GetValue("Agent:RateLimitSeconds", 5);
+    private readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(
+        Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
     private CancellationTokenSource? _serverCts;
     private Task? _serverTask;
 
@@ -120,14 +126,16 @@ public sealed class LocalWebSocketServerService(
             }
         }
 
-        using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null)).WebSocket;
-        logger.LogInformation("Cliente WebSocket conectado desde {RemoteEndPoint}", context.Request.RemoteEndPoint);
+        using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null, _keepAliveInterval)).WebSocket;
+        string clientId = context.Request.RemoteEndPoint?.ToString() ?? "unknown";
+        logger.LogInformation("Cliente WebSocket conectado desde {ClientId}", clientId);
 
-        await ReceiveLoopAsync(webSocket, cancellationToken);
+        await ReceiveLoopAsync(webSocket, clientId, cancellationToken);
     }
 
-    private async Task ReceiveLoopAsync(System.Net.WebSockets.WebSocket webSocket, CancellationToken cancellationToken)
+    private async Task ReceiveLoopAsync(System.Net.WebSockets.WebSocket webSocket, string clientId, CancellationToken cancellationToken)
     {
+        Stopwatch sessionTimer = Stopwatch.StartNew();
         byte[] buffer = new byte[8192];
         using SemaphoreSlim sendLock = new(1, 1);
         List<Task> pendingOperations = [];
@@ -155,7 +163,7 @@ public sealed class LocalWebSocketServerService(
                 string json = Encoding.UTF8.GetString(messageStream.ToArray());
                 pendingOperations.RemoveAll(task => task.IsCompleted);
                 pendingOperations.Add(Task.Run(
-                    () => ProcessClientMessageAsync(json, webSocket, sendLock, cancellationToken),
+                    () => ProcessClientMessageAsync(json, webSocket, clientId, sendLock, cancellationToken),
                     CancellationToken.None));
             }
         }
@@ -164,6 +172,13 @@ public sealed class LocalWebSocketServerService(
         }
         catch (WebSocketException)
         {
+        }
+        finally
+        {
+            _clientLastOperationTime.TryRemove(clientId, out _);
+            logger.LogInformation(
+                "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration}s.",
+                clientId, sessionTimer.Elapsed.TotalSeconds.ToString("F1"));
         }
     }
 
@@ -175,16 +190,34 @@ public sealed class LocalWebSocketServerService(
     private async Task ProcessClientMessageAsync(
         string json,
         System.Net.WebSockets.WebSocket webSocket,
+        string clientId,
         SemaphoreSlim sendLock,
         CancellationToken cancellationToken)
     {
         try
         {
-            bool isEnrollStart = IsMessageType(json, "fingerprint.enroll.start");
+            string? operationType = TryParseMessageType(json);
+            bool isBiometricOp = operationType is "fingerprint.capture" or "fingerprint.identify" or "fingerprint.enroll.start";
+
+            if (isBiometricOp && IsRateLimited(clientId, operationType!))
+            {
+                await SendJsonAsync(webSocket,
+                    new { type = "error", success = false, message = $"Demasiadas solicitudes. Espere {_rateLimitSeconds}s entre operaciones biometricas." },
+                    sendLock, cancellationToken);
+                return;
+            }
+
+            Stopwatch opTimer = Stopwatch.StartNew();
+            bool isEnrollStart = operationType == "fingerprint.enroll.start";
             object response = await HandleMessageAsync(
                 json,
                 (progress, token) => SendJsonAsync(webSocket, progress, sendLock, token),
                 cancellationToken);
+
+            if (isBiometricOp)
+                logger.LogInformation(
+                    "Operacion {OperationType} de {ClientId} completada en {ElapsedMs}ms.",
+                    operationType, clientId, opTimer.ElapsedMilliseconds);
 
             if (isEnrollStart && response is FingerprintEnrollResult { Success: false, Message: "Enrolamiento cancelado." })
             {
@@ -211,6 +244,38 @@ public sealed class LocalWebSocketServerService(
                     sendLock,
                     cancellationToken);
             }
+        }
+    }
+
+    private bool IsRateLimited(string clientId, string operationType)
+    {
+        if (_rateLimitSeconds <= 0) return false;
+
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        if (_clientLastOperationTime.TryGetValue(clientId, out DateTimeOffset last)
+            && (now - last).TotalSeconds < _rateLimitSeconds)
+        {
+            double remaining = _rateLimitSeconds - (now - last).TotalSeconds;
+            logger.LogWarning(
+                "Rate limit: {OperationType} rechazada para {ClientId}. Espere {Remaining:F0}s.",
+                operationType, clientId, remaining);
+            return true;
+        }
+
+        _clientLastOperationTime[clientId] = now;
+        return false;
+    }
+
+    private static string? TryParseMessageType(string json)
+    {
+        try
+        {
+            WebSocketMessage? message = JsonSerializer.Deserialize<WebSocketMessage>(json, JsonOptions);
+            return message?.Type;
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
@@ -323,16 +388,4 @@ public sealed class LocalWebSocketServerService(
         }
     }
 
-    private static bool IsMessageType(string json, string expectedType)
-    {
-        try
-        {
-            WebSocketMessage? message = JsonSerializer.Deserialize<WebSocketMessage>(json, JsonOptions);
-            return string.Equals(message?.Type, expectedType, StringComparison.Ordinal);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
 }

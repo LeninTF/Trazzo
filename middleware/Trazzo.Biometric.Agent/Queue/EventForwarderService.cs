@@ -34,12 +34,13 @@ public sealed class EventForwarderService : BackgroundService
         string backendUrl,
         string? agentToken,
         int retryIntervalSeconds,
-        ILogger<EventForwarderService> logger)
+        ILogger<EventForwarderService> logger,
+        string? tenantId = null)
     {
         _queue = queue;
         _logger = logger;
         _retryIntervalSeconds = retryIntervalSeconds;
-        _sender = BuildHttpSender(backendUrl, agentToken, httpClient);
+        _sender = BuildHttpSender(backendUrl, agentToken, tenantId, httpClient);
         _isEnabled = true;
     }
 
@@ -54,6 +55,7 @@ public sealed class EventForwarderService : BackgroundService
 
         string? backendUrl = configuration["Queue:BackendUrl"];
         string? agentToken = configuration["Queue:AgentToken"];
+        string? tenantId = configuration["Agent:TenantId"];
 
         if (string.IsNullOrWhiteSpace(backendUrl))
         {
@@ -64,7 +66,7 @@ public sealed class EventForwarderService : BackgroundService
         }
         else
         {
-            _sender = BuildHttpSender(backendUrl, agentToken, SharedHttpClient);
+            _sender = BuildHttpSender(backendUrl, agentToken, tenantId, SharedHttpClient);
             _isEnabled = true;
         }
     }
@@ -155,7 +157,7 @@ public sealed class EventForwarderService : BackgroundService
     }
 
     private static Func<BiometricEvent, CancellationToken, Task<bool>> BuildHttpSender(
-        string backendUrl, string? agentToken, HttpClient httpClient)
+        string backendUrl, string? agentToken, string? tenantId, HttpClient httpClient)
     {
         return async (evt, ct) =>
         {
@@ -184,6 +186,8 @@ public sealed class EventForwarderService : BackgroundService
             using HttpRequestMessage request = new(HttpMethod.Post, backendUrl) { Content = content };
             if (!string.IsNullOrWhiteSpace(agentToken))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", agentToken);
+            if (!string.IsNullOrWhiteSpace(tenantId))
+                request.Headers.Add("X-Tenant-ID", tenantId);
 
             using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
             return response.IsSuccessStatusCode;

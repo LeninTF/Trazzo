@@ -12,11 +12,12 @@
 
   <ItemGroup>
     <PackageReference Include="WixToolset.UI.wixext" Version="4.0.6" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
     <Compile Include="$(GeneratedWxs)" />
   </ItemGroup>
 
   <Target Name="PublishAgentForMsi" BeforeTargets="CoreCompile">
-    <Exec Command="dotnet publish &quot;$(AgentProject)&quot; -c $(Configuration) -r win-x64 --self-contained false -o &quot;$(AgentPublishDir)&quot;" />
+    <Exec Command="dotnet publish &quot;$(AgentProject)&quot; -c $(Configuration) -r win-x64 --self-contained true -o &quot;$(AgentPublishDir)&quot;" />
     <Error
       Condition="!Exists('$(AgentPublishDir)\Native\x64\libzkfpcsharp.dll')"
       Text="libzkfpcsharp.dll no encontrada en $(AgentPublishDir)\Native\x64\. Copia la DLL oficial x64 en Trazzo.Biometric.Agent\Native\x64\ antes de compilar el MSI." />

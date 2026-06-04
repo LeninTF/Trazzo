@@ -7,7 +7,8 @@ public sealed record FingerprintQualityCriteria(
     double MaximumForegroundCoveragePercent,
     double MinimumContrastScore,
     bool RequireCenteredFingerprint,
-    double CenterTolerancePercent);
+    double CenterTolerancePercent,
+    double ContrastThresholdOffset = 15);
 
 public static class FingerprintQualityAnalyzer
 {
@@ -24,7 +25,7 @@ public static class FingerprintQualityAnalyzer
 
         int totalPixels = width * height;
         double average = CalculateAverage(imageBuffer, totalPixels);
-        double threshold = Math.Max(0, average - 15);
+        double threshold = Math.Max(0, average - criteria.ContrastThresholdOffset);
 
         int foregroundCount = 0;
         long foregroundSum = 0;
