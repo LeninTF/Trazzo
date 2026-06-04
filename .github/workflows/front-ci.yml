@@ -3,8 +3,6 @@ name: CI/CD Frontend Angular
 on:
   pull_request:
     branches: [ "master" ]
-    paths:
-      - 'front/**' # Solo se ejecuta si los archivos dentro del frontend cambian
   push:
     branches: [ "master" ]
     paths:
@@ -37,12 +35,35 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: ./front
 
-#      Detector de Dependencias Circulares
+      #      Detector de Dependencias Circulares
       - name: Auditoría de Dependencias Circulares (Madge)
         run: npx madge --circular --extensions ts ./src
         working-directory: ./front
 
-#      Si no hay dependencias circulares, procedemos a compilar
+      - name: Análisis Estático y Quality Gate (SonarCloud Frontend)
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: ./front
+          args: >
+            -Dsonar.projectName="Trazzo Frontend (Angular)"
+            -Dsonar.projectKey=methodsync-trazzo-front
+            -Dsonar.organization=methodsync
+            -Dsonar.sources=src,Dockerfile
+            -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+      - name: Verificar Quality Gate de SonarCloud
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          scanMetadataReportFile: front/.scannerwork/report-task.txt
+
+      #      Si no hay dependencias circulares, procedemos a compilar
       - name: Compilar Angular
         run: pnpm run build --configuration=production
         working-directory: ./front
