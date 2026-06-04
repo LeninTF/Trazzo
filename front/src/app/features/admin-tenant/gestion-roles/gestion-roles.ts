@@ -229,6 +229,7 @@ export class GestionRoles {
   respaldoPermisos: Record<string, Record<string, boolean>> = {};
   rolSeleccionado = 'administrador';
   nuevoRolNombre = '';
+  nuevoRolDescripcion = '';
   mostrarModalRol = false;
   mensajeGuardado = false;
 
@@ -331,6 +332,7 @@ export class GestionRoles {
 
   abrirModalNuevoRol(): void {
     this.nuevoRolNombre = '';
+    this.nuevoRolDescripcion = '';
     this.mostrarModalRol = true;
   }
 
@@ -345,10 +347,12 @@ export class GestionRoles {
     const id = nombre.toLowerCase().replace(/\s+/g, '-');
     if (this.roles.some(r => r.id === id)) return;
 
+    const descripcion = this.nuevoRolDescripcion.trim() || `Rol personalizado «${nombre}» con permisos configurados según necesidad.`;
+
     const nuevoRol: Rol = {
       id,
       nombre,
-      descripcion: `Rol personalizado «${nombre}» con permisos configurados según necesidad.`,
+      descripcion,
       color: '#6B7280',
       icono: 'bi-person',
     };
