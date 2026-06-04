@@ -159,6 +159,51 @@ C:\Program Files\Trazzo\BiometricAgent\
   *.json
 ```
 
+## CI/CD con GitHub Actions
+
+El repositorio incluye un pipeline en `.github/workflows/middleware-ci.yml` que se activa automáticamente en cada push o pull request que toque la carpeta `middleware/`.
+
+El pipeline tiene dos etapas:
+
+1. **Tests** — compila el proyecto y ejecuta los 26 tests xUnit. No necesita la DLL porque usa implementaciones falsas.
+2. **Build MSI** — solo corre si los tests pasan. Descifra la DLL del SDK desde un secret de GitHub, genera el MSI con WiX Toolset v4 y lo sube como artefacto descargable.
+
+El MSI generado queda disponible en la pestaña **Actions** del repositorio bajo el nombre:
+
+```text
+Trazzo.Biometric.Agent-buildN.msi
+```
+
+### Configurar el secret ZKFP_DLL_BASE64
+
+La DLL `libzkfpcsharp.dll` es propietaria de ZKTeco y no puede subirse al repositorio. El pipeline la recibe como un secret en Base64.
+
+**Paso 1 — Generar el valor Base64**
+
+Abre PowerShell en tu máquina local y ejecuta:
+
+```powershell
+[Convert]::ToBase64String(
+    [IO.File]::ReadAllBytes(
+        "\KZFingerSDK\ZKFingerSDK_Windows_Standard\ZKFinger Standard SDK 5.3.0.33\C#\lib\x64\libzkfpcsharp.dll"
+    )
+) | Set-Clipboard
+```
+
+El comando no muestra nada. El valor ya quedó en el clipboard.
+
+**Paso 2 — Registrar el secret en GitHub**
+
+1. Ve a **Settings** del repositorio en GitHub.
+2. En el menú izquierdo: **Secrets and variables → Actions**.
+3. Clic en **New repository secret**.
+4. Completa los campos:
+   - **Name:** `ZKFP_DLL_BASE64`
+   - **Secret:** Ctrl+V (pega el contenido del clipboard)
+5. Clic en **Add secret**.
+
+A partir de ese momento, cualquier push al middleware genera el MSI automáticamente en GitHub Actions.
+
 ## Instalar Como Servicio
 
 El MSI registra el servicio automáticamente. Debe instalarse como administrador porque es una instalación per-machine y registra un Windows Service.
