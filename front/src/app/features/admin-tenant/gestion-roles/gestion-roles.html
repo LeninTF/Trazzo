@@ -149,6 +149,13 @@
             [(ngModel)]="nuevoRolNombre"
             (keyup.enter)="agregarRol()"
           />
+          <label class="modal-card__label modal-card__label--mt">Descripción</label>
+          <textarea
+            class="modal-card__textarea"
+            placeholder="Describe el alcance de este rol..."
+            [(ngModel)]="nuevoRolDescripcion"
+            rows="3"
+          ></textarea>
         </div>
         <div class="modal-card__footer">
           <button type="button" class="btn-roles btn-roles--outline" (click)="cerrarModalNuevoRol()">Cancelar</button>

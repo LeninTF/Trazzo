@@ -631,6 +631,10 @@
   margin-bottom: 0.4rem;
 }
 
+.modal-card__label--mt {
+  margin-top: 1rem;
+}
+
 .modal-card__input {
   width: 100%;
   padding: 0.7rem 0.9rem;
@@ -651,8 +655,32 @@
   background: #fff;
 }
 
-.modal-card__input::placeholder {
+.modal-card__input::placeholder,
+.modal-card__textarea::placeholder {
   color: #94A3B8;
+}
+
+.modal-card__textarea {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(30, 64, 175, 0.15);
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: #1E293B;
+  background: #F8FAFC;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+
+.modal-card__textarea:focus {
+  border-color: #1E40AF;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+  background: #fff;
 }
 
 .modal-card__footer {
