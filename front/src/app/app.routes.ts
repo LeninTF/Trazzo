@@ -5,9 +5,9 @@ import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
 import { Login } from './auth/login/login';
-import { Dashboard } from './features/admin-sass/dashboard/dashboard';
-import { Monitoreo } from './features/admin-sass/monitoreo/monitoreo';
-import { Section } from './features/admin-sass/section/section';
+import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
+import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
+import { Section } from './features/admin-tenant/section/section';
 
 export const routes: Routes = [
     {
