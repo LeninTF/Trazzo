@@ -1,1 +1,241 @@
-<p>sedes works!</p>
+<!-- sedes.html -->
+<div class="sedes-wrapper">
+  
+  <!-- HEADER -->
+  <header class="sedes-header">
+    <div>
+      <h1 class="sedes-title">Gestión de Sedes y Departamentos</h1>
+      <p class="sedes-subtitle">Administre la jerarquía estructural de su organización, defina centros operativos y asigne equipos de trabajo de manera centralizada.</p>
+    </div>
+  </header>
+
+  <div class="sedes-grid">
+    
+    <!-- PANEL LATERAL DE ESTADÍSTICAS -->
+    <aside class="sidebar-panel">
+      <h4 class="sidebar-panel__title">
+        <i class="bi bi-bar-chart-fill me-2"></i> Análisis de Distribución Estructural
+      </h4>
+      
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">TOTAL SEDES</small>
+          <h2 class="stat-card__value">{{ totalSedes }}</h2>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">TOTAL DEPARTAMENTOS</small>
+          <h2 class="stat-card__value">{{ totalDepartamentos }}</h2>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">RATIO PERSONAL / SEDE</small>
+          <h2 class="stat-card__value">{{ ratioPersonalPorSede }}</h2>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card__body">
+          <small class="stat-card__label">CRECIMIENTO ANUAL</small>
+          <h2 class="stat-card__value">{{ crecimientoAnual }}</h2>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL: GRID DE SEDES -->
+    <div class="sedes-main">
+      <div class="sedes-cards-grid">
+        
+        <!-- SEDES DINÁMICAS -->
+        <div *ngFor="let sede of sedes" class="sede-card">
+          <div class="sede-card__header">
+            <div class="sede-card__icon" style="background: var(--primary-light); color: var(--primary);">
+              <i class="bi bi-building"></i>
+            </div>
+            <div class="sede-card__header-info">
+              <div class="sede-card__actions">
+                <div class="dropdown">
+                  <button class="btn-dropdown" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" (click)="editarSede(sede)"><i class="bi bi-pencil me-2"></i>Editar Sede</a></li>
+                    <li><a class="dropdown-item text-danger" (click)="eliminarSede(sede.id)"><i class="bi bi-trash me-2"></i>Eliminar Sede</a></li>
+                  </ul>
+                </div>
+              </div>
+              <h2 class="sede-card__title">{{ sede.nombre }}</h2>
+              <p class="sede-card__address">
+                <i class="bi bi-geo-alt-fill me-1"></i> {{ sede.direccion }}
+              </p>
+            </div>
+          </div>
+
+          <div class="sede-card__metrics">
+            <div class="metric">
+              <h4 class="metric__value">{{ sede.personal }}</h4>
+              <small class="metric__label">PERSONAL</small>
+            </div>
+            <div class="metric">
+              <h4 class="metric__value">{{ sede.departamentos.length }}</h4>
+              <small class="metric__label">DEPTS</small>
+            </div>
+            <div class="metric">
+              <h4 class="metric__value">{{ sede.capacidad }}%</h4>
+              <small class="metric__label">CAPACIDAD</small>
+            </div>
+          </div>
+
+          <div class="sede-card__departamentos">
+            <h6 class="departamentos-title">Departamentos</h6>
+            <div class="departamentos-list">
+              <div *ngFor="let depto of sede.departamentos" class="departamento-item">
+                <span class="departamento-item__name">
+                  {{ depto.nombre }}
+                  <i class="bi bi-pencil-square" (click)="editarDepartamento(sede.id, depto.id)" title="Editar"></i>
+                  <i class="bi bi-trash" (click)="eliminarDepartamento(sede.id, depto.id)" title="Eliminar"></i>
+                </span>
+                <span class="departamento-item__personas">{{ depto.personas }} personas</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sede-card__footer">
+            <button class="btn btn--outline-primary w-100" (click)="abrirModalDepartamento(sede.id)">
+              <i class="bi bi-plus-circle me-2"></i> Añadir Departamento
+            </button>
+          </div>
+        </div>
+
+        <!-- TARJETA PARA NUEVA SEDE -->
+        <div class="sede-card sede-card--new">
+          <div class="sede-card__body-new">
+            <i class="bi bi-plus-circle"></i>
+            <h4>Nueva Sede Regional</h4>
+            <p>Expanda su presencia operativa registrando un nuevo centro.</p>
+            <button class="btn btn--success" data-bs-toggle="modal" data-bs-target="#modalSede">
+              <i class="bi bi-building-add me-2"></i> Registrar Sede
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="sedes-footer">
+    <div class="footer-grid">
+      <div class="footer-item">
+        <i class="bi bi-building"></i>
+        <div>
+          <span class="footer-item__label">TOTAL SEDES</span>
+          <span class="footer-item__value">{{ totalSedes }} sedes activas</span>
+        </div>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-diagram-3"></i>
+        <div>
+          <span class="footer-item__label">DEPARTAMENTOS</span>
+          <span class="footer-item__value">{{ totalDepartamentos }} departamentos</span>
+        </div>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-people"></i>
+        <div>
+          <span class="footer-item__label">PERSONAL TOTAL</span>
+          <span class="footer-item__value">{{ totalPersonal }} empleados</span>
+        </div>
+      </div>
+    </div>
+    <p class="footer-note">
+      <i class="bi bi-info-circle me-1"></i>
+      Los cambios en sedes y departamentos se reflejan automáticamente en todos los módulos del sistema.
+    </p>
+  </footer>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: REGISTRAR/EDITAR SEDE               -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalSede" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalSedeLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content sede-modal">
+      <div class="sede-modal__header">
+        <h4 class="sede-modal__title">
+          <i class="bi bi-building-add me-2"></i> {{ sedeEditando ? 'Editar Sede' : 'Registrar Nueva Sede' }}
+        </h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="sede-modal__body">
+        <div class="form-group">
+          <label class="form-label">Nombre de la Sede <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="sedeForm.nombre" placeholder="Ej: Centro Logístico Valencia">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dirección <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="sedeForm.direccion" placeholder="Ej: Calle Principal 123, Ciudad">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Personal</label>
+            <input type="number" class="form-control" [(ngModel)]="sedeForm.personal">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Capacidad (%)</label>
+            <input type="number" class="form-control" [(ngModel)]="sedeForm.capacidad" placeholder="0-100">
+          </div>
+        </div>
+      </div>
+      <div class="sede-modal__footer">
+        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--primary" (click)="guardarSede()">
+          <i class="bi bi-check-lg me-2"></i> {{ sedeEditando ? 'Actualizar' : 'Registrar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: REGISTRAR/EDITAR DEPARTAMENTO       -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalDepartamento" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalDepartamentoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content sede-modal">
+      <div class="sede-modal__header">
+        <h4 class="sede-modal__title">
+          <i class="bi bi-diagram-3 me-2"></i> {{ deptoEditando ? 'Editar Departamento' : 'Añadir Departamento' }}
+        </h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="sede-modal__body">
+        <div class="form-group">
+          <label class="form-label">Sede</label>
+          <select class="form-select" [(ngModel)]="deptoForm.sedeId">
+            <option [value]="0" disabled>Seleccione una sede</option>
+            <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre del Departamento <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" [(ngModel)]="deptoForm.nombre" placeholder="Ej: Ventas Globales">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Número de Personas</label>
+          <input type="number" class="form-control" [(ngModel)]="deptoForm.personas" placeholder="Ej: 180">
+        </div>
+      </div>
+      <div class="sede-modal__footer">
+        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--primary" (click)="guardarDepartamento()">
+          <i class="bi bi-check-lg me-2"></i> {{ deptoEditando ? 'Actualizar' : 'Añadir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
