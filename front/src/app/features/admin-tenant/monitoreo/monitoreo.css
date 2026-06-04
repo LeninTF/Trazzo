@@ -1,0 +1,645 @@
+/* ============================================ */
+/* MONITOREO CSS - VISTA PRINCIPAL + MODAL      */
+/* Paleta de colores personalizada              */
+/* ============================================ */
+
+/* ===== VARIABLES GLOBALES ===== */
+:host {
+  display: block;
+  height: 100%;
+}
+
+.monitoreo-container {
+  --page-blue: #1e40af;
+  --page-blue-dark: #17307d;
+  --page-blue-soft: #e8f0ff;
+  --page-ink: #0f172a;
+  --page-muted: #64748b;
+  --page-surface: #ffffff;
+  --page-border: rgba(30, 64, 175, 0.12);
+  
+  font-size: 0.95rem;
+  line-height: 1.55;
+  background:
+    radial-gradient(circle at 84% 6%, rgba(96, 165, 250, 0.28), transparent 24%),
+    radial-gradient(circle at 10% 18%, rgba(30, 64, 175, 0.14), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(37, 99, 235, 0.08), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f3f7ff 48%, #eef4ff 100%);
+  color: var(--page-ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== TIPOGRAFÍA ===== */
+.monitoreo-container h1,
+.monitoreo-container h2,
+.monitoreo-container h3,
+.monitoreo-container h4,
+.monitoreo-container h5,
+.monitoreo-container h6 {
+  letter-spacing: -0.03em;
+}
+
+.display-5 {
+  font-size: clamp(2.15rem, 3.25vw, 3rem);
+  font-weight: 700;
+  color: var(--page-ink);
+}
+
+/* ===== TÍTULO PRINCIPAL ===== */
+.monitoreo-container h1 {
+  color: var(--page-blue);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  border-left: 4px solid var(--page-blue);
+  padding-left: 1rem;
+  margin: 0;
+}
+
+/* ===== BOTÓN REFRESCAR ===== */
+.btn-refrescar {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--page-border);
+  color: var(--page-blue);
+  border-radius: 999px;
+  padding: 0.45rem 1.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-refrescar:hover {
+  background: var(--page-blue);
+  border-color: var(--page-blue);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(30, 64, 175, 0.15);
+}
+
+/* ===== TARJETAS ===== */
+.card {
+  background: var(--page-surface);
+  border: 1px solid var(--page-border) !important;
+  border-radius: 1.5rem !important;
+  transition: all 220ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(30, 64, 175, 0.1);
+  border-color: rgba(30, 64, 175, 0.2) !important;
+}
+
+.card-header {
+  background: var(--page-surface) !important;
+  border-bottom: 1px solid var(--page-border) !important;
+  padding: 1.25rem 1.5rem 0.75rem 1.5rem;
+}
+
+.card-header h5 {
+  color: var(--page-blue);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* ===== BADGES ===== */
+.badge {
+  border-radius: 999px !important;
+  font-weight: 600;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+.badge.bg-success {
+  background-color: #10b981 !important;
+}
+.badge.bg-danger {
+  background-color: #ef4444 !important;
+}
+.badge.bg-info {
+  background-color: #0ea5e9 !important;
+}
+
+/* ===== LISTA DE EVENTOS ===== */
+.evento-item {
+  transition: all 180ms ease;
+  cursor: default;
+}
+
+.evento-item:hover {
+  background: var(--page-blue-soft);
+}
+
+.evento-item .text-muted {
+  color: var(--page-muted) !important;
+}
+
+.evento-item h6 {
+  color: var(--page-ink);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+/* ===== BOTÓN ELIMINAR EVENTO ===== */
+.btn-eliminar-evento {
+  background: transparent;
+  border: none;
+  color: var(--page-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 160ms ease;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.btn-eliminar-evento:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  transform: scale(1.05);
+}
+
+/* ===== ESCÁNERES ===== */
+.escaner-item {
+  transition: all 180ms ease;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0;
+  margin: 0 -0.25rem;
+  cursor: pointer;
+}
+
+.escaner-item:hover {
+  background: var(--page-blue-soft);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.escaner-item strong {
+  color: var(--page-ink);
+}
+
+.escaner-item .text-muted {
+  color: var(--page-muted) !important;
+}
+
+/* ===== BOTÓN REGISTRAR NUEVO ===== */
+.btn-registrar-nuevo {
+  background: transparent;
+  border: 1px solid var(--page-blue);
+  color: var(--page-blue);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-registrar-nuevo:hover {
+  background: var(--page-blue);
+  border-color: var(--page-blue);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(30, 64, 175, 0.2);
+}
+
+/* ===== ALERTA PERSONALIZADA ===== */
+.alert-info-custom {
+  background: var(--page-blue-soft);
+  border: none;
+  border-radius: 1rem;
+  color: var(--page-blue-dark);
+  font-size: 0.8rem;
+}
+
+.alert-info-custom i {
+  color: var(--page-blue);
+}
+
+/* ===== TEXTOS ===== */
+.text-success {
+  color: #10b981 !important;
+}
+
+.text-muted {
+  color: var(--page-muted) !important;
+}
+
+/* ============================================ */
+/* MODAL REGISTRAR DISPOSITIVO                  */
+/* ============================================ */
+
+/* Contenedor principal del modal */
+.registrar-modal-content {
+  border-radius: 1.5rem !important;
+  border: none !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+/* Cabecera del modal */
+.registrar-modal-header {
+  background: var(--page-surface);
+  border-bottom: none !important;
+  padding: 2rem 2rem 1rem 2rem;
+}
+
+.registrar-modal-title {
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 800;
+  color: var(--page-blue);
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.registrar-modal-title i {
+  color: var(--page-blue);
+  font-size: 1.4rem;
+}
+
+/* Botón cerrar */
+.registrar-modal-header .btn-close {
+  background-size: 0.8rem;
+  opacity: 0.6;
+  transition: opacity 160ms ease;
+}
+
+.registrar-modal-header .btn-close:hover {
+  opacity: 1;
+}
+
+/* Cuerpo del modal */
+.registrar-modal-body {
+  padding: 0 2rem 2rem 2rem;
+  background: var(--page-surface);
+}
+
+/* Líneas divisorias */
+.registrar-divider {
+  margin: 1.5rem 0;
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--page-border), transparent);
+}
+
+/* Secciones */
+.registrar-section {
+  margin-bottom: 0.5rem;
+}
+
+.registrar-section-title {
+  font-size: clamp(1.2rem, 2vw, 1.35rem);
+  font-weight: 700;
+  color: var(--page-ink);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.registrar-section-title i {
+  color: var(--page-blue);
+  font-size: 1.2rem;
+}
+
+.registrar-section-description {
+  color: var(--page-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+/* Protocolo de encriptación */
+.registrar-protocolo {
+  background: var(--page-blue-soft);
+  padding: 0.85rem 1.2rem;
+  border-left: 4px solid var(--page-blue);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--page-blue-dark);
+  display: flex;
+  align-items: center;
+  border-radius: 0.75rem;
+  transition: all 180ms ease;
+}
+
+.registrar-protocolo i {
+  font-size: 1rem;
+  color: var(--page-blue);
+}
+
+/* Nota de seguridad */
+.registrar-nota-seguridad {
+  background: #fef2f2;
+  border-left: 4px solid #dc2626;
+  padding: 1rem 1.2rem;
+  border-radius: 0.75rem;
+  transition: all 180ms ease;
+}
+
+.registrar-nota-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.registrar-nota-header i {
+  color: #dc2626;
+  font-size: 1.1rem;
+}
+
+.registrar-nota-header strong {
+  color: #991b1b;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.registrar-nota-text {
+  color: #7f1d1d;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Formulario */
+.registrar-form {
+  margin-top: 0.5rem;
+}
+
+.registrar-form-group {
+  margin-bottom: 1.35rem;
+}
+
+.registrar-label {
+  display: block;
+  font-weight: 700;
+  color: var(--page-ink);
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+.registrar-input,
+.registrar-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--page-border);
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--page-ink);
+  background: var(--page-surface);
+  transition: all 180ms ease;
+}
+
+.registrar-input:focus,
+.registrar-textarea:focus {
+  outline: none;
+  border-color: var(--page-blue);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.registrar-input::placeholder,
+.registrar-textarea::placeholder {
+  color: var(--page-muted);
+  font-size: 0.85rem;
+}
+
+/* Configuración adicional */
+.registrar-config-adicional {
+  background: var(--page-blue-soft);
+  border-radius: 1rem;
+  padding: 1.2rem;
+  margin: 1rem 0;
+  transition: all 180ms ease;
+}
+
+.registrar-config-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(30, 64, 175, 0.15);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--page-blue-dark);
+}
+
+.registrar-config-header i {
+  color: var(--page-blue);
+  font-size: 1rem;
+}
+
+.registrar-checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.registrar-checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--page-blue);
+  cursor: pointer;
+}
+
+.registrar-checkbox-item label {
+  flex: 1;
+  cursor: pointer;
+}
+
+.registrar-checkbox-item strong {
+  display: block;
+  color: var(--page-ink);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.registrar-checkbox-description {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--page-muted);
+  font-weight: normal;
+}
+
+/* Botones de acción */
+.registrar-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-registrar-dispositivo {
+  flex: 1;
+  background: linear-gradient(135deg, var(--page-blue), var(--page-blue-dark));
+  color: white;
+  border: none;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-registrar-dispositivo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(30, 64, 175, 0.25);
+}
+
+.btn-cancelar-dispositivo {
+  flex: 1;
+  background: transparent;
+  color: var(--page-muted);
+  border: 1px solid var(--page-border);
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-cancelar-dispositivo:hover {
+  border-color: var(--page-blue);
+  color: var(--page-blue);
+  background: var(--page-blue-soft);
+  transform: translateY(-2px);
+}
+
+/* ============================================ */
+/* RESPONSIVE DESIGN                            */
+/* ============================================ */
+
+@media (max-width: 991.98px) {
+  .monitoreo-container {
+    padding: 1rem !important;
+  }
+  
+  .display-5 {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .monitoreo-container h1 {
+    font-size: 1.35rem;
+  }
+  
+  .btn-refrescar {
+    padding: 0.35rem 1rem;
+    font-size: 0.75rem;
+  }
+  
+  .evento-item .row {
+    flex-direction: column;
+  }
+  
+  .evento-item .col-2,
+  .evento-item .col-10 {
+    width: 100%;
+    text-align: left !important;
+  }
+  
+  .evento-item .col-2 {
+    margin-top: 0.75rem;
+  }
+  
+  .btn-eliminar-evento {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .evento-item {
+    position: relative;
+  }
+  
+  .registrar-modal-body {
+    padding: 0 1.25rem 1.25rem 1.25rem;
+  }
+  
+  .registrar-modal-header {
+    padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+  }
+  
+  .registrar-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .display-5 {
+    font-size: 1.5rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.3rem 0.7rem;
+  }
+  
+  .registrar-section-title {
+    font-size: 1.1rem;
+  }
+  
+  .btn-registrar-dispositivo,
+  .btn-cancelar-dispositivo {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* ============================================ */
+/* ANIMACIONES Y EFECTOS                        */
+/* ============================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.evento-item {
+  animation: fadeInUp 0.3s ease both;
+}
+
+.evento-item:nth-child(1) { animation-delay: 0.05s; }
+.evento-item:nth-child(2) { animation-delay: 0.1s; }
+.evento-item:nth-child(3) { animation-delay: 0.15s; }
+.evento-item:nth-child(4) { animation-delay: 0.2s; }
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 64, 175, 0.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(30, 64, 175, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 64, 175, 0.5);
+}
