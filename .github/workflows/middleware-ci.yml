@@ -18,7 +18,7 @@ defaults:
 jobs:
 
   # ─────────────────────────────────────────────
-  # Job 1: Compilar y ejecutar los 26 tests
+  # Job 1: Compilar y ejecutar los 86 tests
   # ─────────────────────────────────────────────
   test:
     name: Tests (.NET 10 / win-x64)
@@ -37,7 +37,7 @@ jobs:
         run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
 
       - name: Ejecutar tests
-        run: dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.xml" --results-directory TestResults
+        run: dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx" --results-directory TestResults
 
       - name: Subir resultados de tests
         if: always()
