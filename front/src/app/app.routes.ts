@@ -11,6 +11,7 @@ import { Section } from './features/admin-tenant/section/section';
 import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
 import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
 import { Sedes } from './features/admin-tenant/sedes/sedes';
+import { GestionRoles } from './features/admin-tenant/gestion-roles/gestion-roles';
 import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
@@ -67,7 +68,7 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/gestion-roles',
-        component: Section
+        component: GestionRoles
     },
     {
         path: 'tenant/configuracion-tenant',
