@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>false</SelfContained>
+    <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
     <UseWindowsService>true</UseWindowsService>
     <UserSecretsId>dotnet-Trazzo.Biometric.Agent-c1913859-d226-45c9-8574-2495ebd900c0</UserSecretsId>
   </PropertyGroup>

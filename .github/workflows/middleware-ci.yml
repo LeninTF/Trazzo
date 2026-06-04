@@ -82,8 +82,14 @@ jobs:
       - name: Compilar MSI (WiX Toolset v4)
         run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release
 
-      - name: Subir MSI como artefacto
+      - name: Subir MSI (Español) como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: Trazzo.Biometric.Agent-build${{ github.run_number }}
-          path: middleware/Trazzo.Biometric.Agent.Installer/bin/Release/Trazzo.Biometric.Agent.msi
+          name: Trazzo.Biometric.Agent-es-ES-build${{ github.run_number }}
+          path: middleware/Trazzo.Biometric.Agent.Installer/bin/Release/es-ES/Trazzo.Biometric.Agent.msi
+
+      - name: Subir MSI (English) como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: Trazzo.Biometric.Agent-en-US-build${{ github.run_number }}
+          path: middleware/Trazzo.Biometric.Agent.Installer/bin/Release/en-US/Trazzo.Biometric.Agent.msi
