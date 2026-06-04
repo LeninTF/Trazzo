@@ -42,7 +42,7 @@ jobs:
 
       # Generar cobertura
       - name: Ejecutar pruebas con cobertura
-        run: pnpm test -- --coverage
+        run: pnpm test
         working-directory: ./front
 
       # Verificar que se generó el archivo
