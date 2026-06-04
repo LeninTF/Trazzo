@@ -30,7 +30,7 @@
         <div class="planes-card__body">
           <div class="planes-grid-cards">
             @for (plan of planes(); track plan.id) {
-              <div class="plan-card" [class.plan-card--featured]="planActualId === plan.id" [class.plan-card--active]="planSeleccionadoId === plan.id" (click)="seleccionarPlan(plan)" (keydown.enter)="seleccionarPlan(plan)" tabindex="0" role="button">
+              <div class="plan-card" [class.plan-card--featured]="planActualId === plan.id" [class.plan-card--active]="planSeleccionadoId === plan.id" (click)="seleccionarPlan(plan)">
                 @if (planActualId === plan.id) {
                   <span class="plan-card__badge">Tu plan actual</span>
                 }
@@ -115,7 +115,7 @@
       <div class="planes-card__body">
         <div class="facturas-horizontal">
           @for (factura of facturas(); track factura.id) {
-            <div class="factura-card" [class.factura-card--active]="facturaSeleccionadaId === factura.id" (click)="seleccionarFactura(factura)" (keydown.enter)="seleccionarFactura(factura)" tabindex="0" role="button">
+            <div class="factura-card" [class.factura-card--active]="facturaSeleccionadaId === factura.id" (click)="seleccionarFactura(factura)">
               <div class="factura-card__header">
                 <h6 class="factura-card__title">{{ factura.codigo }}</h6>
                 <span class="factura-card__plan">{{ factura.plan }}</span>
@@ -149,8 +149,8 @@
 <!-- MODAL: ACTUALIZAR PLAN                     -->
 <!-- ========================================== -->
 @if (modalActualizarOpen && planSeleccionado) {
-  <div class="modal-overlay" (click)="cerrarModalActualizar()" (keydown.escape)="cerrarModalActualizar()" tabindex="0" role="button">
-    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+  <div class="modal-overlay" (click)="cerrarModalActualizar()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -185,8 +185,8 @@
 <!-- MODAL: VER DETALLE FACTURA                 -->
 <!-- ========================================== -->
 @if (modalFacturaOpen && facturaSeleccionada) {
-  <div class="modal-overlay" (click)="cerrarModalFactura()" (keydown.escape)="cerrarModalFactura()" tabindex="0" role="button">
-    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+  <div class="modal-overlay" (click)="cerrarModalFactura()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
