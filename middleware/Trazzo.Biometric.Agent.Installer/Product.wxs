@@ -1,4 +1,5 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
   <Package
       Name="Trazzo Biometric Agent"
@@ -18,8 +19,7 @@
     <MediaTemplate EmbedCab="yes" />
     <Launch Condition="VersionNT &gt;= 603" Message="Trazzo Biometric Agent requiere Windows 10 o superior." />
 
-    <UIRef Id="WixUI_InstallDir" />
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
     <!-- banner.bmp = franja superior (493 x 58 px, 24bpp)
          dialog.bmp = panel izquierdo de bienvenida y finalizacion (493 x 312 px, 24bpp) -->
@@ -45,7 +45,7 @@
       <Directory Id="TrazzoAgentDataDir" Name="TrazzoAgent" />
     </StandardDirectory>
 
-    <Property Id="TRAZZO_AGENT_DATA_DIR" Value="[CommonAppDataFolder]TrazzoAgent" />
+    <SetProperty Id="TRAZZO_AGENT_DATA_DIR" Value="[TrazzoAgentDataDir]" Before="WixRemoveFoldersEx" Sequence="execute" />
 
     <ComponentGroup Id="DataCleanup">
       <Component Id="cmp_DataCleanup" Directory="TrazzoAgentDataDir" Guid="F7A3B2C1-D4E5-4F60-A8B9-C0D1E2F34567">
