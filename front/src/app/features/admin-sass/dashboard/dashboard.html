@@ -1,0 +1,143 @@
+<div class="dashboard-wrapper">
+  <!-- Header -->
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="dashboard-title">Dashboard</h1>
+      <p class="dashboard-subtitle">Información sobre la asistencia en tiempo real en toda la institución.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="date-picker">
+        <i class="bi bi-calendar3 me-2"></i>
+        <span>{{ fechaActual }}</span>
+      </div>
+      <button class="btn btn-export">
+        <i class="bi bi-download me-2"></i>
+        Exportar Reporte
+      </button>
+    </div>
+  </header>
+
+  <div class="row g-4">
+    <!-- Left Column -->
+    <div class="col-lg-8 d-flex flex-column gap-4">
+
+      <!-- Hero Card: Usuarios Activos -->
+      <div class="hero-card rounded-4 p-4 text-white">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div class="hero-icon">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <span class="hero-badge">Mejorar</span>
+        </div>
+        <p class="hero-label mb-1">Usuarios Activos</p>
+        <h2 class="hero-value">{{ usuariosActivos }}</h2>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="status-dot"></span>
+          <span class="hero-sub">{{ capacidadPlan }}% de capacidad del plan suscrito</span>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="row g-4">
+        @for (metrica of metricas; track metrica.titulo) {
+          <div class="col-md-6">
+            <div class="metric-card rounded-4 p-4 h-100">
+              <div class="d-flex align-items-center gap-3">
+                <div class="metric-icon" [style.background]="metrica.color + '15'">
+                  <i class="bi" [class]="metrica.icono" [style.color]="metrica.color"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <p class="metric-label mb-1">{{ metrica.titulo }}</p>
+                  <h3 class="metric-value mb-0">{{ metrica.valor }}</h3>
+                </div>
+                <span class="metric-change" [class.text-danger]="metrica.porcentaje.startsWith('+')">
+                  {{ metrica.porcentaje }}
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Puntualidad Global -->
+      <div class="puntuality-card rounded-4 p-4">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="puntuality-icon">
+            <i class="bi bi-stopwatch-fill"></i>
+          </div>
+          <div class="flex-grow-1">
+            <p class="puntuality-label mb-0">Índice de Puntualidad Global</p>
+          </div>
+          <span class="puntuality-value">{{ indicePuntualidad }}%</span>
+        </div>
+        <div class="progress puntuality-progress">
+          <div
+            class="progress-bar rounded-pill"
+            role="progressbar"
+            [style.width.%]="indicePuntualidad"
+            [attr.aria-valuenow]="indicePuntualidad"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Puntualidad por Rol -->
+      <div class="roles-card rounded-4 p-4">
+        <h3 class="section-title mb-4">Puntualidad por Rol</h3>
+        @for (rol of rolesPuntualidad; track rol.nombre) {
+          <div class="rol-item mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="rol-name">{{ rol.nombre }}</span>
+              <span class="rol-percent" [style.color]="rol.color">{{ rol.porcentaje }}%</span>
+            </div>
+            <div class="progress rol-progress">
+              <div
+                class="progress-bar rounded-pill"
+                role="progressbar"
+                [style.width.%]="rol.porcentaje"
+                [style.background]="rol.color"
+                [attr.aria-valuenow]="rol.porcentaje"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Column: Alertas -->
+    <div class="col-lg-4">
+      <div class="alerts-card rounded-4 p-4">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <h3 class="alerts-title mb-0">Alertas Críticas</h3>
+          <span class="alerts-badge">Detección automática</span>
+        </div>
+        <p class="alerts-subtitle">Incidencias registradas en las últimas 24 horas</p>
+
+        <div class="alerts-list mt-4">
+          @for (alerta of alertas; track alerta.titulo + alerta.fechaHora) {
+            <div class="alert-item" [class.alert-danger]="alerta.tipo === 'danger'" [class.alert-warning]="alerta.tipo === 'warning'">
+              <div class="d-flex gap-3">
+                <div class="alert-icon" [class.bg-danger]="alerta.tipo === 'danger'" [class.bg-warning]="alerta.tipo === 'warning'">
+                  <i class="bi" [class]="alerta.icono"></i>
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                  <h4 class="alert-item-title">{{ alerta.titulo }}</h4>
+                  <p class="alert-item-desc">{{ alerta.descripcion }}</p>
+                  <span class="alert-item-date">{{ alerta.fechaHora }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <button class="btn btn-alerts w-100 mt-3">
+          <i class="bi bi-eye me-2"></i>
+          Ver Incidencias
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
