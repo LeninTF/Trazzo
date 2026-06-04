@@ -1,0 +1,159 @@
+<div class="reglas-wrapper">
+  <header class="reglas-header">
+    <div>
+      <h1 class="reglas-title">Configuraci&oacute;n de Reglas</h1>
+      <p class="reglas-subtitle">Gesti&oacute;n de par&aacute;metros globales de asistencia, tiempos de gracia y validaciones biom&eacute;tricas.</p>
+    </div>
+  </header>
+
+  <div class="reglas-grid">
+    <!-- ─── Card: Tolerancia y Puntualidad ─── -->
+    <div class="card card--tolerancia">
+      <div class="card__header">
+        <div class="card__icon" style="background: #EEF2FF; color: #6366F1;">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div>
+          <h2 class="card__title">Tolerancia y Puntualidad</h2>
+          <p class="card__desc">Define los intervalos de gracia para el registro de entrada.</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <label class="slider-label">
+          <span>Tiempo de tolerancia para entrada</span>
+          <span class="slider-value">{{ tolerancia() }} min</span>
+        </label>
+        <input type="range" class="slider" min="0" max="60" step="1"
+          [value]="tolerancia()" (input)="tolerancia.set(+$any($event.target).value)" />
+        <p class="slider-hint">{{ toleranciaTexto }}</p>
+
+        <div class="radio-group">
+          <span class="radio-group__label">M&eacute;todo de c&aacute;lculo</span>
+          <label class="radio" [class.radio--active]="redondeo() === 'estandar'">
+            <input type="radio" name="calculo" value="estandar"
+              [checked]="redondeo() === 'estandar'"
+              (change)="redondeo.set('estandar')" />
+            <div class="radio__content">
+              <span class="radio__title">Redondeo Est&aacute;ndar</span>
+              <span class="radio__desc">Agrupa los registros en bloques de 5 minutos.</span>
+            </div>
+          </label>
+          <label class="radio" [class.radio--active]="redondeo() === 'real'">
+            <input type="radio" name="calculo" value="real"
+              [checked]="redondeo() === 'real'"
+              (change)="redondeo.set('real')" />
+            <div class="radio__content">
+              <span class="radio__title">C&aacute;lculo de Minutos Reales</span>
+              <span class="radio__desc">Registra el minuto exacto de marcaci&oacute;n sin redondeo.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Card: Seguridad Biométrica ─── -->
+    <div class="card card--biometrica">
+      <div class="card__header">
+        <div class="card__icon" style="background: #F0FDF4; color: #10B981;">
+          <i class="bi bi-fingerprint"></i>
+        </div>
+        <div>
+          <h2 class="card__title">Seguridad Biom&eacute;trica</h2>
+          <p class="card__desc">Controla los m&eacute;todos de verificaci&oacute;n de identidad.</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Huella Dactilar</span>
+            <span class="toggle-desc">Permite el registro mediante lector biom&eacute;trico de huella.</span>
+          </div>
+          <button class="toggle" [class.toggle--on]="huellaActivada()" (click)="alternarHuella()" role="switch" [attr.aria-checked]="huellaActivada()">
+            <span class="toggle__knob"></span>
+          </button>
+        </div>
+
+        @if (!huellaActivada()) {
+          <div class="alert alert--warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Al desactivar la huella dactilar, los empleados solo podr&aacute;n registrar su asistencia mediante c&oacute;digo o tarjeta. Esto reduce el nivel de seguridad en la validaci&oacute;n de identidad.
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ─── Card: Políticas de Horas Extra ─── -->
+    <div class="card card--horas-extra">
+      <div class="card__header">
+        <div class="card__icon" style="background: #FFFBEB; color: #F59E0B;">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <div>
+          <h2 class="card__title">Pol&iacute;ticas de Horas Extra</h2>
+          <p class="card__desc">Configura las reglas para el c&aacute;lculo y aprobaci&oacute;n de horas extras.</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <label class="checkbox" [class.checkbox--active]="autorizacionPrevia()">
+          <input type="checkbox" [checked]="autorizacionPrevia()" (change)="alternarAutorizacion()" />
+          <div class="checkbox__content">
+            <span class="checkbox__title">Autorizaci&oacute;n Previa</span>
+            <span class="checkbox__desc">Requiere aprobaci&oacute;n del supervisor antes de registrar horas extra.</span>
+          </div>
+        </label>
+        <label class="checkbox" [class.checkbox--active]="topeSemanal()">
+          <input type="checkbox" [checked]="topeSemanal()" (change)="alternarTope()" />
+          <div class="checkbox__content">
+            <span class="checkbox__title">Tope Semanal</span>
+            <span class="checkbox__desc">M&aacute;ximo de 12 horas extra por semana por empleado.</span>
+          </div>
+        </label>
+        <label class="checkbox" [class.checkbox--active]="recargoNocturno()">
+          <input type="checkbox" [checked]="recargoNocturno()" (change)="alternarRecargo()" />
+          <div class="checkbox__content">
+            <span class="checkbox__title">Recargo Nocturno</span>
+            <span class="checkbox__desc">Aplica recargo del 25% para horas trabajadas desde las 21:00 h.</span>
+          </div>
+        </label>
+        <a href="#" class="link-recargo" (click)="$event.preventDefault()">
+          <i class="bi bi-arrow-right-circle me-1"></i>
+          Configurar Tablas de Recargo
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Footer ─── -->
+  <footer class="reglas-footer">
+    <div class="footer-grid">
+      <div class="footer-item">
+        <i class="bi bi-clock-history"></i>
+        <div>
+          <span class="footer-label">&Uacute;ltima modificaci&oacute;n</span>
+          <span class="footer-value">Hace 2 horas</span>
+        </div>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-shield-check"></i>
+        <div>
+          <span class="footer-label">Administrador</span>
+          <span class="footer-value">Carlos Ruiz</span>
+        </div>
+      </div>
+      <div class="footer-item">
+        <i class="bi bi-people"></i>
+        <div>
+          <span class="footer-label">Impacto</span>
+          <span class="footer-value">1,240 empleados afectados</span>
+        </div>
+      </div>
+    </div>
+    <p class="footer-note">
+      <i class="bi bi-info-circle me-1"></i>
+      Las nuevas reglas se aplicar&aacute;n a partir del siguiente ciclo de n&oacute;mina.
+    </p>
+  </footer>
+</div>
