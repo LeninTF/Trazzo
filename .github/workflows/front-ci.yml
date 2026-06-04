@@ -42,7 +42,7 @@ jobs:
 
       # Generar cobertura
       - name: Ejecutar pruebas con cobertura
-        run: pnpm test --code-coverage --watch=false --browsers=ChromeHeadless
+        run: pnpm test
         working-directory: ./front
 
       # Verificar que se generó el archivo
