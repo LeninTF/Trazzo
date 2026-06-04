@@ -35,48 +35,48 @@ export const routes: Routes = [
         component: TermsAndConditions
     },
     {
-        path: 'admin',
+        path: 'tenant',
         pathMatch: 'full',
-        redirectTo: 'admin/dashboard'
+        redirectTo: 'tenant/dashboard'
     },
     {
-        path: 'admin/dashboard',
+        path: 'tenant/dashboard',
         component: Dashboard
     },
     {
-        path: 'admin/monitoreo',
+        path: 'tenant/monitoreo',
         component: Monitoreo
     },
     {
-        path: 'admin/incidencias',
+        path: 'tenant/incidencias',
         component: Section
     },
     {
-        path: 'admin/reglas-asistencia',
+        path: 'tenant/reglas-asistencia',
         component: Section
     },
     {
-        path: 'admin/sedes',
+        path: 'tenant/sedes',
         component: Section
     },
     {
-        path: 'admin/gestion-roles',
+        path: 'tenant/gestion-roles',
         component: Section
     },
     {
-        path: 'admin/configuracion-tenant',
+        path: 'tenant/configuracion-tenant',
         component: Section
     },
     {
-        path: 'admin/planes',
+        path: 'tenant/planes',
         component: Section
     },
     {
-        path: 'admin/directorio-personal',
+        path: 'tenant/directorio-personal',
         component: Section
     },
     {
-        path: 'admin/gestion-horarios',
+        path: 'tenant/gestion-horarios',
         component: Section
     }
 ];
