@@ -121,6 +121,11 @@ export class Monitoreo implements OnInit, OnDestroy {
   };
 
   // ==========================================
+  // DATOS PARA ELIMINAR ESCÁNER
+  // ==========================================
+  escanerAEliminar: Escaner | null = null;
+
+  // ==========================================
   // TIMER PARA ACTUALIZACIÓN EN TIEMPO REAL
   // ==========================================
   private intervalId: any;
@@ -161,12 +166,14 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ==========================================
   
   ngOnInit(): void {
+    // Iniciar actualización automática cada 30 segundos
     this.intervalId = setInterval(() => {
       this.actualizarDatosTiempoReal();
     }, 30000);
   }
 
   ngOnDestroy(): void {
+    // Limpiar intervalo al destruir el componente
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
@@ -176,10 +183,14 @@ export class Monitoreo implements OnInit, OnDestroy {
   // MÉTODOS DE ACTUALIZACIÓN
   // ==========================================
   
+  /**
+   * Simula actualización en tiempo real
+   */
   actualizarDatosTiempoReal(): void {
-    console.log('🔄 Actualizando datos en tiempo real...');
+    console.log(' Actualizando datos en tiempo real...');
     this.ultimaActualizacion = new Date();
     
+    // Simular un nuevo evento aleatorio
     const nombres = ['María López', 'Pedro Sánchez', 'Ana García', 'Luis Fernández'];
     const roles = ['Administración', 'Docente', 'Personal de servicio', 'Invitado'];
     const escaneres = ['ESCÁNER 01', 'ESCÁNER 02', 'ESCÁNER 03'];
@@ -197,12 +208,15 @@ export class Monitoreo implements OnInit, OnDestroy {
       online: true
     };
     
+    // Agregar al inicio (más reciente primero)
     this.eventos.unshift(nuevoEvento);
     
+    // Mantener solo últimos 10 eventos
     if (this.eventos.length > 10) {
       this.eventos.pop();
     }
     
+    // Actualizar métricas
     this.metricas.presentesHoy += 1;
     this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
     
@@ -218,6 +232,10 @@ export class Monitoreo implements OnInit, OnDestroy {
     console.log(`📢 Nuevo evento: ${nuevoEvento.nombre} - ${nuevoEvento.estado}`);
   }
 
+  // ==========================================
+  // MÉTODOS PARA ESCÁNERES
+  // ==========================================
+  
   /**
    * Registrar nuevo escáner
    */
@@ -242,10 +260,10 @@ export class Monitoreo implements OnInit, OnDestroy {
     this.metricas.totalDispositivos = this.escaneres.length;
     this.actualizarContadorDispositivos();
     
-    // Agregar log
-    this.agregarEventoDeSistema(`Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
+    // Agregar evento de sistema
+    this.agregarEventoDeSistema(`📡 Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
     
-    this.mostrarToast(`✅ Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
+    this.mostrarToast(` Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
     
     // Limpiar formulario
     this.limpiarFormularioEscaner();
@@ -253,6 +271,84 @@ export class Monitoreo implements OnInit, OnDestroy {
     // Cerrar modal
     this.cerrarModal('modalRegistrarEscaner');
   }
+  
+  /**
+   * Abrir modal de confirmación para eliminar escáner
+   */
+  eliminarEscaner(id: number): void {
+    this.escanerAEliminar = this.escaneres.find(e => e.id === id) || null;
+    if (this.escanerAEliminar) {
+      const modalElement = document.getElementById('modalConfirmarEliminar');
+      if (modalElement) {
+        // @ts-ignore
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+      }
+    }
+  }
+  
+  /**
+   * Confirmar y eliminar escáner
+   */
+  confirmarEliminarEscaner(): void {
+    if (this.escanerAEliminar) {
+      const nombreEscaner = this.escanerAEliminar.nombre;
+      this.escaneres = this.escaneres.filter(e => e.id !== this.escanerAEliminar!.id);
+      
+      // Actualizar métricas
+      this.metricas.totalDispositivos = this.escaneres.length;
+      this.actualizarContadorDispositivos();
+      
+      // Agregar evento de sistema
+      this.agregarEventoDeSistema(`🗑️ Escáner eliminado: ${nombreEscaner}`);
+      
+      this.mostrarToast(`🗑️ Escáner "${nombreEscaner}" eliminado correctamente`);
+      
+      // Cerrar modal
+      this.cerrarModal('modalConfirmarEliminar');
+      this.escanerAEliminar = null;
+    }
+  }
+  
+  /**
+   * Alternar estado online/offline de un escáner
+   */
+  toggleEscaner(id: number): void {
+    const escaner = this.escaneres.find(e => e.id === id);
+    if (escaner) {
+      escaner.online = !escaner.online;
+      this.actualizarContadorDispositivos();
+      const estado = escaner.online ? 'EN LÍNEA' : 'OFFLINE';
+      this.mostrarToast(` Escáner ${escaner.nombre} ahora está ${estado}`);
+      
+      // Agregar evento de sistema por cambio de estado
+      this.agregarEventoDeSistema(` Escáner ${escaner.nombre} cambió a ${estado}`);
+    }
+  }
+  
+  /**
+   * Limpiar formulario del escáner
+   */
+  limpiarFormularioEscaner(): void {
+    this.nuevoEscaner = {
+      nombre: '',
+      ubicacion: '',
+      online: true
+    };
+  }
+  
+  /**
+   * Actualizar contador de dispositivos activos
+   */
+  private actualizarContadorDispositivos(): void {
+    const activos = this.escaneres.filter(e => e.online).length;
+    this.metricas.dispositivosActivos = activos;
+    this.metricas.totalDispositivos = this.escaneres.length;
+  }
+
+  // ==========================================
+  // MÉTODOS PARA EVENTOS
+  // ==========================================
   
   /**
    * Agregar evento de sistema a la lista de eventos
@@ -277,15 +373,39 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
   
   /**
-   * Limpiar formulario del escáner
+   * Eliminar evento
    */
-  limpiarFormularioEscaner(): void {
-    this.nuevoEscaner = {
-      nombre: '',
-      ubicacion: '',
-      online: true
-    };
+  eliminarEvento(id: number): void {
+    const evento = this.eventos.find(e => e.id === id);
+    if (evento && confirm(`¿Eliminar evento de ${evento.nombre}?`)) {
+      this.eventos = this.eventos.filter(e => e.id !== id);
+      console.log(` Evento ${id} eliminado`);
+      
+      // Actualizar métricas (opcional)
+      if (evento.estado === 'TARDE') {
+        this.metricas.tardanzas -= 1;
+      }
+      this.metricas.presentesHoy -= 1;
+      this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
+    }
   }
+
+  // ==========================================
+  // MÉTODOS DE ACTUALIZACIÓN MANUAL
+  // ==========================================
+  
+  /**
+   * Refrescar todos los datos manualmente
+   */
+  refrescarDatos(): void {
+    console.log('🔄 Refrescando datos manualmente...');
+    this.actualizarDatosTiempoReal();
+    this.mostrarToast('🔄 Datos actualizados correctamente');
+  }
+
+  // ==========================================
+  // MÉTODOS UTILITARIOS
+  // ==========================================
   
   /**
    * Cerrar modal programáticamente
@@ -300,57 +420,10 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
   
   /**
-   * Eliminar evento
-   */
-  eliminarEvento(id: number): void {
-    const evento = this.eventos.find(e => e.id === id);
-    if (evento && confirm(`¿Eliminar evento de ${evento.nombre}?`)) {
-      this.eventos = this.eventos.filter(e => e.id !== id);
-      console.log(`🗑️ Evento ${id} eliminado`);
-      
-      if (evento.estado === 'TARDE') {
-        this.metricas.tardanzas -= 1;
-      }
-      this.metricas.presentesHoy -= 1;
-      this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
-    }
-  }
-  
-  /**
-   * Alternar estado online/offline de un escáner
-   */
-  toggleEscaner(id: number): void {
-    const escaner = this.escaneres.find(e => e.id === id);
-    if (escaner) {
-      escaner.online = !escaner.online;
-      this.actualizarContadorDispositivos();
-      const estado = escaner.online ? 'EN LÍNEA' : 'OFFLINE';
-      this.mostrarToast(`🔄 Escáner ${escaner.nombre} ahora está ${estado}`);
-    }
-  }
-  
-  /**
-   * Actualizar contador de dispositivos activos
-   */
-  private actualizarContadorDispositivos(): void {
-    const activos = this.escaneres.filter(e => e.online).length;
-    this.metricas.dispositivosActivos = activos;
-    this.metricas.totalDispositivos = this.escaneres.length;
-  }
-  
-  /**
-   * Refrescar todos los datos manualmente
-   */
-  refrescarDatos(): void {
-    console.log('🔄 Refrescando datos manualmente...');
-    this.actualizarDatosTiempoReal();
-    this.mostrarToast('🔄 Datos actualizados correctamente');
-  }
-  
-  /**
    * Mostrar toast notification
    */
   private mostrarToast(mensaje: string): void {
+    // Crear elemento toast
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerHTML = `
@@ -361,6 +434,7 @@ export class Monitoreo implements OnInit, OnDestroy {
     `;
     document.body.appendChild(toast);
     
+    // Animar y eliminar
     setTimeout(() => {
       toast.classList.add('toast-notification--show');
       setTimeout(() => {
