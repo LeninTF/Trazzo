@@ -1,28 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="es-ES">
-
-  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}Bienvenido al asistente de instalacion de [ProductName]" />
-  <String Id="WelcomeDlgDescription" Value="El asistente instalara [ProductName] en su equipo.\n\nSe recomienda cerrar todas las aplicaciones antes de continuar.\n\nHaga clic en Siguiente para continuar o en Cancelar para salir." />
-
-  <String Id="InstallDirDlgTitle" Value="{\WixUI_Font_Bigger}Carpeta de destino" />
-  <String Id="InstallDirDlgDescription" Value="Haga clic en Siguiente para instalar en la carpeta predeterminada, o en Cambiar para elegir otra ubicacion." />
-  <String Id="InstallDirDlgBrowseLabel" Value="Instalar [ProductName] en:" />
-  <String Id="InstallDirDlgChangeLabel" Value="&amp;Cambiar..." />
-
-  <String Id="VerifyReadyDlgTitle" Value="{\WixUI_Font_Bigger}Listo para instalar" />
-  <String Id="VerifyReadyDlgInstallDescription" Value="Haga clic en Instalar para comenzar. Haga clic en Atras para revisar o cambiar la configuracion." />
-
-  <String Id="ProgressDlgTitle" Value="{\WixUI_Font_Bigger}Instalando [ProductName]" />
-  <String Id="ProgressDlgDescription" Value="Espere mientras se instala [ProductName]." />
-
-  <String Id="ExitDlgTitle" Value="{\WixUI_Font_Bigger}Instalacion completada" />
-  <String Id="ExitDlgDescription" Value="[ProductName] se ha instalado correctamente.\n\nHaga clic en Finalizar para salir del asistente." />
-
-  <String Id="WixUINext" Value="&amp;Siguiente >" />
-  <String Id="WixUIBack" Value="&lt; &amp;Atras" />
-  <String Id="WixUICancel" Value="Cancelar" />
-  <String Id="WixUIFinish" Value="&amp;Finalizar" />
-  <String Id="WixUIInstall" Value="&amp;Instalar" />
-  <String Id="WixUIClose" Value="&amp;Cerrar" />
-
+  <!-- Strings personalizados del producto van aqui -->
 </WixLocalization>

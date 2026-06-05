@@ -1,28 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="en-US">
-
-  <String Id="WelcomeDlgTitle" Value="{\WixUI_Font_Bigger}Welcome to the [ProductName] Setup Wizard" />
-  <String Id="WelcomeDlgDescription" Value="The wizard will install [ProductName] on your computer.\n\nIt is recommended that you close all other applications before continuing.\n\nClick Next to continue or Cancel to exit." />
-
-  <String Id="InstallDirDlgTitle" Value="{\WixUI_Font_Bigger}Destination Folder" />
-  <String Id="InstallDirDlgDescription" Value="Click Next to install to the default folder, or click Change to choose another location." />
-  <String Id="InstallDirDlgBrowseLabel" Value="Install [ProductName] to:" />
-  <String Id="InstallDirDlgChangeLabel" Value="&amp;Change..." />
-
-  <String Id="VerifyReadyDlgTitle" Value="{\WixUI_Font_Bigger}Ready to Install" />
-  <String Id="VerifyReadyDlgInstallDescription" Value="Click Install to begin the installation. Click Back to review or change any settings." />
-
-  <String Id="ProgressDlgTitle" Value="{\WixUI_Font_Bigger}Installing [ProductName]" />
-  <String Id="ProgressDlgDescription" Value="Please wait while [ProductName] is being installed." />
-
-  <String Id="ExitDlgTitle" Value="{\WixUI_Font_Bigger}Installation Complete" />
-  <String Id="ExitDlgDescription" Value="[ProductName] has been successfully installed.\n\nClick Finish to exit the wizard." />
-
-  <String Id="WixUINext" Value="&amp;Next >" />
-  <String Id="WixUIBack" Value="&lt; &amp;Back" />
-  <String Id="WixUICancel" Value="Cancel" />
-  <String Id="WixUIFinish" Value="&amp;Finish" />
-  <String Id="WixUIInstall" Value="&amp;Install" />
-  <String Id="WixUIClose" Value="&amp;Close" />
-
+  <!-- Custom product strings go here -->
 </WixLocalization>

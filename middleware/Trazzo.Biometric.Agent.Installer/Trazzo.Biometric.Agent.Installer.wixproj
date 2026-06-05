@@ -5,6 +5,7 @@
     <InstallerPlatform>x64</InstallerPlatform>
     <ProductVersion>1.0.0</ProductVersion>
     <Cultures>es-ES;en-US</Cultures>
+    <SuppressValidation>true</SuppressValidation>
     <AgentProject>..\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj</AgentProject>
     <AgentPublishDir>$(MSBuildThisFileDirectory)obj\publish</AgentPublishDir>
     <GeneratedWxs>$(MSBuildThisFileDirectory)obj\$(Configuration)\Product.Generated.wxs</GeneratedWxs>
