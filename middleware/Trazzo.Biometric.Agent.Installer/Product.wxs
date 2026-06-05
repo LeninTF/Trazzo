@@ -19,6 +19,9 @@
     <MediaTemplate EmbedCab="yes" />
     <Launch Condition="VersionNT &gt;= 603" Message="Trazzo Biometric Agent requiere Windows 10 o superior." />
 
+    <!-- Genera log automatico en %TEMP%\MSI*.LOG en cada instalacion/desinstalacion -->
+    <Property Id="MsiLogging" Value="voicewarmup" />
+
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
 
     <!-- banner.bmp = franja superior (493 x 58 px, 24bpp)

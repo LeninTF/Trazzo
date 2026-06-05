@@ -93,7 +93,6 @@ New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 $xml = New-Object System.Xml.XmlDocument
 $xml.PreserveWhitespace = $true
 $wix = $xml.CreateElement("Wix", "http://wixtoolset.org/schemas/v4/wxs")
-$wix.SetAttribute("xmlns:util", "http://wixtoolset.org/schemas/v4/wxs/util")
 [void]$xml.AppendChild($wix)
 
 $fragment = $xml.CreateElement("Fragment", $wix.NamespaceURI)
@@ -167,23 +166,18 @@ foreach ($file in $files) {
         $serviceControl = $xml.CreateElement("ServiceControl", $wix.NamespaceURI)
         $serviceControl.SetAttribute("Id", "TrazzoAgentServiceControl")
         $serviceControl.SetAttribute("Name", "TrazzoAgent")
+        # Start="install" con Wait="no": arranca el servicio al finalizar la instalacion sin esperar
+        # a que alcance estado "Running". Asi no hay rollback si el hardware no esta conectado
+        # o si el SCM tarda en arrancar el servicio (libzkfpcsharp.dll u otros).
         $serviceControl.SetAttribute("Start", "install")
         $serviceControl.SetAttribute("Stop", "both")
         $serviceControl.SetAttribute("Remove", "uninstall")
-        $serviceControl.SetAttribute("Wait", "yes")
+        $serviceControl.SetAttribute("Wait", "no")
         [void]$component.AppendChild($serviceControl)
 
         # Reinicio automatico del servicio ante fallos inesperados (caidas de voltaje, errores criticos).
         # 1er y 2do fallo: reinicia tras 10 segundos. 3er fallo: reinicia tras 60 segundos.
         # El contador de fallos se resetea cada 24 horas de funcionamiento estable.
-        $serviceConfig = $xml.CreateElement("util", "ServiceConfig", "http://wixtoolset.org/schemas/v4/wxs/util")
-        $serviceConfig.SetAttribute("ServiceName", "TrazzoAgent")
-        $serviceConfig.SetAttribute("FirstFailureActionType", "restart")
-        $serviceConfig.SetAttribute("SecondFailureActionType", "restart")
-        $serviceConfig.SetAttribute("ThirdFailureActionType", "restart")
-        $serviceConfig.SetAttribute("RestartServiceDelayInSeconds", "10")
-        $serviceConfig.SetAttribute("ResetPeriodInDays", "1")
-        [void]$component.AppendChild($serviceConfig)
     }
 
     $componentRef = $xml.CreateElement("ComponentRef", $wix.NamespaceURI)

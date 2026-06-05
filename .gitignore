@@ -79,6 +79,7 @@ Thumbs.db
 # .NET build output
 **/bin/
 **/obj/
+*.binlog
 
 # ZKTeco native SDK DLLs
 middleware/Trazzo.Biometric.Agent/Native/x64/*.dll
