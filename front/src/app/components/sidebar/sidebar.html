@@ -62,6 +62,28 @@
 			</a>
 		}
 
+		@if (roleService.role() === 'usuario') {
+			<a class="sidebar-nav__item" routerLink="/usuario/dashboard" routerLinkActive="is-active">
+				<i class="bi bi-grid-3x3-gap"></i>
+				<span>Dashboard</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/usuario/calendario" routerLinkActive="is-active">
+				<i class="bi bi-calendar3"></i>
+				<span>Calendario</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/usuario/historial-asistencia" routerLinkActive="is-active">
+				<i class="bi bi-clock-history"></i>
+				<span>Historial de Asistencia</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/usuario/incidencias" routerLinkActive="is-active">
+				<i class="bi bi-exclamation-triangle"></i>
+				<span>Incidencias</span>
+			</a>
+		}
+
 		@if (roleService.role() === 'admin-sass') {
 			<a class="sidebar-nav__item" routerLink="/sass/tenants" routerLinkActive="is-active">
 				<i class="bi bi-buildings"></i>

@@ -11,12 +11,17 @@ import { RoleService } from '../../services/role.service';
 export class Sidebar {
   protected readonly roleService = inject(RoleService);
 
-  protected roleUrlPrefix = computed(() =>
-    this.roleService.role() === 'admin-tenant' ? 'tenant' : 'sass'
-  );
+  protected roleUrlPrefix = computed(() => {
+    const role = this.roleService.role();
+    if (role === 'admin-sass') return 'sass';
+    if (role === 'usuario') return 'usuario';
+    return 'tenant';
+  });
 
   protected roleLabel = computed(() => {
     const role = this.roleService.role();
-    return role === 'admin-tenant' ? 'ADMINISTRADOR TENANT' : 'ADMINISTRADOR SAAS';
+    if (role === 'admin-tenant') return 'ADMINISTRADOR TENANT';
+    if (role === 'admin-sass') return 'ADMINISTRADOR SAAS';
+    return 'USUARIO';
   });
 }

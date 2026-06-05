@@ -48,6 +48,21 @@ const SECTION_MAP: Record<string, SectionMeta> = {
 		subtitle: 'Organiza turnos, franjas horarias y asignaciones de asistencia.',
 		icon: 'bi-calendar2-week',
 	},
+	'/usuario/calendario': {
+		title: 'Calendario',
+		subtitle: 'Visualiza tus horarios, turnos y eventos programados.',
+		icon: 'bi-calendar3',
+	},
+	'/usuario/historial-asistencia': {
+		title: 'Historial de asistencia',
+		subtitle: 'Revisa tu registro de marcaciones, tardanzas y ausencias.',
+		icon: 'bi-clock-history',
+	},
+	'/usuario/incidencias': {
+		title: 'Incidencias',
+		subtitle: 'Consulta y gestiona tus solicitudes y reportes.',
+		icon: 'bi-exclamation-triangle',
+	},
 };
 
 @Component({

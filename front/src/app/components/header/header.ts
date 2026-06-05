@@ -15,11 +15,15 @@ export class Header {
   protected readonly roles: { value: Role; label: string }[] = [
     { value: 'admin-tenant', label: 'Administrador Tenant' },
     { value: 'admin-sass', label: 'Administrador SaaS' },
+    { value: 'usuario', label: 'Usuario' },
   ];
 
-  protected settingsUrl = computed(() =>
-    this.roleService.role() === 'admin-tenant' ? '/tenant/configuracion-tenant' : '/sass/dashboard'
-  );
+  protected settingsUrl = computed(() => {
+    const role = this.roleService.role();
+    if (role === 'admin-tenant') return '/tenant/configuracion-tenant';
+    if (role === 'admin-sass') return '/sass/dashboard';
+    return '/usuario/dashboard';
+  });
 
   protected readonly notificaciones = [
     { icono: 'bi-person-x-fill', titulo: 'Inasistencia detectada', descripcion: '3 empleados no marcaron ingreso', hora: 'Hace 5 min', tipo: 'danger' },
