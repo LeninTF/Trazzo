@@ -15,6 +15,7 @@ import { GestionRoles } from './features/admin-tenant/gestion-roles/gestion-role
 import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
+import { Perfil } from './features/admin-tenant/perfil/perfil';
 
 export const routes: Routes = [
     {
@@ -85,5 +86,9 @@ export const routes: Routes = [
     {
         path: 'tenant/gestion-horarios',
         component: GestionHorarios
+    },
+    {
+        path: 'tenant/perfil',
+        component: Perfil
     }
 ];
