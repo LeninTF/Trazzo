@@ -1,1 +1,382 @@
-<p>directorio-personal works!</p>
+<!-- directorio-personal.html -->
+<div class="personal-wrapper">
+
+  <!-- HEADER -->
+  <header class="personal-header">
+    <div>
+      <h1 class="personal-title">Directorio de Personal</h1>
+      <p class="personal-subtitle">Gestión centralizada del personal y monitoreo de colaboradores.</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" (click)="abrirModalAgregar()">
+        <i class="bi bi-person-plus-fill me-2"></i> Agregar Nuevo Miembro
+      </button>
+    </div>
+  </header>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Personal Total</small>
+        <h3 class="metric-card__value">{{ metricas.personalTotal | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--success">+{{ metricas.crecimiento }}%</span>
+      </div>
+      <i class="bi bi-people-fill metric-card__icon"></i>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Activos Hoy</small>
+        <h3 class="metric-card__value">{{ metricas.activosHoy | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--success">{{ metricas.porcentajeActivos }}% cap</span>
+      </div>
+      <i class="bi bi-person-check-fill metric-card__icon metric-card__icon--success"></i>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Incorporaciones</small>
+        <h3 class="metric-card__value">{{ metricas.incorporaciones | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--warning">Pendiente</span>
+      </div>
+      <i class="bi bi-person-plus-fill metric-card__icon metric-card__icon--warning"></i>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">De Licencia</small>
+        <h3 class="metric-card__value">{{ metricas.deLicencia | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--primary">Programado</span>
+      </div>
+      <i class="bi bi-calendar-check-fill metric-card__icon metric-card__icon--primary"></i>
+    </div>
+  </div>
+
+  <!-- BUSCADOR Y FILTROS -->
+  <div class="filters-card">
+    <div class="filters-card__body">
+      <div class="filters-grid">
+        <div class="search-input">
+          <i class="bi bi-search search-input__icon"></i>
+          <input type="text" class="form-control" placeholder="Buscar por nombre o ID de personal…" [(ngModel)]="searchTerm" (input)="filtrarPersonal()">
+        </div>
+        <select class="form-select" [(ngModel)]="filtroSede" (change)="filtrarPersonal()">
+          <option value="">Todas las Sedes</option>
+          @for (sede of sedesDisponibles; track sede) {
+            <option [value]="sede">{{ sede }}</option>
+          }
+        </select>
+        <select class="form-select" [(ngModel)]="filtroArea" (change)="filtrarPersonal()">
+          <option value="">Todas las Áreas</option>
+          @for (area of areasDisponibles; track area) {
+            <option [value]="area">{{ area }}</option>
+          }
+        </select>
+        <select class="form-select" [(ngModel)]="filtroDepartamento" (change)="filtrarPersonal()">
+          <option value="">Todos los Departamentos</option>
+          @for (depto of departamentosDisponibles; track depto) {
+            <option [value]="depto">{{ depto }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE PERSONAL -->
+  <div class="table-card">
+    <div class="table-card__header">
+      <h5 class="table-card__title">
+        <i class="bi bi-table me-2"></i> Personal Registrado
+      </h5>
+    </div>
+
+    <div class="table-responsive">
+      <table class="personal-table">
+        <thead>
+          <tr>
+            <th>Foto</th>
+            <th>Nombre del Personal</th>
+            <th>ID</th>
+            <th>Sede</th>
+            <th>Departamento</th>
+            <th>Cargo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (persona of personalPaginado; track persona.id) {
+            <tr>
+              <td class="personal-table__avatar">
+                @if (persona.imagenUrl) {
+                  <img [src]="persona.imagenUrl" alt="Avatar" class="avatar-img">
+                } @else {
+                  <div class="avatar-placeholder">
+                    <i class="bi bi-person-fill"></i>
+                  </div>
+                }
+              </td>
+              <td class="personal-table__name">{{ persona.nombre }}</td>
+              <td class="personal-table__id">{{ persona.idPersonal }}</td>
+              <td>{{ persona.sede }}</td>
+              <td>{{ persona.departamento }}</td>
+              <td>{{ persona.cargo }}</td>
+              <td>
+                <span class="estado-badge" [class.estado-activo]="persona.estado === 'ACTIVO'" [class.estado-prueba]="persona.estado === 'PRUEBA'" [class.estado-suspendido]="persona.estado === 'SUSPENDIDO'">
+                  <span class="estado-dot"></span>
+                  {{ persona.estado }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-action" title="Ver detalle" (click)="abrirModalDetalle(persona)">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn-action" title="Editar" (click)="abrirModalEditar(persona)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-action" title="Eliminar" (click)="eliminarPersonal(persona.id)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="empty-row">No hay personal registrado con los filtros actuales</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINACIÓN MANUAL -->
+    @if (personalFiltrado.length > 0) {
+      <div class="table-card__footer">
+        <span class="text-muted">Mostrando {{ inicioRegistro }} - {{ finRegistro }} de {{ personalFiltrado.length }} entradas</span>
+        <nav>
+          <ul class="pagination">
+            <li class="page-item" [class.disabled]="paginaActual === 1">
+              <a class="page-link" (click)="cambiarPagina(paginaActual - 1)">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+            @for (pag of [].constructor(totalPaginas); let i = $index; track i) {
+              <li class="page-item" [class.active]="i + 1 === paginaActual">
+                <a class="page-link" (click)="cambiarPagina(i + 1)">{{ i + 1 }}</a>
+              </li>
+            }
+            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+              <a class="page-link" (click)="cambiarPagina(paginaActual + 1)">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: AGREGAR/EDITAR PERSONAL             -->
+<!-- ========================================== -->
+@if (modalPersonalOpen) {
+  <div class="modal-overlay" (click)="cerrarModalPersonal()">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-person-badge"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">{{ editandoPersonal ? 'Editar Personal' : 'Agregar Nuevo Miembro' }}</h2>
+            <span class="modal-id">Complete los datos del colaborador</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalPersonal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid--with-image">
+          
+          <!-- SECCIÓN DE IMAGEN -->
+          <div class="image-upload-section">
+            <label class="form-label">Foto del Personal</label>
+            <div class="image-preview" (click)="abrirSelectorArchivo()">
+              @if (imagenPreviewUrl) {
+                <img [src]="imagenPreviewUrl" alt="Preview" class="image-preview__img">
+              } @else {
+                <div class="image-preview__placeholder">
+                  <i class="bi bi-camera"></i>
+                  <span>Subir foto</span>
+                </div>
+              }
+            </div>
+            <input type="file" id="fileInput" accept="image/*" style="display: none" (change)="onFileSelected($event)">
+            
+            <div class="image-mode-toggle">
+              <div class="btn-group w-100">
+                <button type="button" class="btn-toggle" [class.active]="modoImagenUrl" (click)="cambiarModoImagen(true)">URL</button>
+                <button type="button" class="btn-toggle" [class.active]="!modoImagenUrl" (click)="cambiarModoImagen(false)">Subir Archivo</button>
+              </div>
+            </div>
+            
+            @if (modoImagenUrl) {
+              <input type="text" class="form-control mt-2" [(ngModel)]="personalForm.imagenUrl" placeholder="https://ejemplo.com/imagen.jpg" (input)="actualizarPreviewUrl()">
+            }
+          </div>
+          
+          <!-- RESTO DEL FORMULARIO -->
+          <div class="form-fields">
+            <div class="form-grid-2cols">
+              <div class="form-group">
+                <label class="form-label">Nombre Completo <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="personalForm.nombre" placeholder="Ej: Dr. Sarah Jenkins">
+              </div>
+              <div class="form-group">
+                <label class="form-label">ID de Personal <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" [(ngModel)]="personalForm.idPersonal" placeholder="Ej: #AX-9021">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sede</label>
+                <select class="form-select" [(ngModel)]="personalForm.sede">
+                  @for (sede of sedesDisponibles; track sede) {
+                    <option [value]="sede">{{ sede }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Área</label>
+                <select class="form-select" [(ngModel)]="personalForm.area">
+                  @for (area of areasDisponibles; track area) {
+                    <option [value]="area">{{ area }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Departamento</label>
+                <select class="form-select" [(ngModel)]="personalForm.departamento">
+                  @for (depto of departamentosDisponibles; track depto) {
+                    <option [value]="depto">{{ depto }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Cargo</label>
+                <input type="text" class="form-control" [(ngModel)]="personalForm.cargo" placeholder="Ej: Lead Faculty">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select class="form-select" [(ngModel)]="personalForm.estado">
+                  <option value="ACTIVO">ACTIVO</option>
+                  <option value="PRUEBA">PRUEBA</option>
+                  <option value="SUSPENDIDO">SUSPENDIDO</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" [(ngModel)]="personalForm.email" placeholder="ejemplo@empresa.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="text" class="form-control" [(ngModel)]="personalForm.telefono" placeholder="+51 987 654 321">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fecha de Ingreso</label>
+                <input type="date" class="form-control" [(ngModel)]="personalForm.fechaIngreso">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalPersonal()">Cancelar</button>
+        <button class="btn btn-primary" (click)="guardarPersonal()">Guardar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL: DETALLE DE PERSONAL                 -->
+<!-- ========================================== -->
+@if (modalDetalleOpen && personalSeleccionado) {
+  <div class="modal-overlay" (click)="cerrarModalDetalle()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-person-circle"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Detalle del Personal</h2>
+            <span class="modal-id">{{ personalSeleccionado.idPersonal }}</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalDetalle()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-header">
+          <div class="detail-avatar">
+            @if (personalSeleccionado.imagenUrl) {
+              <img [src]="personalSeleccionado.imagenUrl" alt="Avatar" class="detail-avatar__img">
+            } @else {
+              <div class="detail-avatar__placeholder">
+                <i class="bi bi-person-fill"></i>
+              </div>
+            }
+          </div>
+          <div class="detail-name">
+            <h3>{{ personalSeleccionado.nombre }}</h3>
+            <span class="estado-badge" [class.estado-activo]="personalSeleccionado.estado === 'ACTIVO'" [class.estado-prueba]="personalSeleccionado.estado === 'PRUEBA'" [class.estado-suspendido]="personalSeleccionado.estado === 'SUSPENDIDO'">
+              <span class="estado-dot"></span>
+              {{ personalSeleccionado.estado }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="detail-grid">
+          <div class="detail-field">
+            <span class="detail-label">ID de Personal</span>
+            <span class="detail-value">{{ personalSeleccionado.idPersonal }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Sede</span>
+            <span class="detail-value">{{ personalSeleccionado.sede }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Área</span>
+            <span class="detail-value">{{ personalSeleccionado.area }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Departamento</span>
+            <span class="detail-value">{{ personalSeleccionado.departamento }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Cargo</span>
+            <span class="detail-value">{{ personalSeleccionado.cargo }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Email</span>
+            <span class="detail-value">{{ personalSeleccionado.email || 'No registrado' }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Teléfono</span>
+            <span class="detail-value">{{ personalSeleccionado.telefono || 'No registrado' }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Fecha de Ingreso</span>
+            <span class="detail-value">{{ personalSeleccionado.fechaIngreso || 'No registrada' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalDetalle()">Cerrar</button>
+        <button class="btn btn-primary" (click)="editarDesdeDetalle()">Editar</button>
+      </div>
+    </div>
+  </div>
+}
