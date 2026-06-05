@@ -1,1 +1,161 @@
-<p>calendario works!</p>
+<div class="cal-wrapper">
+
+    <header class="cal-header">
+        <div class="cal-header__left">
+            <h1 class="cal-title">Horarios y Turnos</h1>
+            <p class="cal-subtitle">Gestión de turnos, horarios y feriados.</p>
+        </div>
+        <div class="cal-header__actions">
+            <button class="cal-btn cal-btn--outline" (click)="descargarPDF()">
+                <i class="bi bi-download"></i> Descargar PDF
+            </button>
+        </div>
+    </header>
+
+    <div class="cal-subheader">
+        <div class="cal-subheader__nav">
+            <button class="cal-btn cal-btn--icon" (click)="cambiarMes(-1)" title="Mes anterior">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="cal-subheader__month">{{ etiquetaMes }}</span>
+            <button class="cal-btn cal-btn--icon" (click)="cambiarMes(1)" title="Mes siguiente">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+            <button class="cal-btn cal-btn--outline cal-btn--sm" (click)="irHoy()">Hoy</button>
+        </div>
+        <div class="cal-subheader__views">
+            <button class="cal-btn cal-btn--view" [class.is-active]="vista() === 'mensual'"
+                (click)="cambiarVista('mensual')">
+                <i class="bi bi-calendar2-week"></i> Vista Mensual
+            </button>
+            <button class="cal-btn cal-btn--view" [class.is-active]="vista() === 'semanal'"
+                (click)="cambiarVista('semanal')">
+                <i class="bi bi-calendar2-range"></i> Vista Semanal
+            </button>
+        </div>
+    </div>
+
+    <div class="cal-body">
+        <div class="cal-main">
+            @if (vista() === 'mensual') {
+            <div class="cal-grid">
+                @for (d of ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; track d) {
+                <span class="cal-grid__day-name">{{ d }}</span>
+                }
+                @for (dia of calendario; track dia.fecha.getTime()) {
+                <div class="cal-day" [class.cal-day--other]="!dia.esMesActual" [class.cal-day--today]="dia.esHoy"
+                    [class.cal-day--holiday]="dia.feriado" [class.cal-day--manana]="dia.turno?.id === 'manana'"
+                    [class.cal-day--tarde]="dia.turno?.id === 'tarde'"
+                    [class.cal-day--noche]="dia.turno?.id === 'noche'"
+            [title]="dia.feriado ? dia.feriado.nombre : (dia.turno ? dia.turno.nombre + ' - ' + dia.turno.ubicacion : '')">
+                    <span class="cal-day__num">{{ dia.numero }}</span>
+                    @if (dia.feriado) {
+                    <span class="cal-day__badge cal-day__badge--holiday">{{ dia.feriado.nombre }}</span>
+                    } @else if (dia.turno) {
+                    <span class="cal-day__badge" [style.background]="dia.turno.color">
+                        {{ dia.turno.inicio }}–{{ dia.turno.fin }}
+                    </span>
+                    <span class="cal-day__loc">{{ dia.turno.ubicacion }}</span>
+                    }
+                </div>
+                }
+            </div>
+            } @else {
+            <div class="cal-weekly">
+                <div class="cal-grid__header">
+                    @for (d of ['Lun','Mar','Mié','Jue','Vie']; track d) {
+                    <span class="cal-grid__day-name">{{ d }}</span>
+                    }
+                </div>
+                <div class="cal-weekly__body">
+                    @for (dia of diasSemana; track dia.numero) {
+                    <div class="cal-day cal-day--weekly" [class.cal-day--holiday]="dia.feriado"
+                        [class.cal-day--manana]="dia.turno?.id === 'manana'"
+                        [class.cal-day--tarde]="dia.turno?.id === 'tarde'"
+                        [class.cal-day--noche]="dia.turno?.id === 'noche'">
+                        <span class="cal-day__num">{{ dia.numero }}</span>
+                        @if (dia.feriado) {
+                        <span class="cal-day__badge cal-day__badge--holiday">{{ dia.feriado.nombre }}</span>
+                        } @else if (dia.turno) {
+                        <span class="cal-day__badge" [style.background]="dia.turno.color">
+                            {{ dia.turno.inicio }}–{{ dia.turno.fin }}
+                        </span>
+                        <span class="cal-day__loc">{{ dia.turno.ubicacion }}</span>
+                        } @else {
+                        <span class="cal-day__badge cal-day__badge--empty">—</span>
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+        </div>
+
+        <aside class="cal-panel">
+            <div class="cal-card">
+                <h3 class="cal-card__title">
+                    <i class="bi bi-calendar2-range"></i> Semana Actual
+                </h3>
+                <div class="cal-card__body">
+                    <div class="cal-stat">
+                        <span class="cal-stat__label">Turno Activo</span>
+                        <span class="cal-stat__value cal-stat__value--blue">{{ turnoActual }}</span>
+                    </div>
+                    <div class="cal-stat">
+                        <span class="cal-stat__label">Pr&oacute;xima Rotaci&oacute;n</span>
+                        <span class="cal-stat__value">{{ proximaRotacion }}</span>
+                    </div>
+                    <div class="cal-stat">
+                        <span class="cal-stat__label">Horas Totales</span>
+                        <span class="cal-stat__value">{{ horasSemanales }}h</span>
+                    </div>
+                    <div class="cal-stat">
+                        <span class="cal-stat__label">Extras Acumuladas</span>
+                        <span class="cal-stat__value cal-stat__value--amber">{{ extrasAcumuladas }}h</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cal-card">
+                <h3 class="cal-card__title">
+                    <i class="bi bi-list-check"></i> Desglose Semanal
+                </h3>
+                <div class="cal-card__body">
+                    @for (dia of diasSemana; track dia.numero) {
+                    <div class="cal-breakdown-item">
+                        <span class="cal-breakdown__day">{{ dia.nombre }} {{ dia.fecha }}</span>
+                        @if (dia.feriado) {
+                        <span class="cal-breakdown__shift cal-breakdown__shift--holiday">
+                            <i class="bi bi-star-fill"></i> {{ dia.feriado.nombre }}
+                        </span>
+                        } @else if (dia.turno) {
+                        <span class="cal-breakdown__shift">
+                            {{ dia.turno.inicio }}–{{ dia.turno.fin }} {{ dia.turno.ubicacion }}
+                        </span>
+                        } @else {
+                        <span class="cal-breakdown__shift cal-breakdown__shift--empty">Sin turno</span>
+                        }
+                    </div>
+                    }
+                    @if (proximoFeriado) {
+                    <div class="cal-breakdown__note">
+                        <i class="bi bi-info-circle"></i>
+                        Pr&oacute;ximo feriado <strong>{{ proximoFeriado.nombre }}</strong> el {{ proximoFeriado.fecha
+                        }} se considera jornada no laborable.
+                    </div>
+                    }
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="cal-legend">
+        <span class="cal-legend__item"><span class="cal-legend__dot" style="background:#3B82F6"></span> Turno Mañana
+            (06:00–14:00)</span>
+        <span class="cal-legend__item"><span class="cal-legend__dot" style="background:#10B981"></span> Turno Tarde
+            (14:00–22:00)</span>
+        <span class="cal-legend__item"><span class="cal-legend__dot" style="background:#8B5CF6"></span> Turno Noche
+            (22:00–06:00)</span>
+        <span class="cal-legend__item"><span class="cal-legend__dot" style="background:#EF4444"></span> Feriado</span>
+    </div>
+</div>
