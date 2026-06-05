@@ -1,1 +1,220 @@
-<p>dashboard works!</p>
+<!-- dashboard.html -->
+<div class="dashboard-wrapper">
+
+  <!-- HEADER -->
+  <header class="dashboard-header">
+    <div>
+      <h1 class="dashboard-title">Bienvenido, {{ usuario.nombre }}</h1>
+      <p class="dashboard-subtitle">{{ fechaActual | date:'EEEE, d \'de\' MMMM \'de\' yyyy' }}</p>
+    </div>
+  </header>
+
+  <!-- MÉTRICAS (4 TARJETAS) -->
+  <div class="metrics-grid">
+    <!-- Tarjeta 1: Asistencias puntuales -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Asistencias puntuales este mes</small>
+        <h3 class="metric-card__value">{{ metricas.asistenciasPuntuales }}</h3>
+      </div>
+      <i class="bi bi-check-circle-fill metric-card__icon metric-card__icon--success"></i>
+    </div>
+
+    <!-- Tarjeta 2: Llegadas tarde -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Llegadas tarde acumuladas</small>
+        <h3 class="metric-card__value">{{ metricas.llegadasTarde }}</h3>
+      </div>
+      <i class="bi bi-clock-history metric-card__icon metric-card__icon--warning"></i>
+    </div>
+
+    <!-- Tarjeta 3: Inasistencias -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Inasistencias registradas</small>
+        <h3 class="metric-card__value">{{ metricas.inasistencias }}</h3>
+      </div>
+      <i class="bi bi-calendar-x-fill metric-card__icon metric-card__icon--danger"></i>
+    </div>
+
+    <!-- Tarjeta 4: Incidencias (Faltas justificadas) -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Incidencias</small>
+        <h3 class="metric-card__value">{{ metricas.incidencias }}</h3>
+        <span class="metric-card__trend metric-card__trend--info">Faltas justificadas</span>
+      </div>
+      <i class="bi bi-file-earmark-text-fill metric-card__icon metric-card__icon--info"></i>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL (2 COLUMNAS) -->
+  <div class="dashboard-grid">
+    
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="dashboard-main">
+      
+      <!-- Tarjeta: Turno de hoy -->
+      <div class="info-card">
+        <div class="info-card__header">
+          <h3 class="info-card__title">
+            <i class="bi bi-briefcase-fill me-2"></i> Turno de Hoy
+          </h3>
+        </div>
+        <div class="info-card__body">
+          <div class="info-row">
+            <div class="info-label">Horario</div>
+            <div class="info-value">{{ turno.horaInicio }} - {{ turno.horaFin }}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label">Puesto</div>
+            <div class="info-value">{{ turno.puesto }}</div>
+          </div>
+          <div class="alert alert-info">
+            <i class="bi bi-shield-check me-2"></i>
+            Recuerda usar tu equipo de protección completo antes de iniciar.
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta: Actividad Reciente -->
+      <div class="info-card">
+        <div class="info-card__header">
+          <h3 class="info-card__title">
+            <i class="bi bi-activity me-2"></i> Actividad Reciente
+          </h3>
+        </div>
+        <div class="info-card__body">
+          <div class="activity-list">
+            @for (actividad of actividadesRecientes; track actividad.id) {
+              <div class="activity-item">
+                <div class="activity-item__icon" [class.activity-item__icon--success]="actividad.tipo === 'entrada'" [class.activity-item__icon--danger]="actividad.tipo === 'salida'" [class.activity-item__icon--warning]="actividad.tipo === 'retraso'">
+                  <i class="bi" [ngClass]="actividad.icono"></i>
+                </div>
+                <div class="activity-item__content">
+                  <div class="activity-item__title">{{ actividad.titulo }}</div>
+                  <div class="activity-item__desc">{{ actividad.descripcion }}</div>
+                </div>
+                <div class="activity-item__date">{{ actividad.fecha | date:'dd MMM, HH:mm a' }}</div>
+              </div>
+            }
+          </div>
+          <button class="btn btn-outline-primary w-100 mt-3" (click)="verHistorialCompleto()">
+            <i class="bi bi-clock-history me-2"></i> Ver Historial Completo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA -->
+    <div class="dashboard-sidebar">
+      
+      <!-- Tarjeta: Puntualidad -->
+      <div class="stats-card">
+        <div class="stats-card__icon stats-card__icon--success">
+          <i class="bi bi-trophy-fill"></i>
+        </div>
+        <div class="stats-card__content">
+          <div class="stats-card__value">{{ metricas.puntualidad }}%</div>
+          <div class="stats-card__label">PUNTUALIDAD</div>
+          <div class="stats-card__trend">Puntuación superior al promedio</div>
+        </div>
+      </div>
+
+      <!-- Tarjeta: Horas Extras -->
+      <div class="stats-card">
+        <div class="stats-card__icon stats-card__icon--primary">
+          <i class="bi bi-clock-fill"></i>
+        </div>
+        <div class="stats-card__content">
+          <div class="stats-card__value">{{ metricas.horasExtras }}h</div>
+          <div class="stats-card__label">HORAS EXTRAS</div>
+          <div class="stats-card__trend">Acumuladas este periodo</div>
+        </div>
+      </div>
+
+      <!-- Historial rápido -->
+      <div class="info-card">
+        <div class="info-card__header">
+          <h3 class="info-card__title">
+            <i class="bi bi-clock-history me-2"></i> Últimos Registros
+          </h3>
+        </div>
+        <div class="info-card__body">
+          <div class="history-list">
+            @for (registro of ultimosRegistros; track registro.id) {
+              <div class="history-item">
+                <div class="history-item__date">{{ registro.fecha | date:'dd MMM, HH:mm a' }}</div>
+                <div class="history-item__type" [class.history-item__type--entrada]="registro.tipo === 'entrada'" [class.history-item__type--salida]="registro.tipo === 'salida'">
+                  {{ registro.tipo === 'entrada' ? 'Entrada Registrada' : 'Salida Registrada' }}
+                </div>
+                <div class="history-item__desc">{{ registro.descripcion }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: HISTORIAL COMPLETO                 -->
+<!-- ========================================== -->
+@if (modalHistorialOpen) {
+  <div class="modal-overlay" (click)="cerrarModalHistorial()">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Historial Completo</h2>
+            <span class="modal-id">Registro de asistencia</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalHistorial()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="historial-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Hora</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (registro of todosLosRegistros; track registro.id) {
+                <tr>
+                  <td>{{ registro.fecha | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <span class="history-type-badge" [class.history-type-badge--entrada]="registro.tipo === 'entrada'" [class.history-type-badge--salida]="registro.tipo === 'salida'">
+                      {{ registro.tipo === 'entrada' ? 'Entrada' : 'Salida' }}
+                    </span>
+                  </td>
+                  <td>{{ registro.fecha | date:'HH:mm:ss' }}</td>
+                  <td>
+                    <span class="estado-badge" [class.estado-exitoso]="registro.estado === 'puntual'" [class.estado-retraso]="registro.estado === 'retraso'">
+                      <span class="estado-dot"></span>
+                      {{ registro.estado === 'puntual' ? 'Puntual' : 'Con retraso' }}
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalHistorial()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}
