@@ -1,1 +1,130 @@
-<p>incidencias works!</p>
+<div class="inc-wrapper">
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="inc-title">Incidencias</h1>
+      <p class="inc-subtitle">Solicitudes y registros de incidencias realizadas.</p>
+    </div>
+    <button class="btn-nueva" (click)="abrirModal()">
+      <i class="bi bi-plus-lg me-2"></i>Nueva Incidencia
+    </button>
+  </header>
+
+  <div class="row g-3 mb-4">
+    @for (r of resumen; track r.label) {
+      <div class="col-md-4 col-6">
+        <div class="inc-stat rounded-4 p-3 text-center">
+          <span class="inc-stat__value d-block fw-bold" [style.color]="r.color">{{ r.valor }}</span>
+          <span class="inc-stat__label d-block">{{ r.label }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="inc-card rounded-4 p-4">
+    @for (inc of incidencias(); track inc.id) {
+      <div class="inc-item d-flex align-items-start gap-3 py-3" [class.border-bottom]="!$last">
+        <div class="inc-icon flex-shrink-0">
+          @if (inc.estado === 'Pendiente') {
+            <i class="bi bi-clock-history"></i>
+          } @else if (inc.estado === 'Aprobado') {
+            <i class="bi bi-check-circle-fill" style="color:var(--success)"></i>
+          } @else {
+            <i class="bi bi-x-circle-fill" style="color:var(--danger)"></i>
+          }
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <span class="inc-id fw-semibold">{{ inc.id }}</span>
+            <span class="inc-type">{{ inc.tipo }}</span>
+            @if (inc.archivo) {
+              <span class="inc-type" style="background:var(--primary-light);color:var(--primary)">
+                <i class="bi bi-paperclip me-1"></i>Adjunto
+              </span>
+            }
+            <span class="inc-badge ms-auto"
+              [class.inc-badge--pending]="inc.estado === 'Pendiente'"
+              [class.inc-badge--approved]="inc.estado === 'Aprobado'"
+              [class.inc-badge--rejected]="inc.estado === 'Rechazado'">
+              {{ inc.estado }}
+            </span>
+          </div>
+          <p class="inc-desc mb-0">{{ inc.descripcion }}</p>
+          <span class="inc-date">{{ inc.fecha }}</span>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (mostrarModal) {
+  <div class="modal-overlay" (click)="cerrarModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-file-text"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Nueva Incidencia</h2>
+            <span class="modal-id">Completa los campos para registrar tu solicitud</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Tipo de Incidencia *</label>
+          <select class="form-select" [(ngModel)]="nuevaIncidencia.tipo">
+            <option value="" disabled>Seleccionar tipo</option>
+            @for (t of tiposDisponibles; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fecha</label>
+          <input type="date" class="form-input" [(ngModel)]="nuevaIncidencia.fecha" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Descripción *</label>
+          <textarea class="form-textarea" rows="4" [(ngModel)]="nuevaIncidencia.descripcion"
+            placeholder="Describe el motivo de tu solicitud..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Archivo Adjunto (opcional)</label>
+          <div class="file-upload" (click)="fileInput.click()">
+            @if (nuevaIncidencia.archivo) {
+              <div class="file-upload__preview">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>{{ nuevaIncidencia.archivo.name }}</span>
+                <button class="file-upload__remove" (click)="nuevaIncidencia.archivo = null; $event.stopPropagation()">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            } @else {
+              <div class="file-upload__placeholder">
+                <i class="bi bi-cloud-upload fs-3"></i>
+                <span>Haz clic para seleccionar un archivo</span>
+                <span class="file-upload__hint">PDF, JPG, PNG - Max 5 MB</span>
+              </div>
+            }
+          </div>
+          <input #fileInput type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.jpg,.png,.doc,.docx" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn btn-primary" (click)="enviar()" [disabled]="!nuevaIncidencia.tipo || !nuevaIncidencia.descripcion">
+          <i class="bi bi-send me-2"></i>Enviar Solicitud
+        </button>
+      </div>
+    </div>
+  </div>
+}
