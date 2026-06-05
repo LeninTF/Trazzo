@@ -28,6 +28,19 @@ interface Metricas {
   variacionChurn: number;
 }
 
+interface ConfiguracionTecnica {
+  modeloOrganizativo: 'Sede Unica' | 'Multi-sede';
+  biometricoHabilitado: boolean;
+  escaneoBarrasHabilitado: boolean;
+  almacenamientoUsado: number;
+  sedesCreadas: number;
+  sedesLimite: number;
+}
+
+
+
+
+
 @Component({
   selector: 'app-tenants',
   standalone: true,
@@ -207,7 +220,7 @@ export class Tenants {
   
   guardarTenant(): void {
     if (!this.tenantForm.nombre || !this.tenantForm.idTenant) {
-      this.mostrarToast('⚠️ Complete los campos obligatorios');
+      this.mostrarToast(' Complete los campos obligatorios');
       return;
     }
     
@@ -216,12 +229,12 @@ export class Tenants {
     
     if (this.editandoTenant) {
       this.tenants = this.tenants.map(t => t.id === this.tenantForm.id ? this.tenantForm : t);
-      this.mostrarToast('✅ Tenant actualizado correctamente');
+      this.mostrarToast(' Tenant actualizado correctamente');
     } else {
       const nuevoId = Math.max(...this.tenants.map(t => t.id), 0) + 1;
       const nuevoTenant = { ...this.tenantForm, id: nuevoId };
       this.tenants = [...this.tenants, nuevoTenant];
-      this.mostrarToast('✅ Nuevo tenant registrado correctamente');
+      this.mostrarToast(' Nuevo tenant registrado correctamente');
       
       this.metricas.totalTenants++;
       this.metricas.nuevos++;
@@ -292,4 +305,127 @@ export class Tenants {
       }, 2000);
     }, 10);
   }
+
+
+// ==========================================
+// CONFIGURACIÓN TÉCNICA
+// ==========================================
+modalConfiguracionOpen: boolean = false;
+modalConfirmarSuspensionOpen: boolean = false;
+motivoSuspension: string = '';
+
+configuracion: ConfiguracionTecnica = {
+  modeloOrganizativo: 'Sede Unica',
+  biometricoHabilitado: true,
+  escaneoBarrasHabilitado: false,
+  almacenamientoUsado: 85,
+  sedesCreadas: 3,
+  sedesLimite: 10
+};
+
+// ==========================================
+// MÉTODOS PARA CONFIGURACIÓN TÉCNICA
+// ==========================================
+
+abrirModalConfiguracion(tenant: Tenant): void {
+  this.tenantSeleccionado = tenant;
+  this.modalConfiguracionOpen = true;
+  
+  // Cargar configuración específica del tenant (simulado)
+  // En producción, esto vendría de una API
+  this.cargarConfiguracionTenant(tenant.id);
 }
+
+cerrarModalConfiguracion(): void {
+  this.modalConfiguracionOpen = false;
+  this.tenantSeleccionado = null;
+}
+
+cargarConfiguracionTenant(tenantId: number): void {
+  // Simular carga de configuración por tenant
+  // En producción, llamar a API
+  if (tenantId === 1) {
+    this.configuracion = {
+      modeloOrganizativo: 'Multi-sede',
+      biometricoHabilitado: true,
+      escaneoBarrasHabilitado: true,
+      almacenamientoUsado: 85,
+      sedesCreadas: 3,
+      sedesLimite: 10
+    };
+  } else {
+    this.configuracion = {
+      modeloOrganizativo: 'Sede Unica',
+      biometricoHabilitado: true,
+      escaneoBarrasHabilitado: false,
+      almacenamientoUsado: 45,
+      sedesCreadas: 1,
+      sedesLimite: 10
+    };
+  }
+}
+
+toggleBiometrico(): void {
+  this.configuracion.biometricoHabilitado = !this.configuracion.biometricoHabilitado;
+  this.mostrarToast(this.configuracion.biometricoHabilitado ? 
+    ' Huellero biométrico habilitado' : 
+    ' Huellero biométrico deshabilitado');
+}
+
+toggleEscaneoBarras(): void {
+  this.configuracion.escaneoBarrasHabilitado = !this.configuracion.escaneoBarrasHabilitado;
+  this.mostrarToast(this.configuracion.escaneoBarrasHabilitado ? 
+    ' Escaneo de barras habilitado' : 
+    ' Escaneo de barras deshabilitado');
+}
+
+guardarConfiguracion(): void {
+  // Aquí iría la lógica para guardar la configuración en la API
+  console.log('Configuración guardada:', this.configuracion);
+  this.mostrarToast(' Configuración guardada correctamente');
+  this.cerrarModalConfiguracion();
+}
+
+suspenderTenant(): void {
+  this.modalConfirmarSuspensionOpen = true;
+}
+
+cerrarModalConfirmarSuspension(): void {
+  this.modalConfirmarSuspensionOpen = false;
+  this.motivoSuspension = '';
+}
+
+confirmarSuspenderTenant(): void {
+  if (this.tenantSeleccionado) {
+    // Actualizar estado del tenant
+    this.tenantSeleccionado.estado = 'Suspendido';
+    this.tenants = this.tenants.map(t => 
+      t.id === this.tenantSeleccionado!.id ? this.tenantSeleccionado! : t
+    );
+    
+    this.mostrarToast(`⚠️ Tenant "${this.tenantSeleccionado.nombre}" suspendido correctamente`);
+    this.cerrarModalConfirmarSuspension();
+    this.cerrarModalConfiguracion();
+    
+    // Actualizar métricas
+    this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+  }
+}
+
+eliminarTenantConfig(): void {
+  if (this.tenantSeleccionado && confirm(`¿Eliminar permanentemente el tenant "${this.tenantSeleccionado.nombre}"?`)) {
+    this.tenants = this.tenants.filter(t => t.id !== this.tenantSeleccionado!.id);
+    this.mostrarToast(` Tenant "${this.tenantSeleccionado.nombre}" eliminado correctamente`);
+    this.cerrarModalConfiguracion();
+    
+    // Actualizar métricas
+    this.metricas.totalTenants = this.tenants.length;
+    this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+  }
+}
+
+
+
+
+}
+
