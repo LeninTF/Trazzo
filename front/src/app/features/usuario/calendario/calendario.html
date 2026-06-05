@@ -39,30 +39,26 @@
         <div class="cal-main">
             @if (vista() === 'mensual') {
             <div class="cal-grid">
-                <div class="cal-grid__header">
-                    @for (d of ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; track d) {
-                    <span class="cal-grid__day-name">{{ d }}</span>
+                @for (d of ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']; track d) {
+                <span class="cal-grid__day-name">{{ d }}</span>
+                }
+                @for (dia of calendario; track dia.fecha.getTime()) {
+                <div class="cal-day" [class.cal-day--other]="!dia.esMesActual" [class.cal-day--today]="dia.esHoy"
+                    [class.cal-day--holiday]="dia.feriado" [class.cal-day--manana]="dia.turno?.id === 'manana'"
+                    [class.cal-day--tarde]="dia.turno?.id === 'tarde'"
+                    [class.cal-day--noche]="dia.turno?.id === 'noche'"
+            [title]="dia.feriado ? dia.feriado.nombre : (dia.turno ? dia.turno.nombre + ' - ' + dia.turno.ubicacion : '')">
+                    <span class="cal-day__num">{{ dia.numero }}</span>
+                    @if (dia.feriado) {
+                    <span class="cal-day__badge cal-day__badge--holiday">{{ dia.feriado.nombre }}</span>
+                    } @else if (dia.turno) {
+                    <span class="cal-day__badge" [style.background]="dia.turno.color">
+                        {{ dia.turno.inicio }}–{{ dia.turno.fin }}
+                    </span>
+                    <span class="cal-day__loc">{{ dia.turno.ubicacion }}</span>
                     }
                 </div>
-                <div class="cal-grid__body">
-                    @for (dia of calendario; track dia.fecha.getTime()) {
-                    <div class="cal-day" [class.cal-day--other]="!dia.esMesActual" [class.cal-day--today]="dia.esHoy"
-                        [class.cal-day--holiday]="dia.feriado" [class.cal-day--manana]="dia.turno?.id === 'manana'"
-                        [class.cal-day--tarde]="dia.turno?.id === 'tarde'"
-                        [class.cal-day--noche]="dia.turno?.id === 'noche'"
-                        [title]="dia.feriado ? dia.feriado.nombre : (dia.turno ? dia.turno.nombre + ' - ' + dia.turno.ubicacion : '')">
-                        <span class="cal-day__num">{{ dia.numero }}</span>
-                        @if (dia.feriado) {
-                        <span class="cal-day__badge cal-day__badge--holiday">{{ dia.feriado.nombre }}</span>
-                        } @else if (dia.turno) {
-                        <span class="cal-day__badge" [style.background]="dia.turno.color">
-                            {{ dia.turno.inicio }}–{{ dia.turno.fin }}
-                        </span>
-                        <span class="cal-day__loc">{{ dia.turno.ubicacion }}</span>
-                        }
-                    </div>
-                    }
-                </div>
+                }
             </div>
             } @else {
             <div class="cal-weekly">
