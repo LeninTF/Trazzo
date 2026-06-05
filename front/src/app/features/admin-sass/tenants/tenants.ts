@@ -273,7 +273,7 @@ export class Tenants {
     const tenant = this.tenants.find(t => t.id === id);
     if (tenant && confirm(`¿Eliminar el tenant "${tenant.nombre}"?`)) {
       this.tenants = this.tenants.filter(t => t.id !== id);
-      this.mostrarToast(`🗑️ Tenant "${tenant.nombre}" eliminado correctamente`);
+      this.mostrarToast(`Tenant "${tenant.nombre}" eliminado correctamente`);
       this.metricas.totalTenants--;
       
       if (tenant.estado === 'Activo') {
@@ -403,7 +403,7 @@ confirmarSuspenderTenant(): void {
       t.id === this.tenantSeleccionado!.id ? this.tenantSeleccionado! : t
     );
     
-    this.mostrarToast(`⚠️ Tenant "${this.tenantSeleccionado.nombre}" suspendido correctamente`);
+    this.mostrarToast(` Tenant "${this.tenantSeleccionado.nombre}" suspendido correctamente`);
     this.cerrarModalConfirmarSuspension();
     this.cerrarModalConfiguracion();
     
