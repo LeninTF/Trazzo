@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Role = 'admin-tenant' | 'admin-sass';
+export type Role = 'admin-tenant' | 'admin-sass' | 'usuario';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +11,7 @@ export class RoleService {
   readonly roleLabel: Record<Role, string> = {
     'admin-tenant': 'Administrador Tenant',
     'admin-sass': 'Administrador SaaS',
+    'usuario': 'Usuario',
   };
 
   switchRole(role: Role): void {

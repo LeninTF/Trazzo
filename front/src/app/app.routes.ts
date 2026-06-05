@@ -24,6 +24,10 @@ import { LogAuditoria } from './features/admin-sass/log-auditoria/log-auditoria'
 import { Facturas } from './features/admin-sass/facturas/facturas';
 import { GestionUsuarios } from './features/admin-sass/gestion-usuarios/gestion-usuarios';
 import { GestionRoles as GestionRolesSass} from './features/admin-sass/gestion-roles/gestion-roles';
+import { Dashboard as DashboardUsuario } from './features/usuario/dashboard/dashboard';
+import { Calendario as CalendarioUsuario } from './features/usuario/calendario/calendario';
+import { HistorialAsistencia as HistorialAsistenciaUsuario } from './features/usuario/historial-asistencia/historial-asistencia';
+import { Incidencias as IncidenciasUsuario } from './features/usuario/incidencias/incidencias';
 
 export const routes: Routes = [
     {
@@ -100,6 +104,27 @@ export const routes: Routes = [
         component: Perfil
     },
     {
+        path: 'usuario',
+        pathMatch: 'full',
+        redirectTo: 'usuario/dashboard'
+    },
+    {
+        path: 'usuario/dashboard',
+        component: DashboardUsuario
+    },
+    {
+        path: 'usuario/calendario',
+        component: CalendarioUsuario
+    },
+    {
+        path: 'usuario/historial-asistencia',
+        component: HistorialAsistenciaUsuario
+    },
+    {
+        path: 'usuario/incidencias',
+        component: IncidenciasUsuario
+    },
+    {
         path: 'sass',
         pathMatch: 'full',
         redirectTo: 'sass/dashboard'
@@ -136,5 +161,9 @@ export const routes: Routes = [
     {
         path: 'sass/perfil',
         component: PerfilSass
+    },
+    {
+        path: 'usuario/perfil',
+        component: Perfil
     }
 ];
