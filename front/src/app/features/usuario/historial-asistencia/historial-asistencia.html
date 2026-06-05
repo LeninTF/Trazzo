@@ -1,1 +1,64 @@
-<p>historial-asistencia works!</p>
+<div class="ha-wrapper">
+  <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+      <h1 class="ha-title">Historial de Asistencia</h1>
+      <p class="ha-subtitle">Registro detallado de tus ingresos y salidas.</p>
+    </div>
+  </header>
+
+  <div class="ha-nav d-flex align-items-center gap-3 mb-4">
+    <button class="ha-btn ha-btn--icon" (click)="cambiarMes(-1)">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <span class="ha-nav__month fw-semibold">{{ mesActual }}</span>
+    <button class="ha-btn ha-btn--icon" (click)="cambiarMes(1)">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+
+  <div class="row g-3 mb-4">
+    @for (r of resumen; track r.label) {
+      <div class="col-md-3 col-6">
+        <div class="ha-stat rounded-4 p-3 text-center">
+          <span class="ha-stat__value d-block fw-bold" [style.color]="r.color">{{ r.valor }}</span>
+          <span class="ha-stat__label d-block">{{ r.label }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="ha-table-card rounded-4 p-4">
+    <div class="table-responsive">
+      <table class="ha-table table mb-0">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Turno</th>
+            <th>Ingreso</th>
+            <th>Salida</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of registros; track r.fecha) {
+            <tr>
+              <td class="fw-medium">{{ r.fecha }}</td>
+              <td>{{ r.turno }}</td>
+              <td>{{ r.ingreso }}</td>
+              <td>{{ r.salida }}</td>
+              <td>
+                <span class="ha-badge"
+                  [class.ha-badge--success]="r.estado === 'A tiempo'"
+                  [class.ha-badge--warning]="r.estado === 'Tardanza'"
+                  [class.ha-badge--danger]="r.estado === 'Falta'"
+                  [class.ha-badge--info]="r.estado === 'Justificado'">
+                  {{ r.estado }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

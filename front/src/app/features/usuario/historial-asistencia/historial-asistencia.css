@@ -1,0 +1,151 @@
+:host {
+  --primary: #163A96;
+  --primary-light: #EAF1FF;
+  --bg-light: #F8F9FC;
+  --white: #FFFFFF;
+  --danger: #FF5A5A;
+  --warning: #FF9B5E;
+  --success: #10B981;
+  --info: #3B82F6;
+  --text-dark: #1E293B;
+  --text-muted: #64748B;
+  --border-color: #E2E8F0;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --radius-md: 16px;
+}
+
+.ha-wrapper {
+  padding: 28px 32px;
+  background: var(--bg-light);
+  min-height: 100%;
+}
+
+.ha-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.ha-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.ha-nav {
+  display: flex;
+  align-items: center;
+}
+
+.ha-nav__month {
+  font-size: 18px;
+  color: var(--text-dark);
+  min-width: 140px;
+  text-align: center;
+}
+
+.ha-btn--icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.ha-btn--icon:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Stats */
+.ha-stat {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.ha-stat__value {
+  font-size: 28px;
+  font-size: 28px;
+}
+
+.ha-stat__label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Table */
+.ha-table-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.ha-table th {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-color);
+  padding: 12px 16px;
+}
+
+.ha-table td {
+  font-size: 14px;
+  color: var(--text-dark);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.ha-table tbody tr:hover {
+  background: var(--primary-light);
+}
+
+.ha-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ha-badge--success {
+  background: #F0FDF4;
+  color: var(--success);
+}
+
+.ha-badge--warning {
+  background: #FFFBEB;
+  color: var(--warning);
+}
+
+.ha-badge--danger {
+  background: #FEF2F2;
+  color: var(--danger);
+}
+
+.ha-badge--info {
+  background: var(--primary-light);
+  color: var(--info);
+}
+
+@media (max-width: 991.98px) {
+  .ha-wrapper {
+    padding: 20px 16px;
+  }
+  .ha-title {
+    font-size: 24px;
+  }
+}
