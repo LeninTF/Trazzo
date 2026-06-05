@@ -21,6 +21,7 @@
     "apexcharts": "^5.13.0",
     "bootstrap": "^5.3.8",
     "ng-apexcharts": "^2.4.0",
+    "ngx-pagination": "^6.0.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.14.0"
