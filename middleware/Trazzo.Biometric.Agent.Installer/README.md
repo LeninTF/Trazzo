@@ -21,7 +21,7 @@ Trazzo.Biometric.Agent.Installer/
 
 ---
 
-## Requisitos
+## Requisitos de build (desarrollador)
 
 - [WiX Toolset SDK v4](https://wixtoolset.org/) (se restaura automáticamente como NuGet)
 - .NET SDK 10 (para compilar y publicar el agente antes de empaquetar)
@@ -32,6 +32,27 @@ Trazzo.Biometric.Agent.Installer/
 ```
 
 Si falta la DLL, el build falla con un error explícito antes de generar el MSI.
+
+---
+
+## Requisitos en el equipo de destino
+
+Antes de ejecutar el MSI en el equipo del cliente, el **software ZKTeco para el lector ZK9500 debe estar instalado**. Ese software instala el driver de kernel (`zkfp.sys`) que el agente necesita para comunicarse con el lector por USB.
+
+> **¿Por qué?** La DLL incluida en el MSI (`libzkfpcsharp.dll`) es el wrapper .NET del SDK ZKTeco, pero depende del driver del sistema operativo que solo instala el setup oficial de ZKTeco. Sin ese driver, el agente arranca pero el lector nunca se inicializa.
+
+**El instalador verifica esto automáticamente.** Si el driver no está presente, muestra este mensaje antes de comenzar la instalación y la cancela:
+
+```
+El software del lector ZK9500 (ZKTeco) no está instalado.
+
+Instálelo antes de continuar:
+1. Descargue el software desde el sitio oficial de ZKTeco
+2. Instálelo y conecte el lector ZK9500
+3. Ejecute nuevamente este instalador
+```
+
+Esta verificación **no aplica a upgrades ni desinstalaciones** — si el agente ya está instalado en el equipo, el driver puede haberse desinstalado por separado sin que el MSI bloquee la operación.
 
 ---
 
@@ -62,6 +83,7 @@ El instalador usa `WixUI_InstallDir` que presenta las siguientes pantallas:
 
 | Pantalla | Descripción |
 |---|---|
+| Prerequisito ZKTeco | Error y cancelación si el driver ZKTeco no está instalado |
 | Bienvenida | Logo en panel izquierdo (`dialog.bmp`), texto de introducción |
 | Selección de carpeta | Default: `C:\Program Files\Trazzo\BiometricAgent\` |
 | Confirmación | Resumen antes de instalar |
