@@ -7,7 +7,7 @@ import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/te
 import { Login } from './auth/login/login';
 import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
-import { Section } from './features/admin-tenant/section/section';
+import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
 import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
 import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
 import { Sedes } from './features/admin-tenant/sedes/sedes';
@@ -84,6 +84,6 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/gestion-horarios',
-        component: Section
+        component: GestionHorarios
     }
 ];
