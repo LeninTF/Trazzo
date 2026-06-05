@@ -16,6 +16,7 @@ import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenan
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
 import { Perfil } from './features/admin-tenant/perfil/perfil';
+import { Perfil as PerfilSass } from './features/admin-sass/perfil/perfil';
 import { Tenants } from './features/admin-sass/tenants/tenants';
 import { GestionPlanes } from './features/admin-sass/gestion-planes/gestion-planes';
 import { Solicitudes } from './features/admin-sass/solicitudes/solicitudes';
@@ -131,5 +132,9 @@ export const routes: Routes = [
     {
         path: 'sass/gestion-roles',
         component: GestionRolesSass
+    },
+    {
+        path: 'sass/perfil',
+        component: PerfilSass
     }
 ];
