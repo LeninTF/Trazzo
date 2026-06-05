@@ -614,3 +614,48 @@
     font-size: 18px;
   }
 }
+/* ===== BOTÓN ELIMINAR ESCÁNER ===== */
+.escaner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.escaner-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.escaner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-eliminar-escaner {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-eliminar-escaner:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* Asegurar que el badge no interfiera con el click */
+.escaner-actions .badge {
+  cursor: pointer;
+}

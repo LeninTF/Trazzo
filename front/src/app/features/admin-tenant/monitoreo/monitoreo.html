@@ -127,16 +127,23 @@
           </h5>
         </div>
         <div class="card-body">
-          <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" (click)="toggleEscaner(escaner.id)">
-            <div>
+          <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <div class="escaner-info" (click)="toggleEscaner(escaner.id)">
               <i class="bi bi-upc-scan fs-5 me-2" [ngClass]="escaner.online ? 'text-primary' : 'text-secondary'"></i>
-              <strong>{{ escaner.nombre }}</strong>
-              <div class="small text-muted">{{ escaner.ubicacion }}</div>
+              <div>
+                <strong>{{ escaner.nombre }}</strong>
+                <div class="small text-muted">{{ escaner.ubicacion }}</div>
+              </div>
             </div>
-            <span class="badge px-3 py-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'">
-              <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
-              {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
-            </span>
+            <div class="escaner-actions">
+              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'" (click)="toggleEscaner(escaner.id)">
+                <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
+                {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
+              </span>
+              <button class="btn-eliminar-escaner" (click)="eliminarEscaner(escaner.id)" title="Eliminar escáner">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </div>
           </div>
 
           <!-- BOTÓN REGISTRAR NUEVO ESCÁNER -->
@@ -219,6 +226,32 @@
             CANCELAR
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL CONFIRMAR ELIMINAR ESCÁNER           -->
+<!-- ========================================== -->
+<div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content registrar-modal-content">
+      <div class="modal-header registrar-modal-header" style="background: var(--danger-bg); border-bottom-color: var(--danger);">
+        <div>
+          <h2 class="registrar-modal-title" style="color: var(--danger);">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
+          </h2>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body registrar-modal-body">
+        <p>¿Está seguro de que desea eliminar el escáner <strong>{{ escanerAEliminar?.nombre }}</strong>?</p>
+        <p class="text-muted small">Esta acción eliminará el escáner de la lista y no podrá ser recuperado.</p>
+      </div>
+      <div class="registrar-actions p-4 pt-0">
+        <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">CANCELAR</button>
+        <button type="button" class="btn-registrar-dispositivo" style="background: var(--danger);" (click)="confirmarEliminarEscaner()">ELIMINAR</button>
       </div>
     </div>
   </div>
