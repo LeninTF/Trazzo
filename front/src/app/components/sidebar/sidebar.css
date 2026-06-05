@@ -177,6 +177,12 @@
 	color: #7080a6;
 }
 
+.profile-card:hover {
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: 0 8px 20px rgba(30, 64, 175, 0.1);
+	cursor: pointer;
+}
+
 .logout-link {
 	display: inline-flex;
 	align-items: center;
