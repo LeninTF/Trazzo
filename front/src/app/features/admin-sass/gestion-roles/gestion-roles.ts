@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-gestion-roles-sass',
-  standalone: true,
+  selector: 'app-gestion-roles',
   imports: [],
-  template: `<h1>Gestión de Roles</h1><p>Administración de roles.</p>`,
+  templateUrl: './gestion-roles.html',
+  styleUrl: './gestion-roles.css',
 })
-export class GestionRolesSass {}
+export class GestionRoles {}
