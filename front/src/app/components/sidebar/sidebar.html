@@ -10,65 +10,109 @@
 	</div>
 
 	<nav class="sidebar-nav" aria-label="Navegación principal">
-		<a class="sidebar-nav__item" routerLink="/tenant/dashboard" routerLinkActive="is-active">
-			<i class="bi bi-grid-3x3-gap"></i>
-			<span>Dashboard</span>
-		</a>
+		@if (roleService.role() === 'admin-tenant') {
+			<a class="sidebar-nav__item" routerLink="/tenant/dashboard" routerLinkActive="is-active">
+				<i class="bi bi-grid-3x3-gap"></i>
+				<span>Dashboard</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/monitoreo" routerLinkActive="is-active">
-			<i class="bi bi-broadcast"></i>
-			<span>Monitoreo</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/monitoreo" routerLinkActive="is-active">
+				<i class="bi bi-broadcast"></i>
+				<span>Monitoreo</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/incidencias" routerLinkActive="is-active">
-			<i class="bi bi-exclamation-triangle"></i>
-			<span>Incidencias</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/incidencias" routerLinkActive="is-active">
+				<i class="bi bi-exclamation-triangle"></i>
+				<span>Incidencias</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/reglas-asistencia" routerLinkActive="is-active">
-			<i class="bi bi-sliders"></i>
-			<span>Reglas De Asistencia</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/reglas-asistencia" routerLinkActive="is-active">
+				<i class="bi bi-sliders"></i>
+				<span>Reglas De Asistencia</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/sedes" routerLinkActive="is-active">
-			<i class="bi bi-building"></i>
-			<span>Sedes</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/sedes" routerLinkActive="is-active">
+				<i class="bi bi-building"></i>
+				<span>Sedes</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/gestion-roles" routerLinkActive="is-active">
-			<i class="bi bi-person-gear"></i>
-			<span>Gestión De Roles</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/gestion-roles" routerLinkActive="is-active">
+				<i class="bi bi-person-gear"></i>
+				<span>Gestión De Roles</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/configuracion-tenant" routerLinkActive="is-active">
-			<i class="bi bi-gear-wide-connected"></i>
-			<span>Configuración Tenant</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/configuracion-tenant" routerLinkActive="is-active">
+				<i class="bi bi-gear-wide-connected"></i>
+				<span>Configuración Tenant</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/planes" routerLinkActive="is-active">
-			<i class="bi bi-kanban"></i>
-			<span>Planes</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/planes" routerLinkActive="is-active">
+				<i class="bi bi-kanban"></i>
+				<span>Planes</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/directorio-personal" routerLinkActive="is-active">
-			<i class="bi bi-people"></i>
-			<span>Directorio Del Personal</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/directorio-personal" routerLinkActive="is-active">
+				<i class="bi bi-people"></i>
+				<span>Directorio Del Personal</span>
+			</a>
 
-		<a class="sidebar-nav__item" routerLink="/tenant/gestion-horarios" routerLinkActive="is-active">
-			<i class="bi bi-calendar2-week"></i>
-			<span>Gestión De Horarios</span>
-		</a>
+			<a class="sidebar-nav__item" routerLink="/tenant/gestion-horarios" routerLinkActive="is-active">
+				<i class="bi bi-calendar2-week"></i>
+				<span>Gestión De Horarios</span>
+			</a>
+		}
+
+		@if (roleService.role() === 'admin-sass') {
+			<a class="sidebar-nav__item" routerLink="/sass/dashboard" routerLinkActive="is-active">
+				<i class="bi bi-grid-3x3-gap"></i>
+				<span>Dashboard</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/tenants" routerLinkActive="is-active">
+				<i class="bi bi-buildings"></i>
+				<span>Tenants</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/gestion-planes" routerLinkActive="is-active">
+				<i class="bi bi-boxes"></i>
+				<span>Gestor de Planes</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/solicitudes" routerLinkActive="is-active">
+				<i class="bi bi-file-text"></i>
+				<span>Solicitudes</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/log-auditoria" routerLinkActive="is-active">
+				<i class="bi bi-journal-text"></i>
+				<span>Log de Auditoría</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/facturas" routerLinkActive="is-active">
+				<i class="bi bi-receipt"></i>
+				<span>Facturas</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/gestion-usuarios" routerLinkActive="is-active">
+				<i class="bi bi-people"></i>
+				<span>Gestión de Usuarios</span>
+			</a>
+
+			<a class="sidebar-nav__item" routerLink="/sass/gestion-roles" routerLinkActive="is-active">
+				<i class="bi bi-person-gear"></i>
+				<span>Gestión de Roles</span>
+			</a>
+		}
 	</nav>
 
 	<div class="sidebar-shell__footer">
-		<div class="profile-card" routerLink="/tenant/perfil">
+		<div class="profile-card" [routerLink]="'/' + roleUrlPrefix() + '/perfil'">
 			<div class="profile-card__avatar">
 				<i class="bi bi-person-fill"></i>
 			</div>
 			<div class="profile-card__copy">
 				<strong>Jose Alata</strong>
-				<span>ADMINISTRADOR</span>
+				<span>{{ roleLabel() }}</span>
 			</div>
 		</div>
 

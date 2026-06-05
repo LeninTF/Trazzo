@@ -16,6 +16,14 @@ import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenan
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
 import { Perfil } from './features/admin-tenant/perfil/perfil';
+import { Dashboard as SassDashboard } from './features/admin-sass/dashboard/dashboard';
+import { Tenants } from './features/admin-sass/tenants/tenants';
+import { GestionPlanes } from './features/admin-sass/gestion-planes/gestion-planes';
+import { Solicitudes } from './features/admin-sass/solicitudes/solicitudes';
+import { LogAuditoria } from './features/admin-sass/log-auditoria/log-auditoria';
+import { Facturas } from './features/admin-sass/facturas/facturas';
+import { GestionUsuarios } from './features/admin-sass/gestion-usuarios/gestion-usuarios';
+import { GestionRolesSass } from './features/admin-sass/gestion-roles/gestion-roles';
 
 export const routes: Routes = [
     {
@@ -90,5 +98,42 @@ export const routes: Routes = [
     {
         path: 'tenant/perfil',
         component: Perfil
+    },
+    {
+        path: 'sass',
+        pathMatch: 'full',
+        redirectTo: 'sass/dashboard'
+    },
+    {
+        path: 'sass/dashboard',
+        component: SassDashboard
+    },
+    {
+        path: 'sass/tenants',
+        component: Tenants
+    },
+    {
+        path: 'sass/gestion-planes',
+        component: GestionPlanes
+    },
+    {
+        path: 'sass/solicitudes',
+        component: Solicitudes
+    },
+    {
+        path: 'sass/log-auditoria',
+        component: LogAuditoria
+    },
+    {
+        path: 'sass/facturas',
+        component: Facturas
+    },
+    {
+        path: 'sass/gestion-usuarios',
+        component: GestionUsuarios
+    },
+    {
+        path: 'sass/gestion-roles',
+        component: GestionRolesSass
     }
 ];
