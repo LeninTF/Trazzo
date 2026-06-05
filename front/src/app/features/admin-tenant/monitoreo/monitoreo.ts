@@ -112,13 +112,12 @@ export class Monitoreo implements OnInit, OnDestroy {
   ];
 
   // ==========================================
-  // DATOS PARA EL MODAL (Nuevo Dispositivo)
+  // DATOS PARA EL MODAL (Nuevo Escáner)
   // ==========================================
-  nuevoDispositivo = {
-    serie: '',
+  nuevoEscaner = {
     nombre: '',
-    descripcion: '',
-    autoEnrolamiento: true
+    ubicacion: '',
+    online: true
   };
 
   // ==========================================
@@ -162,14 +161,12 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ==========================================
   
   ngOnInit(): void {
-    // Iniciar actualización automática cada 30 segundos
     this.intervalId = setInterval(() => {
       this.actualizarDatosTiempoReal();
     }, 30000);
   }
 
   ngOnDestroy(): void {
-    // Limpiar intervalo al destruir el componente
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
@@ -179,17 +176,13 @@ export class Monitoreo implements OnInit, OnDestroy {
   // MÉTODOS DE ACTUALIZACIÓN
   // ==========================================
   
-  /**
-   * Simula actualización en tiempo real
-   */
   actualizarDatosTiempoReal(): void {
     console.log('🔄 Actualizando datos en tiempo real...');
     this.ultimaActualizacion = new Date();
     
-    // Simular un nuevo evento aleatorio
     const nombres = ['María López', 'Pedro Sánchez', 'Ana García', 'Luis Fernández'];
     const roles = ['Administración', 'Docente', 'Personal de servicio', 'Invitado'];
-    const escaneres = ['ESCÁNER 01', 'ESCÁNER 02'];
+    const escaneres = ['ESCÁNER 01', 'ESCÁNER 02', 'ESCÁNER 03'];
     const ubicaciones = ['ENTRADA PRINCIPAL', 'PUERTA NORTE', 'PUERTA SUR'];
     
     const nuevoEvento: Evento = {
@@ -204,15 +197,12 @@ export class Monitoreo implements OnInit, OnDestroy {
       online: true
     };
     
-    // Agregar al inicio (más reciente primero)
     this.eventos.unshift(nuevoEvento);
     
-    // Mantener solo últimos 10 eventos
     if (this.eventos.length > 10) {
       this.eventos.pop();
     }
     
-    // Actualizar métricas
     this.metricas.presentesHoy += 1;
     this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
     
@@ -225,51 +215,83 @@ export class Monitoreo implements OnInit, OnDestroy {
       }
     }
     
-    // Mostrar notificación visual (opcional)
     console.log(`📢 Nuevo evento: ${nuevoEvento.nombre} - ${nuevoEvento.estado}`);
   }
 
   /**
-   * Registrar nuevo dispositivo
+   * Registrar nuevo escáner
    */
-  registrarDispositivo(): void {
-    if (!this.nuevoDispositivo.serie || !this.nuevoDispositivo.nombre) {
-      alert('⚠️ Por favor complete los campos obligatorios: Número de serie y Nombre del dispositivo');
+  registrarEscaner(): void {
+    if (!this.nuevoEscaner.nombre || !this.nuevoEscaner.ubicacion) {
+      this.mostrarToast('⚠️ Complete los campos obligatorios: Nombre y Ubicación');
       return;
     }
     
-    console.log('✅ Dispositivo registrado:', this.nuevoDispositivo);
+    const nuevoId = Math.max(...this.escaneres.map(e => e.id), 0) + 1;
     
-    // Aquí iría la llamada a tu API
-    // this.http.post('/api/dispositivos', this.nuevoDispositivo).subscribe(...)
+    const nuevoEscanerObj: Escaner = {
+      id: nuevoId,
+      nombre: this.nuevoEscaner.nombre,
+      ubicacion: this.nuevoEscaner.ubicacion,
+      online: this.nuevoEscaner.online
+    };
     
-    // Simular éxito
-    alert(`✅ Dispositivo "${this.nuevoDispositivo.nombre}" registrado correctamente`);
+    this.escaneres.push(nuevoEscanerObj);
+    
+    // Actualizar métricas
+    this.metricas.totalDispositivos = this.escaneres.length;
+    this.actualizarContadorDispositivos();
+    
+    // Agregar log
+    this.agregarEventoDeSistema(`Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
+    
+    this.mostrarToast(`✅ Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
     
     // Limpiar formulario
-    this.limpiarFormularioDispositivo();
+    this.limpiarFormularioEscaner();
     
     // Cerrar modal
-    this.cerrarModal();
+    this.cerrarModal('modalRegistrarEscaner');
   }
   
   /**
-   * Limpiar formulario del modal
+   * Agregar evento de sistema a la lista de eventos
    */
-  limpiarFormularioDispositivo(): void {
-    this.nuevoDispositivo = {
-      serie: '',
+  agregarEventoDeSistema(mensaje: string): void {
+    const nuevoEvento: Evento = {
+      id: Date.now(),
+      nombre: 'SISTEMA',
+      rol: 'Notificación',
+      hora: new Date().toLocaleTimeString(),
+      idDispositivo: 'SYS-0000',
+      estado: 'A TIEMPO',
+      escaner: 'SISTEMA',
+      ubicacion: 'CENTRAL',
+      online: true
+    };
+    this.eventos.unshift(nuevoEvento);
+    
+    if (this.eventos.length > 10) {
+      this.eventos.pop();
+    }
+  }
+  
+  /**
+   * Limpiar formulario del escáner
+   */
+  limpiarFormularioEscaner(): void {
+    this.nuevoEscaner = {
       nombre: '',
-      descripcion: '',
-      autoEnrolamiento: true
+      ubicacion: '',
+      online: true
     };
   }
   
   /**
    * Cerrar modal programáticamente
    */
-  cerrarModal(): void {
-    const modalElement = document.getElementById('modalRegistrarDispositivo');
+  cerrarModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
     if (modalElement) {
       // @ts-ignore
       const modal = bootstrap.Modal.getInstance(modalElement);
@@ -286,7 +308,6 @@ export class Monitoreo implements OnInit, OnDestroy {
       this.eventos = this.eventos.filter(e => e.id !== id);
       console.log(`🗑️ Evento ${id} eliminado`);
       
-      // Actualizar métricas (opcional)
       if (evento.estado === 'TARDE') {
         this.metricas.tardanzas -= 1;
       }
@@ -303,7 +324,8 @@ export class Monitoreo implements OnInit, OnDestroy {
     if (escaner) {
       escaner.online = !escaner.online;
       this.actualizarContadorDispositivos();
-      console.log(`🔄 Escáner ${escaner.nombre} ahora está ${escaner.online ? 'EN LÍNEA' : 'OFFLINE'}`);
+      const estado = escaner.online ? 'EN LÍNEA' : 'OFFLINE';
+      this.mostrarToast(`🔄 Escáner ${escaner.nombre} ahora está ${estado}`);
     }
   }
   
@@ -313,6 +335,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   private actualizarContadorDispositivos(): void {
     const activos = this.escaneres.filter(e => e.online).length;
     this.metricas.dispositivosActivos = activos;
+    this.metricas.totalDispositivos = this.escaneres.length;
   }
   
   /**
@@ -321,27 +344,29 @@ export class Monitoreo implements OnInit, OnDestroy {
   refrescarDatos(): void {
     console.log('🔄 Refrescando datos manualmente...');
     this.actualizarDatosTiempoReal();
+    this.mostrarToast('🔄 Datos actualizados correctamente');
   }
   
   /**
-   * Simular cambio de estado en un evento (ejemplo adicional)
+   * Mostrar toast notification
    */
-  cambiarEstadoEvento(id: number): void {
-    const evento = this.eventos.find(e => e.id === id);
-    if (evento) {
-      evento.estado = evento.estado === 'A TIEMPO' ? 'TARDE' : 'A TIEMPO';
-      console.log(`📝 Evento ${evento.nombre} cambió a ${evento.estado}`);
-      
-      // Actualizar métricas de tardanzas
-      this.metricas.tardanzas = this.eventos.filter(e => e.estado === 'TARDE').length;
-      
-      if (this.metricas.tardanzas > 50) {
-        this.metricas.nivelTardanza = 'ALTO';
-      } else if (this.metricas.tardanzas > 20) {
-        this.metricas.nivelTardanza = 'MEDIO';
-      } else {
-        this.metricas.nivelTardanza = 'BAJO';
-      }
-    }
+  private mostrarToast(mensaje: string): void {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerHTML = `
+      <div class="toast-notification__content">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <span>${mensaje}</span>
+      </div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.classList.add('toast-notification--show');
+      setTimeout(() => {
+        toast.classList.remove('toast-notification--show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }, 10);
   }
 }
