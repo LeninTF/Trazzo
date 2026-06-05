@@ -10,20 +10,20 @@
 				<i class="bi bi-bell"></i>
 				<span class="notification-dot"></span>
 			</button>
-			<div class="dropdown-menu dropdown-menu-end py-0 notif-dropdown">
-				<div class="dropdown-header fw-semibold fs-small px-3 py-2">Notificaciones</div>
+			<div class="dropdown-menu dropdown-menu-end header-dropdown notif-dropdown">
+				<div class="dropdown-header">Notificaciones</div>
 				@for (notif of notificaciones; track notif.titulo) {
-					<button type="button" class="dropdown-item d-flex align-items-start gap-2 px-3 py-2">
+					<button type="button" class="dropdown-item d-flex align-items-start gap-2">
 						<i class="bi mt-1" [class]="notif.icono" [style.color]="tipoColor[notif.tipo]"></i>
-						<div class="d-flex flex-column lh-sm">
-							<small class="fw-semibold">{{ notif.titulo }}</small>
-							<small class="text-body-secondary">{{ notif.descripcion }}</small>
-							<small class="text-body-tertiary">{{ notif.hora }}</small>
+						<div class="d-flex flex-column lh-sm min-w-0">
+							<span class="notif-titulo">{{ notif.titulo }}</span>
+							<span class="notif-desc">{{ notif.descripcion }}</span>
+							<span class="notif-hora">{{ notif.hora }}</span>
 						</div>
 					</button>
 				}
-				<div class="dropdown-divider m-0"></div>
-				<button type="button" class="dropdown-item text-center small py-2">Ver todas</button>
+				<div class="dropdown-divider"></div>
+				<button type="button" class="dropdown-item notif-ver-todas">Ver todas las notificaciones</button>
 			</div>
 		</div>
 
@@ -35,10 +35,10 @@
 			<button type="button" class="icon-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Ayuda">
 				<i class="bi bi-question-circle"></i>
 			</button>
-			<ul class="dropdown-menu dropdown-menu-end">
-				<li><button type="button" class="dropdown-item"><i class="bi bi-book me-2"></i>Guía de uso</button></li>
-				<li><button type="button" class="dropdown-item"><i class="bi bi-chat-dots me-2"></i>Soporte técnico</button></li>
-				<li><button type="button" class="dropdown-item"><i class="bi bi-info-circle me-2"></i>Acerca de Trazzo</button></li>
+			<ul class="dropdown-menu dropdown-menu-end header-dropdown">
+				<li><button type="button" class="dropdown-item"><i class="bi bi-book"></i>Guía de uso</button></li>
+				<li><button type="button" class="dropdown-item"><i class="bi bi-chat-dots"></i>Soporte técnico</button></li>
+				<li><button type="button" class="dropdown-item"><i class="bi bi-info-circle"></i>Acerca de Trazzo</button></li>
 			</ul>
 		</div>
 
@@ -50,14 +50,14 @@
 			<button type="button" class="user-chip__toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Cambiar rol">
 				<i class="bi bi-chevron-down"></i>
 			</button>
-			<ul class="dropdown-menu dropdown-menu-end mt-2">
+			<ul class="dropdown-menu dropdown-menu-end header-dropdown">
 				@for (rol of roles; track rol.value) {
 					<li>
 						<button type="button" class="dropdown-item" (click)="roleService.switchRole(rol.value)">
 							@if (roleService.role() === rol.value) {
-								<i class="bi bi-check-lg me-2"></i>
+								<i class="bi bi-check-lg"></i>
 							} @else {
-								<span class="ms-4"></span>
+								<span class="rol-icon-placeholder"></span>
 							}
 							{{ rol.label }}
 						</button>
