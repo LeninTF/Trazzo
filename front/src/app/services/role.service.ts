@@ -16,9 +16,19 @@ export class RoleService {
     'usuario': 'Usuario',
   };
 
+  readonly sidebarOpen = signal(false);
+
   switchRole(role: Role): void {
     this.role.set(role);
     localStorage.setItem(STORAGE_KEY, role);
+  }
+
+  toggleSidebar(): void {
+    this.sidebarOpen.update(v => !v);
+  }
+
+  closeSidebar(): void {
+    this.sidebarOpen.set(false);
   }
 
   private loadRole(): Role {

@@ -437,6 +437,26 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  header {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0.75rem;
+  }
+
+  .hero-value {
+    font-size: 32px;
+  }
+
+  .metric-card {
+    padding: 14px;
+  }
+
+  .metric-value {
+    font-size: 20px;
+  }
+}
+
 @media (max-width: 575.98px) {
   .dashboard-wrapper {
     padding: 16px 12px;
@@ -446,12 +466,7 @@
     font-size: 20px;
   }
 
-  header {
-    flex-direction: column;
-    align-items: stretch !important;
-  }
-
   .hero-value {
-    font-size: 30px;
+    font-size: 28px;
   }
 }

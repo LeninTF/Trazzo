@@ -1,4 +1,8 @@
 <div class="header-shell">
+	<button class="header-hamburger" (click)="roleService.toggleSidebar()" aria-label="Menú">
+		<i class="bi bi-list"></i>
+	</button>
+
 	<div class="header-shell__search input-group">
 		<span class="input-group-text"><i class="bi bi-search"></i></span>
 		<input type="search" class="form-control" placeholder="Buscar recursos, empleados..." aria-label="Buscar recursos, empleados">
@@ -31,7 +35,7 @@
 			<i class="bi bi-gear"></i>
 		</a>
 
-		<div class="dropdown">
+		<div class="dropdown header-help">
 			<button type="button" class="icon-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Ayuda">
 				<i class="bi bi-question-circle"></i>
 			</button>

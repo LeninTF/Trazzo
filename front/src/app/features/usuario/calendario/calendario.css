@@ -430,6 +430,41 @@
   }
 }
 
+@media (max-width: 991.98px) {
+  .cal-grid {
+    min-width: 630px;
+  }
+
+  .cal-main {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cal-weekly__body {
+    min-width: 450px;
+  }
+
+  .cal-wrapper {
+    padding: 20px 16px;
+  }
+
+  .cal-title {
+    font-size: 22px;
+  }
+
+  .cal-day {
+    min-height: 80px;
+  }
+
+  .cal-day--weekly {
+    min-height: 160px;
+  }
+
+  .cal-header {
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 575.98px) {
   .cal-subheader {
     flex-direction: column;
@@ -440,9 +475,41 @@
     align-self: flex-start;
   }
 
+  .cal-subheader__month {
+    min-width: auto;
+    font-size: 1rem;
+  }
+
   .cal-day {
-    min-height: 70px;
+    min-height: 65px;
+    padding: 0.25rem;
+    font-size: 0.7rem;
+  }
+
+  .cal-day--weekly {
+    min-height: 130px;
+  }
+
+  .cal-day__num {
     font-size: 0.75rem;
+  }
+
+  .cal-day__badge {
+    font-size: 0.58rem;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .cal-day__loc {
+    display: none;
+  }
+
+  .cal-legend {
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .cal-legend__item {
+    font-size: 0.7rem;
   }
 }
 
