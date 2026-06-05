@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 
 import { GestionRoles } from './gestion-roles';
 
@@ -8,7 +9,7 @@ describe('GestionRoles', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GestionRoles],
+      imports: [GestionRoles, FormsModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GestionRoles);
