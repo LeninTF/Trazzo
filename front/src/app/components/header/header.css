@@ -63,6 +63,7 @@
 	border-radius: 999px;
 	background: transparent;
 	color: #4e5b77;
+	text-decoration: none;
 	transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
