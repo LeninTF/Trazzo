@@ -1,7 +1,7 @@
-
+<!-- monitoreo.html -->
 <div class="container-fluid monitoreo-container p-4">
 
-  
+  <!-- HEADER -->
   <div class="d-flex align-items-center justify-content-between mb-4">
     <h1 class="d-flex align-items-center gap-2 mb-0">
       <i class="bi bi-tv"></i> Monitoreo de Asistencia en Tiempo Real
@@ -11,10 +11,8 @@
     </button>
   </div>
 
-  
+  <!-- MÉTRICAS -->
   <div class="row g-4 mb-5">
-    
-    
     <div class="col-md-4">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
@@ -32,7 +30,6 @@
       </div>
     </div>
 
-    
     <div class="col-md-4">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
@@ -50,7 +47,6 @@
       </div>
     </div>
 
-    
     <div class="col-md-4">
       <div class="card h-100 border-0 shadow-sm">
         <div class="card-body">
@@ -69,10 +65,10 @@
     </div>
   </div>
 
-  
+  <!-- SECCIÓN PRINCIPAL -->
   <div class="row g-4">
 
-    
+    <!-- COLUMNA IZQUIERDA: EVENTOS -->
     <div class="col-lg-8">
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 pt-4 pb-2">
@@ -82,8 +78,6 @@
           <small class="text-muted">Actualizaciones automáticas de marcación.</small>
         </div>
         <div class="card-body p-0">
-
-          
           <div *ngFor="let evento of eventos" class="evento-item p-3 border-bottom">
             <div class="row align-items-start">
               <div class="col-10">
@@ -116,18 +110,15 @@
               <span class="text-success small ms-1 fw-semibold">EN LÍNEA</span>
             </div>
           </div>
-
-         
           <div *ngIf="eventos.length === 0" class="text-center p-5 text-muted">
             <i class="bi bi-inbox fs-1"></i>
             <p class="mt-2">No hay eventos recientes</p>
           </div>
-
         </div>
       </div>
     </div>
 
-    
+    <!-- COLUMNA DERECHA: ESCÁNERES -->
     <div class="col-lg-4">
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 pt-4 pb-2">
@@ -136,8 +127,6 @@
           </h5>
         </div>
         <div class="card-body">
-
-          
           <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" (click)="toggleEscaner(escaner.id)">
             <div>
               <i class="bi bi-upc-scan fs-5 me-2" [ngClass]="escaner.online ? 'text-primary' : 'text-secondary'"></i>
@@ -150,17 +139,16 @@
             </span>
           </div>
 
-          <!-- BOTÓN REGISTRAR NUEVO -->
-          <button class="btn-registrar-nuevo w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalRegistrarDispositivo">
-            <i class="bi bi-plus-circle me-2"></i> REGISTRAR NUEVO
+          <!-- BOTÓN REGISTRAR NUEVO ESCÁNER -->
+          <button class="btn-registrar-nuevo w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalRegistrarEscaner">
+            <i class="bi bi-plus-circle me-2"></i> REGISTRAR NUEVO ESCÁNER
           </button>
 
-          <!-- Última actualización (dinámica) -->
+          <!-- Última actualización -->
           <div class="alert alert-info-custom mt-2 mb-0 py-2 px-3">
             <i class="bi bi-info-circle-fill me-1"></i>
             <small>Última actualización: {{ ultimaActualizacionTexto }}</small>
           </div>
-
         </div>
       </div>
     </div>
@@ -168,120 +156,69 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL REGISTRAR DISPOSITIVO (DINÁMICO)     -->
+<!-- MODAL REGISTRAR NUEVO ESCÁNER              -->
 <!-- ========================================== -->
-<div class="modal fade" id="modalRegistrarDispositivo" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalRegistrarDispositivoLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+<div class="modal fade" id="modalRegistrarEscaner" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalRegistrarEscanerLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content registrar-modal-content">
 
       <div class="modal-header registrar-modal-header">
         <div>
-          <h2 class="registrar-modal-title" id="modalRegistrarDispositivoLabel">
-            <i class="bi bi-shield-lock-fill me-2"></i>Registrar Dispositivo
+          <h2 class="registrar-modal-title" id="modalRegistrarEscanerLabel">
+            <i class="bi bi-upc-scan me-2"></i>Registrar Nuevo Escáner
           </h2>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <div class="modal-body registrar-modal-body">
-
         <hr class="registrar-divider">
 
         <div class="registrar-section">
           <h3 class="registrar-section-title">
-            <i class="bi bi-plus-circle me-2"></i>Añadir Nuevo Activo
+            <i class="bi bi-plus-circle me-2"></i>Configuración del Escáner
           </h3>
           <p class="registrar-section-description">
-            Inicie el proceso de aprovisionamiento de hardware para integrar nuevos dispositivos en el ecosistema seguro de Nexus MDM.
-          </p>
-        </div>
-
-        <hr class="registrar-divider">
-
-        <div class="registrar-protocolo">
-          <i class="bi bi-lock-fill me-2"></i>
-          <span>PROTOCOLO DE ENCRIPTACIÓN AE-256</span>
-        </div>
-
-        <hr class="registrar-divider">
-
-        <div class="registrar-nota-seguridad">
-          <div class="registrar-nota-header">
-            <i class="bi bi-shield-exclamation"></i>
-            <strong>NOTA DE SEGURIDAD</strong>
-          </div>
-          <p class="registrar-nota-text">
-            Al registrar este dispositivo, se activará automáticamente el protocolo de cumplimiento corporativo. Asegúrese de que el hardware esté conectado a una red autorizada para la descarga inicial de políticas.
+            Registre un nuevo dispositivo de escaneo para el control de asistencia.
           </p>
         </div>
 
         <hr class="registrar-divider">
 
         <form class="registrar-form">
-          
           <div class="registrar-form-group">
-            <label class="registrar-label">NÚMERO DE SERIE (SN) <span class="text-danger">*</span></label>
-            <input 
-              type="text" 
-              class="registrar-input" 
-              placeholder="Ej: NX-998234-B"
-              [(ngModel)]="nuevoDispositivo.serie"
-              name="serie"
-              required>
+            <label class="registrar-label">NOMBRE DEL ESCÁNER <span class="text-danger">*</span></label>
+            <input type="text" class="registrar-input" placeholder="Ej: Escáner 03 - Puerta Sur" [(ngModel)]="nuevoEscaner.nombre" name="nombreEscaner">
           </div>
-
           <div class="registrar-form-group">
-            <label class="registrar-label">NOMBRE DEL DISPOSITIVO <span class="text-danger">*</span></label>
-            <input 
-              type="text" 
-              class="registrar-input" 
-              placeholder="Ej: Laptop-Admin-01"
-              [(ngModel)]="nuevoDispositivo.nombre"
-              name="nombre"
-              required>
+            <label class="registrar-label">UBICACIÓN <span class="text-danger">*</span></label>
+            <input type="text" class="registrar-input" placeholder="Ej: PUERTA SUR, EDIFICIO C" [(ngModel)]="nuevoEscaner.ubicacion" name="ubicacion">
           </div>
-
-          <div class="registrar-form-group">
-            <label class="registrar-label">DESCRIPCIÓN</label>
-            <textarea 
-              class="registrar-textarea" 
-              rows="3" 
-              placeholder="Indique el uso principal o el departamento asignado..."
-              [(ngModel)]="nuevoDispositivo.descripcion"
-              name="descripcion"></textarea>
-          </div>
-
           <div class="registrar-config-adicional">
             <div class="registrar-config-header">
-              <i class="bi bi-gear-fill me-2"></i>
-              <span class="fw-semibold">CONFIGURACIÓN ADICIONAL</span>
+              <i class="bi bi-shield-check me-2"></i>
+              <span class="fw-semibold">ESTADO INICIAL</span>
             </div>
             <div class="registrar-checkbox-item">
-              <input 
-                type="checkbox" 
-                id="autoEnrolamiento" 
-                [(ngModel)]="nuevoDispositivo.autoEnrolamiento"
-                name="autoEnrolamiento">
-              <label for="autoEnrolamiento">
-                <strong>Auto-Enrolamiento</strong>
-                <span class="registrar-checkbox-description">Aplicar perfil por defecto inmediatamente</span>
+              <input type="checkbox" id="escanerOnline" [(ngModel)]="nuevoEscaner.online" name="escanerOnline">
+              <label for="escanerOnline">
+                <strong>Activar escáner inmediatamente</strong>
+                <span class="registrar-checkbox-description">El escáner estará disponible para registrar asistencias al momento de crearlo.</span>
               </label>
             </div>
           </div>
-
         </form>
 
         <hr class="registrar-divider">
 
         <div class="registrar-actions">
-          <button type="button" class="btn-registrar-dispositivo" (click)="registrarDispositivo()">
-            <i class="bi bi-check-lg me-2"></i>REGISTRAR DISPOSITIVO
+          <button type="button" class="btn-registrar-dispositivo" (click)="registrarEscaner()">
+            <i class="bi bi-check-lg me-2"></i>REGISTRAR ESCÁNER
           </button>
           <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">
             CANCELAR
           </button>
         </div>
-
       </div>
     </div>
   </div>
