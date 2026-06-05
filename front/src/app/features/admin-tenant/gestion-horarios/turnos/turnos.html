@@ -1,0 +1,214 @@
+<div class="turnos-section">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <span class="gh-badge">{{ turnos.length }} turnos</span>
+    </div>
+    <button class="gh-btn-primary-sm" (click)="openNewTurnoModal()">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Turno
+    </button>
+  </div>
+
+  @for (turno of turnos; track turno.id) {
+    <div class="turno-card">
+      <!-- ──────── HEADER ──────── -->
+      <div class="turno-header">
+        @if (editingTurnoId === turno.id) {
+          <div class="d-flex align-items-center gap-2 flex-grow-1">
+            <input
+              type="text"
+              class="gh-input-sm flex-grow-1"
+              [class.is-invalid]="editTurnoForm.get('nombre')?.invalid && editTurnoForm.get('nombre')?.touched"
+              formControlName="nombre"
+              [formGroup]="editTurnoForm"
+              placeholder="Nombre del turno"
+            >
+            <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditTurno(turno)" title="Guardar">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelEditTurno()" title="Cancelar">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+        } @else {
+          <div class="d-flex align-items-center gap-3">
+            <div class="turno-avatar">
+              @if (turno.nombre.toLowerCase().includes('mañana') || turno.nombre.toLowerCase().includes('manana')) {
+                <i class="bi bi-sunrise-fill"></i>
+              } @else if (turno.nombre.toLowerCase().includes('tarde')) {
+                <i class="bi bi-sun-fill"></i>
+              } @else if (turno.nombre.toLowerCase().includes('noche')) {
+                <i class="bi bi-moon-stars-fill"></i>
+              } @else {
+                <i class="bi bi-clock-history"></i>
+              }
+            </div>
+            <div>
+              <h6 class="turno-name">{{ turno.nombre }}</h6>
+              <span class="turno-meta">{{ turno.horarios.length }} horario{{ turno.horarios.length !== 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+          <div class="d-flex gap-1">
+            <button class="gh-icon-btn gh-icon-btn-ghost" (click)="startEditTurno(turno)" title="Editar turno">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="gh-icon-btn gh-icon-btn-danger" (click)="deleteTurno(turno.id)" title="Eliminar turno">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- ──────── COLLAPSE TOGGLE ──────── -->
+      <button
+        class="turno-collapse"
+        data-bs-toggle="collapse"
+        [attr.data-bs-target]="'#horarios-' + turno.id"
+      >
+        <i class="bi bi-chevron-down turno-chevron"></i>
+        <span>Ver horarios</span>
+        <span class="turno-count-badge">{{ turno.horarios.length }}</span>
+      </button>
+
+      <!-- ──────── HORARIOS LIST ──────── -->
+      <div class="collapse" [id]="'horarios-' + turno.id">
+        <div class="turno-body">
+          @if (turno.horarios.length === 0) {
+            <div class="turno-empty">
+              <i class="bi bi-inbox"></i>
+              <span>No hay horarios configurados.</span>
+            </div>
+          }
+
+          @for (horario of turno.horarios; track horario.id) {
+            <div class="horario-card">
+              @if (isEditingHorario(turno.id, horario.id)) {
+                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                  <input
+                    type="text"
+                    class="gh-input-xs"
+                    [class.is-invalid]="editHorarioForm.get('inicio')?.invalid && editHorarioForm.get('inicio')?.touched"
+                    formControlName="inicio"
+                    [formGroup]="editHorarioForm"
+                    placeholder="HH:mm"
+                  >
+                  <span class="text-muted fw-bold">&ndash;</span>
+                  <input
+                    type="text"
+                    class="gh-input-xs"
+                    [class.is-invalid]="editHorarioForm.get('fin')?.invalid && editHorarioForm.get('fin')?.touched"
+                    formControlName="fin"
+                    [formGroup]="editHorarioForm"
+                    placeholder="HH:mm"
+                  >
+                  <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditHorario(turno.id, horario)">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelEditHorario()">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              } @else {
+                <div class="d-flex align-items-center gap-3">
+                  <div class="horario-icon">
+                    <i class="bi bi-clock"></i>
+                  </div>
+                  <div class="horario-time">{{ horario.inicio }} &ndash; {{ horario.fin }}</div>
+                  <span class="horario-duration">{{ calcularDuracion(horario.inicio, horario.fin) }}</span>
+                </div>
+                <div class="d-flex gap-1">
+                  <button class="gh-icon-btn gh-icon-btn-ghost" (click)="startEditHorario(turno.id, horario)" title="Editar horario">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="gh-icon-btn gh-icon-btn-danger" (click)="deleteHorario(turno.id, horario.id)" title="Eliminar horario">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ──────── ADD HORARIO ──────── -->
+          @if (activeHorarioTurnoId === turno.id) {
+            <div class="horario-add">
+              <input
+                type="text"
+                class="gh-input-xs"
+                [class.is-invalid]="horarioForm.get('inicio')?.invalid && horarioForm.get('inicio')?.touched"
+                formControlName="inicio"
+                [formGroup]="horarioForm"
+                placeholder="HH:mm"
+              >
+              <span class="text-muted fw-bold">&ndash;</span>
+              <input
+                type="text"
+                class="gh-input-xs"
+                [class.is-invalid]="horarioForm.get('fin')?.invalid && horarioForm.get('fin')?.touched"
+                formControlName="fin"
+                [formGroup]="horarioForm"
+                placeholder="HH:mm"
+              >
+              <button class="gh-icon-btn gh-icon-btn-success" (click)="addHorario(turno.id)" title="Agregar">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelAddHorario()" title="Cancelar">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          } @else {
+            <button class="turno-add-horario" (click)="showAddHorario(turno.id)">
+              <i class="bi bi-plus-circle me-1"></i>Agregar Horario
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ──────── MODAL ──────── -->
+  @if (showNewTurnoModal) {
+    <div class="gh-overlay" (click)="cancelNewTurno()"></div>
+    <div class="gh-modal-wrap">
+      <div class="gh-modal-dialog" (click)="$event.stopPropagation()">
+        <div class="gh-modal">
+          <div class="gh-modal-header">
+            <div class="d-flex align-items-center gap-3">
+              <div class="gh-modal-icon">
+                <i class="bi bi-plus-circle"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 fw-bold" style="color: var(--page-ink);">Nuevo Turno</h5>
+                <span class="small" style="color: var(--page-muted);">Crea un nuevo turno laboral</span>
+              </div>
+            </div>
+            <button type="button" class="gh-modal-close" (click)="cancelNewTurno()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <form [formGroup]="turnoForm" (ngSubmit)="addTurno()">
+            <div class="gh-modal-body">
+              <div>
+                <label class="gh-label">Nombre del turno</label>
+                <input
+                  type="text"
+                  class="gh-input"
+                  [class.is-invalid]="turnoForm.get('nombre')?.invalid && turnoForm.get('nombre')?.touched"
+                  formControlName="nombre"
+                  placeholder="Ej. Turno Madrugada"
+                >
+                @if (turnoForm.get('nombre')?.invalid && turnoForm.get('nombre')?.touched) {
+                  <div class="gh-error">El nombre debe tener al menos 3 caracteres.</div>
+                }
+              </div>
+            </div>
+            <div class="gh-modal-footer">
+              <button type="button" class="gh-btn-ghost" (click)="cancelNewTurno()">Cancelar</button>
+              <button type="submit" class="gh-btn-primary" [disabled]="turnoForm.invalid">
+                <i class="bi bi-check-lg me-1"></i>Crear Turno
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>
