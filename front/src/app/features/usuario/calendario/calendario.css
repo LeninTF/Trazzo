@@ -160,18 +160,13 @@
 }
 
 .cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-}
-
-.cal-grid__header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  background: var(--bg-light);
-  border-bottom: 1px solid var(--border);
 }
 
 .cal-grid__day-name {
@@ -182,11 +177,8 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.cal-grid__body {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  background: var(--bg-light);
+  border-bottom: 1px solid var(--border);
 }
 
 .cal-day {
