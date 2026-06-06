@@ -172,6 +172,6 @@ export class TurnosComponent {
     if (minutos < 0) minutos += 24 * 60;
     const h = Math.floor(minutos / 60);
     const m = minutos % 60;
-    return `${h}h ${m > 0 ? m + 'm' : ''}`;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 }

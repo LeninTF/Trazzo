@@ -290,9 +290,10 @@ export class DirectorioPersonal {
   }
   
   editarDesdeDetalle(): void {
-    if (this.personalSeleccionado) {
+    const persona = this.personalSeleccionado;
+    if (persona) {
       this.cerrarModalDetalle();
-      this.abrirModalEditar(this.personalSeleccionado);
+      this.abrirModalEditar(persona);
     }
   }
   
