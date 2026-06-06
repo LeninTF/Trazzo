@@ -259,9 +259,10 @@ export class Tenants {
   }
   
   editarDesdeDetalle(): void {
-    if (this.tenantSeleccionado) {
+    const tenant = this.tenantSeleccionado;
+    if (tenant) {
       this.cerrarModalDetalle();
-      this.abrirModalEditar(this.tenantSeleccionado);
+      this.abrirModalEditar(tenant);
     }
   }
   
