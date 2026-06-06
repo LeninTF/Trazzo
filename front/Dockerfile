@@ -9,7 +9,7 @@ RUN corepack enable pnpm
 COPY package.json pnpm-lock.yaml .npmrc ./
 
 # 2. Instalar dependencias de forma limpia
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
 RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract
