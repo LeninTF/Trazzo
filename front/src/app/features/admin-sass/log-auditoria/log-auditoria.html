@@ -1,0 +1,199 @@
+<!-- log-auditoria.html -->
+<div class="log-wrapper">
+
+  <!-- HEADER -->
+  <header class="log-header">
+    <div>
+      <h1 class="log-title">Log de Auditoría</h1>
+      <p class="log-subtitle">Trazabilidad completa de acciones y eventos del sistema.</p>
+    </div>
+    <div class="log-header-actions">
+      <button class="btn btn-outline-secondary" (click)="exportarCSV()">
+        <i class="bi bi-download me-2"></i> Exportar CSV
+      </button>
+    </div>
+  </header>
+
+  <!-- MÉTRICAS (3 TARJETAS) -->
+  <div class="metrics-grid">
+    <!-- Tarjeta 1: Total Eventos -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Total Eventos</small>
+        <h3 class="metric-card__value">{{ metricas.totalEventos | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--success">+{{ metricas.crecimiento }}%</span>
+      </div>
+      <i class="bi bi-bar-chart-steps metric-card__icon"></i>
+    </div>
+
+    <!-- Tarjeta 2: Errores -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Errores</small>
+        <h3 class="metric-card__value">{{ metricas.errores | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--danger"> Acciones inmediatas requeridas</span>
+      </div>
+      <i class="bi bi-exclamation-triangle-fill metric-card__icon metric-card__icon--danger"></i>
+    </div>
+
+    <!-- Tarjeta 3: Sesiones Activas -->
+    <div class="metric-card">
+      <div class="metric-card__content">
+        <small class="metric-card__label">Sesiones Activas</small>
+        <h3 class="metric-card__value">{{ metricas.sesionesActivas | number }}</h3>
+        <span class="metric-card__trend metric-card__trend--success">{{ metricas.porcentajeSesiones }}% del total</span>
+      </div>
+      <i class="bi bi-people-fill metric-card__icon metric-card__icon--primary"></i>
+    </div>
+  </div>
+
+  <!-- FILTROS Y BUSCADOR -->
+  <div class="filters-card">
+    <div class="filters-card__body">
+      <div class="filters-grid">
+        <div class="search-input">
+          <i class="bi bi-search search-input__icon"></i>
+          <input type="text" class="form-control" placeholder="Filtrar por descripción o entidad..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
+        </div>
+        <div class="date-filter">
+          <i class="bi bi-calendar3 date-filter__icon"></i>
+          <input type="date" class="form-control" [(ngModel)]="filtroFecha" (change)="filtrarLogs()" placeholder="Filtrar por fecha">
+        </div>
+        <button class="btn btn-primary" (click)="aplicarFiltros()">
+          <i class="bi bi-funnel me-2"></i> Filtrar
+        </button>
+        <button class="btn btn-outline-secondary" (click)="limpiarFiltros()">
+          <i class="bi bi-eraser me-2"></i> Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE LOGS -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>FECHA/HORA</th>
+            <th>TENANT</th>
+            <th>USUARIO</th>
+            <th>ACCIÓN</th>
+            <th>ENTIDAD</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (log of logsPaginado; track log.id) {
+            <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)">
+              <td class="log-table__date">
+                <strong>{{ log.fecha | date:'dd/MM/yyyy' }}</strong>
+                <div class="small text-muted">{{ log.hora }}</div>
+              </td>
+              <td class="log-table__tenant">
+                <strong>{{ log.tenant }}</strong>
+                <div class="small text-muted">{{ log.tenantId }}</div>
+              </td>
+              <td class="log-table__user">
+                <div class="user-initials" [style.backgroundColor]="log.userColor">
+                  {{ log.userInitials }}
+                </div>
+                <div>
+                  <strong>{{ log.userName }}</strong>
+                  <div class="small text-muted">{{ log.userEmail }}</div>
+                </div>
+              </td>
+              <td>
+                <span class="action-badge" [class.action-badge--success]="log.tipo === 'exito'" [class.action-badge--warning]="log.tipo === 'advertencia'" [class.action-badge--danger]="log.tipo === 'error'">
+                  {{ log.accion }}
+                </span>
+              </td>
+              <td>
+                {{ log.entidad }}
+                <div class="small text-muted">{{ log.entidadId }}</div>
+              </td>
+              <td class="log-table__detail">
+                <button class="btn-action" title="Ver detalles" (click)="seleccionarLog(log); $event.stopPropagation()">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PAGINACIÓN -->
+    @if (logsFiltrado.length > 0) {
+      <div class="table-card__footer">
+        <span class="text-muted">Mostrando {{ inicioRegistro }} - {{ finRegistro }} de {{ logsFiltrado.length }} eventos</span>
+        <nav>
+          <ul class="pagination">
+            <li class="page-item" [class.disabled]="paginaActual === 1">
+              <a class="page-link" (click)="cambiarPagina(paginaActual - 1)">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+            </li>
+            @for (pag of [].constructor(totalPaginas); let i = $index; track i) {
+              <li class="page-item" [class.active]="i + 1 === paginaActual">
+                <a class="page-link" (click)="cambiarPagina(i + 1)">{{ i + 1 }}</a>
+              </li>
+            }
+            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+              <a class="page-link" (click)="cambiarPagina(paginaActual + 1)">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- PANEL DE DETALLES (LATERAL DERECHO)        -->
+<!-- ========================================== -->
+@if (logSeleccionado) {
+  <div class="detail-panel">
+    <div class="detail-panel__header">
+      <div class="detail-panel__title">
+        <i class="bi bi-file-text-fill"></i>
+        <span>Detalles del Evento</span>
+      </div>
+      <button class="detail-panel__close" (click)="cerrarDetalle()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="detail-panel__body">
+      <div class="detail-event-id">
+        <strong>ID:</strong> {{ logSeleccionado.eventId }}
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section__title">INFORMACIÓN TÉCNICA</h4>
+        
+        <div class="detail-field">
+          <span class="detail-label">IP ADDRESS</span>
+          <span class="detail-value">{{ logSeleccionado.ipAddress }}</span>
+        </div>
+
+        <div class="detail-field">
+          <span class="detail-label">USER AGENT</span>
+          <span class="detail-value">{{ logSeleccionado.userAgent }}</span>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section__title">PAYLOAD (OLD_VALUE)</h4>
+        <pre class="detail-payload">{{ logSeleccionado.oldValue | json }}</pre>
+      </div>
+
+      <div class="detail-section">
+        <h4 class="detail-section__title">PAYLOAD (NEW_VALUE)</h4>
+        <pre class="detail-payload">{{ logSeleccionado.newValue | json }}</pre>
+      </div>
+    </div>
+  </div>
+}

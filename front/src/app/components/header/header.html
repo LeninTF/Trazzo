@@ -1,31 +1,73 @@
 <div class="header-shell">
+	<button class="header-hamburger" (click)="roleService.toggleSidebar()" aria-label="Menú">
+		<i class="bi bi-list"></i>
+	</button>
+
 	<div class="header-shell__search input-group">
 		<span class="input-group-text"><i class="bi bi-search"></i></span>
 		<input type="search" class="form-control" placeholder="Buscar recursos, empleados..." aria-label="Buscar recursos, empleados">
 	</div>
 
 	<div class="header-shell__actions">
-		<button type="button" class="icon-button has-alert" aria-label="Notificaciones">
-			<i class="bi bi-bell"></i>
-			<span class="notification-dot"></span>
-		</button>
+		<div class="dropdown">
+			<button type="button" class="icon-button has-alert" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificaciones">
+				<i class="bi bi-bell"></i>
+				<span class="notification-dot"></span>
+			</button>
+			<div class="dropdown-menu dropdown-menu-end header-dropdown notif-dropdown">
+				<div class="dropdown-header">Notificaciones</div>
+				@for (notif of notificaciones; track notif.titulo) {
+					<button type="button" class="dropdown-item d-flex align-items-start gap-2">
+						<i class="bi mt-1" [class]="notif.icono" [style.color]="tipoColor[notif.tipo]"></i>
+						<div class="d-flex flex-column lh-sm min-w-0">
+							<span class="notif-titulo">{{ notif.titulo }}</span>
+							<span class="notif-desc">{{ notif.descripcion }}</span>
+							<span class="notif-hora">{{ notif.hora }}</span>
+						</div>
+					</button>
+				}
+				<div class="dropdown-divider"></div>
+				<button type="button" class="dropdown-item notif-ver-todas">Ver todas las notificaciones</button>
+			</div>
+		</div>
 
-		<button type="button" class="icon-button" aria-label="Configuración">
+		<a class="icon-button" [routerLink]="settingsUrl()" aria-label="Configuración">
 			<i class="bi bi-gear"></i>
-		</button>
+		</a>
 
-		<button type="button" class="icon-button" aria-label="Ayuda">
-			<i class="bi bi-question-circle"></i>
-		</button>
+		<div class="dropdown header-help">
+			<button type="button" class="icon-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Ayuda">
+				<i class="bi bi-question-circle"></i>
+			</button>
+			<ul class="dropdown-menu dropdown-menu-end header-dropdown">
+				<li><button type="button" class="dropdown-item"><i class="bi bi-book"></i>Guía de uso</button></li>
+				<li><button type="button" class="dropdown-item"><i class="bi bi-chat-dots"></i>Soporte técnico</button></li>
+				<li><button type="button" class="dropdown-item"><i class="bi bi-info-circle"></i>Acerca de Trazzo</button></li>
+			</ul>
+		</div>
 
 		<div class="user-chip dropdown">
-			<div class="user-chip__info">
+			<div class="user-chip__info" data-bs-toggle="dropdown" aria-expanded="false" role="button">
 				<strong>Jose Alata</strong>
-				<span>Administrador</span>
+				<span>{{ roleService.roleLabel[roleService.role()] }}</span>
 			</div>
-			<button type="button" class="user-chip__toggle" aria-label="Abrir menú de usuario">
+			<button type="button" class="user-chip__toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Cambiar rol">
 				<i class="bi bi-chevron-down"></i>
 			</button>
+			<ul class="dropdown-menu dropdown-menu-end header-dropdown">
+				@for (rol of roles; track rol.value) {
+					<li>
+						<button type="button" class="dropdown-item" (click)="roleService.switchRole(rol.value)">
+							@if (roleService.role() === rol.value) {
+								<i class="bi bi-check-lg"></i>
+							} @else {
+								<span class="rol-icon-placeholder"></span>
+							}
+							{{ rol.label }}
+						</button>
+					</li>
+				}
+			</ul>
 		</div>
 	</div>
 </div>

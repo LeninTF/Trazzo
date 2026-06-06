@@ -46,6 +46,7 @@ html {
 .navbar {
 	background: #fff !important;
 	border-bottom: 1px solid rgba(15,23,42,0.04);
+	z-index: 1100 !important;
 }
 .navbar-brand { color: var(--primary) !important; font-weight:700; }
 .navbar .nav-link { color: var(--muted) !important; }
@@ -69,9 +70,6 @@ header.hero .navbar .btn-primary,
 	color: #fff !important;
 	box-shadow: 0 8px 20px rgba(30,64,175,0.12) !important;
 }
-
-/* If still not visible, increase z-index for navbar */
-.navbar { z-index: 1100 !important; }
 
 
 /* You can add global styles to this file, and also import other style files */

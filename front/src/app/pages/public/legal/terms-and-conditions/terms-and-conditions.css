@@ -345,7 +345,7 @@
 	width: 2.25rem;
 	height: 2.25rem;
 	border-radius: 0.5rem;
-	background: rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.2);
 	color: #fff;
 	transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }

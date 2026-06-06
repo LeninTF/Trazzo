@@ -1,0 +1,250 @@
+<!-- planes.html -->
+<div class="planes-wrapper">
+
+  <!-- HEADER -->
+  <header class="planes-header">
+    <div>
+      <h1 class="planes-title">Planes y Facturación</h1>
+      <p class="planes-subtitle">Administre la suscripción, supervise el consumo y consulte el historial de pagos.</p>
+    </div>
+    <div class="planes-header-actions">
+      <button class="btn btn-outline-primary" (click)="exportarFacturas()">
+        <i class="bi bi-download me-2"></i> Exportar
+      </button>
+      <button class="btn btn-primary" (click)="abrirModalActualizarPlan()">
+        <i class="bi bi-credit-card me-2"></i> Actualizar Plan
+      </button>
+    </div>
+  </header>
+
+  <!-- FILA SUPERIOR: PLANES + USO -->
+  <div class="planes-top-row">
+    <!-- COLUMNA IZQUIERDA: PLANES -->
+    <div class="planes-main">
+      <div class="planes-card">
+        <div class="planes-card__header">
+          <h5 class="planes-card__title">
+            <i class="bi bi-stars me-2"></i> Selecciona tu Plan
+          </h5>
+        </div>
+        <div class="planes-card__body">
+          <div class="planes-grid-cards">
+            @for (plan of planes(); track plan.id) {
+              <div class="plan-card" [class.plan-card--featured]="planActualId === plan.id" [class.plan-card--active]="planSeleccionadoId === plan.id" (click)="seleccionarPlan(plan)">
+                @if (planActualId === plan.id) {
+                  <span class="plan-card__badge">Tu plan actual</span>
+                }
+                <div class="plan-card__header">
+                  <h4 class="plan-card__title">{{ plan.nombre }}</h4>
+                  <div class="plan-card__price">
+                    <h2 class="plan-card__amount">{{ plan.precio | currency:'S/':'symbol':'1.0-0' }}</h2>
+                    <small class="plan-card__period">/ mes</small>
+                  </div>
+                </div>
+                <p class="plan-card__description">{{ plan.descripcion }}</p>
+                <ul class="plan-card__features">
+                  @for (feature of plan.caracteristicas; track feature) {
+                    <li class="plan-card__feature">
+                      <i class="bi bi-check-circle-fill me-2"></i>
+                      {{ feature }}
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: USO DEL SISTEMA -->
+    <div class="planes-sidebar">
+      <div class="planes-card">
+        <div class="planes-card__header">
+          <h5 class="planes-card__title">
+            <i class="bi bi-bar-chart-fill me-2"></i> Uso del Sistema
+          </h5>
+        </div>
+        <div class="planes-card__body">
+          <div class="metric-usage">
+            <div class="metric-usage__item">
+              <div class="metric-usage__header">
+                <span>Usuarios activos</span>
+                <strong>{{ metricas.usuariosActivos }} / {{ planActual?.limiteUsuarios || metricas.limiteUsuarios }}</strong>
+              </div>
+              <small class="text-muted">{{ porcentajeUsuarios }}% uso</small>
+              <div class="progress mt-2">
+                <div class="progress-bar bg-success" [style.width]="porcentajeUsuarios + '%'"></div>
+              </div>
+            </div>
+            <div class="metric-usage__item mt-4">
+              <div class="metric-usage__header">
+                <span>Almacenamiento</span>
+                <strong>{{ metricas.almacenamientoUsado }} GB / {{ planActual?.limiteAlmacenamiento || metricas.limiteAlmacenamiento }} GB</strong>
+              </div>
+              <small class="text-muted">{{ porcentajeAlmacenamiento }}% uso</small>
+              <div class="progress mt-2">
+                <div class="progress-bar bg-primary" [style.width]="porcentajeAlmacenamiento + '%'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECOMENDACIÓN -->
+      <div class="planes-card planes-card--warning">
+        <div class="planes-card__body">
+          <h5 class="planes-card__title">
+            <i class="bi bi-lightbulb-fill text-warning me-2"></i> Optimiza tu gestión
+          </h5>
+          <p class="text-muted">Obtén soporte avanzado, analítica empresarial y herramientas exclusivas realizando un upgrade de tu suscripción.</p>
+          <button class="btn btn-warning w-100" (click)="abrirModalActualizarPlan()">Actualizar ahora</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILA INFERIOR: HISTORIAL DE FACTURAS (HORIZONTAL) -->
+  <div class="planes-bottom-row">
+    <div class="planes-card planes-card--full">
+      <div class="planes-card__header">
+        <h5 class="planes-card__title">
+          <i class="bi bi-receipt-cutoff me-2"></i> Historial de Facturas
+        </h5>
+      </div>
+      <div class="planes-card__body">
+        <div class="facturas-horizontal">
+          @for (factura of facturas(); track factura.id) {
+            <div class="factura-card" [class.factura-card--active]="facturaSeleccionadaId === factura.id" (click)="seleccionarFactura(factura)">
+              <div class="factura-card__header">
+                <h6 class="factura-card__title">{{ factura.codigo }}</h6>
+                <span class="factura-card__plan">{{ factura.plan }}</span>
+              </div>
+              <div class="factura-card__body">
+                <p class="factura-card__date">
+                  <i class="bi bi-calendar3 me-2"></i> {{ factura.fecha | date:'dd MMM, yyyy' }}
+                </p>
+                <p class="factura-card__amount">
+                  <i class="bi bi-cash-stack me-2"></i> {{ factura.monto | currency:'S/':'symbol':'1.2-2' }}
+                </p>
+                <span class="estado-badge" [class.estado-pagada]="factura.estado === 'Pagada'" [class.estado-pendiente]="factura.estado === 'Pendiente'" [class.estado-vencida]="factura.estado === 'Vencida'">
+                  <span class="estado-dot"></span>
+                  {{ factura.estado }}
+                </span>
+              </div>
+            </div>
+          } @empty {
+            <div class="empty-state">
+              <i class="bi bi-receipt"></i>
+              <p>No hay facturas registradas</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: ACTUALIZAR PLAN                     -->
+<!-- ========================================== -->
+@if (modalActualizarOpen && planSeleccionado) {
+  <div class="modal-overlay" (click)="cerrarModalActualizar()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-credit-card"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Actualizar Plan</h2>
+            <span class="modal-id">Confirmar cambio de suscripción</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalActualizar()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea cambiar al plan <strong>{{ planSeleccionado.nombre }}</strong>?</p>
+        <p class="text-muted small">El nuevo precio será de <strong>{{ planSeleccionado.precio | currency:'S/':'symbol':'1.2-2' }}/mes</strong> y se aplicará a partir del próximo ciclo de facturación.</p>
+        <div class="alert alert-info mt-3">
+          <i class="bi bi-info-circle me-2"></i>
+          El cambio de plan no afectará los datos existentes de su organización.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalActualizar()">Cancelar</button>
+        <button class="btn btn-primary" (click)="confirmarActualizarPlan()">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL: VER DETALLE FACTURA                 -->
+<!-- ========================================== -->
+@if (modalFacturaOpen && facturaSeleccionada) {
+  <div class="modal-overlay" (click)="cerrarModalFactura()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-receipt"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Detalle de Factura</h2>
+            <span class="modal-id">{{ facturaSeleccionada.codigo }}</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalFactura()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-field">
+            <span class="detail-label">Plan</span>
+            <span class="detail-value">{{ facturaSeleccionada.plan }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Estado</span>
+            <span class="estado-badge" [class.estado-pagada]="facturaSeleccionada.estado === 'Pagada'" [class.estado-pendiente]="facturaSeleccionada.estado === 'Pendiente'">
+              <span class="estado-dot"></span>
+              {{ facturaSeleccionada.estado }}
+            </span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Fecha de emisión</span>
+            <span class="detail-value">{{ facturaSeleccionada.fecha | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Monto total</span>
+            <span class="detail-value">{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="detail-field detail-field--full">
+            <span class="detail-label">Método de pago</span>
+            <span class="detail-value">Tarjeta de crédito ···· 4242</span>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3 class="detail-section-title">Resumen de cargos</h3>
+          <div class="summary-item">
+            <span>Suscripción mensual - {{ facturaSeleccionada.plan }}</span>
+            <strong>{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</strong>
+          </div>
+          <div class="summary-item summary-item--total">
+            <span>Total</span>
+            <strong>{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalFactura()">Cerrar</button>
+        <button class="btn btn-primary" (click)="descargarFactura()">
+          <i class="bi bi-download me-2"></i> Descargar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+}

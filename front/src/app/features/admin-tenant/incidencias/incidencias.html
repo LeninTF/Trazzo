@@ -1,0 +1,328 @@
+<div class="incidencias-wrapper">
+  <header class="inc-header">
+    <div>
+      <h1 class="inc-title">Gestión de Incidencias</h1>
+      <p class="inc-subtitle">Monitoreo y control de solicitudes del personal</p>
+    </div>
+    <div class="inc-header-actions">
+      <div class="filter-wrapper">
+        <button class="btn btn-outline-filter" (click)="toggleFilter()" [class.active]="filterOpen || hayFiltrosActivos">
+          <i class="bi bi-funnel me-2"></i>
+          Filtros
+          @if (hayFiltrosActivos) {
+            <span class="filter-dot"></span>
+          }
+        </button>
+        @if (filterOpen) {
+          <div class="filter-dropdown" (click)="$event.stopPropagation()">
+            <div class="filter-section">
+              <span class="filter-label">Estado</span>
+              <div class="filter-chips">
+                @for (e of ['Todos', 'Pendiente', 'Aprobado', 'Rechazado']; track e) {
+                  <button class="filter-chip" [class.active]="filterEstado() === e" (click)="setFilterEstado(e)">
+                    {{ e }}
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="filter-section">
+              <span class="filter-label">Tipo</span>
+              <div class="filter-chips">
+                @for (t of tiposDisponibles; track t) {
+                  <button class="filter-chip" [class.active]="filterTipo() === t" (click)="setFilterTipo(t)">
+                    {{ t }}
+                  </button>
+                }
+              </div>
+            </div>
+            @if (hayFiltrosActivos) {
+              <button class="filter-clear" (click)="limpiarFiltros()">
+                <i class="bi bi-x-circle me-1"></i>
+                Limpiar filtros
+              </button>
+            }
+          </div>
+        }
+      </div>
+      <button class="btn btn-primary-export" (click)="exportarCSV()">
+        <i class="bi bi-download me-2"></i>
+        Exportar
+      </button>
+    </div>
+  </header>
+
+  <div class="metrics-grid">
+    @for (m of metricas; track m.titulo) {
+      <div class="metric-card">
+        <div class="metric-icon" [style.background]="m.bg">
+          <i class="bi" [class]="m.icono" [style.color]="m.color"></i>
+        </div>
+        <div class="metric-info">
+          <span class="metric-label">{{ m.titulo }}</span>
+          <span class="metric-value">{{ m.valor }}</span>
+          <span class="metric-sub">{{ m.subtitulo }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h2 class="table-title">Solicitudes Pendientes</h2>
+    </div>
+    <div class="table-responsive">
+      <table class="inc-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Tipo</th>
+            <th>Periodo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of pendientes(); track s.colaborador) {
+            <tr>
+              <td>
+                <div class="colab-info">
+                  <span class="colab-name">{{ s.colaborador }}</span>
+                  <span class="colab-rol">{{ s.rol }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="tipo-badge">{{ s.tipo }}</span>
+              </td>
+              <td>
+                <div class="periodo-info">
+                  <span class="periodo-range">{{ s.periodo }}</span>
+                  <span class="periodo-detalle">{{ s.detalle }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="estado-badge" [class.estado-pendiente]="s.estado === 'Pendiente'" [class.estado-aprobado]="s.estado === 'Aprobado'" [class.estado-rechazado]="s.estado === 'Rechazado'">
+                  <span class="estado-dot"></span>
+                  {{ s.estado }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-action" title="Ver detalle" (click)="openModal(s)">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="empty-row">No hay solicitudes pendientes con los filtros actuales</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="table-footer">
+      <span>Mostrando {{ pendientes().length }} de {{ filtradas().length }} registros filtrados</span>
+    </div>
+  </div>
+
+  @if (aprobadas().length > 0) {
+    <div class="table-card historial-card">
+      <div class="table-header">
+        <h2 class="table-title">
+          <i class="bi bi-check-circle-fill me-2" style="color: var(--success);"></i>
+          Aprobadas
+        </h2>
+      </div>
+      <div class="table-responsive">
+        <table class="inc-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Tipo</th>
+              <th>Periodo</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of aprobadas(); track s.colaborador) {
+              <tr>
+                <td>
+                  <div class="colab-info">
+                    <span class="colab-name">{{ s.colaborador }}</span>
+                    <span class="colab-rol">{{ s.rol }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="tipo-badge">{{ s.tipo }}</span>
+                </td>
+                <td>
+                  <div class="periodo-info">
+                    <span class="periodo-range">{{ s.periodo }}</span>
+                    <span class="periodo-detalle">{{ s.detalle }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="estado-badge estado-aprobado">
+                    <span class="estado-dot"></span>
+                    {{ s.estado }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action" title="Ver detalle" (click)="openModal(s)">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  @if (rechazadas().length > 0) {
+    <div class="table-card historial-card">
+      <div class="table-header">
+        <h2 class="table-title">
+          <i class="bi bi-x-circle-fill me-2" style="color: var(--danger);"></i>
+          Rechazadas
+        </h2>
+      </div>
+      <div class="table-responsive">
+        <table class="inc-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Tipo</th>
+              <th>Periodo</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of rechazadas(); track s.colaborador) {
+              <tr>
+                <td>
+                  <div class="colab-info">
+                    <span class="colab-name">{{ s.colaborador }}</span>
+                    <span class="colab-rol">{{ s.rol }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="tipo-badge">{{ s.tipo }}</span>
+                </td>
+                <td>
+                  <div class="periodo-info">
+                    <span class="periodo-range">{{ s.periodo }}</span>
+                    <span class="periodo-detalle">{{ s.detalle }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="estado-badge estado-rechazado">
+                    <span class="estado-dot"></span>
+                    {{ s.estado }}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn-action" title="Ver detalle" (click)="openModal(s)">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+@if (modalOpen && selectedSolicitud) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-file-text"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Detalle de Incidencia</h2>
+            <span class="modal-id">#{{ selectedSolicitud.tipo.replace(/\s+/g, '-').toLowerCase() }}</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeModal()" title="Cerrar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-field">
+            <span class="detail-label">Colaborador</span>
+            <span class="detail-value">{{ selectedSolicitud.colaborador }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Rol</span>
+            <span class="detail-value">{{ selectedSolicitud.rol }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Tipo de Incidencia</span>
+            <span class="tipo-badge">{{ selectedSolicitud.tipo }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Estado</span>
+            <span class="estado-badge" [class.estado-pendiente]="selectedSolicitud.estado === 'Pendiente'" [class.estado-aprobado]="selectedSolicitud.estado === 'Aprobado'" [class.estado-rechazado]="selectedSolicitud.estado === 'Rechazado'">
+              <span class="estado-dot"></span>
+              {{ selectedSolicitud.estado }}
+            </span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Periodo</span>
+            <span class="detail-value">{{ selectedSolicitud.periodo }} &mdash; {{ selectedSolicitud.detalle }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Fecha de Creación</span>
+            <span class="detail-value">{{ selectedSolicitud.fechaCreacion }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3 class="detail-section-title">Descripción</h3>
+          <p class="detail-desc">{{ selectedSolicitud.descripcion }}</p>
+        </div>
+
+        @if (selectedSolicitud.archivo) {
+          <div class="detail-section">
+            <h3 class="detail-section-title">Archivo Adjunto</h3>
+            <div class="file-card">
+              <div class="file-icon">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </div>
+              <div class="file-info">
+                <span class="file-name">{{ selectedSolicitud.archivo.nombre }}</span>
+                <span class="file-meta">{{ selectedSolicitud.archivo.tamano }} &middot; PDF</span>
+              </div>
+              <button class="btn-file-download" (click)="descargarArchivo(selectedSolicitud)" title="Descargar">
+                <i class="bi bi-download"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModal()">Cerrar</button>
+        @if (selectedSolicitud.estado === 'Pendiente') {
+          <button class="btn btn-aprobar" (click)="aprobar(selectedSolicitud)">
+            <i class="bi bi-check-circle me-2"></i>
+            Aprobar
+          </button>
+          <button class="btn btn-rechazar" (click)="rechazar(selectedSolicitud)">
+            <i class="bi bi-x-circle me-2"></i>
+            Rechazar
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}

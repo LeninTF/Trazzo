@@ -1,0 +1,285 @@
+<!-- configuracion-tenant.html -->
+<div class="config-wrapper">
+  <header class="config-header">
+    <div>
+      <h1 class="config-title">Editar Configuración del Tenant</h1>
+      <p class="config-subtitle">Configure los parámetros institucionales, límites del sistema y personalización visual.</p>
+    </div>
+    <div class="config-header-actions">
+      <button class="btn btn-outline-secondary" (click)="verLogs()">
+        <i class="bi bi-clock-history me-2"></i> Ver Logs
+      </button>
+      <button class="btn btn-outline-danger" (click)="suspenderTenant()">
+        <i class="bi bi-pause-circle me-2"></i> Suspender Tenant
+      </button>
+      <button class="btn btn-primary" (click)="guardarCambios()">
+        <i class="bi bi-floppy me-2"></i> Guardar Cambios
+      </button>
+    </div>
+  </header>
+
+  <div class="config-grid">
+    <!-- Columna principal -->
+    <div class="config-main">
+
+      <!-- Información Básica -->
+      <div class="config-card">
+        <div class="config-card__header">
+          <div class="config-card__icon" style="background: var(--primary-light); color: var(--primary);">
+            <i class="bi bi-building"></i>
+          </div>
+          <div>
+            <h2 class="config-card__title">Información Básica</h2>
+            <p class="config-card__desc">Datos generales del tenant institucional</p>
+          </div>
+        </div>
+        <div class="config-card__body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nombre Oficial del Tenant</label>
+              <input type="text" class="form-control" [(ngModel)]="tenantInfo().nombre" (ngModelChange)="marcarCambiosPendientes()" placeholder="Ej: Universidad Nacional">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Correo Administrador</label>
+              <input type="email" class="form-control" [(ngModel)]="tenantInfo().email" (ngModelChange)="marcarCambiosPendientes()" placeholder="admin@ejemplo.com">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Logo Institucional</label>
+            <div class="logo-upload" (click)="abrirSelectorLogo()">
+              <div class="logo-upload__preview" *ngIf="tenantInfo().logoUrl">
+                <img [src]="tenantInfo().logoUrl" alt="Logo" class="logo-upload__image">
+                <button class="logo-upload__remove" (click)="eliminarLogo($event)">✕</button>
+              </div>
+              <div class="logo-upload__placeholder" *ngIf="!tenantInfo().logoUrl">
+                <i class="bi bi-image"></i>
+                <p>Cambiar Logo</p>
+                <small>PNG, JPG hasta 2MB</small>
+              </div>
+              <input type="file" #logoInput accept="image/*" style="display: none" (change)="cambiarLogo($event)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Límites del Sistema -->
+      <div class="config-card">
+        <div class="config-card__header">
+          <div class="config-card__icon" style="background: var(--indigo-bg); color: var(--indigo);">
+            <i class="bi bi-sliders2"></i>
+          </div>
+          <div>
+            <h2 class="config-card__title">Límites del Sistema</h2>
+            <p class="config-card__desc">Capacidades máximas y restricciones operativas</p>
+          </div>
+        </div>
+        <div class="config-card__body">
+          <div class="limits-grid">
+            <div class="limit-item">
+              <input type="number" class="limit-item__input" [(ngModel)]="limites().maxUsuarios" (change)="validarLimiteMaxUsuarios()">
+              <span class="limit-item__label">Máximo de Usuarios</span>
+            </div>
+            <div class="limit-item">
+              <input type="number" class="limit-item__input" [(ngModel)]="limites().maxSedes" (change)="validarLimiteSedes()">
+              <span class="limit-item__label">Sedes Físicas</span>
+            </div>
+            <div class="limit-item">
+              <input type="date" class="limit-item__input" [(ngModel)]="limites().cicloFacturacion" (change)="marcarCambiosPendientes()">
+              <span class="limit-item__label">Ciclo de Facturación</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Módulos Activos -->
+      <div class="config-card">
+        <div class="config-card__header">
+          <div class="config-card__icon" style="background: var(--success-bg); color: var(--success);">
+            <i class="bi bi-grid-3x3-gap"></i>
+          </div>
+          <div>
+            <h2 class="config-card__title">Plan y Módulos Activos</h2>
+            <p class="config-card__desc">Habilite o deshabilite funcionalidades del sistema</p>
+          </div>
+        </div>
+        <div class="config-card__body">
+          <div class="modules-grid">
+            @for (modulo of modulos(); track modulo.id) {
+              <div class="module-item">
+                <div class="module-item__info">
+                  <span class="module-item__title">{{ modulo.nombre }}</span>
+                  <span class="module-item__status" [class.module-item__status--active]="modulo.activo" [class.module-item__status--inactive]="!modulo.activo">
+                    {{ modulo.activo ? 'ACTIVO' : 'INACTIVO' }}
+                  </span>
+                </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" [(ngModel)]="modulo.activo" (change)="toggleModulo(modulo)">
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna lateral - Branding -->
+    <div class="config-sidebar">
+      <div class="config-card config-card--sticky">
+        <div class="config-card__header">
+          <div class="config-card__icon" style="background: var(--warning-bg); color: var(--warning);">
+            <i class="bi bi-palette"></i>
+          </div>
+          <div>
+            <h2 class="config-card__title">Branding Institucional</h2>
+            <p class="config-card__desc">Personalice la apariencia del sistema</p>
+          </div>
+        </div>
+        <div class="config-card__body">
+          <div class="form-group">
+            <label class="form-label">Color Principal</label>
+            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorPrimario" (ngModelChange)="actualizarColorPrimario($event)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color Secundario</label>
+            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorSecundario" (ngModelChange)="actualizarColorSecundario($event)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color de Acento</label>
+            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorAcento" (ngModelChange)="actualizarColorAcento($event)">
+          </div>
+
+          <div class="preview-section">
+            <h3 class="preview-title">Vista Previa</h3>
+            <div class="preview-card">
+              <button class="preview-button" [style.backgroundColor]="branding().colorPrimario" [style.borderColor]="branding().colorSecundario">
+                Botón de Ejemplo
+              </button>
+              <div class="preview-colors">
+                <div class="preview-color" [style.backgroundColor]="branding().colorPrimario"></div>
+                <div class="preview-color" [style.backgroundColor]="branding().colorSecundario"></div>
+                <div class="preview-color" [style.backgroundColor]="branding().colorAcento"></div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-outline-primary w-100 mt-3" (click)="resetearColores()">
+            <i class="bi bi-arrow-repeat me-2"></i> Restaurar Colores
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: CONFIRMACIÓN DE CAMBIOS             -->
+<!-- ========================================== -->
+@if (modalConfirmacionOpen) {
+  <div class="modal-overlay" (click)="cerrarModalConfirmacion()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-question-circle"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Confirmar Cambios</h2>
+            <span class="modal-id">Validación requerida</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalConfirmacion()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea guardar los cambios realizados?</p>
+        <p class="text-muted small">Esta acción actualizará la configuración del tenant y afectará a todos los usuarios.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalConfirmacion()">Cancelar</button>
+        <button class="btn btn-primary" (click)="confirmarGuardar()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL: SUSPENDER TENANT                    -->
+<!-- ========================================== -->
+@if (modalSuspenderOpen) {
+  <div class="modal-overlay" (click)="cerrarModalSuspender()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header modal-header--danger">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Suspender Tenant</h2>
+            <span class="modal-id">Acción irreversible</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalSuspender()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>¿Está seguro de que desea <strong>suspender</strong> este tenant?</p>
+        <p class="text-muted small">Al suspender el tenant, todos los usuarios perderán acceso al sistema hasta que se reactive la cuenta.</p>
+        <div class="form-group mt-3">
+          <label class="form-label">Motivo de suspensión</label>
+          <textarea class="form-control" rows="2" [(ngModel)]="motivoSuspension" placeholder="Ej: Falta de pago, incumplimiento de términos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalSuspender()">Cancelar</button>
+        <button class="btn btn-danger" (click)="confirmarSuspender()">Suspender Tenant</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL: VER LOGS                            -->
+<!-- ========================================== -->
+@if (modalLogsOpen) {
+  <div class="modal-overlay" (click)="cerrarModalLogs()">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Historial de Cambios</h2>
+            <span class="modal-id">Registro de actividades</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalLogs()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="logs-list">
+          @for (log of logs(); track log.id) {
+            <div class="log-item">
+              <div class="log-item__icon">
+                <i class="bi" [ngClass]="log.tipo === 'exito' ? 'bi-check-circle-fill' : (log.tipo === 'error' ? 'bi-x-circle-fill' : 'bi-info-circle-fill')"></i>
+              </div>
+              <div class="log-item__content">
+                <div class="log-item__title">{{ log.accion }}</div>
+                <div class="log-item__date">{{ log.fecha | date:'dd/MM/yyyy HH:mm:ss' }}</div>
+              </div>
+              <div class="log-item__user">{{ log.usuario }}</div>
+            </div>
+          } @empty {
+            <div class="empty-logs">
+              <i class="bi bi-inbox"></i>
+              <p>No hay registros de cambios recientes</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

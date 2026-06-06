@@ -1,0 +1,304 @@
+.fer-section {
+  --page-blue: #1e40af;
+  --page-blue-soft: #e8f0ff;
+  --page-ink: #0f172a;
+  --page-muted: #64748b;
+  --page-surface: #ffffff;
+  --page-border: rgba(30, 64, 175, 0.12);
+}
+
+.badge-custom {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--page-blue-soft);
+  color: var(--page-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-gh-sm-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, var(--page-blue), #17307d);
+  border: none;
+  color: white;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+
+.btn-gh-sm-primary:hover {
+  box-shadow: 0 6px 16px rgba(30,64,175,0.25);
+  transform: translateY(-2px);
+}
+
+/* ── New Feriado Form Card ── */
+.fer-form-card {
+  background: var(--page-surface);
+  border: 1px solid var(--page-border);
+  border-radius: 1.25rem;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  transition: box-shadow 220ms ease;
+}
+
+.fer-form-card:hover {
+  box-shadow: 0 8px 20px rgba(30,64,175,0.08);
+}
+
+.fer-form-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--page-blue-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--page-blue);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.fer-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--page-muted);
+  margin-bottom: 4px;
+}
+
+.fer-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--page-ink);
+  background: var(--page-surface);
+  transition: border-color 160ms ease;
+}
+
+.fer-input:focus {
+  outline: none;
+  border-color: var(--page-blue);
+  box-shadow: 0 0 0 3px rgba(30,64,175,0.08);
+}
+
+.fer-input.invalid {
+  border-color: #ef4444;
+}
+
+.fer-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--page-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--page-ink);
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.fer-radio:has(input:checked) {
+  background: var(--page-blue-soft);
+  border-color: var(--page-blue);
+  color: var(--page-blue);
+}
+
+.fer-radio input {
+  display: none;
+}
+
+/* ── Feriado Card ── */
+.fer-card {
+  background: var(--page-surface);
+  border: 1px solid var(--page-border);
+  border-radius: 1.25rem;
+  padding: 18px 20px;
+  transition: all 220ms ease;
+  height: 100%;
+}
+
+.fer-card:hover {
+  box-shadow: 0 8px 20px rgba(30,64,175,0.08);
+  border-color: rgba(30,64,175,0.2);
+}
+
+.fer-date-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--page-blue-soft);
+  color: var(--page-blue);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', monospace;
+}
+
+.fer-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fer-tag-nacional {
+  background: #eef2ff;
+  color: #1e40af;
+}
+
+.fer-tag-institucional {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+/* ── Inline Edit ── */
+.fer-input-sm {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--page-border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--page-ink);
+  background: var(--page-surface);
+  transition: border-color 160ms ease;
+}
+
+.fer-input-sm:focus {
+  outline: none;
+  border-color: var(--page-blue);
+  box-shadow: 0 0 0 3px rgba(30,64,175,0.08);
+}
+
+.fer-input-sm.invalid {
+  border-color: #ef4444;
+}
+
+.fer-radio-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--page-border);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.fer-radio-sm:has(input:checked) {
+  background: var(--page-blue-soft);
+  border-color: var(--page-blue);
+  color: var(--page-blue);
+}
+
+.fer-radio-sm input {
+  display: none;
+}
+
+/* ── Icon Buttons ── */
+.btn-icon-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.btn-icon-success {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.btn-icon-success:hover {
+  background: #059669;
+  color: white;
+}
+
+.btn-icon-danger {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.btn-icon-danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-icon-ghost {
+  background: transparent;
+  color: var(--page-muted);
+}
+
+.btn-icon-ghost:hover {
+  background: var(--page-blue-soft);
+  color: var(--page-blue);
+}
+
+/* ── Shared Buttons ── */
+.btn-primary-sm {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--page-blue), #17307d);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.btn-primary-sm:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(30,64,175,0.25);
+  transform: translateY(-2px);
+}
+
+.btn-primary-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost-sm {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border: 1px solid var(--page-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--page-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.btn-ghost-sm:hover {
+  border-color: var(--page-blue);
+  color: var(--page-blue);
+  background: var(--page-blue-soft);
+}
+
+.error-msg {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}

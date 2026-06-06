@@ -1,0 +1,153 @@
+<div class="fer-section">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge-custom">{{ feriados.length }} feriados</span>
+    </div>
+    <button class="btn-gh-sm-primary" (click)="openNewForm()">
+      <i class="bi bi-plus-lg me-1"></i>Nuevo Feriado
+    </button>
+  </div>
+
+  <!-- New Feriado Form -->
+  @if (showNewForm) {
+    <div class="fer-form-card">
+      <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="fer-form-icon">
+          <i class="bi bi-calendar-plus"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 fw-bold">Nuevo Feriado</h6>
+          <span class="small text-muted">Agrega una fecha especial al calendario</span>
+        </div>
+      </div>
+      <form [formGroup]="feriadoForm" (ngSubmit)="addFeriado()">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="fer-label">Fecha</label>
+            <input
+              type="date"
+              class="fer-input"
+              [class.invalid]="feriadoForm.get('fecha')?.invalid && feriadoForm.get('fecha')?.touched"
+              formControlName="fecha"
+            >
+            @if (feriadoForm.get('fecha')?.invalid && feriadoForm.get('fecha')?.touched) {
+              <div class="error-msg">Seleccione una fecha.</div>
+            }
+          </div>
+          <div class="col-md-4">
+            <label class="fer-label">Nombre</label>
+            <input
+              type="text"
+              class="fer-input"
+              [class.invalid]="feriadoForm.get('nombre')?.invalid && feriadoForm.get('nombre')?.touched"
+              formControlName="nombre"
+              placeholder="Ej. Día del Trabajador"
+            >
+            @if (feriadoForm.get('nombre')?.invalid && feriadoForm.get('nombre')?.touched) {
+              <div class="error-msg">Ingrese un nombre válido.</div>
+            }
+          </div>
+          <div class="col-md-4">
+            <label class="fer-label">Tipo</label>
+            <div class="d-flex gap-3 pt-1">
+              <label class="fer-radio">
+                <input type="radio" formControlName="tipo" value="nacional">
+                <span>Nacional</span>
+              </label>
+              <label class="fer-radio">
+                <input type="radio" formControlName="tipo" value="institucional">
+                <span>Institucional</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+          <button type="submit" class="btn-primary-sm" [disabled]="feriadoForm.invalid">
+            <i class="bi bi-check-lg me-1"></i>Guardar
+          </button>
+          <button type="button" class="btn-ghost-sm" (click)="cancelNewForm()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <!-- Feriados List -->
+  <div class="row g-3">
+    @for (feriado of feriados; track feriado.id) {
+      <div class="col-md-6">
+        <div class="fer-card">
+          @if (editingFeriadoId === feriado.id) {
+            <form [formGroup]="editFeriadoForm">
+              <div class="row g-2">
+                <div class="col-12">
+                  <input
+                    type="text"
+                    class="fer-input-sm"
+                    [class.invalid]="editFeriadoForm.get('nombre')?.invalid && editFeriadoForm.get('nombre')?.touched"
+                    formControlName="nombre"
+                  >
+                </div>
+                <div class="col-6">
+                  <input
+                    type="date"
+                    class="fer-input-sm"
+                    [class.invalid]="editFeriadoForm.get('fecha')?.invalid && editFeriadoForm.get('fecha')?.touched"
+                    formControlName="fecha"
+                  >
+                </div>
+                <div class="col-6 d-flex align-items-center gap-2">
+                  <label class="fer-radio-sm">
+                    <input type="radio" formControlName="tipo" value="nacional">
+                    <span>Nac.</span>
+                  </label>
+                  <label class="fer-radio-sm">
+                    <input type="radio" formControlName="tipo" value="institucional">
+                    <span>Inst.</span>
+                  </label>
+                  <button class="btn-icon-sm btn-icon-success ms-auto" (click)="saveEdit(feriado)">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button class="btn-icon-sm btn-icon-ghost" (click)="cancelEdit()">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+            </form>
+          } @else {
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span class="fer-date-badge">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    {{ feriado.fecha | date:'dd/MM/yyyy' }}
+                  </span>
+                  @if (feriado.tipo === 'nacional') {
+                    <span class="fer-tag fer-tag-nacional">Nacional</span>
+                  } @else {
+                    <span class="fer-tag fer-tag-institucional">Institucional</span>
+                  }
+                </div>
+                <h6 class="fw-bold mb-0">{{ feriado.nombre }}</h6>
+              </div>
+              <div class="d-flex gap-1 flex-shrink-0">
+                <button class="btn-icon-sm btn-icon-ghost" (click)="startEdit(feriado)" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-icon-sm btn-icon-danger" (click)="deleteFeriado(feriado.id)" title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @empty {
+      <div class="col-12">
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-calendar2-x fs-2 d-block mb-2"></i>
+          No hay feriados registrados.
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,101 @@
+<div class="gh-wrapper">
+  <div class="gh-container">
+
+    <!-- Header -->
+    <header class="gh-header">
+      <div>
+        <h1 class="gh-title">Gesti&oacute;n de Horarios</h1>
+        <p class="gh-subtitle">Organiza turnos, franjas horarias y asignaciones de asistencia.</p>
+      </div>
+    </header>
+
+    <div class="row g-4">
+      <!-- Sidebar -->
+      <div class="col-lg-3">
+        <div class="gh-sidebar">
+          <div class="gh-sidebar-sections">
+            <p class="gh-sidebar-label">SECCIONES</p>
+
+            <button
+              class="gh-sidebar-item"
+              [class.active]="activeSection === 'turnos'"
+              (click)="activeSection = 'turnos'"
+            >
+              <i class="bi bi-clock-history"></i>
+              <span>Turnos</span>
+            </button>
+
+            <button
+              class="gh-sidebar-item"
+              [class.active]="activeSection === 'asignacion'"
+              (click)="activeSection = 'asignacion'"
+            >
+              <i class="bi bi-person-check"></i>
+              <span>Asignaci&oacute;n</span>
+            </button>
+
+            <button
+              class="gh-sidebar-item"
+              [class.active]="activeSection === 'feriados'"
+              (click)="activeSection = 'feriados'"
+            >
+              <i class="bi bi-calendar-event"></i>
+              <span>Feriados</span>
+            </button>
+          </div>
+
+          <div class="gh-sidebar-footer">
+            <div class="gh-sidebar-section-indicator">
+              <i class="bi bi-gear-fill me-1"></i>
+              {{ currentSection.title }}
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-gh-nuevo w-100" (click)="nuevoTurno()">
+          <i class="bi bi-plus-lg me-2"></i>Nuevo Turno
+        </button>
+      </div>
+
+      <!-- Main -->
+      <div class="col-lg-9">
+        <div class="gh-main">
+          <div class="gh-main-header">
+            <div class="d-flex align-items-center gap-2">
+              <div class="gh-section-icon">
+                <i class="bi" [class]="currentSection.icon"></i>
+              </div>
+              <div>
+                <h2 class="gh-section-title">{{ currentSection.title }}</h2>
+                <p class="gh-section-subtitle mb-0">{{ currentSection.subtitle }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="gh-main-body">
+            @switch (activeSection) {
+              @case ('turnos') { <app-turnos></app-turnos> }
+              @case ('asignacion') { <app-asignacion></app-asignacion> }
+              @case ('feriados') { <app-feriados></app-feriados> }
+            }
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="gh-footer">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-3">
+              <span>
+                <i class="bi bi-info-circle me-1 text-muted"></i>
+                Última modificación: Hace 1 hora por Administrador
+              </span>
+            </div>
+            <span class="text-muted small">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Los cambios impactarán en la planificación de asistencia y nómina.
+            </span>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+</div>

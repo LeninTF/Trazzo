@@ -5,9 +5,29 @@ import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
 import { Login } from './auth/login/login';
-import { Dashboard } from './features/admin-sass/dashboard/dashboard';
-import { Monitoreo } from './features/admin-sass/monitoreo/monitoreo';
-import { Section } from './features/admin-sass/section/section';
+import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
+import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
+import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
+import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
+import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
+import { Sedes } from './features/admin-tenant/sedes/sedes';
+import { GestionRoles } from './features/admin-tenant/gestion-roles/gestion-roles';
+import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
+import { Planes } from './features/admin-tenant/planes/planes';
+import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
+import { Perfil } from './features/admin-tenant/perfil/perfil';
+import { Perfil as PerfilSass } from './features/admin-sass/perfil/perfil';
+import { Tenants } from './features/admin-sass/tenants/tenants';
+import { GestionPlanes } from './features/admin-sass/gestion-planes/gestion-planes';
+import { Solicitudes } from './features/admin-sass/solicitudes/solicitudes';
+import { LogAuditoria } from './features/admin-sass/log-auditoria/log-auditoria';
+import { Facturas } from './features/admin-sass/facturas/facturas';
+import { GestionUsuarios } from './features/admin-sass/gestion-usuarios/gestion-usuarios';
+import { GestionRoles as GestionRolesSass} from './features/admin-sass/gestion-roles/gestion-roles';
+import { Dashboard as DashboardUsuario } from './features/usuario/dashboard/dashboard';
+import { Calendario as CalendarioUsuario } from './features/usuario/calendario/calendario';
+import { HistorialAsistencia as HistorialAsistenciaUsuario } from './features/usuario/historial-asistencia/historial-asistencia';
+import { Incidencias as IncidenciasUsuario } from './features/usuario/incidencias/incidencias';
 
 export const routes: Routes = [
     {
@@ -35,48 +55,115 @@ export const routes: Routes = [
         component: TermsAndConditions
     },
     {
-        path: 'admin',
+        path: 'tenant',
         pathMatch: 'full',
-        redirectTo: 'admin/dashboard'
+        redirectTo: 'tenant/dashboard'
     },
     {
-        path: 'admin/dashboard',
+        path: 'tenant/dashboard',
         component: Dashboard
     },
     {
-        path: 'admin/monitoreo',
+        path: 'tenant/monitoreo',
         component: Monitoreo
     },
     {
-        path: 'admin/incidencias',
-        component: Section
+        path: 'tenant/incidencias',
+        component: Incidencias
     },
     {
-        path: 'admin/reglas-asistencia',
-        component: Section
+        path: 'tenant/reglas-asistencia',
+        component: ReglasAsistencia
     },
     {
-        path: 'admin/sedes',
-        component: Section
+        path: 'tenant/sedes',
+        component: Sedes
     },
     {
-        path: 'admin/gestion-roles',
-        component: Section
+        path: 'tenant/gestion-roles',
+        component: GestionRoles
     },
     {
-        path: 'admin/configuracion-tenant',
-        component: Section
+        path: 'tenant/configuracion-tenant',
+        component: ConfiguracionTenant
     },
     {
-        path: 'admin/planes',
-        component: Section
+        path: 'tenant/planes',
+        component: Planes
     },
     {
-        path: 'admin/directorio-personal',
-        component: Section
+        path: 'tenant/directorio-personal',
+        component: DirectorioPersonal
     },
     {
-        path: 'admin/gestion-horarios',
-        component: Section
+        path: 'tenant/gestion-horarios',
+        component: GestionHorarios
+    },
+    {
+        path: 'tenant/perfil',
+        component: Perfil
+    },
+    {
+        path: 'usuario',
+        pathMatch: 'full',
+        redirectTo: 'usuario/dashboard'
+    },
+    {
+        path: 'usuario/dashboard',
+        component: DashboardUsuario
+    },
+    {
+        path: 'usuario/calendario',
+        component: CalendarioUsuario
+    },
+    {
+        path: 'usuario/historial-asistencia',
+        component: HistorialAsistenciaUsuario
+    },
+    {
+        path: 'usuario/incidencias',
+        component: IncidenciasUsuario
+    },
+    {
+        path: 'sass',
+        pathMatch: 'full',
+        redirectTo: 'sass/dashboard'
+    },
+    
+    {
+        path: 'sass/tenants',
+        component: Tenants
+    },
+    {
+        path: 'sass/gestion-planes',
+        component: GestionPlanes
+    },
+    {
+        path: 'sass/solicitudes',
+        component: Solicitudes
+    },
+    {
+        path: 'sass/log-auditoria',
+        component: LogAuditoria
+    },
+    {
+        path: 'sass/facturas',
+        component: Facturas
+    },
+    {
+        path: 'sass/gestion-usuarios',
+        component: GestionUsuarios
+    },
+    {
+        path: 'sass/gestion-roles',
+        component: GestionRolesSass
+    },
+    {
+        path: 'sass/perfil',
+        component: PerfilSass
+    },
+    {
+        path: 'usuario/perfil',
+        component: Perfil
     }
 ];

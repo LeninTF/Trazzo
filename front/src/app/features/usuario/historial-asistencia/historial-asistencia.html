@@ -1,0 +1,143 @@
+<div class="ha-wrapper">
+  <header class="ha-header">
+    <div>
+      <h1 class="ha-title">Historial de Asistencia</h1>
+      <p class="ha-subtitle">Registro detallado de tus ingresos y salidas.</p>
+    </div>
+    <button class="ha-btn ha-btn--primary" (click)="exportarCSV()">
+      <i class="bi bi-download me-2"></i>Exportar
+    </button>
+  </header>
+
+  <div class="ha-nav-card">
+    <button class="ha-nav-btn" (click)="cambiarMes(-1)">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <div class="ha-nav-info">
+      <i class="bi bi-calendar3 me-2"></i>
+      <span class="ha-nav__month">{{ mesActual }}</span>
+    </div>
+    <button class="ha-nav-btn" (click)="cambiarMes(1)">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+
+  <div class="ha-metrics">
+    @for (r of resumen; track r.label) {
+      <div class="ha-metric">
+        <div class="ha-metric__icon" [style.background]="r.color + '15'">
+          @if (r.label === 'A tiempo') {
+            <i class="bi bi-check-circle-fill" [style.color]="r.color"></i>
+          } @else if (r.label === 'Tardanzas') {
+            <i class="bi bi-clock-fill" [style.color]="r.color"></i>
+          } @else if (r.label === 'Faltas') {
+            <i class="bi bi-person-x-fill" [style.color]="r.color"></i>
+          } @else {
+            <i class="bi bi-shield-fill-check" [style.color]="r.color"></i>
+          }
+        </div>
+        <div class="ha-metric__info">
+          <span class="ha-metric__value" [style.color]="r.color">{{ r.valor }}</span>
+          <span class="ha-metric__label">{{ r.label }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="ha-card">
+    <div class="ha-card__header">
+      <h2 class="ha-card__title">
+        <i class="bi bi-journal-text me-2" style="color:var(--primary)"></i>
+        Registros del Mes
+      </h2>
+      <span class="ha-card__count">{{ registros.length }} registros</span>
+    </div>
+    <div class="ha-card__body">
+      <table class="ha-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Turno</th>
+            <th>Ingreso</th>
+            <th>Salida</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of registros; track r.fecha) {
+            <tr>
+              <td>
+                <span class="ha-cell-date">{{ r.fecha }}</span>
+              </td>
+              <td>
+                <span class="ha-cell-turno"
+                  [class.ha-cell-turno--manana]="r.turno === 'Mañana'"
+                  [class.ha-cell-turno--tarde]="r.turno === 'Tarde'">
+                  {{ r.turno }}
+                </span>
+              </td>
+              <td class="ha-cell-time">{{ r.ingreso }}</td>
+              <td class="ha-cell-time">{{ r.salida }}</td>
+              <td>
+                <span class="ha-badge"
+                  [class.ha-badge--success]="r.estado === 'A tiempo'"
+                  [class.ha-badge--warning]="r.estado === 'Tardanza'"
+                  [class.ha-badge--danger]="r.estado === 'Falta'"
+                  [class.ha-badge--info]="r.estado === 'Justificado'">
+                  <span class="ha-badge__dot"></span>
+                  {{ r.estado }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="ha-card__footer">
+      <i class="bi bi-info-circle me-1"></i>
+      La hora de ingreso y salida se registra automáticamente al marcar en el reloj biométrico.
+    </div>
+  </div>
+
+  @if (eficiencia > 0) {
+    <div class="ha-card">
+      <div class="ha-card__header">
+        <h2 class="ha-card__title">
+          <i class="bi bi-graph-up-arrow me-2" style="color:var(--success)"></i>
+          Eficiencia del Mes
+        </h2>
+      </div>
+      <div class="ha-card__body">
+        <div class="ha-eficiencia">
+          <div class="ha-eficiencia__circle">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border-color)" stroke-width="10"/>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--success)" stroke-width="10"
+                stroke-dasharray="326.7" [attr.stroke-dashoffset]="326.7 - (326.7 * eficiencia / 100)"
+                stroke-linecap="round" transform="rotate(-90 60 60)"/>
+            </svg>
+            <span class="ha-eficiencia__value">{{ eficiencia }}%</span>
+          </div>
+          <div class="ha-eficiencia__legend">
+            <div class="ha-eficiencia__item">
+              <span class="ha-eficiencia__dot" style="background:var(--success)"></span>
+              Días completos ({{ completos }})
+            </div>
+            <div class="ha-eficiencia__item">
+              <span class="ha-eficiencia__dot" style="background:var(--warning)"></span>
+              Tardanzas ({{ tardanzas }})
+            </div>
+            <div class="ha-eficiencia__item">
+              <span class="ha-eficiencia__dot" style="background:var(--info)"></span>
+              Justificados ({{ justificados }})
+            </div>
+            <div class="ha-eficiencia__item">
+              <span class="ha-eficiencia__dot" style="background:var(--danger)"></span>
+              Faltas ({{ faltas }})
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

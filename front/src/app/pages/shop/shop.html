@@ -25,9 +25,7 @@
 					</div>
 					<strong>{{ completionLabel() }}</strong>
 				</div>
-				<div class="progress progress-track" role="progressbar" [attr.aria-valuenow]="progressPercent()" [attr.aria-valuemin]="0" [attr.aria-valuemax]="100" [attr.aria-label]="'Progreso del formulario al ' + progressPercent() + ' por ciento'">
-					<span [style.width.%]="progressPercent()"></span>
-				</div>
+				<progress class="progress progress-track" [value]="progressPercent()" max="100" [attr.aria-label]="'Progreso del formulario al ' + progressPercent() + ' por ciento'"></progress>
 				<nav class="progress-steps" aria-label="Pasos del formulario">
 					<ol class="list-unstyled d-flex gap-2 m-0">
 						<li class="is-done" aria-current="false"><i class="bi bi-check-lg"></i></li>
