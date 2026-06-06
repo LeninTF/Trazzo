@@ -77,6 +77,24 @@ bin\Release\Trazzo.Biometric.Agent.msi
 
 ---
 
+## Limpiar y regenerar el MSI
+
+Si necesitas forzar una recompilación completa desde cero (por ejemplo, tras cambiar archivos del publish o resolver errores de caché de WiX):
+
+```powershell
+dotnet clean -c Release
+dotnet build .\Trazzo.Biometric.Agent.Installer.wixproj -c Release
+```
+
+O borrando las carpetas manualmente:
+
+```powershell
+Remove-Item -Recurse -Force bin, obj
+dotnet build .\Trazzo.Biometric.Agent.Installer.wixproj -c Release
+```
+
+---
+
 ## Flujo del Instalador (UI)
 
 El instalador usa `WixUI_InstallDir` que presenta las siguientes pantallas:
