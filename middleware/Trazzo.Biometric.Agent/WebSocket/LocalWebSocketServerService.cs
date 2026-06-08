@@ -21,9 +21,12 @@ public sealed class LocalWebSocketServerService(
 
     private readonly HttpListener _listener = new();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _clientLastOperationTime = new();
+    private readonly ConcurrentDictionary<string, (System.Net.WebSockets.WebSocket WebSocket, SemaphoreSlim SendLock)> _activeClients = new();
     private readonly int _rateLimitSeconds = configuration.GetValue("Agent:RateLimitSeconds", 5);
     private readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(
         Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
+    private readonly int _deviceMonitorIntervalSeconds = Math.Max(1,
+        configuration.GetValue("Agent:DeviceMonitorIntervalSeconds", 3));
     private CancellationTokenSource? _serverCts;
     private Task? _serverTask;
 
@@ -40,7 +43,9 @@ public sealed class LocalWebSocketServerService(
         _listener.Start();
 
         _serverCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _serverTask = AcceptLoopAsync(_serverCts.Token);
+        _serverTask = Task.WhenAll(
+            AcceptLoopAsync(_serverCts.Token),
+            DeviceMonitorLoopAsync(_serverCts.Token));
 
         logger.LogInformation("WebSocket escuchando en {Url}", url.Replace("http://", "ws://"));
         return _serverTask;
@@ -137,8 +142,10 @@ public sealed class LocalWebSocketServerService(
     {
         Stopwatch sessionTimer = Stopwatch.StartNew();
         byte[] buffer = new byte[8192];
-        using SemaphoreSlim sendLock = new(1, 1);
+        SemaphoreSlim sendLock = new(1, 1);
         List<Task> pendingOperations = [];
+
+        _activeClients[clientId] = (webSocket, sendLock);
 
         try
         {
@@ -175,10 +182,121 @@ public sealed class LocalWebSocketServerService(
         }
         finally
         {
+            _activeClients.TryRemove(clientId, out _);
+            sendLock.Dispose();
             _clientLastOperationTime.TryRemove(clientId, out _);
             logger.LogInformation(
                 "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration}s.",
                 clientId, sessionTimer.Elapsed.TotalSeconds.ToString("F1"));
+        }
+    }
+
+    private async Task DeviceMonitorLoopAsync(CancellationToken cancellationToken)
+    {
+        bool? lastKnownConnected = null;
+        DateTimeOffset? disconnectedSince = null;
+        TimeSpan pollInterval = TimeSpan.FromSeconds(_deviceMonitorIntervalSeconds);
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                FingerprintDeviceStatus status = await scannerService.GetStatusAsync(cancellationToken);
+                bool isConnected = status.IsConnected;
+
+                if (lastKnownConnected is null)
+                {
+                    // Primera lectura: establece línea base sin notificar
+                    lastKnownConnected = isConnected;
+                    if (!isConnected)
+                        disconnectedSince = DateTimeOffset.UtcNow;
+                }
+                else if (isConnected && lastKnownConnected == false)
+                {
+                    // Lector recién conectado
+                    lastKnownConnected = true;
+                    disconnectedSince = null;
+                    logger.LogInformation("Lector biométrico conectado. Notificando clientes.");
+                    await BroadcastAsync(new
+                    {
+                        type = "device.status.changed",
+                        success = true,
+                        isConnected = true,
+                        message = "Detector de huella conectado."
+                    }, cancellationToken);
+                }
+                else if (!isConnected && lastKnownConnected == true)
+                {
+                    // Lector recién desconectado
+                    lastKnownConnected = false;
+                    disconnectedSince = DateTimeOffset.UtcNow;
+                    logger.LogWarning("Lector biométrico desconectado. Notificando clientes.");
+                    await BroadcastAsync(new
+                    {
+                        type = "device.status.changed",
+                        success = false,
+                        isConnected = false,
+                        message = "Lector biométrico desconectado."
+                    }, cancellationToken);
+                }
+                else if (!isConnected && disconnectedSince is not null)
+                {
+                    // Sigue sin lector: enviar tiempo de espera a clientes activos
+                    int waitingSeconds = (int)(DateTimeOffset.UtcNow - disconnectedSince.Value).TotalSeconds;
+                    await BroadcastAsync(new
+                    {
+                        type = "device.connecting",
+                        success = false,
+                        isConnected = false,
+                        message = $"Buscando lector biométrico... ({waitingSeconds}s)",
+                        waitingSeconds
+                    }, cancellationToken);
+                }
+
+                await Task.Delay(pollInterval, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Error en monitor de dispositivo biométrico.");
+                try { await Task.Delay(pollInterval, cancellationToken); }
+                catch (OperationCanceledException) { break; }
+            }
+        }
+    }
+
+    private async Task BroadcastAsync(object message, CancellationToken cancellationToken)
+    {
+        if (_activeClients.IsEmpty) return;
+
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(message, JsonOptions);
+
+        foreach ((string clientId, (System.Net.WebSockets.WebSocket ws, SemaphoreSlim sendLock)) in _activeClients)
+        {
+            try
+            {
+                await sendLock.WaitAsync(cancellationToken);
+                try
+                {
+                    if (ws.State == WebSocketState.Open)
+                        await ws.SendAsync(payload, WebSocketMessageType.Text, endOfMessage: true, cancellationToken);
+                }
+                finally
+                {
+                    sendLock.Release();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // El cliente se desconectó justo mientras se enviaba la notificación
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogDebug(ex, "No se pudo notificar al cliente {ClientId}.", clientId);
+            }
         }
     }
 
@@ -387,5 +505,4 @@ public sealed class LocalWebSocketServerService(
             logger.LogWarning(ex, "No se pudo encolar el evento biométrico de tipo {EventType}.", eventType);
         }
     }
-
 }

@@ -19,20 +19,18 @@
     <MediaTemplate EmbedCab="yes" />
     <Launch Condition="VersionNT &gt;= 603" Message="Trazzo Biometric Agent requiere Windows 10 o superior." />
 
-    <!-- Detectar si el driver ZKTeco está instalado buscando el servicio zkfp en el registro -->
-    <Property Id="ZKTECO_DRIVER_INSTALLED">
-      <RegistrySearch
-          Id="ZKTecoDriverRegistrySearch"
-          Root="HKLM"
-          Key="SYSTEM\CurrentControlSet\Services\zkfp"
-          Name="ImagePath"
-          Type="raw" />
+    <!-- Detectar si el SDK ZKTeco está instalado buscando libzkfp.dll en System32 x64.
+         Cubre tanto instalaciones con driver de kernel (zkfp.sys) como con WinUSB. -->
+    <Property Id="ZKTECO_SDK_INSTALLED">
+      <DirectorySearch Id="ZKTecoSdkDirSearch" Path="[System64Folder]">
+        <FileSearch Id="ZKTecoLibSearch" Name="libzkfp.dll" />
+      </DirectorySearch>
     </Property>
 
-    <!-- Bloquear instalación nueva si el driver ZKTeco no está presente.
-         "Installed" permite que upgrades y desinstalaciones continúen sin el driver. -->
+    <!-- Bloquear instalación nueva si el SDK ZKTeco no está instalado.
+         "Installed" permite que upgrades y desinstalaciones continúen sin el SDK. -->
     <Launch
-        Condition="Installed OR ZKTECO_DRIVER_INSTALLED"
+        Condition="Installed OR ZKTECO_SDK_INSTALLED"
         Message="El software del lector ZK9500 (ZKTeco) no está instalado.&#13;&#10;&#13;&#10;Instálelo antes de continuar:&#13;&#10;1. Descargue el software desde el sitio oficial de ZKTeco&#13;&#10;2. Instálelo y conecte el lector ZK9500&#13;&#10;3. Ejecute nuevamente este instalador" />
 
     <!-- Genera log automatico en %TEMP%\MSI*.LOG en cada instalacion/desinstalacion -->

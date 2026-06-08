@@ -858,7 +858,16 @@ public sealed class ZKTecoScannerService(
 
         if (!_initialized)
         {
-            return CreateDeviceStatus(false, 0, "El SDK ZKTeco no está inicializado.");
+            // Init() puede fallar al arrancar si el lector no estaba conectado en ese momento.
+            // Si ahora el SDK está disponible, intentar inicializar bajo demanda.
+            int retryInit = sdk.Init();
+            if (retryInit != 0)
+            {
+                logger.LogDebug("Reinicio del SDK ZKTeco falló: {Message}", ZKTecoErrorMapper.ToMessage(retryInit));
+                return CreateDeviceStatus(false, 0, "El SDK ZKTeco no está inicializado.");
+            }
+            _initialized = true;
+            logger.LogInformation("SDK ZKTeco inicializado bajo demanda.");
         }
 
         int deviceCount;
@@ -890,17 +899,28 @@ public sealed class ZKTecoScannerService(
 
             ConfigureCaptureBuffers();
         }
-        else if (!IsDeviceHandleValid())
+        else
         {
-            logger.LogWarning("Handle anterior inválido. Cerrando lector...");
-            CloseCurrentDeviceHandle();
-
-            if (!TryOpenDevice())
+            // TryGetParameter devuelve valores cacheados en memoria, no comunica con el hardware.
+            // Verificar conectividad real cerrando y reabriendo el handle, excepto si hay una
+            // operación biométrica activa (la captura usa el handle sin el sdkLock).
+            bool operationInProgress;
+            lock (_operationStateLock)
             {
-                return CreateDeviceStatus(false, deviceCount, "Lector biométrico desconectado.");
+                operationInProgress = _operationState is BiometricOperationState.Capturing
+                    or BiometricOperationState.Identifying
+                    or BiometricOperationState.Enrolling;
             }
 
-            ConfigureCaptureBuffers();
+            if (!operationInProgress)
+            {
+                CloseCurrentDeviceHandle();
+                if (!TryOpenDevice())
+                {
+                    return CreateDeviceStatus(false, deviceCount, "Lector biométrico desconectado.");
+                }
+                ConfigureCaptureBuffers();
+            }
         }
 
         if (_databaseHandle == IntPtr.Zero)
@@ -908,7 +928,7 @@ public sealed class ZKTecoScannerService(
             InitializeDatabase();
         }
 
-        bool connected = _deviceHandle != IntPtr.Zero && IsDeviceHandleValid();
+        bool connected = _deviceHandle != IntPtr.Zero;
         if (connected)
         {
             logger.LogInformation("Lector biométrico conectado.");

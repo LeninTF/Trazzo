@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="es-ES">
-  <!-- Strings personalizados del producto van aqui -->
+  <String Id="MaintenanceTypeDlgTitle" Value="{\WixUI_Font_Title}Cambiar, reparar o desinstalar" />
+  <String Id="MaintenanceTypeDlgRemoveButton" Value="&amp;Desinstalar" />
+  <String Id="MaintenanceTypeDlgRemoveButtonTooltip" Value="Desinstalar el agente" />
+  <String Id="MaintenanceTypeDlgRemoveText" Value="Desinstala [ProductName] de su equipo." />
+  <String Id="MaintenanceTypeDlgRemoveDisabledText" Value="No se puede desinstalar [ProductName]." />
+  <String Id="VerifyReadyDlgRemove" Value="&amp;Desinstalar" />
+  <String Id="VerifyReadyDlgRemoveTitle" Value="{\WixUI_Font_Title}Listo para desinstalar [ProductName]" />
+  <String Id="VerifyReadyDlgRemoveText" Value="Haga clic en Desinstalar para desinstalar [ProductName] de su equipo. Haga clic en Atrás para revisar o cambiar la configuración de la instalación. Haga clic en Cancelar para salir del asistente." />
 </WixLocalization>

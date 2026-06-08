@@ -3,13 +3,11 @@
     <OutputName>Trazzo.Biometric.Agent</OutputName>
     <OutputType>Package</OutputType>
     <InstallerPlatform>x64</InstallerPlatform>
-    <ProductVersion>1.0.0</ProductVersion>
     <Cultures>es-ES;en-US</Cultures>
     <SuppressValidation>true</SuppressValidation>
     <AgentProject>..\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj</AgentProject>
     <AgentPublishDir>$(MSBuildThisFileDirectory)obj\publish</AgentPublishDir>
     <GeneratedWxs>$(MSBuildThisFileDirectory)obj\$(Configuration)\Product.Generated.wxs</GeneratedWxs>
-    <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +15,19 @@
     <PackageReference Include="WixToolset.Util.wixext" Version="4.0.6" />
     <Compile Include="$(GeneratedWxs)" />
   </ItemGroup>
+
+  <!-- Lee la version directamente del .csproj del agente para mantener un unico punto de verdad -->
+  <Target Name="ReadAgentVersion" BeforeTargets="PublishAgentForMsi">
+    <XmlPeek XmlInputPath="$(AgentProject)" Query="/Project/PropertyGroup/Version/text()">
+      <Output TaskParameter="Result" ItemName="_AgentVersionItems" />
+    </XmlPeek>
+    <PropertyGroup>
+      <ProductVersion Condition="'@(_AgentVersionItems)' != ''">@(_AgentVersionItems)</ProductVersion>
+      <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
+      <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
+    </PropertyGroup>
+    <Message Text="MSI version: $(ProductVersion)" Importance="high" />
+  </Target>
 
   <Target Name="PublishAgentForMsi" BeforeTargets="CoreCompile">
     <Exec Command="dotnet publish &quot;$(AgentProject)&quot; -c $(Configuration) -r win-x64 -p:SelfContained=true -o &quot;$(AgentPublishDir)&quot;" />
