@@ -77,12 +77,12 @@ jobs:
         run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
 
       - name: Compilar (Build)
-        run: dotnet build Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Release --no-restore
+        run: dotnet build Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Debug --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
         run: >
           dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
-          -c Release
+          -c Debug
           --no-restore
           --logger "trx;LogFileName=test-results.trx"
           --results-directory TestResults
