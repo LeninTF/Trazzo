@@ -27,7 +27,10 @@ public sealed class FingerprintCaptureResultTests
         byte[] template = [1, 2, 3];
         EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
 
-        FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(template, 3, encryptedTemplate: encrypted);
+        FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(
+            template,
+            3,
+            new FingerprintCaptureOptions(EncryptedTemplate: encrypted));
 
         Assert.True(result.Success);
         Assert.Null(result.TemplateBase64);
@@ -40,7 +43,10 @@ public sealed class FingerprintCaptureResultTests
     {
         byte[] template = [1, 2, 3];
 
-        FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(template, 3, deviceId: "ZK9500-12345");
+        FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(
+            template,
+            3,
+            new FingerprintCaptureOptions(DeviceId: "ZK9500-12345"));
 
         Assert.True(result.Success);
         Assert.Equal("ZK9500-12345", result.DeviceId);

@@ -93,7 +93,7 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
                 EncryptedAesKeyBase64 = reader.GetString(3),
                 IvBase64 = reader.GetString(4),
                 TagBase64 = reader.GetString(5),
-                DeviceId = reader.IsDBNull(6) ? null : reader.GetString(6),
+                DeviceId = await reader.IsDBNullAsync(6, cancellationToken) ? null : reader.GetString(6),
                 CapturedAtUtc = DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture),
                 Status = Enum.Parse<BiometricEventStatus>(reader.GetString(8), ignoreCase: true),
                 RetryCount = reader.GetInt32(9)
@@ -110,7 +110,8 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         await using SqliteConnection conn = new(_connectionString);
         await conn.OpenAsync(cancellationToken);
-        await using SqliteTransaction tx = conn.BeginTransaction();
+        await using SqliteTransaction tx =
+            (SqliteTransaction)await conn.BeginTransactionAsync(cancellationToken);
         string sentAt = DateTimeOffset.UtcNow.ToString("O");
 
         foreach (long id in idArray)

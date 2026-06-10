@@ -67,7 +67,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         ApplyKey(base64Key);
 
         _refreshTimer = new Timer(
-            _ => _ = TryRefreshKeyAsync(),
+            async _ => await TryRefreshKeyAsync(),
             null,
             _refreshInterval,
             _refreshInterval);

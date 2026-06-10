@@ -65,6 +65,16 @@ public static class FingerprintQualityAnalyzer
         double contrastScore = Math.Max(0, backgroundAverage - foregroundAverage);
         bool isCentered = IsForegroundCentered(width, height, minX, minY, maxX, maxY, criteria.CenterTolerancePercent);
 
+        return EvaluateQuality(criteria, foregroundCount, coveragePercent, contrastScore, isCentered);
+    }
+
+    private static FingerprintQualityResult EvaluateQuality(
+        FingerprintQualityCriteria criteria,
+        int foregroundCount,
+        double coveragePercent,
+        double contrastScore,
+        bool isCentered)
+    {
         if (coveragePercent < criteria.MinimumForegroundCoveragePercent)
         {
             return CreateResult(false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella insuficiente.");

@@ -314,6 +314,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         await Task.Delay(TimeSpan.FromMilliseconds(200));
         await _service!.StopAsync(CancellationToken.None);
 
+        Assert.True(scanner.StatusException is not null);
         _service = null;
     }
 
@@ -324,6 +325,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         await _service!.StopAsync(CancellationToken.None);
 
+        Assert.NotNull(_service);
         _service = null;
     }
 
@@ -337,6 +339,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         await _service!.StopAsync(CancellationToken.None);
 
+        Assert.NotEqual(WebSocketState.Connecting, client.State);
         _service = null;
     }
 

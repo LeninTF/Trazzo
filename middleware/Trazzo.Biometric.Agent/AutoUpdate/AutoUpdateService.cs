@@ -89,7 +89,7 @@ public sealed class AutoUpdateService : BackgroundService
         UpdateManifest? manifest = await FetchManifestAsync(cancellationToken);
         if (manifest is null) return;
 
-        if (!Version.TryParse(manifest.Version, out Version? remote) || remote is null)
+        if (!Version.TryParse(manifest.Version, out Version? remote))
         {
             _logger.LogWarning("Auto-Update: el manifiesto contiene una versión inválida: '{Version}'.", manifest.Version);
             return;

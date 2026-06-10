@@ -17,6 +17,7 @@ public sealed class LocalWebSocketServerService(
     IConfiguration configuration,
     ILogger<LocalWebSocketServerService> logger) : IWebSocketServerService
 {
+    private const string ErrorMessageType = "error";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpListener _listener = new();
@@ -161,7 +162,7 @@ public sealed class LocalWebSocketServerService(
                         return;
                     }
 
-                    messageStream.Write(buffer, 0, receiveResult.Count);
+                    await messageStream.WriteAsync(buffer.AsMemory(0, receiveResult.Count), cancellationToken);
                 }
                 while (!receiveResult.EndOfMessage);
 
@@ -172,8 +173,9 @@ public sealed class LocalWebSocketServerService(
                     CancellationToken.None));
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            logger.LogDebug(ex, "Recepción WebSocket cancelada para {ClientId}.", clientId);
         }
         catch (WebSocketException ex)
         {
@@ -300,9 +302,9 @@ public sealed class LocalWebSocketServerService(
                     sendLock.Release();
                 }
             }
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException ex)
             {
-                // El cliente se desconectó justo mientras se enviaba la notificación
+                logger.LogDebug(ex, "Cliente {ClientId} desconectado durante la notificación.", clientId);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
@@ -331,7 +333,7 @@ public sealed class LocalWebSocketServerService(
             if (isBiometricOp && IsRateLimited(clientId, operationType!))
             {
                 await SendJsonAsync(webSocket,
-                    new { type = "error", success = false, message = $"Demasiadas solicitudes. Espere {_rateLimitSeconds}s entre operaciones biometricas." },
+                    new { type = ErrorMessageType, success = false, message = $"Demasiadas solicitudes. Espere {_rateLimitSeconds}s entre operaciones biometricas." },
                     sendLock, cancellationToken);
                 return;
             }
@@ -356,8 +358,9 @@ public sealed class LocalWebSocketServerService(
 
             await SendJsonAsync(webSocket, response, sendLock, cancellationToken);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
         {
+            logger.LogDebug(ex, "Procesamiento WebSocket cancelado para {ClientId}.", clientId);
         }
         catch (WebSocketException ex)
         {
@@ -370,7 +373,7 @@ public sealed class LocalWebSocketServerService(
             {
                 await SendJsonAsync(
                     webSocket,
-                    new { type = "error", success = false, message = "Error interno procesando el mensaje WebSocket." },
+                    new { type = ErrorMessageType, success = false, message = "Error interno procesando el mensaje WebSocket." },
                     sendLock,
                     cancellationToken);
             }
@@ -411,7 +414,7 @@ public sealed class LocalWebSocketServerService(
 
     internal static string ResolveWebSocketUrl(string? configuredUrl)
     {
-        string url = configuredUrl ?? "http://localhost:9001/";
+        string url = configuredUrl ?? new UriBuilder(Uri.UriSchemeHttp, "localhost", 9001).Uri.AbsoluteUri;
         return url.EndsWith('/') ? url : $"{url}/";
     }
 
@@ -444,7 +447,7 @@ public sealed class LocalWebSocketServerService(
                 },
                 _ => new
                 {
-                    type = "error",
+                    type = ErrorMessageType,
                     success = false,
                     message = "Tipo de mensaje WebSocket no soportado."
                 }
@@ -454,7 +457,7 @@ public sealed class LocalWebSocketServerService(
         {
             return new
             {
-                type = "error",
+                type = ErrorMessageType,
                 success = false,
                 message = "Mensaje JSON inválido."
             };

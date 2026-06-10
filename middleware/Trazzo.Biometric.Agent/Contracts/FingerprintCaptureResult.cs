@@ -1,5 +1,13 @@
 namespace Trazzo.Biometric.Agent.Contracts;
 
+public sealed record FingerprintCaptureOptions(
+    string? DeviceId = null,
+    EncryptedPayload? EncryptedTemplate = null,
+    FingerprintQualityResult? Quality = null,
+    string? FingerprintImageBase64 = null,
+    string? FingerprintImageMimeType = null,
+    string? FingerprintImageDataUrl = null);
+
 public sealed record FingerprintCaptureResult(
     string Type,
     bool Success,
@@ -17,15 +25,11 @@ public sealed record FingerprintCaptureResult(
     public static FingerprintCaptureResult Succeeded(
         byte[] template,
         int templateSize,
-        string? deviceId = null,
-        EncryptedPayload? encryptedTemplate = null,
-        FingerprintQualityResult? quality = null,
-        string? fingerprintImageBase64 = null,
-        string? fingerprintImageMimeType = null,
-        string? fingerprintImageDataUrl = null)
+        FingerprintCaptureOptions? options = null)
     {
+        options ??= new FingerprintCaptureOptions();
         // TemplateBase64 solo se incluye cuando el cifrado no está configurado (modo desarrollo)
-        string? plainBase64 = encryptedTemplate is null
+        string? plainBase64 = options.EncryptedTemplate is null
             ? Convert.ToBase64String(template.AsSpan(0, templateSize))
             : null;
 
@@ -34,13 +38,13 @@ public sealed record FingerprintCaptureResult(
             true,
             "Huella capturada correctamente.",
             plainBase64,
-            encryptedTemplate,
+            options.EncryptedTemplate,
             templateSize,
-            deviceId,
-            fingerprintImageBase64,
-            fingerprintImageMimeType,
-            fingerprintImageDataUrl,
-            quality,
+            options.DeviceId,
+            options.FingerprintImageBase64,
+            options.FingerprintImageMimeType,
+            options.FingerprintImageDataUrl,
+            options.Quality,
             DateTimeOffset.UtcNow);
     }
 

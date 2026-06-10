@@ -24,4 +24,4 @@ builder.Services.AddHostedService<EventForwarderService>();
 builder.Services.AddHostedService<AutoUpdateService>();
 
 var host = builder.Build();
-host.Run();
+await host.RunAsync();

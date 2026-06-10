@@ -90,7 +90,10 @@ public sealed class WebSocketResponseTests
     public async Task HandleMessageAsync_ForCaptureWithEncryptedTemplate_EnqueuesEvent()
     {
         EncryptedPayload enc = new("cipher", "key", "iv", "tag");
-        FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded([1, 2, 3], 3, encryptedTemplate: enc, deviceId: "ZK9500-1");
+        FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded(
+            [1, 2, 3],
+            3,
+            new FingerprintCaptureOptions(DeviceId: "ZK9500-1", EncryptedTemplate: enc));
         FakeEventQueue queue = new();
         LocalWebSocketServerService server = CreateServer(captureResult: captureResult, eventQueue: queue);
 

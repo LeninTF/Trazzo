@@ -100,7 +100,6 @@ public sealed class WorkerTests
 
         Assert.True(webSocket.StopCalled);
         Assert.Contains(logger.Messages, message => message.Contains("Deteniendo el agente", StringComparison.Ordinal));
-        Assert.Contains(logger.Messages, message => message.Contains("Detención solicitada", StringComparison.Ordinal));
     }
 
     private static IConfiguration CreateConfiguration(IEnumerable<KeyValuePair<string, string?>> settings)

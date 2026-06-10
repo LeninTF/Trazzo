@@ -21,9 +21,9 @@ public sealed class Worker(
             await webSocketServer.StartAsync(stoppingToken);
             await LogStartupReportAsync(stoppingToken);
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {
-            logger.LogInformation("Detención solicitada para el agente biométrico de Trazzo.");
+            logger.LogInformation(ex, "Detención solicitada para el agente biométrico de Trazzo.");
         }
     }
 

@@ -110,7 +110,6 @@ public sealed class EventForwarderService : BackgroundService
         }
     }
 
-    // Retorna true si hubo errores de envío al backend; false si la cola estaba vacía o todo se envió.
     internal async Task<bool> TryForwardPendingAsync(CancellationToken cancellationToken)
     {
         bool hadFailures = false;

@@ -158,12 +158,13 @@ public sealed class ZKTecoScannerService(
             return FingerprintCaptureResult.Succeeded(
                 sample.Template,
                 sample.TemplateSize,
-                deviceId: _deviceSerial,
-                encryptedTemplate: encryptedTemplate,
-                quality: sample.Quality,
-                fingerprintImageBase64: sample.Image?.Base64,
-                fingerprintImageMimeType: sample.Image?.MimeType,
-                fingerprintImageDataUrl: sample.Image?.DataUrl);
+                new FingerprintCaptureOptions(
+                    DeviceId: _deviceSerial,
+                    EncryptedTemplate: encryptedTemplate,
+                    Quality: sample.Quality,
+                    FingerprintImageBase64: sample.Image?.Base64,
+                    FingerprintImageMimeType: sample.Image?.MimeType,
+                    FingerprintImageDataUrl: sample.Image?.DataUrl));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -275,39 +276,13 @@ public sealed class ZKTecoScannerService(
 
             operationId = StartOperation(BiometricOperationState.Enrolling, cancellationToken);
             CancellationToken operationToken = GetActiveOperationToken(operationId.Value);
-
-            for (int step = 1; step <= _enrollmentSamples;)
-            {
-                await progressCallback(FingerprintEnrollProgress.Create(step, _enrollmentSamples, GetPlaceFingerMessage(step)), operationToken);
-                CapturedSample sample = await CaptureValidSampleAsync(operationId.Value, _enrollmentSampleTimeoutSeconds);
-
-                if (!IsOperationActive(operationId.Value))
-                {
-                    return FingerprintEnrollResult.Failed("Enrolamiento cancelado.", samples.Count);
-                }
-
-                if (!sample.Success)
-                {
-                    if (sample.FinalState is BiometricOperationState.TimedOut or BiometricOperationState.Error)
-                    {
-                        FinalizeOperation(operationId.Value, sample.FinalState);
-                        return FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.", samples.Count);
-                    }
-
-                    await progressCallback(FingerprintEnrollProgress.Create(step, _enrollmentSamples, sample.Message), operationToken);
-                    continue;
-                }
-
-                samples.Add(sample.Template);
-
-                if (step < _enrollmentSamples && _requireFingerLiftBetweenEnrollmentSamples)
-                {
-                    await progressCallback(FingerprintEnrollProgress.Create(step, _enrollmentSamples, "Retire el dedo del lector."), operationToken);
-                    await WaitForFingerLiftAsync(operationToken);
-                }
-
-                step++;
-            }
+            FingerprintEnrollResult? captureFailure = await CaptureEnrollmentSamplesAsync(
+                operationId.Value,
+                samples,
+                progressCallback,
+                operationToken);
+            if (captureFailure is not null)
+                return captureFailure;
 
             byte[] registeredTemplate = new byte[_templateBufferSize];
             int registeredTemplateSize = registeredTemplate.Length;
@@ -356,6 +331,51 @@ public sealed class ZKTecoScannerService(
         }
     }
 
+    private async Task<FingerprintEnrollResult?> CaptureEnrollmentSamplesAsync(
+        Guid operationId,
+        List<byte[]> samples,
+        Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
+        CancellationToken operationToken)
+    {
+        for (int step = 1; step <= _enrollmentSamples;)
+        {
+            await progressCallback(
+                FingerprintEnrollProgress.Create(step, _enrollmentSamples, GetPlaceFingerMessage(step)),
+                operationToken);
+            CapturedSample sample = await CaptureValidSampleAsync(operationId, _enrollmentSampleTimeoutSeconds);
+
+            if (!IsOperationActive(operationId))
+                return FingerprintEnrollResult.Failed("Enrolamiento cancelado.", samples.Count);
+
+            if (!sample.Success)
+            {
+                if (sample.FinalState is BiometricOperationState.TimedOut or BiometricOperationState.Error)
+                {
+                    FinalizeOperation(operationId, sample.FinalState);
+                    return FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.", samples.Count);
+                }
+
+                await progressCallback(
+                    FingerprintEnrollProgress.Create(step, _enrollmentSamples, sample.Message),
+                    operationToken);
+                continue;
+            }
+
+            samples.Add(sample.Template);
+            if (step < _enrollmentSamples && _requireFingerLiftBetweenEnrollmentSamples)
+            {
+                await progressCallback(
+                    FingerprintEnrollProgress.Create(step, _enrollmentSamples, "Retire el dedo del lector."),
+                    operationToken);
+                await WaitForFingerLiftAsync(operationToken);
+            }
+
+            step++;
+        }
+
+        return null;
+    }
+
     public FingerprintEnrollResult CancelEnrollment()
     {
         lock (_operationStateLock)
@@ -378,9 +398,10 @@ public sealed class ZKTecoScannerService(
         TimeSpan pollingInterval = TimeSpan.FromMilliseconds(_capturePollingIntervalMilliseconds);
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        logger.LogInformation("Esperando huella...");
-        logger.LogInformation("Intervalo de lectura: {CapturePollingIntervalMilliseconds} ms", _capturePollingIntervalMilliseconds);
-        logger.LogInformation("Tiempo máximo de captura: {TimeoutSeconds} segundos", timeoutSeconds);
+        logger.LogInformation(
+            "Esperando huella. Intervalo: {CapturePollingIntervalMilliseconds} ms. Tiempo máximo: {TimeoutSeconds} segundos.",
+            _capturePollingIntervalMilliseconds,
+            timeoutSeconds);
 
         while (stopwatch.Elapsed < timeout)
         {
@@ -422,8 +443,10 @@ public sealed class ZKTecoScannerService(
             await Task.Delay(delay, cancellationToken);
         }
 
-        logger.LogWarning("Tiempo máximo de captura agotado después de {ElapsedMilliseconds} ms", stopwatch.ElapsedMilliseconds);
-        logger.LogWarning("Tiempo de espera agotado. Cerrando sesión: {SessionId}", operationId);
+        logger.LogWarning(
+            "Tiempo máximo de captura agotado después de {ElapsedMilliseconds} ms. Cerrando sesión: {SessionId}",
+            stopwatch.ElapsedMilliseconds,
+            operationId);
         return CapturedSample.Failed("Tiempo de espera agotado. Coloque el dedo en el lector.", BiometricOperationState.TimedOut);
     }
 
@@ -447,10 +470,11 @@ public sealed class ZKTecoScannerService(
             return CapturedSample.Failed("Lectura ignorada porque la sesión de captura ya finalizó.", BiometricOperationState.Error);
         }
 
-        logger.LogInformation("Huella detectada para la sesión: {OperationId}", operationId);
         logger.LogInformation(
-            "Huella capturada en {ElapsedMilliseconds} ms. Tamaño de plantilla: {TemplateSize}",
-            elapsedMilliseconds, templateSize);
+            "Huella detectada para la sesión {OperationId} en {ElapsedMilliseconds} ms. Tamaño de plantilla: {TemplateSize}",
+            operationId,
+            elapsedMilliseconds,
+            templateSize);
 
         return ValidateCapturedSample(templateSize);
     }
@@ -463,8 +487,10 @@ public sealed class ZKTecoScannerService(
         {
             FingerprintQualityResult quality = new(false, 0, 0, 0, false, "Plantilla biométrica demasiado pequeña.");
             int minimumTemplateSize = _minimumTemplateSize;
-            logger.LogWarning("Plantilla biométrica demasiado pequeña. Tamaño de plantilla: {TemplateSize}. Mínimo: {MinimumTemplateSize}.", templateSize, minimumTemplateSize);
-            logger.LogWarning("Captura rechazada por calidad.");
+            logger.LogWarning(
+                "Captura rechazada por calidad: plantilla demasiado pequeña. Tamaño: {TemplateSize}. Mínimo: {MinimumTemplateSize}.",
+                templateSize,
+                minimumTemplateSize);
             return CapturedSample.Failed(
                 "Huella incompleta o mal posicionada. Coloque el dedo completo y centrado sobre el lector.",
                 BiometricOperationState.Rejected,
@@ -861,36 +887,13 @@ public sealed class ZKTecoScannerService(
         logger.LogInformation("Verificando estado real del lector...");
 
         if (!sdk.IsAvailable)
-        {
             return CreateDeviceStatus(false, 0, sdk.LoadError ?? "El SDK ZKTeco no está disponible.");
-        }
 
-        if (!_initialized)
-        {
-            // Init() puede fallar al arrancar si el lector no estaba conectado en ese momento.
-            // Si ahora el SDK está disponible, intentar inicializar bajo demanda.
-            int retryInit = sdk.Init();
-            if (retryInit != 0)
-            {
-                string retryInitMessage = ZKTecoErrorMapper.ToMessage(retryInit);
-                logger.LogDebug("Reinicio del SDK ZKTeco falló: {Message}", retryInitMessage);
-                return CreateDeviceStatus(false, 0, "El SDK ZKTeco no está inicializado.");
-            }
-            _initialized = true;
-            logger.LogInformation("SDK ZKTeco inicializado bajo demanda.");
-        }
+        if (!EnsureSdkInitialized())
+            return CreateDeviceStatus(false, 0, "El SDK ZKTeco no está inicializado.");
 
-        int deviceCount;
-        try
-        {
-            deviceCount = sdk.GetDeviceCount();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "No se pudo consultar la cantidad de lectores biométricos.");
-            CloseCurrentDeviceHandle();
+        if (!TryGetDeviceCount(out int deviceCount))
             return CreateDeviceStatus(false, 0, DeviceDisconnectedMessage);
-        }
 
         if (deviceCount <= 0)
         {
@@ -899,38 +902,8 @@ public sealed class ZKTecoScannerService(
             return CreateDeviceStatus(false, 0, DeviceDisconnectedMessage);
         }
 
-        if (_deviceHandle == IntPtr.Zero)
-        {
-            if (!TryOpenDevice())
-            {
-                return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
-            }
-
-            ConfigureCaptureBuffers();
-        }
-        else
-        {
-            // TryGetParameter devuelve valores cacheados en memoria, no comunica con el hardware.
-            // Verificar conectividad real cerrando y reabriendo el handle, excepto si hay una
-            // operación biométrica activa (la captura usa el handle sin el sdkLock).
-            bool operationInProgress;
-            lock (_operationStateLock)
-            {
-                operationInProgress = _operationState is BiometricOperationState.Capturing
-                    or BiometricOperationState.Identifying
-                    or BiometricOperationState.Enrolling;
-            }
-
-            if (!operationInProgress)
-            {
-                CloseCurrentDeviceHandle();
-                if (!TryOpenDevice())
-                {
-                    return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
-                }
-                ConfigureCaptureBuffers();
-            }
-        }
+        if (!EnsureDeviceOpen())
+            return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
 
         if (_databaseHandle == IntPtr.Zero)
         {
@@ -947,6 +920,64 @@ public sealed class ZKTecoScannerService(
         CloseCurrentDeviceHandle();
         logger.LogWarning(DeviceDisconnectedMessage);
         return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
+    }
+
+    private bool EnsureSdkInitialized()
+    {
+        if (_initialized)
+            return true;
+
+        int retryInit = sdk.Init();
+        if (retryInit != 0)
+        {
+            logger.LogDebug("Reinicio del SDK ZKTeco falló: {Message}", ZKTecoErrorMapper.ToMessage(retryInit));
+            return false;
+        }
+
+        _initialized = true;
+        logger.LogInformation("SDK ZKTeco inicializado bajo demanda.");
+        return true;
+    }
+
+    private bool TryGetDeviceCount(out int deviceCount)
+    {
+        try
+        {
+            deviceCount = sdk.GetDeviceCount();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "No se pudo consultar la cantidad de lectores biométricos.");
+            CloseCurrentDeviceHandle();
+            deviceCount = 0;
+            return false;
+        }
+    }
+
+    private bool EnsureDeviceOpen()
+    {
+        if (_deviceHandle != IntPtr.Zero && IsBiometricOperationInProgress())
+            return true;
+
+        if (_deviceHandle != IntPtr.Zero)
+            CloseCurrentDeviceHandle();
+
+        if (!TryOpenDevice())
+            return false;
+
+        ConfigureCaptureBuffers();
+        return true;
+    }
+
+    private bool IsBiometricOperationInProgress()
+    {
+        lock (_operationStateLock)
+        {
+            return _operationState is BiometricOperationState.Capturing
+                or BiometricOperationState.Identifying
+                or BiometricOperationState.Enrolling;
+        }
     }
 
     private FingerprintDeviceStatus CreateDeviceStatus(bool connected, int deviceCount, string message)

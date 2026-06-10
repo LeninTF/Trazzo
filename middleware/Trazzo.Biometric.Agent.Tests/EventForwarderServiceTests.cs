@@ -18,6 +18,8 @@ public sealed class EventForwarderServiceTests
 
         await forwarder.StartAsync(CancellationToken.None);
         await forwarder.StopAsync(CancellationToken.None);
+
+        Assert.NotNull(forwarder);
     }
 
     [Fact]
@@ -57,6 +59,8 @@ public sealed class EventForwarderServiceTests
         await forwarder.StartAsync(CancellationToken.None);
         await senderCalled.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await forwarder.StopAsync(CancellationToken.None);
+
+        Assert.True(senderCalled.Task.IsCompletedSuccessfully);
     }
 
     [Fact]
