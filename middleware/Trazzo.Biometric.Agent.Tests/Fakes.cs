@@ -14,7 +14,9 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public int InitResult { get; init; }
 
-    public int DeviceCount { get; init; }
+    public int DeviceCount { get; set; }
+
+    public Queue<int>? DeviceCountSequence { get; set; }
 
     public IntPtr DeviceHandle { get; init; }
 
@@ -23,6 +25,20 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int CaptureResult { get; init; }
 
     public byte[] CapturedTemplate { get; init; } = [];
+
+    public Exception? InitException { get; init; }
+
+    public Exception? CaptureException { get; init; }
+
+    public int CaptureDelayMilliseconds { get; init; }
+
+    public int? ReportedTemplateSize { get; init; }
+
+    public bool FillQualityImage { get; init; } = true;
+
+    public int DBMergeResult { get; init; }
+
+    public int? DBMergeTemplateSize { get; set; }
 
     // Serial por defecto que simula un ZK9500 real
     public int DeviceSerial { get; init; } = 12345;
@@ -38,12 +54,21 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int Init()
     {
         InitCalls++;
+        if (InitException is not null)
+            throw InitException;
+
         return InitResult;
     }
 
     public int Terminate() => 0;
 
-    public int GetDeviceCount() => DeviceCount;
+    public int GetDeviceCount()
+    {
+        if (DeviceCountSequence is { Count: > 0 })
+            return DeviceCountSequence.Dequeue();
+
+        return DeviceCount;
+    }
 
     public IntPtr OpenDevice(int index)
     {
@@ -56,9 +81,19 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int AcquireFingerprint(IntPtr deviceHandle, byte[] imageBuffer, byte[] template, ref int size)
     {
         AcquireFingerprintCalls++;
-        FillHighQualityFingerprintImage(imageBuffer);
-        CapturedTemplate.CopyTo(template, 0);
-        size = CapturedTemplate.Length;
+        if (CaptureDelayMilliseconds > 0)
+            Thread.Sleep(CaptureDelayMilliseconds);
+        if (CaptureException is not null)
+            throw CaptureException;
+
+        if (FillQualityImage)
+            FillHighQualityFingerprintImage(imageBuffer);
+        else
+            Array.Fill(imageBuffer, (byte)255);
+
+        int copyLength = Math.Min(CapturedTemplate.Length, template.Length);
+        CapturedTemplate.AsSpan(0, copyLength).CopyTo(template);
+        size = ReportedTemplateSize ?? CapturedTemplate.Length;
         return CaptureResult;
     }
 
@@ -99,8 +134,8 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     {
         int copyLength = Math.Min(template1.Length, registeredTemplate.Length);
         Array.Copy(template1, registeredTemplate, copyLength);
-        registeredTemplateSize = copyLength;
-        return 0;
+        registeredTemplateSize = DBMergeTemplateSize ?? copyLength;
+        return DBMergeResult;
     }
 
     private static void FillHighQualityFingerprintImage(byte[] imageBuffer)
@@ -139,7 +174,7 @@ internal sealed class FakeCryptographyService : ICryptographyService
 
 internal sealed class FakeBiometricScannerService : IBiometricScannerService
 {
-    public FingerprintDeviceStatus Status { get; init; } = new(
+    public FingerprintDeviceStatus Status { get; set; } = new(
         "device.status.result",
         Success: false,
         IsSdkAvailable: true,
@@ -153,28 +188,47 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
     public FingerprintCaptureResult CaptureResult { get; init; } =
         FingerprintCaptureResult.Failed("No se encontró ningún lector biométrico.");
 
+    public FingerprintIdentifyResult IdentifyResult { get; init; } =
+        FingerprintIdentifyResult.Failed("No se pudo capturar la huella para identificación.");
+
+    public FingerprintEnrollResult EnrollResult { get; init; } =
+        FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.");
+
+    public Exception? StatusException { get; set; }
+    public Exception? CaptureException { get; set; }
+    public FingerprintEnrollProgress? EnrollmentProgress { get; init; }
+
     public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task<FingerprintDeviceStatus> GetStatusAsync(CancellationToken cancellationToken)
     {
+        if (StatusException is not null)
+            return Task.FromException<FingerprintDeviceStatus>(StatusException);
+
         return Task.FromResult(Status);
     }
 
     public Task<FingerprintCaptureResult> CaptureFingerprintAsync(CancellationToken cancellationToken)
     {
+        if (CaptureException is not null)
+            return Task.FromException<FingerprintCaptureResult>(CaptureException);
+
         return Task.FromResult(CaptureResult);
     }
 
     public Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult(FingerprintIdentifyResult.Failed("No se pudo capturar la huella para identificación."));
+        return Task.FromResult(IdentifyResult);
     }
 
-    public Task<FingerprintEnrollResult> EnrollFingerprintAsync(
+    public async Task<FingerprintEnrollResult> EnrollFingerprintAsync(
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult(FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente."));
+        if (EnrollmentProgress is not null)
+            await progressCallback(EnrollmentProgress, cancellationToken);
+
+        return EnrollResult;
     }
 
     public FingerprintEnrollResult CancelEnrollment()
@@ -239,6 +293,7 @@ internal sealed class MockHttpMessageHandler : HttpMessageHandler
     public HttpRequestMessage? LastRequest { get; private set; }
     public string? LastRequestBody { get; private set; }
     public HttpStatusCode ResponseStatusCode { get; init; } = HttpStatusCode.OK;
+    public string? ResponseContent { get; init; }
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
@@ -247,6 +302,9 @@ internal sealed class MockHttpMessageHandler : HttpMessageHandler
         LastRequestBody = request.Content is not null
             ? await request.Content.ReadAsStringAsync(cancellationToken)
             : null;
-        return new HttpResponseMessage(ResponseStatusCode);
+        return new HttpResponseMessage(ResponseStatusCode)
+        {
+            Content = ResponseContent is null ? null : new StringContent(ResponseContent)
+        };
     }
 }

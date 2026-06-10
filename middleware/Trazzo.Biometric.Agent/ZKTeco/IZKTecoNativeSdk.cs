@@ -30,9 +30,11 @@ public interface IZKTecoNativeSdk
 
     int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score);
 
-    int DBMerge(IntPtr databaseHandle, byte[] template1, byte[] template2, byte[] template3, byte[] registeredTemplate, ref int registeredTemplateSize)
-    {
-        registeredTemplateSize = 0;
-        return -1;
-    }
+    int DBMerge(
+        IntPtr databaseHandle,
+        byte[] template1,
+        byte[] template2,
+        byte[] template3,
+        byte[] registeredTemplate,
+        ref int registeredTemplateSize);
 }

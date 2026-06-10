@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Contracts;
+using Trazzo.Biometric.Agent.Queue;
 using Trazzo.Biometric.Agent.WebSocket;
 
 namespace Trazzo.Biometric.Agent.Tests;
@@ -138,10 +139,90 @@ public sealed class WebSocketResponseTests
         Assert.False(root.GetProperty("success").GetBoolean());
     }
 
+    [Fact]
+    public async Task HandleMessageAsync_ForIdentifyWithEncryptedTemplate_EnqueuesEvent()
+    {
+        EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
+        FingerprintIdentifyResult identifyResult = FingerprintIdentifyResult.Succeeded(
+            [1, 2, 3],
+            3,
+            quality: null,
+            deviceId: "ZK9500-IDENTIFY",
+            encryptedTemplate: encrypted);
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(
+            identifyResult: identifyResult,
+            eventQueue: queue);
+
+        object response = await server.HandleMessageAsync(
+            """{ "type": "fingerprint.identify" }""",
+            CancellationToken.None);
+
+        Assert.Equal(identifyResult, response);
+        BiometricEvent queued = Assert.Single(queue.Enqueued);
+        Assert.Equal("identify", queued.EventType);
+        Assert.Equal("ZK9500-IDENTIFY", queued.DeviceId);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollWithEncryptedTemplate_EnqueuesEvent()
+    {
+        EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
+        FingerprintEnrollResult enrollResult = FingerprintEnrollResult.Succeeded(
+            [1, 2, 3],
+            3,
+            capturedSamples: 3,
+            deviceId: "ZK9500-ENROLL",
+            encryptedTemplate: encrypted);
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(
+            enrollResult: enrollResult,
+            eventQueue: queue);
+
+        object response = await server.HandleMessageAsync(
+            """{ "type": "fingerprint.enroll.start" }""",
+            CancellationToken.None);
+
+        Assert.Equal(enrollResult, response);
+        BiometricEvent queued = Assert.Single(queue.Enqueued);
+        Assert.Equal("enroll", queued.EventType);
+        Assert.Equal("ZK9500-ENROLL", queued.DeviceId);
+    }
+
+    [Fact]
+    public void TryParseMessageType_ReturnsTypeOrNull()
+    {
+        Assert.Equal(
+            "fingerprint.capture",
+            LocalWebSocketServerService.TryParseMessageType("""{"type":"fingerprint.capture"}"""));
+        Assert.Null(LocalWebSocketServerService.TryParseMessageType("{ invalid"));
+    }
+
+    [Fact]
+    public void IsRateLimited_WhenEnabled_RejectsSecondOperation()
+    {
+        LocalWebSocketServerService server = CreateServer(rateLimitSeconds: 5);
+
+        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
+        Assert.True(server.IsRateLimited("client-1", "fingerprint.capture"));
+    }
+
+    [Fact]
+    public void IsRateLimited_WhenDisabled_AllowsRepeatedOperations()
+    {
+        LocalWebSocketServerService server = CreateServer(rateLimitSeconds: 0);
+
+        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
+        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
+    }
+
     private static LocalWebSocketServerService CreateServer(
         int deviceCount = 0,
         FingerprintCaptureResult? captureResult = null,
-        FakeEventQueue? eventQueue = null)
+        FingerprintIdentifyResult? identifyResult = null,
+        FingerprintEnrollResult? enrollResult = null,
+        FakeEventQueue? eventQueue = null,
+        int rateLimitSeconds = 5)
     {
         FakeBiometricScannerService scanner = new()
         {
@@ -155,14 +236,23 @@ public sealed class WebSocketResponseTests
                 DeviceCount: deviceCount,
                 Message: deviceCount > 0 ? "Lector biométrico encontrado." : "No se encontró ningún lector biométrico.",
                 CheckedAtUtc: DateTimeOffset.UtcNow),
-            CaptureResult = captureResult ?? FingerprintCaptureResult.Failed("No se encontró ningún lector biométrico.")
+            CaptureResult = captureResult ?? FingerprintCaptureResult.Failed("No se encontró ningún lector biométrico."),
+            IdentifyResult = identifyResult ?? FingerprintIdentifyResult.Failed("No se pudo identificar la huella."),
+            EnrollResult = enrollResult ?? FingerprintEnrollResult.Failed("No se pudo enrolar la huella.")
         };
+
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Agent:RateLimitSeconds"] = rateLimitSeconds.ToString()
+            })
+            .Build();
 
         return new LocalWebSocketServerService(
             scanner,
             new FakeAgentHealthService(),
             eventQueue ?? new FakeEventQueue(),
-            new ConfigurationBuilder().Build(),
+            configuration,
             NullLogger<LocalWebSocketServerService>.Instance);
     }
 

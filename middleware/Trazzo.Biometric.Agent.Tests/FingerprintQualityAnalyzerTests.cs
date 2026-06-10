@@ -60,6 +60,21 @@ public sealed class FingerprintQualityAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_CuandoNoHayPixelesDeFondo_UsaPromedioGeneral()
+    {
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)100);
+        FingerprintQualityCriteria criteria = DefaultCriteria with { ContrastThresholdOffset = -1 };
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.Equal(100, result.ForegroundPixelCount);
+        Assert.Equal(100, result.ForegroundCoveragePercent);
+        Assert.Equal(0, result.ContrastScore);
+        Assert.Equal("Área de huella excesiva.", result.Message);
+    }
+
+    [Fact]
     public void Analyze_CuandoContrasteInsuficiente_RetornaContrasteInsuficiente()
     {
         // 30 píxeles oscuros (30) + 70 claros (200): contrast=170, pero usamos criterio MinContrast=200
@@ -125,6 +140,7 @@ public sealed class FingerprintQualityAnalyzerTests
 
         var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, DefaultCriteria);
 
+        Assert.Equal(30, result.ForegroundPixelCount);
         Assert.Equal(30.0, result.ForegroundCoveragePercent);
         Assert.Equal(170.0, result.ContrastScore);
     }

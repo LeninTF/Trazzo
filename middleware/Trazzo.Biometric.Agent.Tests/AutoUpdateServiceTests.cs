@@ -8,6 +8,22 @@ namespace Trazzo.Biometric.Agent.Tests;
 
 public sealed class AutoUpdateServiceTests
 {
+    // ─── Constructor ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void Constructor_WithSharedHttpClient_DoesNotThrow()
+    {
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AutoUpdate:Enabled"] = "false"
+            })
+            .Build();
+
+        AutoUpdateService service = new(config, NullLogger<AutoUpdateService>.Instance);
+        Assert.NotNull(service);
+    }
+
     // ─── ExecuteAsync early-return paths ───────────────────────────────────
 
     [Fact]

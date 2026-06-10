@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -183,6 +184,7 @@ public sealed class AutoUpdateService : BackgroundService
         return string.Equals(actual, expectedHex.ToLowerInvariant(), StringComparison.Ordinal);
     }
 
+    [ExcludeFromCodeCoverage]
     private void ApplyUpdate(string msiPath)
     {
         string updatesDir = GetUpdatesDirectory();
@@ -216,6 +218,7 @@ public sealed class AutoUpdateService : BackgroundService
         }
     }
 
+    [ExcludeFromCodeCoverage]
     private void TryDeleteFile(string path)
     {
         try { File.Delete(path); }

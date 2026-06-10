@@ -13,6 +13,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     private readonly Func<CancellationToken, Task<string?>> _keyFetcher;
     private readonly ILogger<HybridCryptographyService> _logger;
     private readonly string _cacheFilePath;
+    private readonly TimeSpan _refreshInterval;
     private RSA? _rsaPublicKey;
     private readonly object _keyLock = new();
     private Timer? _refreshTimer;
@@ -21,17 +22,19 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     internal HybridCryptographyService(
         Func<CancellationToken, Task<string?>> keyFetcher,
         ILogger<HybridCryptographyService> logger,
-        string? cacheFilePath = null)
+        string? cacheFilePath = null,
+        TimeSpan? refreshInterval = null)
     {
         _keyFetcher = keyFetcher;
         _logger = logger;
         _cacheFilePath = cacheFilePath ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "TrazzoAgent", "public_key.cache");
+        _refreshInterval = refreshInterval ?? TimeSpan.FromHours(24);
     }
 
     public HybridCryptographyService(IConfiguration configuration, ILogger<HybridCryptographyService> logger)
-        : this(BuildHttpFetcher(configuration, logger), logger)
+        : this(BuildHttpFetcher(configuration, logger, SharedKeyFetchClient), logger)
     {
     }
 
@@ -64,14 +67,10 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         ApplyKey(base64Key);
 
         _refreshTimer = new Timer(
-            _ => TryRefreshKeyAsync().ContinueWith(
-                t => _logger.LogWarning(t.Exception?.GetBaseException(), "Error al refrescar la clave pública RSA en segundo plano."),
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted,
-                TaskScheduler.Default),
+            _ => _ = TryRefreshKeyAsync(),
             null,
-            TimeSpan.FromHours(24),
-            TimeSpan.FromHours(24));
+            _refreshInterval,
+            _refreshInterval);
     }
 
     public EncryptedPayload? TryEncryptTemplate(byte[] template, int templateSize)
@@ -114,7 +113,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         }
     }
 
-    private async Task TryRefreshKeyAsync()
+    internal async Task TryRefreshKeyAsync()
     {
         if (_disposed) return;
         try
@@ -181,9 +180,10 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         }
     }
 
-    private static Func<CancellationToken, Task<string?>> BuildHttpFetcher(
+    internal static Func<CancellationToken, Task<string?>> BuildHttpFetcher(
         IConfiguration configuration,
-        ILogger<HybridCryptographyService> logger)
+        ILogger<HybridCryptographyService> logger,
+        HttpClient httpClient)
     {
         string? url = configuration["Security:BackendPublicKeyUrl"];
         string? agentToken = configuration["Queue:AgentToken"];
@@ -210,7 +210,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             if (!string.IsNullOrWhiteSpace(agentToken))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", agentToken);
 
-            using HttpResponseMessage response = await SharedKeyFetchClient.SendAsync(request, ct);
+            using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
             string json = await response.Content.ReadAsStringAsync(ct);
             using JsonDocument doc = JsonDocument.Parse(json);
             return doc.RootElement.GetProperty("publicKey").GetString();

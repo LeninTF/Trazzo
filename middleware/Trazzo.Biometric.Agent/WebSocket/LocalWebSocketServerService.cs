@@ -381,7 +381,7 @@ public sealed class LocalWebSocketServerService(
         }
     }
 
-    private bool IsRateLimited(string clientId, string operationType)
+    internal bool IsRateLimited(string clientId, string operationType)
     {
         if (_rateLimitSeconds <= 0) return false;
 
@@ -400,7 +400,7 @@ public sealed class LocalWebSocketServerService(
         return false;
     }
 
-    private static string? TryParseMessageType(string json)
+    internal static string? TryParseMessageType(string json)
     {
         try
         {

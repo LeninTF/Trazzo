@@ -205,12 +205,12 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
         cmd.ExecuteNonQuery();
     }
 
-    private static string BuildConnectionString(IConfiguration configuration)
+    internal static string BuildConnectionString(IConfiguration configuration, string? defaultBasePath = null)
     {
         string? configuredPath = configuration["Queue:DatabasePath"];
         string dbPath = string.IsNullOrWhiteSpace(configuredPath)
             ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                defaultBasePath ?? Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                 "TrazzoAgent", "events.db")
             : configuredPath;
 

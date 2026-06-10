@@ -10,20 +10,11 @@ public interface IBiometricScannerService : IAsyncDisposable
 
     Task<FingerprintCaptureResult> CaptureFingerprintAsync(CancellationToken cancellationToken);
 
-    Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken)
-    {
-        return Task.FromResult(FingerprintIdentifyResult.Failed("No se pudo capturar la huella para identificación."));
-    }
+    Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken);
 
     Task<FingerprintEnrollResult> EnrollFingerprintAsync(
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult(FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente."));
-    }
+        CancellationToken cancellationToken);
 
-    FingerprintEnrollResult CancelEnrollment()
-    {
-        return FingerprintEnrollResult.Failed("No hay un enrolamiento activo.");
-    }
+    FingerprintEnrollResult CancelEnrollment();
 }

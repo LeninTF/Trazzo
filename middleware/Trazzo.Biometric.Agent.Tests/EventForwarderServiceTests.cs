@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Queue;
 
@@ -6,6 +7,58 @@ namespace Trazzo.Biometric.Agent.Tests;
 
 public sealed class EventForwarderServiceTests
 {
+    [Fact]
+    public async Task Constructor_CuandoBackendNoConfigurado_DeshabilitaEjecucion()
+    {
+        IConfiguration configuration = new ConfigurationBuilder().Build();
+        EventForwarderService forwarder = new(
+            new FakeEventQueue(),
+            configuration,
+            NullLogger<EventForwarderService>.Instance);
+
+        await forwarder.StartAsync(CancellationToken.None);
+        await forwarder.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public void Constructor_CuandoBackendConfigurado_CreaServicioHabilitado()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Queue:BackendUrl"] = "https://localhost/api/asistencias/sync",
+                ["Queue:AgentToken"] = "token",
+                ["Agent:TenantId"] = "tenant-1",
+                ["Queue:RetryIntervalSeconds"] = "1"
+            })
+            .Build();
+
+        EventForwarderService forwarder = new(
+            new FakeEventQueue(),
+            configuration,
+            NullLogger<EventForwarderService>.Instance);
+
+        Assert.NotNull(forwarder);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CuandoSeDetiene_CancelaEspera()
+    {
+        TaskCompletionSource senderCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventForwarderService forwarder = CreateForwarder(
+            new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
+            sender: (_, _) =>
+            {
+                senderCalled.TrySetResult();
+                return Task.FromResult(false);
+            },
+            retryIntervalSeconds: 1);
+
+        await forwarder.StartAsync(CancellationToken.None);
+        await senderCalled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await forwarder.StopAsync(CancellationToken.None);
+    }
+
     [Fact]
     public async Task TryForwardPendingAsync_CuandoColaVacia_NoMarcaNadaComoEnviado()
     {
@@ -133,6 +186,33 @@ public sealed class EventForwarderServiceTests
     }
 
     [Fact]
+    public async Task TryForwardPendingAsync_CuandoColaLanzaExcepcion_RetornaTrue()
+    {
+        EventForwarderService forwarder = new(
+            new ThrowingEventQueue(new InvalidOperationException("database unavailable")),
+            (_, _) => Task.FromResult(true),
+            retryIntervalSeconds: 60,
+            NullLogger<EventForwarderService>.Instance);
+
+        bool hadFailures = await forwarder.TryForwardPendingAsync(CancellationToken.None);
+
+        Assert.True(hadFailures);
+    }
+
+    [Fact]
+    public async Task TryForwardPendingAsync_CuandoColaCancela_PropagaCancelacion()
+    {
+        EventForwarderService forwarder = new(
+            new ThrowingEventQueue(new OperationCanceledException()),
+            (_, _) => Task.FromResult(true),
+            retryIntervalSeconds: 60,
+            NullLogger<EventForwarderService>.Instance);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => forwarder.TryForwardPendingAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task BuildHttpSender_CuandoEnviaEvento_PayloadTieneFormatoCorrecto()
     {
         byte[] iv = new byte[12];
@@ -207,14 +287,34 @@ public sealed class EventForwarderServiceTests
         Assert.Null(handler.LastRequest?.Headers.Authorization);
     }
 
+    [Fact]
+    public async Task BuildHttpSender_CuandoTenantConfigurado_EnviaTenantHeader()
+    {
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        EventForwarderService forwarder = new(
+            new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
+            httpClient,
+            "http://localhost/api/asistencias/sync",
+            agentToken: null,
+            retryIntervalSeconds: 60,
+            NullLogger<EventForwarderService>.Instance,
+            tenantId: "tenant-1");
+
+        await forwarder.TryForwardPendingAsync(CancellationToken.None);
+
+        Assert.Equal("tenant-1", handler.LastRequest?.Headers.GetValues("X-Tenant-ID").Single());
+    }
+
     private static EventForwarderService CreateForwarder(
         FakeEventQueue queue,
-        Func<BiometricEvent, CancellationToken, Task<bool>>? sender = null)
+        Func<BiometricEvent, CancellationToken, Task<bool>>? sender = null,
+        int retryIntervalSeconds = 60)
     {
         return new EventForwarderService(
             queue,
             sender ?? ((_, _) => Task.FromResult(true)),
-            retryIntervalSeconds: 60,
+            retryIntervalSeconds,
             NullLogger<EventForwarderService>.Instance);
     }
 
@@ -229,4 +329,27 @@ public sealed class EventForwarderServiceTests
         DeviceId = "ZK9500-1",
         CapturedAtUtc = DateTimeOffset.UtcNow
     };
+
+    private sealed class ThrowingEventQueue(Exception exception) : IEventQueue
+    {
+        public Task EnqueueAsync(BiometricEvent biometricEvent, CancellationToken cancellationToken = default)
+            => Task.FromException(exception);
+
+        public Task<IReadOnlyList<BiometricEvent>> GetPendingAsync(
+            int limit = 50,
+            CancellationToken cancellationToken = default)
+            => Task.FromException<IReadOnlyList<BiometricEvent>>(exception);
+
+        public Task MarkSentAsync(IEnumerable<long> ids, CancellationToken cancellationToken = default)
+            => Task.FromException(exception);
+
+        public Task MarkFailedAsync(long id, CancellationToken cancellationToken = default)
+            => Task.FromException(exception);
+
+        public Task<int> GetPendingCountAsync(CancellationToken cancellationToken = default)
+            => Task.FromException<int>(exception);
+
+        public Task PruneAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+            => Task.FromException(exception);
+    }
 }
