@@ -74,10 +74,10 @@ jobs:
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
 
       - name: Restaurar dependencias
-        run: dotnet restore
+        run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
 
       - name: Compilar (Build)
-        run: dotnet build -c Release --no-restore
+        run: dotnet build Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Release --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
         run: >
