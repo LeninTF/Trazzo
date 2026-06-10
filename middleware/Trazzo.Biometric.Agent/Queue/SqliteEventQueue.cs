@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using System.Globalization;
 
 namespace Trazzo.Biometric.Agent.Queue;
 
@@ -55,9 +56,11 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         await cmd.ExecuteNonQueryAsync(cancellationToken);
 
+        string eventType = biometricEvent.EventType;
+        string? deviceId = biometricEvent.DeviceId;
         _logger.LogDebug(
             "Evento biométrico encolado. Tipo: {EventType}, Dispositivo: {DeviceId}.",
-            biometricEvent.EventType, biometricEvent.DeviceId);
+            eventType, deviceId);
     }
 
     public async Task<IReadOnlyList<BiometricEvent>> GetPendingAsync(
@@ -91,7 +94,7 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
                 IvBase64 = reader.GetString(4),
                 TagBase64 = reader.GetString(5),
                 DeviceId = reader.IsDBNull(6) ? null : reader.GetString(6),
-                CapturedAtUtc = DateTimeOffset.Parse(reader.GetString(7)),
+                CapturedAtUtc = DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture),
                 Status = Enum.Parse<BiometricEventStatus>(reader.GetString(8), ignoreCase: true),
                 RetryCount = reader.GetInt32(9)
             });

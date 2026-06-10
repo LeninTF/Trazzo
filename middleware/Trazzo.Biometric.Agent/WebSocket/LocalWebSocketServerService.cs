@@ -27,6 +27,8 @@ public sealed class LocalWebSocketServerService(
         Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
     private readonly int _deviceMonitorIntervalSeconds = Math.Max(1,
         configuration.GetValue("Agent:DeviceMonitorIntervalSeconds", 3));
+    private bool? _monitorLastKnownConnected;
+    private DateTimeOffset? _monitorDisconnectedSince;
     private CancellationTokenSource? _serverCts;
     private Task? _serverTask;
 
@@ -177,8 +179,9 @@ public sealed class LocalWebSocketServerService(
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
-        catch (WebSocketException)
+        catch (WebSocketException ex)
         {
+            logger.LogDebug(ex, "Conexión WebSocket cerrada inesperadamente.");
         }
         finally
         {
@@ -186,8 +189,8 @@ public sealed class LocalWebSocketServerService(
             sendLock.Dispose();
             _clientLastOperationTime.TryRemove(clientId, out _);
             logger.LogInformation(
-                "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration}s.",
-                clientId, sessionTimer.Elapsed.TotalSeconds.ToString("F1"));
+                "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration:F1}s.",
+                clientId, sessionTimer.Elapsed.TotalSeconds);
         }
     }
 
@@ -203,8 +206,6 @@ public sealed class LocalWebSocketServerService(
 
     private async Task DeviceMonitorLoopAsync(CancellationToken cancellationToken)
     {
-        bool? lastKnownConnected = null;
-        DateTimeOffset? disconnectedSince = null;
         TimeSpan pollInterval = TimeSpan.FromSeconds(_deviceMonitorIntervalSeconds);
 
         while (!cancellationToken.IsCancellationRequested)
@@ -212,57 +213,7 @@ public sealed class LocalWebSocketServerService(
             try
             {
                 FingerprintDeviceStatus status = await scannerService.GetStatusAsync(cancellationToken);
-                bool isConnected = status.IsConnected;
-
-                if (lastKnownConnected is null)
-                {
-                    // Primera lectura: establece línea base sin notificar
-                    lastKnownConnected = isConnected;
-                    if (!isConnected)
-                        disconnectedSince = DateTimeOffset.UtcNow;
-                }
-                else if (isConnected && lastKnownConnected == false)
-                {
-                    // Lector recién conectado
-                    lastKnownConnected = true;
-                    disconnectedSince = null;
-                    logger.LogInformation("Lector biométrico conectado. Notificando clientes.");
-                    await BroadcastAsync(new
-                    {
-                        type = "device.status.changed",
-                        success = true,
-                        isConnected = true,
-                        message = "Detector de huella conectado."
-                    }, cancellationToken);
-                }
-                else if (!isConnected && lastKnownConnected == true)
-                {
-                    // Lector recién desconectado
-                    lastKnownConnected = false;
-                    disconnectedSince = DateTimeOffset.UtcNow;
-                    logger.LogWarning("Lector biométrico desconectado. Notificando clientes.");
-                    await BroadcastAsync(new
-                    {
-                        type = "device.status.changed",
-                        success = false,
-                        isConnected = false,
-                        message = "Lector biométrico desconectado."
-                    }, cancellationToken);
-                }
-                else if (!isConnected && disconnectedSince is not null)
-                {
-                    // Sigue sin lector: enviar tiempo de espera a clientes activos
-                    int waitingSeconds = (int)(DateTimeOffset.UtcNow - disconnectedSince.Value).TotalSeconds;
-                    await BroadcastAsync(new
-                    {
-                        type = "device.connecting",
-                        success = false,
-                        isConnected = false,
-                        message = $"Buscando lector biométrico... ({waitingSeconds}s)",
-                        waitingSeconds
-                    }, cancellationToken);
-                }
-
+                await HandleDeviceStatusChangeAsync(status.IsConnected, cancellationToken);
                 await Task.Delay(pollInterval, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -275,6 +226,60 @@ public sealed class LocalWebSocketServerService(
                 try { await Task.Delay(pollInterval, cancellationToken); }
                 catch (OperationCanceledException) { break; }
             }
+        }
+    }
+
+    private async Task HandleDeviceStatusChangeAsync(bool isConnected, CancellationToken cancellationToken)
+    {
+        if (_monitorLastKnownConnected is null)
+        {
+            _monitorLastKnownConnected = isConnected;
+            if (!isConnected)
+                _monitorDisconnectedSince = DateTimeOffset.UtcNow;
+            return;
+        }
+
+        if (isConnected && _monitorLastKnownConnected == false)
+        {
+            _monitorLastKnownConnected = true;
+            _monitorDisconnectedSince = null;
+            logger.LogInformation("Lector biométrico conectado. Notificando clientes.");
+            await BroadcastAsync(new
+            {
+                type = "device.status.changed",
+                success = true,
+                isConnected = true,
+                message = "Detector de huella conectado."
+            }, cancellationToken);
+            return;
+        }
+
+        if (!isConnected && _monitorLastKnownConnected == true)
+        {
+            _monitorLastKnownConnected = false;
+            _monitorDisconnectedSince = DateTimeOffset.UtcNow;
+            logger.LogWarning("Lector biométrico desconectado. Notificando clientes.");
+            await BroadcastAsync(new
+            {
+                type = "device.status.changed",
+                success = false,
+                isConnected = false,
+                message = "Lector biométrico desconectado."
+            }, cancellationToken);
+            return;
+        }
+
+        if (!isConnected && _monitorDisconnectedSince is not null)
+        {
+            int waitingSeconds = (int)(DateTimeOffset.UtcNow - _monitorDisconnectedSince.Value).TotalSeconds;
+            await BroadcastAsync(new
+            {
+                type = "device.connecting",
+                success = false,
+                isConnected = false,
+                message = $"Buscando lector biométrico... ({waitingSeconds}s)",
+                waitingSeconds
+            }, cancellationToken);
         }
     }
 
@@ -342,10 +347,11 @@ public sealed class LocalWebSocketServerService(
                 (progress, token) => SendJsonAsync(webSocket, progress, sendLock, token),
                 cancellationToken);
 
+            long elapsedMs = opTimer.ElapsedMilliseconds;
             if (isBiometricOp)
                 logger.LogInformation(
                     "Operacion {OperationType} de {ClientId} completada en {ElapsedMs}ms.",
-                    operationType, clientId, opTimer.ElapsedMilliseconds);
+                    operationType, clientId, elapsedMs);
 
             if (isEnrollStart && response is FingerprintEnrollResult { Success: false, Message: "Enrolamiento cancelado." })
             {

@@ -25,11 +25,6 @@ public sealed class Worker(
         {
             logger.LogInformation("Detención solicitada para el agente biométrico de Trazzo.");
         }
-        catch (Exception ex)
-        {
-            logger.LogCritical(ex, "El agente biométrico de Trazzo se detuvo inesperadamente.");
-            throw;
-        }
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -77,8 +72,10 @@ public sealed class Worker(
         bool autoUpdateEnabled = configuration.GetValue("AutoUpdate:Enabled", false);
         string? manifestUrl = configuration["AutoUpdate:ManifestUrl"];
         if (autoUpdateEnabled && !string.IsNullOrWhiteSpace(manifestUrl))
-            logger.LogInformation("  Auto-Update:       ACTIVO — verificacion cada {Minutes} min.",
-                configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60));
+        {
+            int checkIntervalMinutes = configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60);
+            logger.LogInformation("  Auto-Update:       ACTIVO — verificacion cada {Minutes} min.", checkIntervalMinutes);
+        }
         else if (autoUpdateEnabled)
             logger.LogWarning("  Auto-Update:       HABILITADO pero sin ManifestUrl — configure AutoUpdate:ManifestUrl.");
         else

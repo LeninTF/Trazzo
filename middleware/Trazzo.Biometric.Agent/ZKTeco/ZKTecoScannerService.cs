@@ -55,7 +55,6 @@ public sealed class ZKTecoScannerService(
     private byte[] _imageBuffer = new byte[DefaultImageWidth * DefaultImageHeight];
     private byte[] _templateBuffer = new byte[DefaultTemplateBufferSize];
     private bool _initialized;
-    private int _deviceCount;
     private int _imageWidth = DefaultImageWidth;
     private int _imageHeight = DefaultImageHeight;
     private int _imageDataSize;
@@ -151,7 +150,7 @@ public sealed class ZKTecoScannerService(
                 return FingerprintCaptureResult.Failed(sample.Message, sample.Quality, sample.Image?.Base64, sample.Image?.MimeType, sample.Image?.DataUrl);
             }
 
-            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {SessionId}", operationId);
+            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
             EncryptedPayload? encryptedTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
@@ -217,7 +216,7 @@ public sealed class ZKTecoScannerService(
                 return FingerprintIdentifyResult.Failed("No se pudo capturar la huella para identificación.", sample.Quality);
             }
 
-            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {SessionId}", operationId);
+            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
             EncryptedPayload? encryptedIdentifyTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
@@ -327,7 +326,7 @@ public sealed class ZKTecoScannerService(
                 return FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.", samples.Count);
             }
 
-            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {SessionId}", operationId);
+            logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
             EncryptedPayload? encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(registeredTemplate, registeredTemplateSize);
@@ -387,7 +386,7 @@ public sealed class ZKTecoScannerService(
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         logger.LogInformation("Esperando huella...");
-        logger.LogInformation("Intervalo de lectura: {PollingIntervalMilliseconds} ms", _capturePollingIntervalMilliseconds);
+        logger.LogInformation("Intervalo de lectura: {CapturePollingIntervalMilliseconds} ms", _capturePollingIntervalMilliseconds);
         logger.LogInformation("Tiempo máximo de captura: {TimeoutSeconds} segundos", timeoutSeconds);
 
         while (stopwatch.Elapsed < timeout)
@@ -409,30 +408,9 @@ public sealed class ZKTecoScannerService(
 
             logger.LogInformation("AcquireFingerprint devolvió: {CaptureResult}", captureResult);
 
-            if (captureResult == 0 && templateSize > 0)
-            {
-                if (templateSize > _templateBuffer.Length)
-                {
-                    logger.LogWarning(
-                        "SDK reportó templateSize={TemplateSize} mayor que el buffer ({BufferSize}). Captura rechazada.",
-                        templateSize, _templateBuffer.Length);
-                    return CapturedSample.Failed("Error interno: tamaño de plantilla excede el buffer.", BiometricOperationState.Error);
-                }
-
-                if (!IsOperationActive(operationId))
-                {
-                    logger.LogWarning("Lectura ignorada porque la sesión ya no está activa.");
-                    return CapturedSample.Failed("Lectura ignorada porque la sesión de captura ya finalizó.", BiometricOperationState.Error);
-                }
-
-                logger.LogInformation("Huella detectada para la sesión: {SessionId}", operationId);
-                logger.LogInformation(
-                    "Huella capturada en {ElapsedMilliseconds} ms. Tamaño de plantilla: {TemplateSize}",
-                    stopwatch.ElapsedMilliseconds,
-                    templateSize);
-
-                return ValidateCapturedSample(templateSize);
-            }
+            CapturedSample? detected = TryProcessCaptureResult(captureResult, templateSize, operationId, stopwatch.ElapsedMilliseconds);
+            if (detected is not null)
+                return detected;
 
             if (IsFatalCaptureError(captureResult))
             {
@@ -456,6 +434,34 @@ public sealed class ZKTecoScannerService(
         return CapturedSample.Failed("Tiempo de espera agotado. Coloque el dedo en el lector.", BiometricOperationState.TimedOut);
     }
 
+    private CapturedSample? TryProcessCaptureResult(int captureResult, int templateSize, Guid operationId, long elapsedMilliseconds)
+    {
+        if (captureResult != 0 || templateSize <= 0)
+            return null;
+
+        int bufferSize = _templateBuffer.Length;
+        if (templateSize > bufferSize)
+        {
+            logger.LogWarning(
+                "SDK reportó templateSize={TemplateSize} mayor que el buffer ({BufferSize}). Captura rechazada.",
+                templateSize, bufferSize);
+            return CapturedSample.Failed("Error interno: tamaño de plantilla excede el buffer.", BiometricOperationState.Error);
+        }
+
+        if (!IsOperationActive(operationId))
+        {
+            logger.LogWarning("Lectura ignorada porque la sesión ya no está activa.");
+            return CapturedSample.Failed("Lectura ignorada porque la sesión de captura ya finalizó.", BiometricOperationState.Error);
+        }
+
+        logger.LogInformation("Huella detectada para la sesión: {OperationId}", operationId);
+        logger.LogInformation(
+            "Huella capturada en {ElapsedMilliseconds} ms. Tamaño de plantilla: {TemplateSize}",
+            elapsedMilliseconds, templateSize);
+
+        return ValidateCapturedSample(templateSize);
+    }
+
     private CapturedSample ValidateCapturedSample(int templateSize)
     {
         FingerprintImagePayload? image = CreateDebugImagePayload();
@@ -463,7 +469,8 @@ public sealed class ZKTecoScannerService(
         if (templateSize < _minimumTemplateSize)
         {
             FingerprintQualityResult quality = new(false, 0, 0, 0, false, "Plantilla biométrica demasiado pequeña.");
-            logger.LogWarning("Plantilla biométrica demasiado pequeña. Tamaño de plantilla: {TemplateSize}. Mínimo: {MinimumTemplateSize}.", templateSize, _minimumTemplateSize);
+            int minimumTemplateSize = _minimumTemplateSize;
+            logger.LogWarning("Plantilla biométrica demasiado pequeña. Tamaño de plantilla: {TemplateSize}. Mínimo: {MinimumTemplateSize}.", templateSize, minimumTemplateSize);
             logger.LogWarning("Captura rechazada por calidad.");
             return CapturedSample.Failed(
                 "Huella incompleta o mal posicionada. Coloque el dedo completo y centrado sobre el lector.",
@@ -763,7 +770,8 @@ public sealed class ZKTecoScannerService(
         try
         {
             FingerprintImagePayload image = FingerprintImageConverter.ConvertGrayscaleRawToPng(_imageBuffer, _imageWidth, _imageHeight);
-            logger.LogInformation("Imagen de huella convertida a PNG para respuesta local de modo de prueba. Tamaño PNG: {PngSize} bytes.", image.PngBytes.Length);
+            int pngSize = image.PngBytes.Length;
+            logger.LogInformation("Imagen de huella convertida a PNG para respuesta local de modo de prueba. Tamaño PNG: {PngSize} bytes.", pngSize);
             return image;
         }
         catch (Exception ex)
@@ -815,14 +823,14 @@ public sealed class ZKTecoScannerService(
 
     private bool OpenFirstDevice()
     {
-        _deviceCount = sdk.GetDeviceCount();
-        if (_deviceCount <= 0)
+        int deviceCount = sdk.GetDeviceCount();
+        if (deviceCount <= 0)
         {
             logger.LogWarning("No se encontró ningún lector biométrico ZKTeco.");
             return false;
         }
 
-        logger.LogInformation("Cantidad de lectores: {DeviceCount}.", _deviceCount);
+        logger.LogInformation("Cantidad de lectores: {DeviceCount}.", deviceCount);
 
         return TryOpenDevice();
     }
@@ -842,8 +850,9 @@ public sealed class ZKTecoScannerService(
         // Leer número de serie del dispositivo (SN, código 1103) para trazabilidad y anti-suplantación.
         if (TryReadDeviceSerial(out string deviceSerial))
         {
-            _deviceSerial = FormatDeviceId(deviceSerial);
-            logger.LogInformation("Lector ZK9500 abierto. Serial: {DeviceSerial}", _deviceSerial);
+            string formattedSerial = FormatDeviceId(deviceSerial);
+            _deviceSerial = formattedSerial;
+            logger.LogInformation("Lector ZK9500 abierto. Serial: {DeviceSerial}", formattedSerial);
         }
         else
         {
@@ -870,7 +879,8 @@ public sealed class ZKTecoScannerService(
             int retryInit = sdk.Init();
             if (retryInit != 0)
             {
-                logger.LogDebug("Reinicio del SDK ZKTeco falló: {Message}", ZKTecoErrorMapper.ToMessage(retryInit));
+                string retryInitMessage = ZKTecoErrorMapper.ToMessage(retryInit);
+                logger.LogDebug("Reinicio del SDK ZKTeco falló: {Message}", retryInitMessage);
                 return CreateDeviceStatus(false, 0, "El SDK ZKTeco no está inicializado.");
             }
             _initialized = true;
@@ -889,7 +899,6 @@ public sealed class ZKTecoScannerService(
             return CreateDeviceStatus(false, 0, DeviceDisconnectedMessage);
         }
 
-        _deviceCount = deviceCount;
         if (deviceCount <= 0)
         {
             logger.LogWarning(DeviceDisconnectedMessage);
@@ -1065,7 +1074,7 @@ public sealed class ZKTecoScannerService(
         if (sdk.TryGetParameter(_deviceHandle, 2, out int height))
         {
             _imageHeight = height;
-            logger.LogInformation("Alto de imagen ZKTeco detectado: {Height}.", _imageHeight);
+            logger.LogInformation("Alto de imagen ZKTeco detectado: {ImageHeight}.", _imageHeight);
         }
 
         if (sdk.TryGetParameter(_deviceHandle, 106, out int imageDataSize))
@@ -1082,7 +1091,9 @@ public sealed class ZKTecoScannerService(
         int imageBufferSize = _imageDataSize > 0 ? _imageDataSize : _imageWidth * _imageHeight;
         _imageBuffer = new byte[imageBufferSize];
         _templateBuffer = new byte[_templateBufferSize];
-        logger.LogInformation("Buffers de captura ZKTeco asignados. Buffer de imagen: {ImageBufferSize} bytes. Buffer de plantilla: {TemplateBufferSize} bytes.", _imageBuffer.Length, _templateBuffer.Length);
+        int imageBufferLength = _imageBuffer.Length;
+        int templateBufferLength = _templateBuffer.Length;
+        logger.LogInformation("Buffers de captura ZKTeco asignados. Buffer de imagen: {ImageBufferSize} bytes. Buffer de plantilla: {TemplateBufferSize} bytes.", imageBufferLength, templateBufferLength);
     }
 
     private static bool IsFatalCaptureError(int captureResult)

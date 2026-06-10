@@ -206,8 +206,12 @@ public sealed class AutoUpdateService : BackgroundService
         }
     }
 
-    private static void TryDeleteFile(string path)
+    private void TryDeleteFile(string path)
     {
-        try { File.Delete(path); } catch { }
+        try { File.Delete(path); }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Auto-Update: no se pudo eliminar el archivo temporal.");
+        }
     }
 }

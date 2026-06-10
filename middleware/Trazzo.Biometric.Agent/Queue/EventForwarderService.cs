@@ -146,7 +146,10 @@ public sealed class EventForwarderService : BackgroundService
 
             await _queue.PruneAsync(TimeSpan.FromDays(7), cancellationToken);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error al procesar la cola de eventos biométricos.");
