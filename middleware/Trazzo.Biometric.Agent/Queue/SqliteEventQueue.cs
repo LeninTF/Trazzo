@@ -110,20 +110,24 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         await using SqliteConnection conn = new(_connectionString);
         await conn.OpenAsync(cancellationToken);
-        await using SqliteCommand cmd = conn.CreateCommand();
+        await using SqliteTransaction tx = conn.BeginTransaction();
+        string sentAt = DateTimeOffset.UtcNow.ToString("O");
 
-        string placeholders = string.Join(",", idArray.Select((_, i) => $"@id{i}"));
-        cmd.CommandText = $"""
-            UPDATE biometric_events
-            SET status = 'sent', sent_at_utc = @sentAt
-            WHERE id IN ({placeholders})
-            """;
+        foreach (long id in idArray)
+        {
+            await using SqliteCommand cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = """
+                UPDATE biometric_events
+                SET status = 'sent', sent_at_utc = @sentAt
+                WHERE id = @id
+                """;
+            cmd.Parameters.AddWithValue("@sentAt", sentAt);
+            cmd.Parameters.AddWithValue("@id", id);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+        }
 
-        cmd.Parameters.AddWithValue("@sentAt", DateTimeOffset.UtcNow.ToString("O"));
-        for (int i = 0; i < idArray.Length; i++)
-            cmd.Parameters.AddWithValue($"@id{i}", idArray[i]);
-
-        await cmd.ExecuteNonQueryAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
     }
 
     public async Task MarkFailedAsync(long id, CancellationToken cancellationToken = default)
