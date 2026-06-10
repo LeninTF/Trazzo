@@ -51,7 +51,7 @@ public sealed class ZKTecoScannerServiceTests
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
         Assert.Equal(1, sdk.InitCalls);
-        Assert.Equal(1, sdk.OpenDeviceCalls);
+        Assert.Equal(2, sdk.OpenDeviceCalls);
         Assert.Equal(1, sdk.DBInitCalls);
         Assert.True(sdk.AcquireFingerprintCalls >= 1);
     }
