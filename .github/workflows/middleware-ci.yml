@@ -77,7 +77,7 @@ jobs:
         run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
 
       - name: Compilar (Build)
-        run: dotnet build Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Debug --no-restore
+        run: dotnet build -c Debug --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
         run: >
@@ -85,9 +85,7 @@ jobs:
           -c Debug
           --no-restore
           --logger "trx;LogFileName=test-results.trx"
-          --results-directory TestResults
-          --collect:"XPlat Code Coverage"
-          --settings Trazzo.Biometric.Agent.Tests/coverlet.runsettings
+          --results-directory TestResults --collect:"XPlat Code Coverage"
 
       - name: Finalizar análisis de SonarCloud (End)
         env:
