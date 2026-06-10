@@ -1,0 +1,74 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package
+      Name="Trazzo Biometric Agent"
+      Manufacturer="Trazzo"
+      Version="$(var.ProductVersion)"
+      Language="1034"
+      Scope="perMachine"
+      InstallerVersion="500"
+      Compressed="yes"
+      UpgradeCode="212DE720-3B16-4993-8D3C-625A69983856">
+
+    <MajorUpgrade
+        Schedule="afterInstallInitialize"
+        AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="Ya existe una version mas reciente de Trazzo Biometric Agent instalada." />
+
+    <MediaTemplate EmbedCab="yes" />
+    <Launch Condition="VersionNT &gt;= 603" Message="Trazzo Biometric Agent requiere Windows 10 o superior." />
+
+    <!-- Detectar si el SDK ZKTeco está instalado buscando libzkfp.dll en System32 x64.
+         Cubre tanto instalaciones con driver de kernel (zkfp.sys) como con WinUSB. -->
+    <Property Id="ZKTECO_SDK_INSTALLED">
+      <DirectorySearch Id="ZKTecoSdkDirSearch" Path="[System64Folder]">
+        <FileSearch Id="ZKTecoLibSearch" Name="libzkfp.dll" />
+      </DirectorySearch>
+    </Property>
+
+    <!-- Bloquear instalación nueva si el SDK ZKTeco no está instalado.
+         "Installed" permite que upgrades y desinstalaciones continúen sin el SDK. -->
+    <Launch
+        Condition="Installed OR ZKTECO_SDK_INSTALLED"
+        Message="El software del lector ZK9500 (ZKTeco) no está instalado.&#13;&#10;&#13;&#10;Instálelo antes de continuar:&#13;&#10;1. Descargue el software desde el sitio oficial de ZKTeco&#13;&#10;2. Instálelo y conecte el lector ZK9500&#13;&#10;3. Ejecute nuevamente este instalador" />
+
+    <!-- Genera log automatico en %TEMP%\MSI*.LOG en cada instalacion/desinstalacion -->
+    <Property Id="MsiLogging" Value="voicewarmup" />
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <!-- banner.bmp = franja superior (493 x 58 px, 24bpp)
+         dialog.bmp = panel izquierdo de bienvenida y finalizacion (493 x 312 px, 24bpp) -->
+    <WixVariable Id="WixUIBannerBmp" Value="Resources\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="Resources\dialog.bmp" />
+
+    <Feature Id="MainFeature" Title="Trazzo Biometric Agent" Level="1">
+      <ComponentGroupRef Id="PublishedFiles" />
+      <ComponentGroupRef Id="DataCleanup" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="TrazzoFolder" Name="Trazzo">
+        <Directory Id="INSTALLFOLDER" Name="BiometricAgent" />
+      </Directory>
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="TrazzoAgentDataDir" Name="TrazzoAgent" />
+    </StandardDirectory>
+
+    <Property Id="TRAZZO_AGENT_DATA_DIR" Value="[TrazzoAgentDataDir]" />
+
+    <ComponentGroup Id="DataCleanup">
+      <Component Id="cmp_DataCleanup" Directory="TrazzoAgentDataDir" Guid="F7A3B2C1-D4E5-4F60-A8B9-C0D1E2F34567">
+        <CreateFolder />
+        <util:RemoveFolderEx On="uninstall" Property="TRAZZO_AGENT_DATA_DIR" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
