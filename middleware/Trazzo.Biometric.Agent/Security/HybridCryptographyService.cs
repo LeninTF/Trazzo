@@ -64,7 +64,11 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         ApplyKey(base64Key);
 
         _refreshTimer = new Timer(
-            async _ => await TryRefreshKeyAsync(),
+            _ => TryRefreshKeyAsync().ContinueWith(
+                t => _logger.LogWarning(t.Exception?.GetBaseException(), "Error al refrescar la clave pública RSA en segundo plano."),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default),
             null,
             TimeSpan.FromHours(24),
             TimeSpan.FromHours(24));
@@ -189,6 +193,14 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             logger.LogWarning(
                 "URL del endpoint de clave pública no configurada (Security:BackendPublicKeyUrl). " +
                 "Se intentará usar la caché de disco si existe.");
+            return _ => Task.FromResult<string?>(null);
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsedUrl) || parsedUrl.Scheme != Uri.UriSchemeHttps)
+        {
+            logger.LogError(
+                "Security:BackendPublicKeyUrl='{Url}' debe usar HTTPS. La clave pública no se descargará.",
+                url);
             return _ => Task.FromResult<string?>(null);
         }
 

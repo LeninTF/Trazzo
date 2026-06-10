@@ -13,11 +13,18 @@ public sealed class AutoUpdateService : BackgroundService
     private readonly bool _enabled;
     private readonly TimeSpan _checkInterval;
     private readonly string? _manifestUrl;
+    private readonly HttpClient _httpClient;
     private readonly ILogger<AutoUpdateService> _logger;
 
     public AutoUpdateService(IConfiguration configuration, ILogger<AutoUpdateService> logger)
+        : this(configuration, logger, SharedHttpClient)
+    {
+    }
+
+    internal AutoUpdateService(IConfiguration configuration, ILogger<AutoUpdateService> logger, HttpClient httpClient)
     {
         _logger = logger;
+        _httpClient = httpClient;
         _enabled = configuration.GetValue("AutoUpdate:Enabled", false);
         int intervalMinutes = Math.Max(5, configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60));
         _checkInterval = TimeSpan.FromMinutes(intervalMinutes);
@@ -29,7 +36,15 @@ public sealed class AutoUpdateService : BackgroundService
         if (!_enabled || string.IsNullOrWhiteSpace(_manifestUrl))
             return;
 
-        // Espera inicial para no interferir con el arranque del servicio.
+        if (!Uri.TryCreate(_manifestUrl, UriKind.Absolute, out Uri? manifestUri)
+            || manifestUri.Scheme != Uri.UriSchemeHttps)
+        {
+            _logger.LogError(
+                "Auto-Update: la URL del manifiesto '{Url}' debe usar HTTPS. Auto-actualización deshabilitada por seguridad.",
+                _manifestUrl);
+            return;
+        }
+
         try { await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); }
         catch (OperationCanceledException) { return; }
 
@@ -95,7 +110,7 @@ public sealed class AutoUpdateService : BackgroundService
     {
         try
         {
-            using HttpResponseMessage response = await SharedHttpClient.GetAsync(_manifestUrl, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.GetAsync(_manifestUrl, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
@@ -121,7 +136,7 @@ public sealed class AutoUpdateService : BackgroundService
             Path.GetTempPath(), $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
         try
         {
-            using HttpResponseMessage response = await SharedHttpClient.GetAsync(downloadUri, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.GetAsync(downloadUri, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
@@ -164,6 +179,14 @@ public sealed class AutoUpdateService : BackgroundService
 
     private void ApplyUpdate(string msiPath)
     {
+        string tempDir = Path.GetTempPath();
+        if (!msiPath.StartsWith(tempDir, StringComparison.OrdinalIgnoreCase)
+            || !msiPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogError("Auto-Update: ruta del instalador fuera del directorio temporal. Instalación abortada.");
+            return;
+        }
+
         try
         {
             _logger.LogInformation(

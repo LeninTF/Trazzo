@@ -12,6 +12,9 @@ public sealed class ZKTecoScannerService(
     IConfiguration configuration,
     ILogger<ZKTecoScannerService> logger) : IBiometricScannerService
 {
+    private const string DeviceDisconnectedMessage = "Lector biométrico desconectado.";
+    private const string NoDeviceConnectedMessage = "No se encontró ningún lector biométrico conectado.";
+
     // ZK9500: 300×400 px (FAP20) según ZKTeco Fingerprint Scanners Hardware Selection Guide
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
@@ -536,7 +539,7 @@ public sealed class ZKTecoScannerService(
             if (!liveStatus.IsConnected)
             {
                 logger.LogWarning("No se puede capturar porque el lector está desconectado.");
-                return FingerprintCaptureResult.Failed("No se encontró ningún lector biométrico conectado.");
+                return FingerprintCaptureResult.Failed(NoDeviceConnectedMessage);
             }
 
             if (_requireFingerLiftBeforeNextCapture && await IsFingerAlreadyOnReaderAsync(cancellationToken))
@@ -626,7 +629,11 @@ public sealed class ZKTecoScannerService(
 
         ctsToDispose?.Cancel();
         ctsToDispose?.Dispose();
-        _ = CompleteCooldownAsync();
+        CompleteCooldownAsync().ContinueWith(
+            t => logger.LogWarning(t.Exception?.GetBaseException(), "Error no controlado durante cooldown post-captura."),
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted,
+            TaskScheduler.Default);
     }
 
     private async Task CompleteCooldownAsync()
@@ -879,22 +886,22 @@ public sealed class ZKTecoScannerService(
         {
             logger.LogWarning(ex, "No se pudo consultar la cantidad de lectores biométricos.");
             CloseCurrentDeviceHandle();
-            return CreateDeviceStatus(false, 0, "Lector biométrico desconectado.");
+            return CreateDeviceStatus(false, 0, DeviceDisconnectedMessage);
         }
 
         _deviceCount = deviceCount;
         if (deviceCount <= 0)
         {
-            logger.LogWarning("Lector biométrico desconectado.");
+            logger.LogWarning(DeviceDisconnectedMessage);
             CloseCurrentDeviceHandle();
-            return CreateDeviceStatus(false, 0, "Lector biométrico desconectado.");
+            return CreateDeviceStatus(false, 0, DeviceDisconnectedMessage);
         }
 
         if (_deviceHandle == IntPtr.Zero)
         {
             if (!TryOpenDevice())
             {
-                return CreateDeviceStatus(false, deviceCount, "Lector biométrico desconectado.");
+                return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
             }
 
             ConfigureCaptureBuffers();
@@ -917,7 +924,7 @@ public sealed class ZKTecoScannerService(
                 CloseCurrentDeviceHandle();
                 if (!TryOpenDevice())
                 {
-                    return CreateDeviceStatus(false, deviceCount, "Lector biométrico desconectado.");
+                    return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
                 }
                 ConfigureCaptureBuffers();
             }
@@ -936,8 +943,8 @@ public sealed class ZKTecoScannerService(
         }
 
         CloseCurrentDeviceHandle();
-        logger.LogWarning("Lector biométrico desconectado.");
-        return CreateDeviceStatus(false, deviceCount, "Lector biométrico desconectado.");
+        logger.LogWarning(DeviceDisconnectedMessage);
+        return CreateDeviceStatus(false, deviceCount, DeviceDisconnectedMessage);
     }
 
     private FingerprintDeviceStatus CreateDeviceStatus(bool connected, int deviceCount, string message)

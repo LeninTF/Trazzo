@@ -7,7 +7,9 @@ on:
       - 'middleware/**'
       - '.github/workflows/middleware-ci.yml'
   pull_request:
-    branches: [master]
+    paths:
+      - 'middleware/**'
+      - '.github/workflows/middleware-ci.yml'
 
 permissions:
   contents: read
@@ -65,21 +67,27 @@ jobs:
           dotnet sonarscanner begin `
             /k:"methodsync-trazzo-middleware" `
             /o:"methodsync" `
-            /n:sonar.projectName="Trazzo Middleware (C# Windows Service)" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
-            /d:sonar.cs.cobertura.reportsPaths="**/TestResults/**/coverage.cobertura.xml"
-            
+            /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
+            /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
+            /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
 
       - name: Restaurar dependencias
         run: dotnet restore
+
       - name: Compilar (Build)
-        # Compilamos la solución entera para que Sonar evalúe la sintaxis
         run: dotnet build -c Release --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
-        # El parámetro --collect:"XPlat Code Coverage" activa coverlet.collector
-        run: dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj -c Release --no-restore --logger "trx;LogFileName=test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+        run: >
+          dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
+          -c Release
+          --no-restore
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+          --collect:"XPlat Code Coverage"
+          --settings Trazzo.Biometric.Agent.Tests/coverlet.runsettings
 
       - name: Finalizar análisis de SonarCloud (End)
         env:
@@ -92,7 +100,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          # Ruta para proyectos .NET en Windows
           scanMetadataReportFile: middleware/.sonarqube/out/.sonar/report-task.txt
 
       - name: Subir resultados de tests
@@ -131,8 +138,6 @@ jobs:
           [System.IO.File]::WriteAllBytes("$PWD\$dllPath", $bytes)
 
       - name: Compilar MSI (Self-Contained / win-x64)
-        # WiX v4 hereda las propiedades de MSBuild. Al pasarle RuntimeIdentifier y SelfContained,
-        # le ordena al proyecto C# subyacente publicarse incluyendo el runtime de .NET 10.
         run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
 
       - name: Subir MSI (Español) como artefacto

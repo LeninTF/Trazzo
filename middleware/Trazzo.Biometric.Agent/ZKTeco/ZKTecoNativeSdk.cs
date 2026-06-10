@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
 
 namespace Trazzo.Biometric.Agent.ZKTeco;
 
+[ExcludeFromCodeCoverage(Justification = "Thin P/Invoke wrapper over libzkfpcsharp.dll. Requires physical ZK9500 hardware to test.")]
 public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
 {
     private readonly Type? _zkfp2Type;

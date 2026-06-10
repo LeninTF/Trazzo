@@ -91,7 +91,7 @@ public sealed class LocalWebSocketServerService(
                 break;
             }
 
-            _ = Task.Run(() => HandleContextAsync(context, cancellationToken), cancellationToken);
+            StartContextHandler(context, cancellationToken);
         }
     }
 
@@ -189,6 +189,16 @@ public sealed class LocalWebSocketServerService(
                 "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration}s.",
                 clientId, sessionTimer.Elapsed.TotalSeconds.ToString("F1"));
         }
+    }
+
+    private void StartContextHandler(HttpListenerContext context, CancellationToken cancellationToken)
+    {
+        Task.Run(() => HandleContextAsync(context, cancellationToken), cancellationToken)
+            .ContinueWith(
+                t => logger.LogDebug(t.Exception?.GetBaseException(), "Error no controlado en handler de contexto WebSocket."),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
     }
 
     private async Task DeviceMonitorLoopAsync(CancellationToken cancellationToken)

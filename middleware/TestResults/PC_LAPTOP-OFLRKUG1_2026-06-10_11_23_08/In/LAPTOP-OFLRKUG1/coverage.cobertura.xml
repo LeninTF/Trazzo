@@ -1,0 +1,3086 @@
+<?xml version="1.0" encoding="utf-8"?>
+<coverage line-rate="0.7793000000000001" branch-rate="0.6041" version="1.9" timestamp="1781108592" lines-covered="696" lines-valid="893" branches-covered="145" branches-valid="240">
+  <sources>
+    <source></source>
+  </sources>
+  <packages>
+    <package name="Trazzo.Biometric.Agent" line-rate="0.7793000000000001" branch-rate="0.6041" complexity="289">
+      <classes>
+        <class name="Trazzo.Biometric.Agent.Worker" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Worker.cs" line-rate="0" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.Services.IWebSocketServerService,Trazzo.Biometric.Agent.Services.IBiometricScannerService,Trazzo.Biometric.Agent.Services.ICryptographyService,Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Worker&gt;)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="0" branch="False" />
+                <line number="7" hits="0" branch="False" />
+                <line number="8" hits="0" branch="False" />
+                <line number="9" hits="0" branch="False" />
+                <line number="10" hits="0" branch="False" />
+                <line number="11" hits="0" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="6" hits="0" branch="False" />
+            <line number="7" hits="0" branch="False" />
+            <line number="8" hits="0" branch="False" />
+            <line number="9" hits="0" branch="False" />
+            <line number="10" hits="0" branch="False" />
+            <line number="11" hits="0" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.AgentHealthService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Worker.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name="GetHealthResult" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="95" hits="5" branch="False" />
+                <line number="96" hits="5" branch="False" />
+                <line number="97" hits="5" branch="False" />
+                <line number="98" hits="5" branch="False" />
+                <line number="99" hits="5" branch="False" />
+                <line number="100" hits="5" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="95" hits="5" branch="False" />
+            <line number="96" hits="5" branch="False" />
+            <line number="97" hits="5" branch="False" />
+            <line number="98" hits="5" branch="False" />
+            <line number="99" hits="5" branch="False" />
+            <line number="100" hits="5" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.ZKTeco.CapturedSample" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/ZKTeco/CapturedSample.cs" line-rate="0.9" branch-rate="1" complexity="3">
+          <methods>
+            <method name="Succeeded" signature="(System.Byte[],System.Int32,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,Trazzo.Biometric.Agent.Utilities.FingerprintImagePayload)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="17" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name="Failed" signature="(System.String,Trazzo.Biometric.Agent.ZKTeco.BiometricOperationState,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,Trazzo.Biometric.Agent.Utilities.FingerprintImagePayload)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="22" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Boolean,System.String,System.Byte[],System.Int32,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,Trazzo.Biometric.Agent.Utilities.FingerprintImagePayload,Trazzo.Biometric.Agent.ZKTeco.BiometricOperationState)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="8" branch="False" />
+                <line number="7" hits="8" branch="False" />
+                <line number="8" hits="8" branch="False" />
+                <line number="9" hits="8" branch="False" />
+                <line number="10" hits="8" branch="False" />
+                <line number="11" hits="8" branch="False" />
+                <line number="12" hits="8" branch="False" />
+                <line number="13" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="17" hits="8" branch="False" />
+            <line number="22" hits="0" branch="False" />
+            <line number="6" hits="8" branch="False" />
+            <line number="7" hits="8" branch="False" />
+            <line number="8" hits="8" branch="False" />
+            <line number="9" hits="8" branch="False" />
+            <line number="10" hits="8" branch="False" />
+            <line number="11" hits="8" branch="False" />
+            <line number="12" hits="8" branch="False" />
+            <line number="13" hits="8" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.ZKTeco.IZKTecoNativeSdk" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/ZKTeco/IZKTecoNativeSdk.cs" line-rate="0" branch-rate="1" complexity="1">
+          <methods>
+            <method name="DBMerge" signature="(System.IntPtr,System.Byte[],System.Byte[],System.Byte[],System.Byte[],System.Int32&amp;)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="35" hits="0" branch="False" />
+                <line number="36" hits="0" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="35" hits="0" branch="False" />
+            <line number="36" hits="0" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.ZKTeco.ZKTecoErrorMapper" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/ZKTeco/ZKTecoErrorMapper.cs" line-rate="0.625" branch-rate="0.6666" complexity="18">
+          <methods>
+            <method name="ToMessage" signature="(System.Int32)" line-rate="0.625" branch-rate="0.6666" complexity="18">
+              <lines>
+                <line number="7" hits="7" branch="True" condition-coverage="66.66% (12/18)">
+                  <conditions>
+                    <condition number="4" type="switch" coverage="66.66%" />
+                  </conditions>
+                </line>
+                <line number="8" hits="7" branch="False" />
+                <line number="9" hits="1" branch="False" />
+                <line number="10" hits="1" branch="False" />
+                <line number="11" hits="1" branch="False" />
+                <line number="12" hits="1" branch="False" />
+                <line number="13" hits="1" branch="False" />
+                <line number="14" hits="0" branch="False" />
+                <line number="15" hits="0" branch="False" />
+                <line number="16" hits="0" branch="False" />
+                <line number="17" hits="1" branch="False" />
+                <line number="18" hits="0" branch="False" />
+                <line number="19" hits="0" branch="False" />
+                <line number="20" hits="0" branch="False" />
+                <line number="21" hits="1" branch="False" />
+                <line number="22" hits="7" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="7" hits="7" branch="True" condition-coverage="66.66% (12/18)">
+              <conditions>
+                <condition number="4" type="switch" coverage="66.66%" />
+              </conditions>
+            </line>
+            <line number="8" hits="7" branch="False" />
+            <line number="9" hits="1" branch="False" />
+            <line number="10" hits="1" branch="False" />
+            <line number="11" hits="1" branch="False" />
+            <line number="12" hits="1" branch="False" />
+            <line number="13" hits="1" branch="False" />
+            <line number="14" hits="0" branch="False" />
+            <line number="15" hits="0" branch="False" />
+            <line number="16" hits="0" branch="False" />
+            <line number="17" hits="1" branch="False" />
+            <line number="18" hits="0" branch="False" />
+            <line number="19" hits="0" branch="False" />
+            <line number="20" hits="0" branch="False" />
+            <line number="21" hits="1" branch="False" />
+            <line number="22" hits="7" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.ZKTeco.ZKTecoScannerService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/ZKTeco/ZKTecoScannerService.cs" line-rate="0.7006999999999999" branch-rate="0.5238" complexity="128">
+          <methods>
+            <method name="CancelEnrollment" signature="()" line-rate="0" branch-rate="0" complexity="6">
+              <lines>
+                <line number="369" hits="0" branch="False" />
+                <line number="371" hits="0" branch="True" condition-coverage="0% (0/4)">
+                  <conditions>
+                    <condition number="24" type="jump" coverage="0%" />
+                    <condition number="40" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="373" hits="0" branch="False" />
+                <line number="376" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="63" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="377" hits="0" branch="False" />
+                <line number="379" hits="0" branch="False" />
+                <line number="380" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="ValidateCapturedSample" signature="(System.Int32)" line-rate="0.4814" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="461" hits="8" branch="False" />
+                <line number="463" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="14" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="465" hits="0" branch="False" />
+                <line number="466" hits="0" branch="False" />
+                <line number="467" hits="0" branch="False" />
+                <line number="468" hits="0" branch="False" />
+                <line number="469" hits="0" branch="False" />
+                <line number="470" hits="0" branch="False" />
+                <line number="471" hits="0" branch="False" />
+                <line number="472" hits="0" branch="False" />
+                <line number="475" hits="8" branch="False" />
+                <line number="476" hits="8" branch="False" />
+                <line number="477" hits="8" branch="False" />
+                <line number="478" hits="8" branch="False" />
+                <line number="479" hits="8" branch="False" />
+                <line number="480" hits="8" branch="False" />
+                <line number="481" hits="8" branch="False" />
+                <line number="482" hits="8" branch="False" />
+                <line number="484" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="251" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="486" hits="0" branch="False" />
+                <line number="487" hits="0" branch="False" />
+                <line number="488" hits="0" branch="False" />
+                <line number="489" hits="0" branch="False" />
+                <line number="490" hits="0" branch="False" />
+                <line number="491" hits="0" branch="False" />
+                <line number="494" hits="8" branch="False" />
+                <line number="495" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name="GetBusyMessage" signature="()" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="511" hits="1" branch="False" />
+                <line number="513" hits="1" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="24" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="514" hits="1" branch="False" />
+                <line number="515" hits="1" branch="False" />
+                <line number="517" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name="GetOperationUnavailableMessage" signature="()" line-rate="0.5714" branch-rate="0.3333" complexity="6">
+              <lines>
+                <line number="560" hits="16" branch="False" />
+                <line number="562" hits="16" branch="True" condition-coverage="50% (2/4)">
+                  <conditions>
+                    <condition number="23" type="jump" coverage="50%" />
+                    <condition number="39" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="564" hits="16" branch="False" />
+                <line number="567" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="52" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="568" hits="0" branch="False" />
+                <line number="569" hits="0" branch="False" />
+                <line number="571" hits="16" branch="False" />
+              </lines>
+            </method>
+            <method name="StartOperation" signature="(Trazzo.Biometric.Agent.ZKTeco.BiometricOperationState,System.Threading.CancellationToken)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="575" hits="6" branch="False" />
+                <line number="577" hits="6" branch="False" />
+                <line number="579" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="30" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="580" hits="6" branch="False" />
+                <line number="581" hits="6" branch="False" />
+                <line number="582" hits="6" branch="False" />
+                <line number="583" hits="6" branch="False" />
+                <line number="585" hits="6" branch="False" />
+                <line number="586" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="GetActiveOperationToken" signature="(System.Guid)" line-rate="0.8" branch-rate="0.5" complexity="6">
+              <lines>
+                <line number="591" hits="9" branch="False" />
+                <line number="593" hits="9" branch="True" condition-coverage="50% (3/6)">
+                  <conditions>
+                    <condition number="33" type="jump" coverage="50%" />
+                    <condition number="51" type="jump" coverage="50%" />
+                    <condition number="59" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="595" hits="0" branch="False" />
+                <line number="598" hits="9" branch="False" />
+                <line number="600" hits="9" branch="False" />
+              </lines>
+            </method>
+            <method name="IsOperationActive" signature="(System.Guid)" line-rate="1" branch-rate="0.6" complexity="10">
+              <lines>
+                <line number="604" hits="11" branch="False" />
+                <line number="606" hits="11" branch="True" condition-coverage="60% (6/10)">
+                  <conditions>
+                    <condition number="35" type="jump" coverage="50%" />
+                    <condition number="54" type="jump" coverage="50%" />
+                    <condition number="62" type="jump" coverage="50%" />
+                    <condition number="85" type="jump" coverage="100%" />
+                    <condition number="100" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="607" hits="11" branch="False" />
+                <line number="608" hits="11" branch="False" />
+                <line number="609" hits="11" branch="False" />
+                <line number="611" hits="11" branch="False" />
+              </lines>
+            </method>
+            <method name="FinalizeOperation" signature="(System.Guid,Trazzo.Biometric.Agent.ZKTeco.BiometricOperationState)" line-rate="0.9411" branch-rate="0.75" complexity="8">
+              <lines>
+                <line number="615" hits="6" branch="False" />
+                <line number="617" hits="6" branch="False" />
+                <line number="619" hits="6" branch="True" condition-coverage="50% (2/4)">
+                  <conditions>
+                    <condition number="36" type="jump" coverage="50%" />
+                    <condition number="55" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="621" hits="0" branch="False" />
+                <line number="624" hits="6" branch="False" />
+                <line number="625" hits="6" branch="False" />
+                <line number="626" hits="6" branch="False" />
+                <line number="627" hits="6" branch="False" />
+                <line number="628" hits="6" branch="False" />
+                <line number="630" hits="6" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="105" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="631" hits="6" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="114" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="632" hits="6" branch="False" />
+                <line number="633" hits="6" branch="False" />
+                <line number="634" hits="6" branch="False" />
+                <line number="635" hits="6" branch="False" />
+                <line number="636" hits="6" branch="False" />
+                <line number="637" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="CreateDebugImagePayload" signature="()" line-rate="0.22219999999999998" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="758" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="6" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="760" hits="8" branch="False" />
+                <line number="765" hits="0" branch="False" />
+                <line number="766" hits="0" branch="False" />
+                <line number="767" hits="0" branch="False" />
+                <line number="769" hits="0" branch="False" />
+                <line number="771" hits="0" branch="False" />
+                <line number="772" hits="0" branch="False" />
+                <line number="774" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="OpenFirstDevice" signature="()" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="818" hits="8" branch="False" />
+                <line number="819" hits="8" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="24" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="821" hits="2" branch="False" />
+                <line number="822" hits="2" branch="False" />
+                <line number="825" hits="6" branch="False" />
+                <line number="827" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="TryOpenDevice" signature="()" line-rate="0.5832999999999999" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="832" hits="12" branch="False" />
+                <line number="834" hits="12" branch="False" />
+                <line number="835" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="50" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="837" hits="0" branch="False" />
+                <line number="838" hits="0" branch="False" />
+                <line number="839" hits="0" branch="False" />
+                <line number="843" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="90" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="845" hits="12" branch="False" />
+                <line number="846" hits="12" branch="False" />
+                <line number="850" hits="0" branch="False" />
+                <line number="851" hits="0" branch="False" />
+                <line number="854" hits="12" branch="False" />
+              </lines>
+            </method>
+            <method name="GetLiveDeviceStatus" signature="()" line-rate="0.5555" branch-rate="0.4583" complexity="24">
+              <lines>
+                <line number="859" hits="8" branch="False" />
+                <line number="861" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="32" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="863" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="49" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="866" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="69" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="870" hits="0" branch="False" />
+                <line number="871" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="84" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="873" hits="0" branch="False" />
+                <line number="874" hits="0" branch="False" />
+                <line number="876" hits="0" branch="False" />
+                <line number="877" hits="0" branch="False" />
+                <line number="883" hits="8" branch="False" />
+                <line number="884" hits="8" branch="False" />
+                <line number="885" hits="0" branch="False" />
+                <line number="887" hits="0" branch="False" />
+                <line number="888" hits="0" branch="False" />
+                <line number="889" hits="0" branch="False" />
+                <line number="892" hits="8" branch="False" />
+                <line number="893" hits="8" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="232" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="895" hits="2" branch="False" />
+                <line number="896" hits="2" branch="False" />
+                <line number="897" hits="2" branch="False" />
+                <line number="900" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="286" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="902" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="294" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="904" hits="0" branch="False" />
+                <line number="907" hits="0" branch="False" />
+                <line number="915" hits="6" branch="False" />
+                <line number="917" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="351" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="918" hits="6" branch="False" />
+                <line number="919" hits="6" branch="False" />
+                <line number="920" hits="6" branch="False" />
+                <line number="922" hits="6" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="381" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="924" hits="6" branch="False" />
+                <line number="925" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="395" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="927" hits="0" branch="False" />
+                <line number="929" hits="6" branch="False" />
+                <line number="933" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="428" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="935" hits="0" branch="False" />
+                <line number="938" hits="6" branch="False" />
+                <line number="939" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="454" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="941" hits="6" branch="False" />
+                <line number="942" hits="6" branch="False" />
+                <line number="945" hits="0" branch="False" />
+                <line number="946" hits="0" branch="False" />
+                <line number="947" hits="0" branch="False" />
+                <line number="948" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="CreateDeviceStatus" signature="(System.Boolean,System.Int32,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="952" hits="8" branch="False" />
+                <line number="953" hits="8" branch="False" />
+                <line number="954" hits="8" branch="False" />
+                <line number="955" hits="8" branch="False" />
+                <line number="956" hits="8" branch="False" />
+                <line number="957" hits="8" branch="False" />
+                <line number="958" hits="8" branch="False" />
+                <line number="959" hits="8" branch="False" />
+                <line number="960" hits="8" branch="False" />
+                <line number="961" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name="IsDeviceHandleValid" signature="()" line-rate="0.5555" branch-rate="0.4" complexity="10">
+              <lines>
+                <line number="966" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="11" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="968" hits="0" branch="False" />
+                <line number="973" hits="8" branch="True" condition-coverage="37.5% (3/8)">
+                  <conditions>
+                    <condition number="36" type="jump" coverage="50%" />
+                    <condition number="40" type="jump" coverage="50%" />
+                    <condition number="62" type="jump" coverage="0%" />
+                    <condition number="66" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="974" hits="8" branch="False" />
+                <line number="975" hits="8" branch="False" />
+                <line number="977" hits="0" branch="False" />
+                <line number="979" hits="0" branch="False" />
+                <line number="980" hits="0" branch="False" />
+                <line number="982" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name="IsDeviceDisconnected" signature="()" line-rate="0.4" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="988" hits="8" branch="True" condition-coverage="50% (2/4)">
+                  <conditions>
+                    <condition number="12" type="jump" coverage="50%" />
+                    <condition number="25" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="990" hits="0" branch="False" />
+                <line number="992" hits="0" branch="False" />
+                <line number="993" hits="0" branch="False" />
+                <line number="995" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name="CloseCurrentDeviceHandle" signature="()" line-rate="0.75" branch-rate="1" complexity="2">
+              <lines>
+                <line number="999" hits="8" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="11" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="1001" hits="2" branch="False" />
+                <line number="1006" hits="6" branch="False" />
+                <line number="1007" hits="6" branch="False" />
+                <line number="1008" hits="6" branch="False" />
+                <line number="1009" hits="0" branch="False" />
+                <line number="1011" hits="0" branch="False" />
+                <line number="1012" hits="0" branch="False" />
+                <line number="1015" hits="6" branch="False" />
+                <line number="1016" hits="6" branch="False" />
+                <line number="1017" hits="6" branch="False" />
+                <line number="1018" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="InitializeDatabase" signature="()" line-rate="0.6666" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="1022" hits="6" branch="False" />
+                <line number="1023" hits="6" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="28" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1025" hits="0" branch="False" />
+                <line number="1026" hits="0" branch="False" />
+                <line number="1029" hits="6" branch="False" />
+                <line number="1030" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="TryReadDeviceSerial" signature="(System.String&amp;)" line-rate="0.2857" branch-rate="0.1666" complexity="6">
+              <lines>
+                <line number="1034" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="23" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1036" hits="12" branch="False" />
+                <line number="1039" hits="0" branch="True" condition-coverage="0% (0/4)">
+                  <conditions>
+                    <condition number="51" type="jump" coverage="0%" />
+                    <condition number="55" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="1041" hits="0" branch="False" />
+                <line number="1042" hits="0" branch="False" />
+                <line number="1045" hits="0" branch="False" />
+                <line number="1046" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="FormatDeviceId" signature="(System.String)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="1051" hits="12" branch="False" />
+                <line number="1052" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="19" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1053" hits="12" branch="False" />
+                <line number="1054" hits="12" branch="False" />
+              </lines>
+            </method>
+            <method name="ConfigureCaptureBuffers" signature="()" line-rate="0.875" branch-rate="0.75" complexity="8">
+              <lines>
+                <line number="1059" hits="12" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="20" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="1061" hits="12" branch="False" />
+                <line number="1062" hits="12" branch="False" />
+                <line number="1065" hits="12" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="85" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="1067" hits="12" branch="False" />
+                <line number="1068" hits="12" branch="False" />
+                <line number="1071" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="151" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1073" hits="12" branch="False" />
+                <line number="1074" hits="12" branch="False" />
+                <line number="1078" hits="0" branch="False" />
+                <line number="1079" hits="0" branch="False" />
+                <line number="1082" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="260" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1083" hits="12" branch="False" />
+                <line number="1084" hits="12" branch="False" />
+                <line number="1085" hits="12" branch="False" />
+                <line number="1086" hits="12" branch="False" />
+              </lines>
+            </method>
+            <method name="IsFatalCaptureError" signature="(System.Int32)" line-rate="0" branch-rate="0" complexity="2">
+              <lines>
+                <line number="1090" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="5" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+              </lines>
+            </method>
+            <method name="GetPlaceFingerMessage" signature="(System.Int32)" line-rate="0.8571" branch-rate="0.75" complexity="4">
+              <lines>
+                <line number="1095" hits="3" branch="True" condition-coverage="75% (3/4)">
+                  <conditions>
+                    <condition number="3" type="switch" coverage="75%" />
+                  </conditions>
+                </line>
+                <line number="1096" hits="3" branch="False" />
+                <line number="1097" hits="1" branch="False" />
+                <line number="1098" hits="1" branch="False" />
+                <line number="1099" hits="1" branch="False" />
+                <line number="1100" hits="0" branch="False" />
+                <line number="1101" hits="3" branch="False" />
+              </lines>
+            </method>
+            <method name="GetPositiveConfigurationValue" signature="(Microsoft.Extensions.Configuration.IConfiguration,System.String,System.Int32)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="1106" hits="56" branch="False" />
+                <line number="1107" hits="56" branch="True" condition-coverage="100% (4/4)">
+                  <conditions>
+                    <condition number="16" type="jump" coverage="100%" />
+                    <condition number="20" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+              </lines>
+            </method>
+            <method name="GetPositiveDoubleConfigurationValue" signature="(Microsoft.Extensions.Configuration.IConfiguration,System.String,System.Double)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="1112" hits="40" branch="False" />
+                <line number="1113" hits="40" branch="True" condition-coverage="100% (4/4)">
+                  <conditions>
+                    <condition number="26" type="jump" coverage="100%" />
+                    <condition number="38" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="1114" hits="40" branch="False" />
+                <line number="1115" hits="40" branch="False" />
+              </lines>
+            </method>
+            <method name="ClampEnrollmentSamples" signature="(System.Int32,Microsoft.Extensions.Logging.ILogger)" line-rate="0.4" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="1120" hits="8" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="2" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="1121" hits="0" branch="False" />
+                <line number="1122" hits="0" branch="False" />
+                <line number="1123" hits="0" branch="False" />
+                <line number="1124" hits="8" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.ZKTeco.IZKTecoNativeSdk,Trazzo.Biometric.Agent.Services.ICryptographyService,Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.ZKTeco.ZKTecoScannerService&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="9" hits="8" branch="False" />
+                <line number="10" hits="8" branch="False" />
+                <line number="11" hits="8" branch="False" />
+                <line number="12" hits="8" branch="False" />
+                <line number="13" hits="8" branch="False" />
+                <line number="34" hits="8" branch="False" />
+                <line number="35" hits="8" branch="False" />
+                <line number="36" hits="8" branch="False" />
+                <line number="37" hits="8" branch="False" />
+                <line number="38" hits="8" branch="False" />
+                <line number="39" hits="8" branch="False" />
+                <line number="40" hits="8" branch="False" />
+                <line number="41" hits="8" branch="False" />
+                <line number="42" hits="8" branch="False" />
+                <line number="43" hits="8" branch="False" />
+                <line number="44" hits="8" branch="False" />
+                <line number="45" hits="8" branch="False" />
+                <line number="46" hits="8" branch="False" />
+                <line number="47" hits="8" branch="False" />
+                <line number="48" hits="8" branch="False" />
+                <line number="49" hits="8" branch="False" />
+                <line number="50" hits="8" branch="False" />
+                <line number="51" hits="8" branch="False" />
+                <line number="52" hits="8" branch="False" />
+                <line number="53" hits="8" branch="False" />
+                <line number="55" hits="8" branch="False" />
+                <line number="56" hits="8" branch="False" />
+                <line number="59" hits="8" branch="False" />
+                <line number="60" hits="8" branch="False" />
+                <line number="62" hits="8" branch="False" />
+                <line number="63" hits="8" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="369" hits="0" branch="False" />
+            <line number="371" hits="0" branch="True" condition-coverage="0% (0/4)">
+              <conditions>
+                <condition number="24" type="jump" coverage="0%" />
+                <condition number="40" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="373" hits="0" branch="False" />
+            <line number="376" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="63" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="377" hits="0" branch="False" />
+            <line number="379" hits="0" branch="False" />
+            <line number="380" hits="0" branch="False" />
+            <line number="461" hits="8" branch="False" />
+            <line number="463" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="14" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="465" hits="0" branch="False" />
+            <line number="466" hits="0" branch="False" />
+            <line number="467" hits="0" branch="False" />
+            <line number="468" hits="0" branch="False" />
+            <line number="469" hits="0" branch="False" />
+            <line number="470" hits="0" branch="False" />
+            <line number="471" hits="0" branch="False" />
+            <line number="472" hits="0" branch="False" />
+            <line number="475" hits="8" branch="False" />
+            <line number="476" hits="8" branch="False" />
+            <line number="477" hits="8" branch="False" />
+            <line number="478" hits="8" branch="False" />
+            <line number="479" hits="8" branch="False" />
+            <line number="480" hits="8" branch="False" />
+            <line number="481" hits="8" branch="False" />
+            <line number="482" hits="8" branch="False" />
+            <line number="484" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="251" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="486" hits="0" branch="False" />
+            <line number="487" hits="0" branch="False" />
+            <line number="488" hits="0" branch="False" />
+            <line number="489" hits="0" branch="False" />
+            <line number="490" hits="0" branch="False" />
+            <line number="491" hits="0" branch="False" />
+            <line number="494" hits="8" branch="False" />
+            <line number="495" hits="8" branch="False" />
+            <line number="511" hits="1" branch="False" />
+            <line number="513" hits="1" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="24" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="514" hits="1" branch="False" />
+            <line number="515" hits="1" branch="False" />
+            <line number="517" hits="1" branch="False" />
+            <line number="560" hits="16" branch="False" />
+            <line number="562" hits="16" branch="True" condition-coverage="50% (2/4)">
+              <conditions>
+                <condition number="23" type="jump" coverage="50%" />
+                <condition number="39" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="564" hits="16" branch="False" />
+            <line number="567" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="52" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="568" hits="0" branch="False" />
+            <line number="569" hits="0" branch="False" />
+            <line number="571" hits="16" branch="False" />
+            <line number="575" hits="6" branch="False" />
+            <line number="577" hits="6" branch="False" />
+            <line number="579" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="30" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="580" hits="6" branch="False" />
+            <line number="581" hits="6" branch="False" />
+            <line number="582" hits="6" branch="False" />
+            <line number="583" hits="6" branch="False" />
+            <line number="585" hits="6" branch="False" />
+            <line number="586" hits="6" branch="False" />
+            <line number="591" hits="9" branch="False" />
+            <line number="593" hits="9" branch="True" condition-coverage="50% (3/6)">
+              <conditions>
+                <condition number="33" type="jump" coverage="50%" />
+                <condition number="51" type="jump" coverage="50%" />
+                <condition number="59" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="595" hits="0" branch="False" />
+            <line number="598" hits="9" branch="False" />
+            <line number="600" hits="9" branch="False" />
+            <line number="604" hits="11" branch="False" />
+            <line number="606" hits="11" branch="True" condition-coverage="60% (6/10)">
+              <conditions>
+                <condition number="35" type="jump" coverage="50%" />
+                <condition number="54" type="jump" coverage="50%" />
+                <condition number="62" type="jump" coverage="50%" />
+                <condition number="85" type="jump" coverage="100%" />
+                <condition number="100" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="607" hits="11" branch="False" />
+            <line number="608" hits="11" branch="False" />
+            <line number="609" hits="11" branch="False" />
+            <line number="611" hits="11" branch="False" />
+            <line number="615" hits="6" branch="False" />
+            <line number="617" hits="6" branch="False" />
+            <line number="619" hits="6" branch="True" condition-coverage="50% (2/4)">
+              <conditions>
+                <condition number="36" type="jump" coverage="50%" />
+                <condition number="55" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="621" hits="0" branch="False" />
+            <line number="624" hits="6" branch="False" />
+            <line number="625" hits="6" branch="False" />
+            <line number="626" hits="6" branch="False" />
+            <line number="627" hits="6" branch="False" />
+            <line number="628" hits="6" branch="False" />
+            <line number="630" hits="6" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="105" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="631" hits="6" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="114" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="632" hits="6" branch="False" />
+            <line number="633" hits="6" branch="False" />
+            <line number="634" hits="6" branch="False" />
+            <line number="635" hits="6" branch="False" />
+            <line number="636" hits="6" branch="False" />
+            <line number="637" hits="6" branch="False" />
+            <line number="758" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="6" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="760" hits="8" branch="False" />
+            <line number="765" hits="0" branch="False" />
+            <line number="766" hits="0" branch="False" />
+            <line number="767" hits="0" branch="False" />
+            <line number="769" hits="0" branch="False" />
+            <line number="771" hits="0" branch="False" />
+            <line number="772" hits="0" branch="False" />
+            <line number="774" hits="0" branch="False" />
+            <line number="818" hits="8" branch="False" />
+            <line number="819" hits="8" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="24" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="821" hits="2" branch="False" />
+            <line number="822" hits="2" branch="False" />
+            <line number="825" hits="6" branch="False" />
+            <line number="827" hits="6" branch="False" />
+            <line number="832" hits="12" branch="False" />
+            <line number="834" hits="12" branch="False" />
+            <line number="835" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="50" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="837" hits="0" branch="False" />
+            <line number="838" hits="0" branch="False" />
+            <line number="839" hits="0" branch="False" />
+            <line number="843" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="90" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="845" hits="12" branch="False" />
+            <line number="846" hits="12" branch="False" />
+            <line number="850" hits="0" branch="False" />
+            <line number="851" hits="0" branch="False" />
+            <line number="854" hits="12" branch="False" />
+            <line number="859" hits="8" branch="False" />
+            <line number="861" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="32" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="863" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="49" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="866" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="69" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="870" hits="0" branch="False" />
+            <line number="871" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="84" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="873" hits="0" branch="False" />
+            <line number="874" hits="0" branch="False" />
+            <line number="876" hits="0" branch="False" />
+            <line number="877" hits="0" branch="False" />
+            <line number="883" hits="8" branch="False" />
+            <line number="884" hits="8" branch="False" />
+            <line number="885" hits="0" branch="False" />
+            <line number="887" hits="0" branch="False" />
+            <line number="888" hits="0" branch="False" />
+            <line number="889" hits="0" branch="False" />
+            <line number="892" hits="8" branch="False" />
+            <line number="893" hits="8" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="232" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="895" hits="2" branch="False" />
+            <line number="896" hits="2" branch="False" />
+            <line number="897" hits="2" branch="False" />
+            <line number="900" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="286" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="902" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="294" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="904" hits="0" branch="False" />
+            <line number="907" hits="0" branch="False" />
+            <line number="915" hits="6" branch="False" />
+            <line number="917" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="351" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="918" hits="6" branch="False" />
+            <line number="919" hits="6" branch="False" />
+            <line number="920" hits="6" branch="False" />
+            <line number="922" hits="6" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="381" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="924" hits="6" branch="False" />
+            <line number="925" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="395" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="927" hits="0" branch="False" />
+            <line number="929" hits="6" branch="False" />
+            <line number="933" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="428" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="935" hits="0" branch="False" />
+            <line number="938" hits="6" branch="False" />
+            <line number="939" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="454" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="941" hits="6" branch="False" />
+            <line number="942" hits="6" branch="False" />
+            <line number="945" hits="0" branch="False" />
+            <line number="946" hits="0" branch="False" />
+            <line number="947" hits="0" branch="False" />
+            <line number="948" hits="0" branch="False" />
+            <line number="952" hits="8" branch="False" />
+            <line number="953" hits="8" branch="False" />
+            <line number="954" hits="8" branch="False" />
+            <line number="955" hits="8" branch="False" />
+            <line number="956" hits="8" branch="False" />
+            <line number="957" hits="8" branch="False" />
+            <line number="958" hits="8" branch="False" />
+            <line number="959" hits="8" branch="False" />
+            <line number="960" hits="8" branch="False" />
+            <line number="961" hits="8" branch="False" />
+            <line number="966" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="11" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="968" hits="0" branch="False" />
+            <line number="973" hits="8" branch="True" condition-coverage="37.5% (3/8)">
+              <conditions>
+                <condition number="36" type="jump" coverage="50%" />
+                <condition number="40" type="jump" coverage="50%" />
+                <condition number="62" type="jump" coverage="0%" />
+                <condition number="66" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="974" hits="8" branch="False" />
+            <line number="975" hits="8" branch="False" />
+            <line number="977" hits="0" branch="False" />
+            <line number="979" hits="0" branch="False" />
+            <line number="980" hits="0" branch="False" />
+            <line number="982" hits="8" branch="False" />
+            <line number="988" hits="8" branch="True" condition-coverage="50% (2/4)">
+              <conditions>
+                <condition number="12" type="jump" coverage="50%" />
+                <condition number="25" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="990" hits="0" branch="False" />
+            <line number="992" hits="0" branch="False" />
+            <line number="993" hits="0" branch="False" />
+            <line number="995" hits="8" branch="False" />
+            <line number="999" hits="8" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="11" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="1001" hits="2" branch="False" />
+            <line number="1006" hits="6" branch="False" />
+            <line number="1007" hits="6" branch="False" />
+            <line number="1008" hits="6" branch="False" />
+            <line number="1009" hits="0" branch="False" />
+            <line number="1011" hits="0" branch="False" />
+            <line number="1012" hits="0" branch="False" />
+            <line number="1015" hits="6" branch="False" />
+            <line number="1016" hits="6" branch="False" />
+            <line number="1017" hits="6" branch="False" />
+            <line number="1018" hits="6" branch="False" />
+            <line number="1022" hits="6" branch="False" />
+            <line number="1023" hits="6" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="28" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1025" hits="0" branch="False" />
+            <line number="1026" hits="0" branch="False" />
+            <line number="1029" hits="6" branch="False" />
+            <line number="1030" hits="6" branch="False" />
+            <line number="1034" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="23" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1036" hits="12" branch="False" />
+            <line number="1039" hits="0" branch="True" condition-coverage="0% (0/4)">
+              <conditions>
+                <condition number="51" type="jump" coverage="0%" />
+                <condition number="55" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="1041" hits="0" branch="False" />
+            <line number="1042" hits="0" branch="False" />
+            <line number="1045" hits="0" branch="False" />
+            <line number="1046" hits="0" branch="False" />
+            <line number="1051" hits="12" branch="False" />
+            <line number="1052" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="19" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1053" hits="12" branch="False" />
+            <line number="1054" hits="12" branch="False" />
+            <line number="1059" hits="12" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="20" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="1061" hits="12" branch="False" />
+            <line number="1062" hits="12" branch="False" />
+            <line number="1065" hits="12" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="85" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="1067" hits="12" branch="False" />
+            <line number="1068" hits="12" branch="False" />
+            <line number="1071" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="151" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1073" hits="12" branch="False" />
+            <line number="1074" hits="12" branch="False" />
+            <line number="1078" hits="0" branch="False" />
+            <line number="1079" hits="0" branch="False" />
+            <line number="1082" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="260" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1083" hits="12" branch="False" />
+            <line number="1084" hits="12" branch="False" />
+            <line number="1085" hits="12" branch="False" />
+            <line number="1086" hits="12" branch="False" />
+            <line number="1090" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="5" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="1095" hits="3" branch="True" condition-coverage="75% (3/4)">
+              <conditions>
+                <condition number="3" type="switch" coverage="75%" />
+              </conditions>
+            </line>
+            <line number="1096" hits="3" branch="False" />
+            <line number="1097" hits="1" branch="False" />
+            <line number="1098" hits="1" branch="False" />
+            <line number="1099" hits="1" branch="False" />
+            <line number="1100" hits="0" branch="False" />
+            <line number="1101" hits="3" branch="False" />
+            <line number="1106" hits="56" branch="False" />
+            <line number="1107" hits="56" branch="True" condition-coverage="100% (4/4)">
+              <conditions>
+                <condition number="16" type="jump" coverage="100%" />
+                <condition number="20" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="1112" hits="40" branch="False" />
+            <line number="1113" hits="40" branch="True" condition-coverage="100% (4/4)">
+              <conditions>
+                <condition number="26" type="jump" coverage="100%" />
+                <condition number="38" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="1114" hits="40" branch="False" />
+            <line number="1115" hits="40" branch="False" />
+            <line number="1120" hits="8" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="2" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="1121" hits="0" branch="False" />
+            <line number="1122" hits="0" branch="False" />
+            <line number="1123" hits="0" branch="False" />
+            <line number="1124" hits="8" branch="False" />
+            <line number="9" hits="8" branch="False" />
+            <line number="10" hits="8" branch="False" />
+            <line number="11" hits="8" branch="False" />
+            <line number="12" hits="8" branch="False" />
+            <line number="13" hits="8" branch="False" />
+            <line number="34" hits="8" branch="False" />
+            <line number="35" hits="8" branch="False" />
+            <line number="36" hits="8" branch="False" />
+            <line number="37" hits="8" branch="False" />
+            <line number="38" hits="8" branch="False" />
+            <line number="39" hits="8" branch="False" />
+            <line number="40" hits="8" branch="False" />
+            <line number="41" hits="8" branch="False" />
+            <line number="42" hits="8" branch="False" />
+            <line number="43" hits="8" branch="False" />
+            <line number="44" hits="8" branch="False" />
+            <line number="45" hits="8" branch="False" />
+            <line number="46" hits="8" branch="False" />
+            <line number="47" hits="8" branch="False" />
+            <line number="48" hits="8" branch="False" />
+            <line number="49" hits="8" branch="False" />
+            <line number="50" hits="8" branch="False" />
+            <line number="51" hits="8" branch="False" />
+            <line number="52" hits="8" branch="False" />
+            <line number="53" hits="8" branch="False" />
+            <line number="55" hits="8" branch="False" />
+            <line number="56" hits="8" branch="False" />
+            <line number="59" hits="8" branch="False" />
+            <line number="60" hits="8" branch="False" />
+            <line number="62" hits="8" branch="False" />
+            <line number="63" hits="8" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.WebSocket.LocalWebSocketServerService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/WebSocket/LocalWebSocketServerService.cs" line-rate="0.7254" branch-rate="0.25" complexity="16">
+          <methods>
+            <method name="StartAsync" signature="(System.Threading.CancellationToken)" line-rate="0.9166" branch-rate="0.5" complexity="4">
+              <lines>
+                <line number="35" hits="7" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="17" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="36" hits="7" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="34" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="38" hits="0" branch="False" />
+                <line number="41" hits="7" branch="False" />
+                <line number="42" hits="7" branch="False" />
+                <line number="43" hits="7" branch="False" />
+                <line number="45" hits="7" branch="False" />
+                <line number="46" hits="7" branch="False" />
+                <line number="47" hits="7" branch="False" />
+                <line number="48" hits="7" branch="False" />
+                <line number="50" hits="7" branch="False" />
+                <line number="51" hits="7" branch="False" />
+              </lines>
+            </method>
+            <method name="StartContextHandler" signature="(System.Net.HttpListenerContext,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="196" hits="7" branch="False" />
+                <line number="197" hits="7" branch="False" />
+                <line number="198" hits="7" branch="False" />
+                <line number="199" hits="7" branch="False" />
+                <line number="200" hits="7" branch="False" />
+                <line number="201" hits="7" branch="False" />
+                <line number="202" hits="7" branch="False" />
+              </lines>
+            </method>
+            <method name="HandleMessageAsync" signature="(System.String,System.Threading.CancellationToken)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="315" hits="9" branch="False" />
+              </lines>
+            </method>
+            <method name="IsRateLimited" signature="(System.String,System.String)" line-rate="0" branch-rate="0" complexity="6">
+              <lines>
+                <line number="380" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="7" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="382" hits="0" branch="False" />
+                <line number="383" hits="0" branch="True" condition-coverage="0% (0/4)">
+                  <conditions>
+                    <condition number="31" type="jump" coverage="0%" />
+                    <condition number="55" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="384" hits="0" branch="False" />
+                <line number="386" hits="0" branch="False" />
+                <line number="387" hits="0" branch="False" />
+                <line number="388" hits="0" branch="False" />
+                <line number="389" hits="0" branch="False" />
+                <line number="390" hits="0" branch="False" />
+                <line number="393" hits="0" branch="False" />
+                <line number="394" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="TryParseMessageType" signature="(System.String)" line-rate="0.6" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="401" hits="2" branch="False" />
+                <line number="402" hits="2" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="13" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="404" hits="0" branch="False" />
+                <line number="406" hits="0" branch="False" />
+                <line number="408" hits="2" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.Services.IBiometricScannerService,Trazzo.Biometric.Agent.Services.IAgentHealthService,Trazzo.Biometric.Agent.Queue.IEventQueue,Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.WebSocket.LocalWebSocketServerService&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="13" hits="16" branch="False" />
+                <line number="14" hits="16" branch="False" />
+                <line number="15" hits="16" branch="False" />
+                <line number="16" hits="16" branch="False" />
+                <line number="17" hits="16" branch="False" />
+                <line number="18" hits="16" branch="False" />
+                <line number="22" hits="16" branch="False" />
+                <line number="23" hits="16" branch="False" />
+                <line number="24" hits="16" branch="False" />
+                <line number="25" hits="16" branch="False" />
+                <line number="26" hits="16" branch="False" />
+                <line number="27" hits="16" branch="False" />
+                <line number="28" hits="16" branch="False" />
+                <line number="29" hits="16" branch="False" />
+              </lines>
+            </method>
+            <method name=".cctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="20" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="35" hits="7" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="17" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="36" hits="7" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="34" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="38" hits="0" branch="False" />
+            <line number="41" hits="7" branch="False" />
+            <line number="42" hits="7" branch="False" />
+            <line number="43" hits="7" branch="False" />
+            <line number="45" hits="7" branch="False" />
+            <line number="46" hits="7" branch="False" />
+            <line number="47" hits="7" branch="False" />
+            <line number="48" hits="7" branch="False" />
+            <line number="50" hits="7" branch="False" />
+            <line number="51" hits="7" branch="False" />
+            <line number="196" hits="7" branch="False" />
+            <line number="197" hits="7" branch="False" />
+            <line number="198" hits="7" branch="False" />
+            <line number="199" hits="7" branch="False" />
+            <line number="200" hits="7" branch="False" />
+            <line number="201" hits="7" branch="False" />
+            <line number="202" hits="7" branch="False" />
+            <line number="315" hits="9" branch="False" />
+            <line number="380" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="7" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="382" hits="0" branch="False" />
+            <line number="383" hits="0" branch="True" condition-coverage="0% (0/4)">
+              <conditions>
+                <condition number="31" type="jump" coverage="0%" />
+                <condition number="55" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="384" hits="0" branch="False" />
+            <line number="386" hits="0" branch="False" />
+            <line number="387" hits="0" branch="False" />
+            <line number="388" hits="0" branch="False" />
+            <line number="389" hits="0" branch="False" />
+            <line number="390" hits="0" branch="False" />
+            <line number="393" hits="0" branch="False" />
+            <line number="394" hits="0" branch="False" />
+            <line number="401" hits="2" branch="False" />
+            <line number="402" hits="2" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="13" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="404" hits="0" branch="False" />
+            <line number="406" hits="0" branch="False" />
+            <line number="408" hits="2" branch="False" />
+            <line number="13" hits="16" branch="False" />
+            <line number="14" hits="16" branch="False" />
+            <line number="15" hits="16" branch="False" />
+            <line number="16" hits="16" branch="False" />
+            <line number="17" hits="16" branch="False" />
+            <line number="18" hits="16" branch="False" />
+            <line number="22" hits="16" branch="False" />
+            <line number="23" hits="16" branch="False" />
+            <line number="24" hits="16" branch="False" />
+            <line number="25" hits="16" branch="False" />
+            <line number="26" hits="16" branch="False" />
+            <line number="27" hits="16" branch="False" />
+            <line number="28" hits="16" branch="False" />
+            <line number="29" hits="16" branch="False" />
+            <line number="20" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Utilities.FingerprintImagePayload" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Utilities/FingerprintImageConverter.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Byte[],System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="6" branch="False" />
+                <line number="7" hits="6" branch="False" />
+                <line number="8" hits="6" branch="False" />
+                <line number="9" hits="6" branch="False" />
+                <line number="10" hits="6" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="6" hits="6" branch="False" />
+            <line number="7" hits="6" branch="False" />
+            <line number="8" hits="6" branch="False" />
+            <line number="9" hits="6" branch="False" />
+            <line number="10" hits="6" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Utilities.FingerprintImageConverter" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Utilities/FingerprintImageConverter.cs" line-rate="1" branch-rate="1" complexity="15">
+          <methods>
+            <method name="ConvertGrayscaleRawToPng" signature="(System.Byte[],System.Int32,System.Int32)" line-rate="1" branch-rate="1" complexity="6">
+              <lines>
+                <line number="18" hits="9" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="2" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="20" hits="1" branch="False" />
+                <line number="23" hits="8" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="22" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="25" hits="1" branch="False" />
+                <line number="28" hits="7" branch="False" />
+                <line number="29" hits="7" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="48" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="31" hits="1" branch="False" />
+                <line number="34" hits="6" branch="False" />
+                <line number="35" hits="6" branch="False" />
+                <line number="38" hits="6" branch="False" />
+                <line number="39" hits="6" branch="False" />
+                <line number="40" hits="6" branch="False" />
+                <line number="41" hits="6" branch="False" />
+                <line number="42" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="WritePng" signature="(System.Byte[],System.Int32,System.Int32)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="47" hits="6" branch="False" />
+                <line number="48" hits="6" branch="False" />
+                <line number="50" hits="6" branch="False" />
+                <line number="51" hits="6" branch="False" />
+                <line number="52" hits="6" branch="False" />
+                <line number="53" hits="6" branch="False" />
+                <line number="54" hits="6" branch="False" />
+                <line number="55" hits="6" branch="False" />
+                <line number="56" hits="6" branch="False" />
+                <line number="57" hits="6" branch="False" />
+                <line number="58" hits="6" branch="False" />
+                <line number="60" hits="6" branch="False" />
+                <line number="61" hits="86" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="195" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="63" hits="37" branch="False" />
+                <line number="64" hits="37" branch="False" />
+                <line number="67" hits="6" branch="False" />
+                <line number="68" hits="6" branch="False" />
+                <line number="69" hits="6" branch="False" />
+                <line number="71" hits="6" branch="False" />
+                <line number="72" hits="6" branch="False" />
+                <line number="74" hits="6" branch="False" />
+                <line number="75" hits="6" branch="False" />
+                <line number="77" hits="6" branch="False" />
+                <line number="78" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="WriteChunk" signature="(System.IO.Stream,System.ReadOnlySpan`1&lt;System.Byte&gt;,System.ReadOnlySpan`1&lt;System.Byte&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="82" hits="18" branch="False" />
+                <line number="83" hits="18" branch="False" />
+                <line number="84" hits="18" branch="False" />
+                <line number="85" hits="18" branch="False" />
+                <line number="86" hits="18" branch="False" />
+                <line number="88" hits="18" branch="False" />
+                <line number="89" hits="18" branch="False" />
+                <line number="90" hits="18" branch="False" />
+                <line number="91" hits="18" branch="False" />
+                <line number="92" hits="18" branch="False" />
+              </lines>
+            </method>
+            <method name="Crc32" signature="(System.ReadOnlySpan`1&lt;System.Byte&gt;,System.ReadOnlySpan`1&lt;System.Byte&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="96" hits="18" branch="False" />
+                <line number="97" hits="18" branch="False" />
+                <line number="98" hits="18" branch="False" />
+                <line number="99" hits="18" branch="False" />
+              </lines>
+            </method>
+            <method name="UpdateCrc" signature="(System.UInt32,System.ReadOnlySpan`1&lt;System.Byte&gt;)" line-rate="1" branch-rate="1" complexity="4">
+              <lines>
+                <line number="104" hits="498" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="66" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="106" hits="213" branch="False" />
+                <line number="107" hits="3834" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="52" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="109" hits="1704" branch="False" />
+                <line number="110" hits="1704" branch="False" />
+                <line number="114" hits="36" branch="False" />
+              </lines>
+            </method>
+            <method name=".cctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="18" hits="9" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="2" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="20" hits="1" branch="False" />
+            <line number="23" hits="8" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="22" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="25" hits="1" branch="False" />
+            <line number="28" hits="7" branch="False" />
+            <line number="29" hits="7" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="48" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="31" hits="1" branch="False" />
+            <line number="34" hits="6" branch="False" />
+            <line number="35" hits="6" branch="False" />
+            <line number="38" hits="6" branch="False" />
+            <line number="39" hits="6" branch="False" />
+            <line number="40" hits="6" branch="False" />
+            <line number="41" hits="6" branch="False" />
+            <line number="42" hits="6" branch="False" />
+            <line number="47" hits="6" branch="False" />
+            <line number="48" hits="6" branch="False" />
+            <line number="50" hits="6" branch="False" />
+            <line number="51" hits="6" branch="False" />
+            <line number="52" hits="6" branch="False" />
+            <line number="53" hits="6" branch="False" />
+            <line number="54" hits="6" branch="False" />
+            <line number="55" hits="6" branch="False" />
+            <line number="56" hits="6" branch="False" />
+            <line number="57" hits="6" branch="False" />
+            <line number="58" hits="6" branch="False" />
+            <line number="60" hits="6" branch="False" />
+            <line number="61" hits="86" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="195" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="63" hits="37" branch="False" />
+            <line number="64" hits="37" branch="False" />
+            <line number="67" hits="6" branch="False" />
+            <line number="68" hits="6" branch="False" />
+            <line number="69" hits="6" branch="False" />
+            <line number="71" hits="6" branch="False" />
+            <line number="72" hits="6" branch="False" />
+            <line number="74" hits="6" branch="False" />
+            <line number="75" hits="6" branch="False" />
+            <line number="77" hits="6" branch="False" />
+            <line number="78" hits="6" branch="False" />
+            <line number="82" hits="18" branch="False" />
+            <line number="83" hits="18" branch="False" />
+            <line number="84" hits="18" branch="False" />
+            <line number="85" hits="18" branch="False" />
+            <line number="86" hits="18" branch="False" />
+            <line number="88" hits="18" branch="False" />
+            <line number="89" hits="18" branch="False" />
+            <line number="90" hits="18" branch="False" />
+            <line number="91" hits="18" branch="False" />
+            <line number="92" hits="18" branch="False" />
+            <line number="96" hits="18" branch="False" />
+            <line number="97" hits="18" branch="False" />
+            <line number="98" hits="18" branch="False" />
+            <line number="99" hits="18" branch="False" />
+            <line number="104" hits="498" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="66" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="106" hits="213" branch="False" />
+            <line number="107" hits="3834" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="52" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="109" hits="1704" branch="False" />
+            <line number="110" hits="1704" branch="False" />
+            <line number="114" hits="36" branch="False" />
+            <line number="14" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Utilities.FingerprintQualityCriteria" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Utilities/FingerprintQualityAnalyzer.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Double,System.Double,System.Double,System.Boolean,System.Double,System.Double)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="5" hits="9" branch="False" />
+                <line number="6" hits="9" branch="False" />
+                <line number="7" hits="9" branch="False" />
+                <line number="8" hits="9" branch="False" />
+                <line number="9" hits="9" branch="False" />
+                <line number="10" hits="9" branch="False" />
+                <line number="11" hits="9" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="5" hits="9" branch="False" />
+            <line number="6" hits="9" branch="False" />
+            <line number="7" hits="9" branch="False" />
+            <line number="8" hits="9" branch="False" />
+            <line number="9" hits="9" branch="False" />
+            <line number="10" hits="9" branch="False" />
+            <line number="11" hits="9" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Utilities.FingerprintQualityAnalyzer" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Utilities/FingerprintQualityAnalyzer.cs" line-rate="1" branch-rate="0.9704999999999999" complexity="35">
+          <methods>
+            <method name="Analyze" signature="(System.Byte[],System.Int32,System.Int32,Trazzo.Biometric.Agent.Utilities.FingerprintQualityCriteria)" line-rate="1" branch-rate="0.9615" complexity="26">
+              <lines>
+                <line number="21" hits="17" branch="True" condition-coverage="100% (6/6)">
+                  <conditions>
+                    <condition number="2" type="jump" coverage="100%" />
+                    <condition number="6" type="jump" coverage="100%" />
+                    <condition number="14" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="23" hits="2" branch="False" />
+                <line number="26" hits="15" branch="False" />
+                <line number="27" hits="15" branch="False" />
+                <line number="28" hits="15" branch="False" />
+                <line number="30" hits="15" branch="False" />
+                <line number="31" hits="15" branch="False" />
+                <line number="32" hits="15" branch="False" />
+                <line number="33" hits="15" branch="False" />
+                <line number="34" hits="15" branch="False" />
+                <line number="35" hits="15" branch="False" />
+                <line number="36" hits="15" branch="False" />
+                <line number="37" hits="15" branch="False" />
+                <line number="39" hits="6570" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="231" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="41" hits="3270" branch="False" />
+                <line number="42" hits="1927940" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="220" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="44" hits="960700" branch="False" />
+                <line number="45" hits="960700" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="137" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="47" hits="112190" branch="False" />
+                <line number="48" hits="112190" branch="False" />
+                <line number="49" hits="112190" branch="False" />
+                <line number="50" hits="112190" branch="False" />
+                <line number="51" hits="112190" branch="False" />
+                <line number="52" hits="112190" branch="False" />
+                <line number="56" hits="848510" branch="False" />
+                <line number="57" hits="848510" branch="False" />
+                <line number="62" hits="15" branch="False" />
+                <line number="63" hits="15" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="252" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="64" hits="15" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="276" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="65" hits="15" branch="False" />
+                <line number="66" hits="15" branch="False" />
+                <line number="68" hits="15" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="342" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="70" hits="1" branch="False" />
+                <line number="73" hits="14" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="371" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="75" hits="1" branch="False" />
+                <line number="78" hits="13" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="400" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="80" hits="1" branch="False" />
+                <line number="83" hits="12" branch="True" condition-coverage="100% (4/4)">
+                  <conditions>
+                    <condition number="427" type="jump" coverage="100%" />
+                    <condition number="431" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="85" hits="1" branch="False" />
+                <line number="88" hits="11" branch="False" />
+              </lines>
+            </method>
+            <method name="CalculateAverage" signature="(System.Byte[],System.Int32)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="93" hits="15" branch="False" />
+                <line number="94" hits="1921430" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="20" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="96" hits="960700" branch="False" />
+                <line number="99" hits="15" branch="False" />
+              </lines>
+            </method>
+            <method name="IsForegroundCentered" signature="(System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Int32,System.Double)" line-rate="1" branch-rate="1" complexity="6">
+              <lines>
+                <line number="111" hits="15" branch="True" condition-coverage="100% (4/4)">
+                  <conditions>
+                    <condition number="3" type="jump" coverage="100%" />
+                    <condition number="8" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="113" hits="1" branch="False" />
+                <line number="116" hits="14" branch="False" />
+                <line number="117" hits="14" branch="False" />
+                <line number="118" hits="14" branch="False" />
+                <line number="119" hits="14" branch="False" />
+                <line number="120" hits="14" branch="False" />
+                <line number="121" hits="14" branch="False" />
+                <line number="123" hits="14" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="114" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="124" hits="14" branch="False" />
+              </lines>
+            </method>
+            <method name="CreateResult" signature="(System.Boolean,System.Int32,System.Double,System.Double,System.Boolean,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="135" hits="15" branch="False" />
+                <line number="136" hits="15" branch="False" />
+                <line number="137" hits="15" branch="False" />
+                <line number="138" hits="15" branch="False" />
+                <line number="139" hits="15" branch="False" />
+                <line number="140" hits="15" branch="False" />
+                <line number="141" hits="15" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="21" hits="17" branch="True" condition-coverage="100% (6/6)">
+              <conditions>
+                <condition number="2" type="jump" coverage="100%" />
+                <condition number="6" type="jump" coverage="100%" />
+                <condition number="14" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="23" hits="2" branch="False" />
+            <line number="26" hits="15" branch="False" />
+            <line number="27" hits="15" branch="False" />
+            <line number="28" hits="15" branch="False" />
+            <line number="30" hits="15" branch="False" />
+            <line number="31" hits="15" branch="False" />
+            <line number="32" hits="15" branch="False" />
+            <line number="33" hits="15" branch="False" />
+            <line number="34" hits="15" branch="False" />
+            <line number="35" hits="15" branch="False" />
+            <line number="36" hits="15" branch="False" />
+            <line number="37" hits="15" branch="False" />
+            <line number="39" hits="6570" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="231" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="41" hits="3270" branch="False" />
+            <line number="42" hits="1927940" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="220" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="44" hits="960700" branch="False" />
+            <line number="45" hits="960700" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="137" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="47" hits="112190" branch="False" />
+            <line number="48" hits="112190" branch="False" />
+            <line number="49" hits="112190" branch="False" />
+            <line number="50" hits="112190" branch="False" />
+            <line number="51" hits="112190" branch="False" />
+            <line number="52" hits="112190" branch="False" />
+            <line number="56" hits="848510" branch="False" />
+            <line number="57" hits="848510" branch="False" />
+            <line number="62" hits="15" branch="False" />
+            <line number="63" hits="15" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="252" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="64" hits="15" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="276" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="65" hits="15" branch="False" />
+            <line number="66" hits="15" branch="False" />
+            <line number="68" hits="15" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="342" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="70" hits="1" branch="False" />
+            <line number="73" hits="14" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="371" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="75" hits="1" branch="False" />
+            <line number="78" hits="13" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="400" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="80" hits="1" branch="False" />
+            <line number="83" hits="12" branch="True" condition-coverage="100% (4/4)">
+              <conditions>
+                <condition number="427" type="jump" coverage="100%" />
+                <condition number="431" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="85" hits="1" branch="False" />
+            <line number="88" hits="11" branch="False" />
+            <line number="93" hits="15" branch="False" />
+            <line number="94" hits="1921430" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="20" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="96" hits="960700" branch="False" />
+            <line number="99" hits="15" branch="False" />
+            <line number="111" hits="15" branch="True" condition-coverage="100% (4/4)">
+              <conditions>
+                <condition number="3" type="jump" coverage="100%" />
+                <condition number="8" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="113" hits="1" branch="False" />
+            <line number="116" hits="14" branch="False" />
+            <line number="117" hits="14" branch="False" />
+            <line number="118" hits="14" branch="False" />
+            <line number="119" hits="14" branch="False" />
+            <line number="120" hits="14" branch="False" />
+            <line number="121" hits="14" branch="False" />
+            <line number="123" hits="14" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="114" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="124" hits="14" branch="False" />
+            <line number="135" hits="15" branch="False" />
+            <line number="136" hits="15" branch="False" />
+            <line number="137" hits="15" branch="False" />
+            <line number="138" hits="15" branch="False" />
+            <line number="139" hits="15" branch="False" />
+            <line number="140" hits="15" branch="False" />
+            <line number="141" hits="15" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Services.IBiometricScannerService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Services/IBiometricScannerService.cs" line-rate="0" branch-rate="1" complexity="3">
+          <methods>
+            <method name="IdentifyFingerprintAsync" signature="(System.Threading.CancellationToken)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="15" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="EnrollFingerprintAsync" signature="(System.Func`3&lt;Trazzo.Biometric.Agent.Contracts.FingerprintEnrollProgress,System.Threading.CancellationToken,System.Threading.Tasks.Task&gt;,System.Threading.CancellationToken)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="22" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="CancelEnrollment" signature="()" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="27" hits="0" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="15" hits="0" branch="False" />
+            <line number="22" hits="0" branch="False" />
+            <line number="27" hits="0" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Security.HybridCryptographyService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Security/HybridCryptographyService.cs" line-rate="0.6344" branch-rate="0.6" complexity="24">
+          <methods>
+            <method name="get_IsConfigured" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="38" hits="15" branch="False" />
+              </lines>
+            </method>
+            <method name="TryEncryptTemplate" signature="(System.Byte[],System.Int32)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="80" hits="10" branch="False" />
+                <line number="81" hits="6" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="42" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="83" hits="4" branch="False" />
+                <line number="85" hits="4" branch="False" />
+                <line number="86" hits="4" branch="False" />
+                <line number="87" hits="4" branch="False" />
+                <line number="88" hits="4" branch="False" />
+                <line number="90" hits="4" branch="False" />
+                <line number="92" hits="4" branch="False" />
+                <line number="93" hits="4" branch="False" />
+                <line number="95" hits="4" branch="False" />
+                <line number="97" hits="4" branch="False" />
+                <line number="98" hits="4" branch="False" />
+                <line number="99" hits="4" branch="False" />
+                <line number="100" hits="4" branch="False" />
+                <line number="101" hits="4" branch="False" />
+              </lines>
+            </method>
+            <method name="Dispose" signature="()" line-rate="1" branch-rate="1" complexity="6">
+              <lines>
+                <line number="106" hits="9" branch="False" />
+                <line number="107" hits="9" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="16" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="108" hits="9" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="36" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="109" hits="9" branch="False" />
+                <line number="110" hits="9" branch="False" />
+                <line number="112" hits="9" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="77" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="113" hits="9" branch="False" />
+                <line number="114" hits="9" branch="False" />
+                <line number="115" hits="9" branch="False" />
+              </lines>
+            </method>
+            <method name="ApplyKey" signature="(System.String)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="136" hits="6" branch="False" />
+                <line number="137" hits="5" branch="False" />
+                <line number="138" hits="5" branch="False" />
+                <line number="141" hits="5" branch="False" />
+                <line number="143" hits="5" branch="False" />
+                <line number="144" hits="5" branch="False" />
+                <line number="145" hits="5" branch="False" />
+                <line number="146" hits="5" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="76" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="148" hits="5" branch="False" />
+                <line number="149" hits="5" branch="False" />
+                <line number="150" hits="5" branch="False" />
+                <line number="151" hits="1" branch="False" />
+                <line number="153" hits="1" branch="False" />
+                <line number="154" hits="1" branch="False" />
+                <line number="155" hits="6" branch="False" />
+              </lines>
+            </method>
+            <method name="TryReadDiskCache" signature="()" line-rate="0.375" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="161" hits="3" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="11" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="162" hits="0" branch="False" />
+                <line number="163" hits="3" branch="False" />
+                <line number="164" hits="0" branch="False" />
+                <line number="166" hits="0" branch="False" />
+                <line number="167" hits="0" branch="False" />
+                <line number="168" hits="3" branch="False" />
+                <line number="169" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="WriteDiskCache" signature="(System.String)" line-rate="0.5714" branch-rate="1" complexity="1">
+              <lines>
+                <line number="175" hits="5" branch="False" />
+                <line number="176" hits="5" branch="False" />
+                <line number="177" hits="5" branch="False" />
+                <line number="178" hits="0" branch="False" />
+                <line number="180" hits="0" branch="False" />
+                <line number="181" hits="0" branch="False" />
+                <line number="182" hits="5" branch="False" />
+              </lines>
+            </method>
+            <method name="BuildHttpFetcher" signature="(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Security.HybridCryptographyService&gt;)" line-rate="0" branch-rate="0" complexity="6">
+              <lines>
+                <line number="188" hits="0" branch="False" />
+                <line number="189" hits="0" branch="False" />
+                <line number="191" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="51" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="193" hits="0" branch="False" />
+                <line number="194" hits="0" branch="False" />
+                <line number="195" hits="0" branch="False" />
+                <line number="196" hits="0" branch="False" />
+                <line number="199" hits="0" branch="True" condition-coverage="0% (0/4)">
+                  <conditions>
+                    <condition number="115" type="jump" coverage="0%" />
+                    <condition number="133" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="201" hits="0" branch="False" />
+                <line number="202" hits="0" branch="False" />
+                <line number="203" hits="0" branch="False" />
+                <line number="204" hits="0" branch="False" />
+                <line number="207" hits="0" branch="False" />
+                <line number="208" hits="0" branch="False" />
+                <line number="209" hits="0" branch="False" />
+                <line number="210" hits="0" branch="False" />
+                <line number="211" hits="0" branch="False" />
+                <line number="212" hits="0" branch="False" />
+                <line number="213" hits="0" branch="False" />
+                <line number="214" hits="0" branch="False" />
+                <line number="215" hits="0" branch="False" />
+                <line number="216" hits="0" branch="False" />
+                <line number="217" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.Func`2&lt;System.Threading.CancellationToken,System.Threading.Tasks.Task`1&lt;System.String&gt;&gt;,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Security.HybridCryptographyService&gt;,System.String)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="17" hits="9" branch="False" />
+                <line number="21" hits="9" branch="False" />
+                <line number="22" hits="9" branch="False" />
+                <line number="23" hits="9" branch="False" />
+                <line number="24" hits="9" branch="False" />
+                <line number="26" hits="9" branch="False" />
+                <line number="27" hits="9" branch="False" />
+                <line number="28" hits="9" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="34" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="29" hits="9" branch="False" />
+                <line number="30" hits="9" branch="False" />
+                <line number="31" hits="9" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Security.HybridCryptographyService&gt;)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="34" hits="0" branch="False" />
+                <line number="36" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".cctor" signature="()" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="0" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="38" hits="15" branch="False" />
+            <line number="80" hits="10" branch="False" />
+            <line number="81" hits="6" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="42" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="83" hits="4" branch="False" />
+            <line number="85" hits="4" branch="False" />
+            <line number="86" hits="4" branch="False" />
+            <line number="87" hits="4" branch="False" />
+            <line number="88" hits="4" branch="False" />
+            <line number="90" hits="4" branch="False" />
+            <line number="92" hits="4" branch="False" />
+            <line number="93" hits="4" branch="False" />
+            <line number="95" hits="4" branch="False" />
+            <line number="97" hits="4" branch="False" />
+            <line number="98" hits="4" branch="False" />
+            <line number="99" hits="4" branch="False" />
+            <line number="100" hits="4" branch="False" />
+            <line number="101" hits="4" branch="False" />
+            <line number="106" hits="9" branch="False" />
+            <line number="107" hits="9" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="16" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="108" hits="9" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="36" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="109" hits="9" branch="False" />
+            <line number="110" hits="9" branch="False" />
+            <line number="112" hits="9" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="77" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="113" hits="9" branch="False" />
+            <line number="114" hits="9" branch="False" />
+            <line number="115" hits="9" branch="False" />
+            <line number="136" hits="6" branch="False" />
+            <line number="137" hits="5" branch="False" />
+            <line number="138" hits="5" branch="False" />
+            <line number="141" hits="5" branch="False" />
+            <line number="143" hits="5" branch="False" />
+            <line number="144" hits="5" branch="False" />
+            <line number="145" hits="5" branch="False" />
+            <line number="146" hits="5" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="76" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="148" hits="5" branch="False" />
+            <line number="149" hits="5" branch="False" />
+            <line number="150" hits="5" branch="False" />
+            <line number="151" hits="1" branch="False" />
+            <line number="153" hits="1" branch="False" />
+            <line number="154" hits="1" branch="False" />
+            <line number="155" hits="6" branch="False" />
+            <line number="161" hits="3" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="11" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="162" hits="0" branch="False" />
+            <line number="163" hits="3" branch="False" />
+            <line number="164" hits="0" branch="False" />
+            <line number="166" hits="0" branch="False" />
+            <line number="167" hits="0" branch="False" />
+            <line number="168" hits="3" branch="False" />
+            <line number="169" hits="0" branch="False" />
+            <line number="175" hits="5" branch="False" />
+            <line number="176" hits="5" branch="False" />
+            <line number="177" hits="5" branch="False" />
+            <line number="178" hits="0" branch="False" />
+            <line number="180" hits="0" branch="False" />
+            <line number="181" hits="0" branch="False" />
+            <line number="182" hits="5" branch="False" />
+            <line number="188" hits="0" branch="False" />
+            <line number="189" hits="0" branch="False" />
+            <line number="191" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="51" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="193" hits="0" branch="False" />
+            <line number="194" hits="0" branch="False" />
+            <line number="195" hits="0" branch="False" />
+            <line number="196" hits="0" branch="False" />
+            <line number="199" hits="0" branch="True" condition-coverage="0% (0/4)">
+              <conditions>
+                <condition number="115" type="jump" coverage="0%" />
+                <condition number="133" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="201" hits="0" branch="False" />
+            <line number="202" hits="0" branch="False" />
+            <line number="203" hits="0" branch="False" />
+            <line number="204" hits="0" branch="False" />
+            <line number="207" hits="0" branch="False" />
+            <line number="208" hits="0" branch="False" />
+            <line number="209" hits="0" branch="False" />
+            <line number="210" hits="0" branch="False" />
+            <line number="211" hits="0" branch="False" />
+            <line number="212" hits="0" branch="False" />
+            <line number="213" hits="0" branch="False" />
+            <line number="214" hits="0" branch="False" />
+            <line number="215" hits="0" branch="False" />
+            <line number="216" hits="0" branch="False" />
+            <line number="217" hits="0" branch="False" />
+            <line number="17" hits="9" branch="False" />
+            <line number="21" hits="9" branch="False" />
+            <line number="22" hits="9" branch="False" />
+            <line number="23" hits="9" branch="False" />
+            <line number="24" hits="9" branch="False" />
+            <line number="26" hits="9" branch="False" />
+            <line number="27" hits="9" branch="False" />
+            <line number="28" hits="9" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="34" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="29" hits="9" branch="False" />
+            <line number="30" hits="9" branch="False" />
+            <line number="31" hits="9" branch="False" />
+            <line number="34" hits="0" branch="False" />
+            <line number="36" hits="0" branch="False" />
+            <line number="11" hits="0" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Queue.EventForwarderService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Queue/EventForwarderService.cs" line-rate="0.7692" branch-rate="0" complexity="6">
+          <methods>
+            <method name="BuildHttpSender" signature="(System.String,System.String,System.String,System.Net.Http.HttpClient)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="162" hits="3" branch="False" />
+                <line number="163" hits="3" branch="False" />
+                <line number="164" hits="3" branch="False" />
+                <line number="165" hits="3" branch="False" />
+                <line number="166" hits="3" branch="False" />
+                <line number="167" hits="3" branch="False" />
+                <line number="168" hits="3" branch="False" />
+                <line number="169" hits="3" branch="False" />
+                <line number="170" hits="3" branch="False" />
+                <line number="171" hits="3" branch="False" />
+                <line number="172" hits="3" branch="False" />
+                <line number="173" hits="3" branch="False" />
+                <line number="174" hits="3" branch="False" />
+                <line number="175" hits="3" branch="False" />
+                <line number="176" hits="3" branch="False" />
+                <line number="177" hits="3" branch="False" />
+                <line number="178" hits="3" branch="False" />
+                <line number="179" hits="3" branch="False" />
+                <line number="180" hits="3" branch="False" />
+                <line number="181" hits="3" branch="False" />
+                <line number="182" hits="3" branch="False" />
+                <line number="183" hits="3" branch="False" />
+                <line number="184" hits="3" branch="False" />
+                <line number="185" hits="3" branch="False" />
+                <line number="186" hits="3" branch="False" />
+                <line number="187" hits="3" branch="False" />
+                <line number="188" hits="3" branch="False" />
+                <line number="189" hits="3" branch="False" />
+                <line number="190" hits="3" branch="False" />
+                <line number="191" hits="3" branch="False" />
+                <line number="192" hits="3" branch="False" />
+                <line number="193" hits="3" branch="False" />
+                <line number="194" hits="3" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.Queue.IEventQueue,System.Func`3&lt;Trazzo.Biometric.Agent.Queue.BiometricEvent,System.Threading.CancellationToken,System.Threading.Tasks.Task`1&lt;System.Boolean&gt;&gt;,System.Int32,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Queue.EventForwarderService&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="18" hits="9" branch="False" />
+                <line number="19" hits="9" branch="False" />
+                <line number="20" hits="9" branch="False" />
+                <line number="21" hits="9" branch="False" />
+                <line number="22" hits="9" branch="False" />
+                <line number="24" hits="9" branch="False" />
+                <line number="25" hits="9" branch="False" />
+                <line number="26" hits="9" branch="False" />
+                <line number="27" hits="9" branch="False" />
+                <line number="28" hits="9" branch="False" />
+                <line number="29" hits="9" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.Queue.IEventQueue,System.Net.Http.HttpClient,System.String,System.String,System.Int32,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Queue.EventForwarderService&gt;,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="31" hits="3" branch="False" />
+                <line number="32" hits="3" branch="False" />
+                <line number="33" hits="3" branch="False" />
+                <line number="34" hits="3" branch="False" />
+                <line number="35" hits="3" branch="False" />
+                <line number="36" hits="3" branch="False" />
+                <line number="37" hits="3" branch="False" />
+                <line number="38" hits="3" branch="False" />
+                <line number="40" hits="3" branch="False" />
+                <line number="41" hits="3" branch="False" />
+                <line number="42" hits="3" branch="False" />
+                <line number="43" hits="3" branch="False" />
+                <line number="44" hits="3" branch="False" />
+                <line number="45" hits="3" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Trazzo.Biometric.Agent.Queue.IEventQueue,Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Queue.EventForwarderService&gt;)" line-rate="0" branch-rate="0" complexity="2">
+              <lines>
+                <line number="47" hits="0" branch="False" />
+                <line number="48" hits="0" branch="False" />
+                <line number="49" hits="0" branch="False" />
+                <line number="50" hits="0" branch="False" />
+                <line number="52" hits="0" branch="False" />
+                <line number="53" hits="0" branch="False" />
+                <line number="54" hits="0" branch="False" />
+                <line number="56" hits="0" branch="False" />
+                <line number="57" hits="0" branch="False" />
+                <line number="58" hits="0" branch="False" />
+                <line number="60" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="81" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="62" hits="0" branch="False" />
+                <line number="63" hits="0" branch="False" />
+                <line number="64" hits="0" branch="False" />
+                <line number="65" hits="0" branch="False" />
+                <line number="69" hits="0" branch="False" />
+                <line number="70" hits="0" branch="False" />
+                <line number="72" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".cctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="9" hits="1" branch="False" />
+                <line number="10" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="162" hits="3" branch="False" />
+            <line number="163" hits="3" branch="False" />
+            <line number="164" hits="3" branch="False" />
+            <line number="165" hits="3" branch="False" />
+            <line number="166" hits="3" branch="False" />
+            <line number="167" hits="3" branch="False" />
+            <line number="168" hits="3" branch="False" />
+            <line number="169" hits="3" branch="False" />
+            <line number="170" hits="3" branch="False" />
+            <line number="171" hits="3" branch="False" />
+            <line number="172" hits="3" branch="False" />
+            <line number="173" hits="3" branch="False" />
+            <line number="174" hits="3" branch="False" />
+            <line number="175" hits="3" branch="False" />
+            <line number="176" hits="3" branch="False" />
+            <line number="177" hits="3" branch="False" />
+            <line number="178" hits="3" branch="False" />
+            <line number="179" hits="3" branch="False" />
+            <line number="180" hits="3" branch="False" />
+            <line number="181" hits="3" branch="False" />
+            <line number="182" hits="3" branch="False" />
+            <line number="183" hits="3" branch="False" />
+            <line number="184" hits="3" branch="False" />
+            <line number="185" hits="3" branch="False" />
+            <line number="186" hits="3" branch="False" />
+            <line number="187" hits="3" branch="False" />
+            <line number="188" hits="3" branch="False" />
+            <line number="189" hits="3" branch="False" />
+            <line number="190" hits="3" branch="False" />
+            <line number="191" hits="3" branch="False" />
+            <line number="192" hits="3" branch="False" />
+            <line number="193" hits="3" branch="False" />
+            <line number="194" hits="3" branch="False" />
+            <line number="18" hits="9" branch="False" />
+            <line number="19" hits="9" branch="False" />
+            <line number="20" hits="9" branch="False" />
+            <line number="21" hits="9" branch="False" />
+            <line number="22" hits="9" branch="False" />
+            <line number="24" hits="9" branch="False" />
+            <line number="25" hits="9" branch="False" />
+            <line number="26" hits="9" branch="False" />
+            <line number="27" hits="9" branch="False" />
+            <line number="28" hits="9" branch="False" />
+            <line number="29" hits="9" branch="False" />
+            <line number="31" hits="3" branch="False" />
+            <line number="32" hits="3" branch="False" />
+            <line number="33" hits="3" branch="False" />
+            <line number="34" hits="3" branch="False" />
+            <line number="35" hits="3" branch="False" />
+            <line number="36" hits="3" branch="False" />
+            <line number="37" hits="3" branch="False" />
+            <line number="38" hits="3" branch="False" />
+            <line number="40" hits="3" branch="False" />
+            <line number="41" hits="3" branch="False" />
+            <line number="42" hits="3" branch="False" />
+            <line number="43" hits="3" branch="False" />
+            <line number="44" hits="3" branch="False" />
+            <line number="45" hits="3" branch="False" />
+            <line number="47" hits="0" branch="False" />
+            <line number="48" hits="0" branch="False" />
+            <line number="49" hits="0" branch="False" />
+            <line number="50" hits="0" branch="False" />
+            <line number="52" hits="0" branch="False" />
+            <line number="53" hits="0" branch="False" />
+            <line number="54" hits="0" branch="False" />
+            <line number="56" hits="0" branch="False" />
+            <line number="57" hits="0" branch="False" />
+            <line number="58" hits="0" branch="False" />
+            <line number="60" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="81" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="62" hits="0" branch="False" />
+            <line number="63" hits="0" branch="False" />
+            <line number="64" hits="0" branch="False" />
+            <line number="65" hits="0" branch="False" />
+            <line number="69" hits="0" branch="False" />
+            <line number="70" hits="0" branch="False" />
+            <line number="72" hits="0" branch="False" />
+            <line number="9" hits="1" branch="False" />
+            <line number="10" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Queue.SqliteEventQueue" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Queue/SqliteEventQueue.cs" line-rate="0.7559999999999999" branch-rate="0.5" complexity="8">
+          <methods>
+            <method name="Dispose" signature="()" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="173" hits="12" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="7" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+              </lines>
+            </method>
+            <method name="InitializeDatabase" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="177" hits="12" branch="False" />
+                <line number="178" hits="12" branch="False" />
+                <line number="179" hits="12" branch="False" />
+                <line number="181" hits="12" branch="False" />
+                <line number="182" hits="12" branch="False" />
+                <line number="183" hits="12" branch="False" />
+                <line number="184" hits="12" branch="False" />
+                <line number="185" hits="12" branch="False" />
+                <line number="186" hits="12" branch="False" />
+                <line number="187" hits="12" branch="False" />
+                <line number="188" hits="12" branch="False" />
+                <line number="189" hits="12" branch="False" />
+                <line number="190" hits="12" branch="False" />
+                <line number="191" hits="12" branch="False" />
+                <line number="192" hits="12" branch="False" />
+                <line number="193" hits="12" branch="False" />
+                <line number="194" hits="12" branch="False" />
+                <line number="195" hits="12" branch="False" />
+                <line number="196" hits="12" branch="False" />
+                <line number="197" hits="12" branch="False" />
+                <line number="198" hits="12" branch="False" />
+                <line number="199" hits="24" branch="False" />
+              </lines>
+            </method>
+            <method name="BuildConnectionString" signature="(Microsoft.Extensions.Configuration.IConfiguration)" line-rate="0" branch-rate="0" complexity="2">
+              <lines>
+                <line number="203" hits="0" branch="False" />
+                <line number="204" hits="0" branch="True" condition-coverage="0% (0/2)">
+                  <conditions>
+                    <condition number="18" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="205" hits="0" branch="False" />
+                <line number="206" hits="0" branch="False" />
+                <line number="207" hits="0" branch="False" />
+                <line number="208" hits="0" branch="False" />
+                <line number="210" hits="0" branch="False" />
+                <line number="211" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Queue.SqliteEventQueue&gt;)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="14" hits="0" branch="False" />
+                <line number="16" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.Queue.SqliteEventQueue&gt;)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="18" hits="12" branch="False" />
+                <line number="20" hits="12" branch="False" />
+                <line number="21" hits="12" branch="False" />
+                <line number="23" hits="12" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="32" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="25" hits="12" branch="False" />
+                <line number="26" hits="12" branch="False" />
+                <line number="29" hits="12" branch="False" />
+                <line number="30" hits="12" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="173" hits="12" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="7" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="177" hits="12" branch="False" />
+            <line number="178" hits="12" branch="False" />
+            <line number="179" hits="12" branch="False" />
+            <line number="181" hits="12" branch="False" />
+            <line number="182" hits="12" branch="False" />
+            <line number="183" hits="12" branch="False" />
+            <line number="184" hits="12" branch="False" />
+            <line number="185" hits="12" branch="False" />
+            <line number="186" hits="12" branch="False" />
+            <line number="187" hits="12" branch="False" />
+            <line number="188" hits="12" branch="False" />
+            <line number="189" hits="12" branch="False" />
+            <line number="190" hits="12" branch="False" />
+            <line number="191" hits="12" branch="False" />
+            <line number="192" hits="12" branch="False" />
+            <line number="193" hits="12" branch="False" />
+            <line number="194" hits="12" branch="False" />
+            <line number="195" hits="12" branch="False" />
+            <line number="196" hits="12" branch="False" />
+            <line number="197" hits="12" branch="False" />
+            <line number="198" hits="12" branch="False" />
+            <line number="199" hits="24" branch="False" />
+            <line number="203" hits="0" branch="False" />
+            <line number="204" hits="0" branch="True" condition-coverage="0% (0/2)">
+              <conditions>
+                <condition number="18" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="205" hits="0" branch="False" />
+            <line number="206" hits="0" branch="False" />
+            <line number="207" hits="0" branch="False" />
+            <line number="208" hits="0" branch="False" />
+            <line number="210" hits="0" branch="False" />
+            <line number="211" hits="0" branch="False" />
+            <line number="14" hits="0" branch="False" />
+            <line number="16" hits="0" branch="False" />
+            <line number="18" hits="12" branch="False" />
+            <line number="20" hits="12" branch="False" />
+            <line number="21" hits="12" branch="False" />
+            <line number="23" hits="12" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="32" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="25" hits="12" branch="False" />
+            <line number="26" hits="12" branch="False" />
+            <line number="29" hits="12" branch="False" />
+            <line number="30" hits="12" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.EncryptedPayload" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/EncryptedPayload.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.String,System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="6" branch="False" />
+                <line number="4" hits="6" branch="False" />
+                <line number="5" hits="6" branch="False" />
+                <line number="6" hits="6" branch="False" />
+                <line number="7" hits="6" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="3" hits="6" branch="False" />
+            <line number="4" hits="6" branch="False" />
+            <line number="5" hits="6" branch="False" />
+            <line number="6" hits="6" branch="False" />
+            <line number="7" hits="6" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintCaptureResult" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintCaptureResult.cs" line-rate="1" branch-rate="1" complexity="4">
+          <methods>
+            <method name="Succeeded" signature="(System.Byte[],System.Int32,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="2">
+              <lines>
+                <line number="28" hits="10" branch="True" condition-coverage="100% (2/2)">
+                  <conditions>
+                    <condition number="1" type="jump" coverage="100%" />
+                  </conditions>
+                </line>
+                <line number="29" hits="10" branch="False" />
+                <line number="30" hits="10" branch="False" />
+                <line number="32" hits="10" branch="False" />
+                <line number="33" hits="10" branch="False" />
+                <line number="34" hits="10" branch="False" />
+                <line number="35" hits="10" branch="False" />
+                <line number="36" hits="10" branch="False" />
+                <line number="37" hits="10" branch="False" />
+                <line number="38" hits="10" branch="False" />
+                <line number="39" hits="10" branch="False" />
+                <line number="40" hits="10" branch="False" />
+                <line number="41" hits="10" branch="False" />
+                <line number="42" hits="10" branch="False" />
+                <line number="43" hits="10" branch="False" />
+                <line number="44" hits="10" branch="False" />
+              </lines>
+            </method>
+            <method name="Failed" signature="(System.String,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="54" hits="26" branch="False" />
+                <line number="55" hits="26" branch="False" />
+                <line number="56" hits="26" branch="False" />
+                <line number="57" hits="26" branch="False" />
+                <line number="58" hits="26" branch="False" />
+                <line number="59" hits="26" branch="False" />
+                <line number="60" hits="26" branch="False" />
+                <line number="61" hits="26" branch="False" />
+                <line number="62" hits="26" branch="False" />
+                <line number="63" hits="26" branch="False" />
+                <line number="64" hits="26" branch="False" />
+                <line number="65" hits="26" branch="False" />
+                <line number="66" hits="26" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,System.Boolean,System.String,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload,System.Int32,System.String,System.String,System.String,System.String,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="36" branch="False" />
+                <line number="4" hits="36" branch="False" />
+                <line number="5" hits="36" branch="False" />
+                <line number="6" hits="36" branch="False" />
+                <line number="7" hits="36" branch="False" />
+                <line number="8" hits="36" branch="False" />
+                <line number="9" hits="36" branch="False" />
+                <line number="10" hits="36" branch="False" />
+                <line number="11" hits="36" branch="False" />
+                <line number="12" hits="36" branch="False" />
+                <line number="13" hits="36" branch="False" />
+                <line number="14" hits="36" branch="False" />
+                <line number="15" hits="36" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="28" hits="10" branch="True" condition-coverage="100% (2/2)">
+              <conditions>
+                <condition number="1" type="jump" coverage="100%" />
+              </conditions>
+            </line>
+            <line number="29" hits="10" branch="False" />
+            <line number="30" hits="10" branch="False" />
+            <line number="32" hits="10" branch="False" />
+            <line number="33" hits="10" branch="False" />
+            <line number="34" hits="10" branch="False" />
+            <line number="35" hits="10" branch="False" />
+            <line number="36" hits="10" branch="False" />
+            <line number="37" hits="10" branch="False" />
+            <line number="38" hits="10" branch="False" />
+            <line number="39" hits="10" branch="False" />
+            <line number="40" hits="10" branch="False" />
+            <line number="41" hits="10" branch="False" />
+            <line number="42" hits="10" branch="False" />
+            <line number="43" hits="10" branch="False" />
+            <line number="44" hits="10" branch="False" />
+            <line number="54" hits="26" branch="False" />
+            <line number="55" hits="26" branch="False" />
+            <line number="56" hits="26" branch="False" />
+            <line number="57" hits="26" branch="False" />
+            <line number="58" hits="26" branch="False" />
+            <line number="59" hits="26" branch="False" />
+            <line number="60" hits="26" branch="False" />
+            <line number="61" hits="26" branch="False" />
+            <line number="62" hits="26" branch="False" />
+            <line number="63" hits="26" branch="False" />
+            <line number="64" hits="26" branch="False" />
+            <line number="65" hits="26" branch="False" />
+            <line number="66" hits="26" branch="False" />
+            <line number="3" hits="36" branch="False" />
+            <line number="4" hits="36" branch="False" />
+            <line number="5" hits="36" branch="False" />
+            <line number="6" hits="36" branch="False" />
+            <line number="7" hits="36" branch="False" />
+            <line number="8" hits="36" branch="False" />
+            <line number="9" hits="36" branch="False" />
+            <line number="10" hits="36" branch="False" />
+            <line number="11" hits="36" branch="False" />
+            <line number="12" hits="36" branch="False" />
+            <line number="13" hits="36" branch="False" />
+            <line number="14" hits="36" branch="False" />
+            <line number="15" hits="36" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintDeviceStatus" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintDeviceStatus.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.String,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Int32,System.String,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="33" branch="False" />
+                <line number="4" hits="33" branch="False" />
+                <line number="5" hits="33" branch="False" />
+                <line number="6" hits="33" branch="False" />
+                <line number="7" hits="33" branch="False" />
+                <line number="8" hits="33" branch="False" />
+                <line number="9" hits="33" branch="False" />
+                <line number="10" hits="33" branch="False" />
+                <line number="11" hits="33" branch="False" />
+                <line number="12" hits="33" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="3" hits="33" branch="False" />
+            <line number="4" hits="33" branch="False" />
+            <line number="5" hits="33" branch="False" />
+            <line number="6" hits="33" branch="False" />
+            <line number="7" hits="33" branch="False" />
+            <line number="8" hits="33" branch="False" />
+            <line number="9" hits="33" branch="False" />
+            <line number="10" hits="33" branch="False" />
+            <line number="11" hits="33" branch="False" />
+            <line number="12" hits="33" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintEnrollProgress" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintEnrollProgress.cs" line-rate="1" branch-rate="1" complexity="2">
+          <methods>
+            <method name="Create" signature="(System.Int32,System.Int32,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="11" hits="3" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,System.Int32,System.Int32,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="3" branch="False" />
+                <line number="4" hits="3" branch="False" />
+                <line number="5" hits="3" branch="False" />
+                <line number="6" hits="3" branch="False" />
+                <line number="7" hits="3" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="11" hits="3" branch="False" />
+            <line number="3" hits="3" branch="False" />
+            <line number="4" hits="3" branch="False" />
+            <line number="5" hits="3" branch="False" />
+            <line number="6" hits="3" branch="False" />
+            <line number="7" hits="3" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintEnrollResult" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintEnrollResult.cs" line-rate="1" branch-rate="0.5" complexity="4">
+          <methods>
+            <method name="Succeeded" signature="(System.Byte[],System.Int32,System.Int32,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="21" hits="1" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="2" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="22" hits="1" branch="False" />
+                <line number="23" hits="1" branch="False" />
+                <line number="25" hits="1" branch="False" />
+                <line number="26" hits="1" branch="False" />
+                <line number="27" hits="1" branch="False" />
+                <line number="28" hits="1" branch="False" />
+                <line number="29" hits="1" branch="False" />
+                <line number="30" hits="1" branch="False" />
+                <line number="31" hits="1" branch="False" />
+                <line number="32" hits="1" branch="False" />
+                <line number="33" hits="1" branch="False" />
+                <line number="34" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name="Failed" signature="(System.String,System.Int32)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="39" hits="1" branch="False" />
+                <line number="40" hits="1" branch="False" />
+                <line number="41" hits="1" branch="False" />
+                <line number="42" hits="1" branch="False" />
+                <line number="43" hits="1" branch="False" />
+                <line number="44" hits="1" branch="False" />
+                <line number="45" hits="1" branch="False" />
+                <line number="46" hits="1" branch="False" />
+                <line number="47" hits="1" branch="False" />
+                <line number="48" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,System.Boolean,System.String,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload,System.Int32,System.String,System.Int32,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="2" branch="False" />
+                <line number="4" hits="2" branch="False" />
+                <line number="5" hits="2" branch="False" />
+                <line number="6" hits="2" branch="False" />
+                <line number="7" hits="2" branch="False" />
+                <line number="8" hits="2" branch="False" />
+                <line number="9" hits="2" branch="False" />
+                <line number="10" hits="2" branch="False" />
+                <line number="11" hits="2" branch="False" />
+                <line number="12" hits="2" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="21" hits="1" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="2" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="22" hits="1" branch="False" />
+            <line number="23" hits="1" branch="False" />
+            <line number="25" hits="1" branch="False" />
+            <line number="26" hits="1" branch="False" />
+            <line number="27" hits="1" branch="False" />
+            <line number="28" hits="1" branch="False" />
+            <line number="29" hits="1" branch="False" />
+            <line number="30" hits="1" branch="False" />
+            <line number="31" hits="1" branch="False" />
+            <line number="32" hits="1" branch="False" />
+            <line number="33" hits="1" branch="False" />
+            <line number="34" hits="1" branch="False" />
+            <line number="39" hits="1" branch="False" />
+            <line number="40" hits="1" branch="False" />
+            <line number="41" hits="1" branch="False" />
+            <line number="42" hits="1" branch="False" />
+            <line number="43" hits="1" branch="False" />
+            <line number="44" hits="1" branch="False" />
+            <line number="45" hits="1" branch="False" />
+            <line number="46" hits="1" branch="False" />
+            <line number="47" hits="1" branch="False" />
+            <line number="48" hits="1" branch="False" />
+            <line number="3" hits="2" branch="False" />
+            <line number="4" hits="2" branch="False" />
+            <line number="5" hits="2" branch="False" />
+            <line number="6" hits="2" branch="False" />
+            <line number="7" hits="2" branch="False" />
+            <line number="8" hits="2" branch="False" />
+            <line number="9" hits="2" branch="False" />
+            <line number="10" hits="2" branch="False" />
+            <line number="11" hits="2" branch="False" />
+            <line number="12" hits="2" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintIdentifyResult" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintIdentifyResult.cs" line-rate="1" branch-rate="0.5" complexity="4">
+          <methods>
+            <method name="Succeeded" signature="(System.Byte[],System.Int32,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload)" line-rate="1" branch-rate="0.5" complexity="2">
+              <lines>
+                <line number="21" hits="1" branch="True" condition-coverage="50% (1/2)">
+                  <conditions>
+                    <condition number="2" type="jump" coverage="50%" />
+                  </conditions>
+                </line>
+                <line number="22" hits="1" branch="False" />
+                <line number="23" hits="1" branch="False" />
+                <line number="25" hits="1" branch="False" />
+                <line number="26" hits="1" branch="False" />
+                <line number="27" hits="1" branch="False" />
+                <line number="28" hits="1" branch="False" />
+                <line number="29" hits="1" branch="False" />
+                <line number="30" hits="1" branch="False" />
+                <line number="31" hits="1" branch="False" />
+                <line number="32" hits="1" branch="False" />
+                <line number="33" hits="1" branch="False" />
+                <line number="34" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name="Failed" signature="(System.String,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="39" hits="1" branch="False" />
+                <line number="40" hits="1" branch="False" />
+                <line number="41" hits="1" branch="False" />
+                <line number="42" hits="1" branch="False" />
+                <line number="43" hits="1" branch="False" />
+                <line number="44" hits="1" branch="False" />
+                <line number="45" hits="1" branch="False" />
+                <line number="46" hits="1" branch="False" />
+                <line number="47" hits="1" branch="False" />
+                <line number="48" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(System.String,System.Boolean,System.String,System.String,Trazzo.Biometric.Agent.Contracts.EncryptedPayload,System.Int32,System.String,Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult,System.DateTimeOffset)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="2" branch="False" />
+                <line number="4" hits="2" branch="False" />
+                <line number="5" hits="2" branch="False" />
+                <line number="6" hits="2" branch="False" />
+                <line number="7" hits="2" branch="False" />
+                <line number="8" hits="2" branch="False" />
+                <line number="9" hits="2" branch="False" />
+                <line number="10" hits="2" branch="False" />
+                <line number="11" hits="2" branch="False" />
+                <line number="12" hits="2" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="21" hits="1" branch="True" condition-coverage="50% (1/2)">
+              <conditions>
+                <condition number="2" type="jump" coverage="50%" />
+              </conditions>
+            </line>
+            <line number="22" hits="1" branch="False" />
+            <line number="23" hits="1" branch="False" />
+            <line number="25" hits="1" branch="False" />
+            <line number="26" hits="1" branch="False" />
+            <line number="27" hits="1" branch="False" />
+            <line number="28" hits="1" branch="False" />
+            <line number="29" hits="1" branch="False" />
+            <line number="30" hits="1" branch="False" />
+            <line number="31" hits="1" branch="False" />
+            <line number="32" hits="1" branch="False" />
+            <line number="33" hits="1" branch="False" />
+            <line number="34" hits="1" branch="False" />
+            <line number="39" hits="1" branch="False" />
+            <line number="40" hits="1" branch="False" />
+            <line number="41" hits="1" branch="False" />
+            <line number="42" hits="1" branch="False" />
+            <line number="43" hits="1" branch="False" />
+            <line number="44" hits="1" branch="False" />
+            <line number="45" hits="1" branch="False" />
+            <line number="46" hits="1" branch="False" />
+            <line number="47" hits="1" branch="False" />
+            <line number="48" hits="1" branch="False" />
+            <line number="3" hits="2" branch="False" />
+            <line number="4" hits="2" branch="False" />
+            <line number="5" hits="2" branch="False" />
+            <line number="6" hits="2" branch="False" />
+            <line number="7" hits="2" branch="False" />
+            <line number="8" hits="2" branch="False" />
+            <line number="9" hits="2" branch="False" />
+            <line number="10" hits="2" branch="False" />
+            <line number="11" hits="2" branch="False" />
+            <line number="12" hits="2" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.FingerprintQualityResult" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/FingerprintQualityResult.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.Boolean,System.Int32,System.Double,System.Double,System.Boolean,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="17" branch="False" />
+                <line number="4" hits="17" branch="False" />
+                <line number="5" hits="17" branch="False" />
+                <line number="6" hits="17" branch="False" />
+                <line number="7" hits="17" branch="False" />
+                <line number="8" hits="17" branch="False" />
+                <line number="9" hits="17" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="3" hits="17" branch="False" />
+            <line number="4" hits="17" branch="False" />
+            <line number="5" hits="17" branch="False" />
+            <line number="6" hits="17" branch="False" />
+            <line number="7" hits="17" branch="False" />
+            <line number="8" hits="17" branch="False" />
+            <line number="9" hits="17" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.Contracts.WebSocketMessage" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/Contracts/WebSocketMessage.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.String,System.Nullable`1&lt;System.Text.Json.JsonElement&gt;)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="6" hits="12" branch="False" />
+                <line number="7" hits="12" branch="False" />
+                <line number="8" hits="12" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="6" hits="12" branch="False" />
+            <line number="7" hits="12" branch="False" />
+            <line number="8" hits="12" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.AutoUpdate.AutoUpdateService" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/AutoUpdate/AutoUpdateService.cs" line-rate="0.4473" branch-rate="0" complexity="9">
+          <methods>
+            <method name="VerifySha256" signature="(System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="174" hits="1" branch="False" />
+                <line number="175" hits="1" branch="False" />
+                <line number="176" hits="1" branch="False" />
+                <line number="177" hits="1" branch="False" />
+                <line number="178" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name="ApplyUpdate" signature="(System.String)" line-rate="0" branch-rate="0" complexity="4">
+              <lines>
+                <line number="182" hits="0" branch="False" />
+                <line number="183" hits="0" branch="True" condition-coverage="0% (0/4)">
+                  <conditions>
+                    <condition number="14" type="jump" coverage="0%" />
+                    <condition number="28" type="jump" coverage="0%" />
+                  </conditions>
+                </line>
+                <line number="184" hits="0" branch="False" />
+                <line number="186" hits="0" branch="False" />
+                <line number="187" hits="0" branch="False" />
+                <line number="192" hits="0" branch="False" />
+                <line number="193" hits="0" branch="False" />
+                <line number="195" hits="0" branch="False" />
+                <line number="196" hits="0" branch="False" />
+                <line number="197" hits="0" branch="False" />
+                <line number="198" hits="0" branch="False" />
+                <line number="199" hits="0" branch="False" />
+                <line number="200" hits="0" branch="False" />
+                <line number="201" hits="0" branch="False" />
+                <line number="202" hits="0" branch="False" />
+                <line number="204" hits="0" branch="False" />
+                <line number="205" hits="0" branch="False" />
+                <line number="206" hits="0" branch="False" />
+                <line number="207" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name="TryDeleteFile" signature="(System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="211" hits="2" branch="False" />
+                <line number="212" hits="1" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.AutoUpdate.AutoUpdateService&gt;)" line-rate="0" branch-rate="1" complexity="1">
+              <lines>
+                <line number="20" hits="0" branch="False" />
+                <line number="22" hits="0" branch="False" />
+              </lines>
+            </method>
+            <method name=".ctor" signature="(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger`1&lt;Trazzo.Biometric.Agent.AutoUpdate.AutoUpdateService&gt;,System.Net.Http.HttpClient)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="24" hits="10" branch="False" />
+                <line number="26" hits="10" branch="False" />
+                <line number="27" hits="10" branch="False" />
+                <line number="28" hits="10" branch="False" />
+                <line number="29" hits="10" branch="False" />
+                <line number="30" hits="10" branch="False" />
+                <line number="31" hits="10" branch="False" />
+                <line number="32" hits="10" branch="False" />
+              </lines>
+            </method>
+            <method name=".cctor" signature="()" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="10" hits="1" branch="False" />
+                <line number="11" hits="1" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="174" hits="1" branch="False" />
+            <line number="175" hits="1" branch="False" />
+            <line number="176" hits="1" branch="False" />
+            <line number="177" hits="1" branch="False" />
+            <line number="178" hits="1" branch="False" />
+            <line number="182" hits="0" branch="False" />
+            <line number="183" hits="0" branch="True" condition-coverage="0% (0/4)">
+              <conditions>
+                <condition number="14" type="jump" coverage="0%" />
+                <condition number="28" type="jump" coverage="0%" />
+              </conditions>
+            </line>
+            <line number="184" hits="0" branch="False" />
+            <line number="186" hits="0" branch="False" />
+            <line number="187" hits="0" branch="False" />
+            <line number="192" hits="0" branch="False" />
+            <line number="193" hits="0" branch="False" />
+            <line number="195" hits="0" branch="False" />
+            <line number="196" hits="0" branch="False" />
+            <line number="197" hits="0" branch="False" />
+            <line number="198" hits="0" branch="False" />
+            <line number="199" hits="0" branch="False" />
+            <line number="200" hits="0" branch="False" />
+            <line number="201" hits="0" branch="False" />
+            <line number="202" hits="0" branch="False" />
+            <line number="204" hits="0" branch="False" />
+            <line number="205" hits="0" branch="False" />
+            <line number="206" hits="0" branch="False" />
+            <line number="207" hits="0" branch="False" />
+            <line number="211" hits="2" branch="False" />
+            <line number="212" hits="1" branch="False" />
+            <line number="20" hits="0" branch="False" />
+            <line number="22" hits="0" branch="False" />
+            <line number="24" hits="10" branch="False" />
+            <line number="26" hits="10" branch="False" />
+            <line number="27" hits="10" branch="False" />
+            <line number="28" hits="10" branch="False" />
+            <line number="29" hits="10" branch="False" />
+            <line number="30" hits="10" branch="False" />
+            <line number="31" hits="10" branch="False" />
+            <line number="32" hits="10" branch="False" />
+            <line number="10" hits="1" branch="False" />
+            <line number="11" hits="1" branch="False" />
+          </lines>
+        </class>
+        <class name="Trazzo.Biometric.Agent.AutoUpdate.UpdateManifest" filename="https://raw.githubusercontent.com/LeninTF/Trazzo/b321cb37ed11fdce908174a586d8ba97770fcd85/middleware/Trazzo.Biometric.Agent/AutoUpdate/UpdateManifest.cs" line-rate="1" branch-rate="1" complexity="1">
+          <methods>
+            <method name=".ctor" signature="(System.String,System.String,System.String)" line-rate="1" branch-rate="1" complexity="1">
+              <lines>
+                <line number="3" hits="5" branch="False" />
+                <line number="4" hits="5" branch="False" />
+                <line number="5" hits="5" branch="False" />
+                <line number="6" hits="5" branch="False" />
+              </lines>
+            </method>
+          </methods>
+          <lines>
+            <line number="3" hits="5" branch="False" />
+            <line number="4" hits="5" branch="False" />
+            <line number="5" hits="5" branch="False" />
+            <line number="6" hits="5" branch="False" />
+          </lines>
+        </class>
+      </classes>
+    </package>
+  </packages>
+</coverage>
