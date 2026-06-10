@@ -35,6 +35,28 @@ public sealed class HybridCryptographyServiceTests
     }
 
     [Fact]
+    public async Task BuildHttpFetcher_CuandoUrlEsRelativa_NoRealizaSolicitud()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "/public-key"
+            })
+            .Build();
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        string? result = await fetcher(CancellationToken.None);
+
+        Assert.Null(result);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
     public async Task BuildHttpFetcher_CuandoUrlEsHttps_ObtieneClaveYEnviaToken()
     {
         string publicKey = GenerateTestPublicKeyBase64();
@@ -299,6 +321,40 @@ public sealed class HybridCryptographyServiceTests
 
         Assert.Equal(2, callCount);
         Assert.True(service.IsConfigured);
+    }
+
+    [Fact]
+    public async Task TryRefreshKeyAsync_WhenFetcherReturnsNull_KeepsPreviousKey()
+    {
+        string publicKey = GenerateTestPublicKeyBase64();
+        int callCount = 0;
+        using HybridCryptographyService service = new(
+            _ => Task.FromResult<string?>(++callCount == 1 ? publicKey : null),
+            NullLogger<HybridCryptographyService>.Instance,
+            NoCache());
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.TryRefreshKeyAsync();
+
+        Assert.True(service.IsConfigured);
+        Assert.Equal(2, callCount);
+    }
+
+    [Fact]
+    public async Task TryRefreshKeyAsync_WhenDisposedDuringFetch_DoesNotApplyFetchedKey()
+    {
+        TaskCompletionSource<string?> fetchResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        HybridCryptographyService service = new(
+            _ => fetchResult.Task,
+            NullLogger<HybridCryptographyService>.Instance,
+            NoCache());
+
+        Task refresh = service.TryRefreshKeyAsync();
+        service.Dispose();
+        fetchResult.SetResult(GenerateTestPublicKeyBase64());
+        await refresh;
+
+        Assert.False(service.IsConfigured);
     }
 
     [Fact]

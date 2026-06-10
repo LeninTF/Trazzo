@@ -149,6 +149,32 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task HttpEndpoint_CuandoRutaGetNoExiste_Devuelve400()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start();
+
+        using HttpClient http = new();
+        HttpResponseMessage response = await http.GetAsync(_httpUrl + "unknown", cts.Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task HttpEndpoint_CuandoHandlerFalla_LaSolicitudSeCancela()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        Start(healthService: new FakeAgentHealthService
+        {
+            Exception = new InvalidOperationException("health failure")
+        });
+        using HttpClient http = new();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => http.GetAsync(_httpUrl, cts.Token));
+    }
+
+    [Fact]
     public async Task WebSocket_CuandoRepiteOperacionBiometrica_AplicaRateLimit()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -188,6 +214,34 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         Assert.Contains("fingerprint.enroll.progress", progress);
         Assert.Contains("fingerprint.enroll.result", result);
+    }
+
+    [Fact]
+    public async Task WebSocket_CuandoEnrolamientoEsCancelado_NoEnviaResultadoFinal()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Failed("Enrolamiento cancelado.")
+        };
+        Start(scanner: scanner);
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        await client.SendAsync(
+            Encoding.UTF8.GetBytes("""{"type":"fingerprint.enroll.start"}"""),
+            WebSocketMessageType.Text,
+            true,
+            cts.Token);
+        await Task.Delay(100, cts.Token);
+        await client.SendAsync(
+            Encoding.UTF8.GetBytes("""{"type":"health.check"}"""),
+            WebSocketMessageType.Text,
+            true,
+            cts.Token);
+        string response = await ReceiveStringAsync(client, cts.Token);
+
+        Assert.Contains("health.check.result", response);
     }
 
     [Fact]
@@ -273,12 +327,26 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         _service = null;
     }
 
+    [Fact]
+    public async Task StopAsync_CuandoClienteEstaConectado_CancelaRecepcion()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start();
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        await _service!.StopAsync(CancellationToken.None);
+
+        _service = null;
+    }
+
     private void Start(
         string[]? allowedOrigins = null,
         bool includeTrailingSlash = true,
         int rateLimitSeconds = 5,
         int deviceMonitorIntervalSeconds = 3,
-        FakeBiometricScannerService? scanner = null)
+        FakeBiometricScannerService? scanner = null,
+        FakeAgentHealthService? healthService = null)
     {
         int port = GetFreePort();
         _wsUrl = $"ws://localhost:{port}/";
@@ -303,7 +371,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         _service = new LocalWebSocketServerService(
             scanner ?? new FakeBiometricScannerService(),
-            new FakeAgentHealthService(),
+            healthService ?? new FakeAgentHealthService(),
             new FakeEventQueue(),
             config,
             NullLogger<LocalWebSocketServerService>.Instance);

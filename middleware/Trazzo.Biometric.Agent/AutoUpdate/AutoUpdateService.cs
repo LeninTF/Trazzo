@@ -16,13 +16,24 @@ public sealed class AutoUpdateService : BackgroundService
     private readonly string? _manifestUrl;
     private readonly HttpClient _httpClient;
     private readonly ILogger<AutoUpdateService> _logger;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
+    private readonly Func<Version> _getCurrentVersion;
+    private readonly Action<string> _applyUpdate;
+    private readonly string _updatesDirectory;
 
     public AutoUpdateService(IConfiguration configuration, ILogger<AutoUpdateService> logger)
         : this(configuration, logger, SharedHttpClient)
     {
     }
 
-    internal AutoUpdateService(IConfiguration configuration, ILogger<AutoUpdateService> logger, HttpClient httpClient)
+    internal AutoUpdateService(
+        IConfiguration configuration,
+        ILogger<AutoUpdateService> logger,
+        HttpClient httpClient,
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<Version>? getCurrentVersion = null,
+        Action<string>? applyUpdate = null,
+        string? updatesDirectory = null)
     {
         _logger = logger;
         _httpClient = httpClient;
@@ -30,6 +41,10 @@ public sealed class AutoUpdateService : BackgroundService
         int intervalMinutes = Math.Max(5, configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60));
         _checkInterval = TimeSpan.FromMinutes(intervalMinutes);
         _manifestUrl = configuration["AutoUpdate:ManifestUrl"];
+        _delay = delay ?? Task.Delay;
+        _getCurrentVersion = getCurrentVersion ?? GetCurrentVersion;
+        _applyUpdate = applyUpdate ?? ApplyUpdate;
+        _updatesDirectory = updatesDirectory ?? GetUpdatesDirectory();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -46,7 +61,7 @@ public sealed class AutoUpdateService : BackgroundService
             return;
         }
 
-        try { await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); }
+        try { await _delay(TimeSpan.FromMinutes(1), stoppingToken); }
         catch (OperationCanceledException) { return; }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -64,7 +79,7 @@ public sealed class AutoUpdateService : BackgroundService
                 _logger.LogWarning(ex, "Auto-Update: error inesperado al verificar actualizaciones.");
             }
 
-            try { await Task.Delay(_checkInterval, stoppingToken); }
+            try { await _delay(_checkInterval, stoppingToken); }
             catch (OperationCanceledException) { return; }
         }
     }
@@ -89,7 +104,7 @@ public sealed class AutoUpdateService : BackgroundService
             return;
         }
 
-        Version current = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0, 0);
+        Version current = _getCurrentVersion();
 
         if (remote <= current)
         {
@@ -104,7 +119,7 @@ public sealed class AutoUpdateService : BackgroundService
         string? msiPath = await DownloadAndVerifyAsync(manifest.Version, downloadUri, manifest.Sha256, cancellationToken);
         if (msiPath is null) return;
 
-        ApplyUpdate(msiPath);
+        _applyUpdate(msiPath);
     }
 
     private async Task<UpdateManifest?> FetchManifestAsync(CancellationToken cancellationToken)
@@ -138,7 +153,7 @@ public sealed class AutoUpdateService : BackgroundService
     private async Task<string?> DownloadAndVerifyAsync(
         string version, Uri downloadUri, string expectedSha256, CancellationToken cancellationToken)
     {
-        string updatesDir = GetUpdatesDirectory();
+        string updatesDir = _updatesDirectory;
         Directory.CreateDirectory(updatesDir);
         string tempPath = Path.Combine(updatesDir, $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
         try
@@ -183,6 +198,9 @@ public sealed class AutoUpdateService : BackgroundService
         string actual = Convert.ToHexStringLower(hash);
         return string.Equals(actual, expectedHex.ToLowerInvariant(), StringComparison.Ordinal);
     }
+
+    private static Version GetCurrentVersion()
+        => Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0, 0);
 
     [ExcludeFromCodeCoverage]
     private void ApplyUpdate(string msiPath)

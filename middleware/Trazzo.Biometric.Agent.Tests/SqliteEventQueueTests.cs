@@ -38,15 +38,24 @@ public sealed class SqliteEventQueueTests
         }
     }
 
-    [Fact]
-    public void BuildConnectionString_CuandoRutaNoConfigurada_UsaDirectorioPredeterminado()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BuildConnectionString_CuandoRutaNoConfigurada_UsaDirectorioPredeterminado(string? configuredPath)
     {
         string directory = Path.Combine(Path.GetTempPath(), $"trazzo-queue-default-{Guid.NewGuid():N}");
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Queue:DatabasePath"] = configuredPath
+            })
+            .Build();
 
         try
         {
             string connectionString = SqliteEventQueue.BuildConnectionString(
-                new ConfigurationBuilder().Build(),
+                configuration,
                 directory);
 
             Assert.Equal(

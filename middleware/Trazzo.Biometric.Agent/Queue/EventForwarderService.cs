@@ -14,18 +14,24 @@ public sealed class EventForwarderService : BackgroundService
     private readonly int _retryIntervalSeconds;
     private readonly bool _isEnabled;
     private readonly ILogger<EventForwarderService> _logger;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delay;
+    private readonly Func<double> _nextJitter;
 
     internal EventForwarderService(
         IEventQueue queue,
         Func<BiometricEvent, CancellationToken, Task<bool>> sender,
         int retryIntervalSeconds,
-        ILogger<EventForwarderService> logger)
+        ILogger<EventForwarderService> logger,
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<double>? nextJitter = null)
     {
         _queue = queue;
         _sender = sender;
         _retryIntervalSeconds = retryIntervalSeconds;
         _logger = logger;
         _isEnabled = true;
+        _delay = delay ?? Task.Delay;
+        _nextJitter = nextJitter ?? Random.Shared.NextDouble;
     }
 
     internal EventForwarderService(
@@ -42,6 +48,8 @@ public sealed class EventForwarderService : BackgroundService
         _retryIntervalSeconds = retryIntervalSeconds;
         _sender = BuildHttpSender(backendUrl, agentToken, tenantId, httpClient);
         _isEnabled = true;
+        _delay = Task.Delay;
+        _nextJitter = Random.Shared.NextDouble;
     }
 
     public EventForwarderService(
@@ -69,6 +77,9 @@ public sealed class EventForwarderService : BackgroundService
             _sender = BuildHttpSender(backendUrl, agentToken, tenantId, SharedHttpClient);
             _isEnabled = true;
         }
+
+        _delay = Task.Delay;
+        _nextJitter = Random.Shared.NextDouble;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -86,11 +97,11 @@ public sealed class EventForwarderService : BackgroundService
             double delaySeconds = Math.Min(
                 _retryIntervalSeconds * Math.Pow(2, Math.Max(0, consecutiveFailures - 1)),
                 300);
-            double jitter = delaySeconds * 0.1 * (Random.Shared.NextDouble() * 2 - 1);
+            double jitter = delaySeconds * 0.1 * (_nextJitter() * 2 - 1);
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds + jitter), stoppingToken);
+                await _delay(TimeSpan.FromSeconds(delaySeconds + jitter), stoppingToken);
             }
             catch (OperationCanceledException)
             {

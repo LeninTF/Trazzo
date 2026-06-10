@@ -24,6 +24,8 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public int CaptureResult { get; init; }
 
+    public Queue<int>? CaptureResultSequence { get; set; }
+
     public byte[] CapturedTemplate { get; init; } = [];
 
     public Exception? InitException { get; init; }
@@ -35,6 +37,8 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int? ReportedTemplateSize { get; init; }
 
     public bool FillQualityImage { get; init; } = true;
+
+    public Queue<bool>? FillQualityImageSequence { get; set; }
 
     public int DBMergeResult { get; init; }
 
@@ -86,15 +90,21 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
         if (CaptureException is not null)
             throw CaptureException;
 
-        if (FillQualityImage)
+        bool fillQualityImage = FillQualityImageSequence is { Count: > 0 }
+            ? FillQualityImageSequence.Dequeue()
+            : FillQualityImage;
+        if (fillQualityImage)
             FillHighQualityFingerprintImage(imageBuffer);
         else
             Array.Fill(imageBuffer, (byte)255);
 
+        int captureResult = CaptureResultSequence is { Count: > 0 }
+            ? CaptureResultSequence.Dequeue()
+            : CaptureResult;
         int copyLength = Math.Min(CapturedTemplate.Length, template.Length);
         CapturedTemplate.AsSpan(0, copyLength).CopyTo(template);
-        size = ReportedTemplateSize ?? CapturedTemplate.Length;
-        return CaptureResult;
+        size = ReportedTemplateSize ?? (captureResult == 0 ? CapturedTemplate.Length : 0);
+        return captureResult;
     }
 
     public bool TryGetParameter(IntPtr deviceHandle, int parameterCode, out int value)
@@ -277,8 +287,13 @@ internal sealed class FakeEventQueue : IEventQueue
 
 internal sealed class FakeAgentHealthService : IAgentHealthService
 {
+    public Exception? Exception { get; init; }
+
     public object GetHealthResult()
     {
+        if (Exception is not null)
+            throw Exception;
+
         return new
         {
             type = "health.check.result",

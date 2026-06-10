@@ -34,11 +34,7 @@ public sealed class LocalWebSocketServerService(
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        string url = configuration["Agent:WebSocketUrl"] ?? "http://localhost:9001/";
-        if (!url.EndsWith('/'))
-        {
-            url += "/";
-        }
+        string url = ResolveWebSocketUrl(configuration["Agent:WebSocketUrl"]);
 
         _listener.Prefixes.Clear();
         _listener.Prefixes.Add(url);
@@ -134,7 +130,7 @@ public sealed class LocalWebSocketServerService(
         }
 
         using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null, _keepAliveInterval)).WebSocket;
-        string clientId = context.Request.RemoteEndPoint?.ToString() ?? "unknown";
+        string clientId = ResolveClientId(context.Request.RemoteEndPoint);
         logger.LogInformation("Cliente WebSocket conectado desde {ClientId}", clientId);
 
         await ReceiveLoopAsync(webSocket, clientId, cancellationToken);
@@ -411,6 +407,17 @@ public sealed class LocalWebSocketServerService(
         {
             return null;
         }
+    }
+
+    internal static string ResolveWebSocketUrl(string? configuredUrl)
+    {
+        string url = configuredUrl ?? "http://localhost:9001/";
+        return url.EndsWith('/') ? url : $"{url}/";
+    }
+
+    internal static string ResolveClientId(IPEndPoint? remoteEndPoint)
+    {
+        return remoteEndPoint?.ToString() ?? "unknown";
     }
 
     private async Task<object> HandleMessageAsync(

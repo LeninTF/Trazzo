@@ -60,6 +60,39 @@ public sealed class EventForwarderServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_AplicaBackoffYLoReiniciaDespuesDeExito()
+    {
+        using CancellationTokenSource stopping = new();
+        TaskCompletionSource completed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        List<TimeSpan> delays = [];
+        int senderCalls = 0;
+        EventForwarderService forwarder = new(
+            new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
+            (_, _) => Task.FromResult(++senderCalls >= 3),
+            retryIntervalSeconds: 10,
+            NullLogger<EventForwarderService>.Instance,
+            delay: (delay, _) =>
+            {
+                delays.Add(delay);
+                if (delays.Count == 3)
+                {
+                    stopping.Cancel();
+                    completed.TrySetResult();
+                }
+
+                return Task.CompletedTask;
+            },
+            nextJitter: () => 0.5);
+
+        await forwarder.StartAsync(stopping.Token);
+        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(
+            [TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(10)],
+            delays);
+    }
+
+    [Fact]
     public async Task TryForwardPendingAsync_CuandoColaVacia_NoMarcaNadaComoEnviado()
     {
         FakeEventQueue queue = new() { PendingToReturn = [] };

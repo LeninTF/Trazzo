@@ -259,6 +259,42 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task IdentifyFingerprintAsync_CuandoHayOperacionEnProgreso_RetornaOcupado()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureDelayMilliseconds: 200);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+        Task<Trazzo.Biometric.Agent.Contracts.FingerprintCaptureResult> capture =
+            service.CaptureFingerprintAsync(CancellationToken.None);
+        await Task.Delay(50);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+        await capture;
+
+        Assert.False(result.Success);
+        Assert.Contains("operación biométrica en progreso", result.Message);
+    }
+
+    [Fact]
+    public async Task EnrollFingerprintAsync_CuandoHayOperacionEnProgreso_RetornaOcupado()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureDelayMilliseconds: 200);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+        Task<Trazzo.Biometric.Agent.Contracts.FingerprintCaptureResult> capture =
+            service.CaptureFingerprintAsync(CancellationToken.None);
+        await Task.Delay(50);
+
+        var result = await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask,
+            CancellationToken.None);
+        await capture;
+
+        Assert.False(result.Success);
+        Assert.Contains("operación biométrica en progreso", result.Message);
+    }
+
+    [Fact]
     public async Task CaptureFingerprintAsync_CuandoSdkDevuelveErrorFatal_RetornaFallo()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureResult: -2, template: []);
@@ -317,6 +353,46 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task CaptureFingerprintAsync_WithImageEnabled_IncludesImageOnSuccess()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?>
+            {
+                ["Biometric:IncludeFingerprintImageInResponses"] = "true"
+            });
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.FingerprintImageBase64);
+        Assert.Equal("image/png", result.FingerprintImageMimeType);
+        Assert.StartsWith("data:image/png;base64,", result.FingerprintImageDataUrl);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_WithImageEnabled_IncludesImageOnQualityFailure()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(fillQualityImage: false);
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?>
+            {
+                ["Biometric:IncludeFingerprintImageInResponses"] = "true"
+            });
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.FingerprintImageBase64);
+        Assert.Equal("image/png", result.FingerprintImageMimeType);
+        Assert.StartsWith("data:image/png;base64,", result.FingerprintImageDataUrl);
+    }
+
+    [Fact]
     public async Task CaptureFingerprintAsync_CuandoSdkLanzaExcepcion_RetornaFallo()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk(
@@ -345,10 +421,44 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task CaptureFingerprintAsync_CuandoTokenYaEstaCancelado_NoIniciaSesion()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        await using ZKTecoScannerService service = CreateService(CreateConnectedSdk());
+
+        var result = await service.CaptureFingerprintAsync(cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("Lectura ignorada porque la sesión de captura ya finalizó.", result.Message);
+    }
+
+    [Fact]
     public async Task CaptureFingerprintAsync_CuandoNoDetectaHuella_RetornaTimeout()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureResult: -1, template: []);
         await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", result.Message);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_CuandoLecturaConsumeTimeout_NoEsperaPollingAdicional()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(
+            captureResult: -1,
+            template: [],
+            captureDelayMilliseconds: 1100);
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?>
+            {
+                ["Biometric:CapturePollingIntervalMilliseconds"] = "2000"
+            });
         await service.InitializeAsync(CancellationToken.None);
 
         var result = await service.CaptureFingerprintAsync(CancellationToken.None);
@@ -417,6 +527,33 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task IdentifyFingerprintAsync_CuandoSdkCancela_RetornaSesionFinalizada()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(
+            captureException: new OperationCanceledException());
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Lectura ignorada porque la sesión de captura ya finalizó.", result.Message);
+    }
+
+    [Fact]
+    public async Task IdentifyFingerprintAsync_CuandoTokenYaEstaCancelado_NoIniciaSesion()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        await using ZKTecoScannerService service = CreateService(CreateConnectedSdk());
+
+        var result = await service.IdentifyFingerprintAsync(cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("Lectura ignorada porque la sesión de captura ya finalizó.", result.Message);
+    }
+
+    [Fact]
     public async Task EnrollFingerprintAsync_CuandoNoHayLector_RetornaFallo()
     {
         FakeZKTecoNativeSdk sdk = new() { DeviceCount = 0 };
@@ -474,6 +611,91 @@ public sealed class ZKTecoScannerServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("No se pudo enrolar la huella. Intente nuevamente.", result.Message);
+    }
+
+    [Fact]
+    public async Task EnrollFingerprintAsync_CuandoCapturaEsRechazada_ReintentaMismaMuestra()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        sdk.FillQualityImageSequence = new Queue<bool>([false, true, true, true]);
+        List<string> progress = [];
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.EnrollFingerprintAsync(
+            (update, _) =>
+            {
+                progress.Add(update.Message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains(
+            progress,
+            message => message.Contains("Huella incompleta", StringComparison.Ordinal));
+        Assert.True(sdk.AcquireFingerprintCalls >= 4);
+    }
+
+    [Fact]
+    public async Task EnrollFingerprintAsync_WhenFingerLiftRequired_WaitsBetweenSamples()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        sdk.CaptureResultSequence = new Queue<int>([0, -1, 0, -1, 0]);
+        List<string> progress = [];
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?>
+            {
+                ["Enrollment:RequireFingerLiftBetweenSamples"] = "true"
+            });
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.EnrollFingerprintAsync(
+            (update, _) =>
+            {
+                progress.Add(update.Message);
+                return Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(2, progress.Count(message => message == "Retire el dedo del lector."));
+    }
+
+    [Fact]
+    public async Task EnrollFingerprintAsync_WhenCancellationRequested_ReturnsCancelled()
+    {
+        using CancellationTokenSource cancellation = new();
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureDelayMilliseconds: 100);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.EnrollFingerprintAsync(
+            (update, _) =>
+            {
+                cancellation.Cancel();
+                return Task.CompletedTask;
+            },
+            cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("Enrolamiento cancelado.", result.Message);
+    }
+
+    [Fact]
+    public async Task EnrollFingerprintAsync_CuandoTokenYaEstaCancelado_NoIniciaSesion()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        await using ZKTecoScannerService service = CreateService(CreateConnectedSdk());
+
+        var result = await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask,
+            cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("Enrolamiento cancelado.", result.Message);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Contracts;
@@ -196,6 +197,38 @@ public sealed class WebSocketResponseTests
             "fingerprint.capture",
             LocalWebSocketServerService.TryParseMessageType("""{"type":"fingerprint.capture"}"""));
         Assert.Null(LocalWebSocketServerService.TryParseMessageType("{ invalid"));
+        Assert.Null(LocalWebSocketServerService.TryParseMessageType("null"));
+        Assert.Null(LocalWebSocketServerService.TryParseMessageType("{}"));
+    }
+
+    [Theory]
+    [InlineData(null, "http://localhost:9001/")]
+    [InlineData("http://localhost:8080", "http://localhost:8080/")]
+    [InlineData("http://localhost:8080/", "http://localhost:8080/")]
+    public void ResolveWebSocketUrl_NormalizesConfiguredUrl(string? configuredUrl, string expected)
+    {
+        Assert.Equal(expected, LocalWebSocketServerService.ResolveWebSocketUrl(configuredUrl));
+    }
+
+    [Fact]
+    public void ResolveClientId_ReturnsEndpointOrUnknown()
+    {
+        Assert.Equal("127.0.0.1:9001", LocalWebSocketServerService.ResolveClientId(new IPEndPoint(IPAddress.Loopback, 9001)));
+        Assert.Equal("unknown", LocalWebSocketServerService.ResolveClientId(null));
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    public async Task HandleMessageAsync_WhenMessageHasNoType_ReturnsUnsupportedType(string json)
+    {
+        LocalWebSocketServerService server = CreateServer();
+
+        object response = await server.HandleMessageAsync(json, CancellationToken.None);
+        using JsonDocument document = ToJsonDocument(response);
+
+        Assert.Equal("error", document.RootElement.GetProperty("type").GetString());
+        Assert.Equal("Tipo de mensaje WebSocket no soportado.", document.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]

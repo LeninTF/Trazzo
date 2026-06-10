@@ -309,13 +309,6 @@ public sealed class ZKTecoScannerService(
                 step++;
             }
 
-            if (samples.Count < 3)
-            {
-                logger.LogWarning("DBMerge requiere 3 muestras. Solo se capturaron: {Count}.", samples.Count);
-                FinalizeOperation(operationId.Value, BiometricOperationState.Error);
-                return FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.", samples.Count);
-            }
-
             byte[] registeredTemplate = new byte[_templateBufferSize];
             int registeredTemplateSize = registeredTemplate.Length;
             int mergeResult = sdk.DBMerge(_databaseHandle, samples[0], samples[1], samples[2], registeredTemplate, ref registeredTemplateSize);
