@@ -129,11 +129,17 @@ public sealed class AutoUpdateService : BackgroundService
         }
     }
 
+    private static string GetUpdatesDirectory()
+        => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "TrazzoAgent", "updates");
+
     private async Task<string?> DownloadAndVerifyAsync(
         string version, Uri downloadUri, string expectedSha256, CancellationToken cancellationToken)
     {
-        string tempPath = Path.Combine(
-            Path.GetTempPath(), $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
+        string updatesDir = GetUpdatesDirectory();
+        Directory.CreateDirectory(updatesDir);
+        string tempPath = Path.Combine(updatesDir, $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
         try
         {
             using HttpResponseMessage response = await _httpClient.GetAsync(downloadUri, cancellationToken);
@@ -179,20 +185,24 @@ public sealed class AutoUpdateService : BackgroundService
 
     private void ApplyUpdate(string msiPath)
     {
-        string tempDir = Path.GetTempPath();
-        if (!msiPath.StartsWith(tempDir, StringComparison.OrdinalIgnoreCase)
+        string updatesDir = GetUpdatesDirectory();
+        if (!msiPath.StartsWith(updatesDir, StringComparison.OrdinalIgnoreCase)
             || !msiPath.EndsWith(".msi", StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogError("Auto-Update: ruta del instalador fuera del directorio temporal. Instalación abortada.");
+            _logger.LogError("Auto-Update: ruta del instalador fuera del directorio de actualizaciones. Instalación abortada.");
             return;
         }
+
+        string msiexecPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "msiexec.exe");
 
         try
         {
             _logger.LogInformation(
                 "Auto-Update: lanzando instalador MSI. El servicio se reiniciará automáticamente...");
 
-            Process.Start(new ProcessStartInfo("msiexec.exe")
+            Process.Start(new ProcessStartInfo(msiexecPath)
             {
                 Arguments = $"/i \"{msiPath}\" /quiet /norestart",
                 UseShellExecute = false,
