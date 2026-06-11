@@ -49,6 +49,10 @@ jobs:
         env:
           ZKFP_DLL_BASE64: ${{ secrets.ZKFP_DLL_BASE64 }}
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:ZKFP_DLL_BASE64)) {
+            Write-Host "ZKFP_DLL_BASE64 no configurado; se omite la decodificación de libzkfpcsharp.dll."
+            exit 0
+          }
           $dllDir  = "Trazzo.Biometric.Agent\Native\x64"
           $dllPath = "$dllDir\libzkfpcsharp.dll"
           New-Item -ItemType Directory -Force -Path $dllDir | Out-Null
