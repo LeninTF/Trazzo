@@ -8,6 +8,10 @@ updates:
       day: "monday"
     commit-message:
       prefix: "chore(back)"
+    ignore: #Ignora versiones mayores a 4.x para que no haga PR's
+      - dependency-name: "org.springframework.boot:*"
+        versions:
+          - ">= 4.0.0"
     groups:
       # Agrupará todas las dependencias de Spring Boot en un solo Pull Request
       spring-boot-updates:
@@ -37,17 +41,17 @@ updates:
           - "*"
 
   # 3. Configuración para el Middleware (C# / .NET)
-#  - package-ecosystem: "nuget"
-#    directory: "/middleware"
-#    schedule:
-#      interval: "weekly"
-#      day: "monday"
-#    commit-message:
-#      prefix: "chore(middleware)"
-#    groups:
-#      dotnet-updates:
-#        patterns:
-#          - "*"
+  - package-ecosystem: "nuget"
+    directory: "/middleware"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(middleware)"
+    groups:
+      dotnet-updates:
+        patterns:
+          - "*"
 
   # 4. Configuración para los propios Workflows de GitHub Actions
   - package-ecosystem: "github-actions"
