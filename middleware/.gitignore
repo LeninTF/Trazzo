@@ -1,0 +1,21 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+.vs/
+
+# Test results
+TestResults/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Native SDK DLL (decodificada en CI desde secret ZKFP_DLL_BASE64)
+**/Native/x64/libzkfpcsharp.dll
+
+# SonarQube local
+.sonarqube/
+
+# Publish output
+publish/
