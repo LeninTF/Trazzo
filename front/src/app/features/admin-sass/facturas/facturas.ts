@@ -1,7 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ChartComponent } from 'ng-apexcharts';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { ToastService } from '../../../services/toast.service';
+import { ExportService } from '../../../services/export.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Transaccion {
 	id: number;
@@ -17,12 +21,15 @@ interface Transaccion {
 @Component({
 	selector: 'app-facturas',
 	standalone: true,
-	imports: [ReactiveFormsModule, ChartComponent],
+	imports: [ReactiveFormsModule, ChartComponent, PaginationComponent],
 	templateUrl: './facturas.html',
 	styleUrl: './facturas.css',
 })
 export class Facturas {
-	private readonly fb = new FormBuilder();
+  private readonly fb = new FormBuilder();
+  private readonly toastService = inject(ToastService);
+  private readonly exportService = inject(ExportService);
+  private readonly modalService = inject(ModalService);
 
 	readonly filterForm = this.fb.group({
 		estado: ['todos'],
@@ -73,8 +80,6 @@ export class Facturas {
 	readonly pagina = signal(1);
 	readonly pageSize = 5;
 	transaccionSeleccionada = signal<Transaccion | null>(null);
-	toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
-	private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 	get mrr(): string { return 'S/. 245,820.00'; }
 	get cambioMrr(): string { return '+12.4%'; }
@@ -212,31 +217,21 @@ export class Facturas {
 
 	onEstadoChange(): void { this.pagina.set(1); }
 
-	verDetalle(t: Transaccion): void {
-		this.transaccionSeleccionada.set(t);
-		const el = document.getElementById('modalDetalleTransaccion');
-		if (el) new (window as any).bootstrap.Modal(el).show();
-	}
+  verDetalle(t: Transaccion): void {
+    this.transaccionSeleccionada.set(t);
+    this.modalService.show('modalDetalleTransaccion');
+  }
 
-	exportarCSV(): void {
-		const cabeceras = ['Tenant', 'Plan', 'ID Transacción', 'Fecha', 'Monto', 'Estado'];
-		const filas = this.transaccionesFiltradas().map(t =>
-			[t.tenant, t.plan, t.idTransaccion, t.fecha, `S/${t.monto.toFixed(2)}`, t.estado]
-		);
-		const csv = [cabeceras.join(','), ...filas.map(f => f.join(','))].join('\n');
-		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `transacciones-${new Date().toISOString().split('T')[0]}.csv`;
-		a.click();
-		URL.revokeObjectURL(url);
-		this.mostrarToast('CSV exportado correctamente.', 'success');
-	}
+  exportarCSV(): void {
+    const headers = ['Tenant', 'Plan', 'ID Transacción', 'Fecha', 'Monto', 'Estado'];
+    const rows = this.transaccionesFiltradas().map(t =>
+      [t.tenant, t.plan, t.idTransaccion, t.fecha, `S/${t.monto.toFixed(2)}`, t.estado]
+    );
+    this.exportService.exportCSV(`transacciones-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    this.mostrarToast('CSV exportado correctamente.');
+  }
 
-	private mostrarToast(message: string, type: 'success' | 'error'): void {
-		if (this.toastTimer) clearTimeout(this.toastTimer);
-		this.toast.set({ message, type });
-		this.toastTimer = setTimeout(() => this.toast.set(null), 3500);
-	}
+  private mostrarToast(message: string): void {
+    this.toastService.info(message);
+  }
 }

@@ -18,6 +18,18 @@ interface RegistroAsistencia {
 export class HistorialAsistencia {
   mesActual = 'Junio 2026';
 
+  cambiarMes(delta: number): void {
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+    const partes = this.mesActual.split(' ');
+    const mesIdx = meses.indexOf(partes[0]);
+    const anio = parseInt(partes[1], 10);
+    let nuevoMes = mesIdx + delta;
+    let nuevoAnio = anio;
+    if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
+    if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
+    this.mesActual = `${meses[nuevoMes]} ${nuevoAnio}`;
+  }
+
   registros: RegistroAsistencia[] = [
     { fecha: '05/06/2026', ingreso: '06:02', salida: '14:05', turno: 'Mañana', estado: 'A tiempo' },
     { fecha: '04/06/2026', ingreso: '06:15', salida: '14:10', turno: 'Mañana', estado: 'Tardanza' },
@@ -61,8 +73,6 @@ export class HistorialAsistencia {
     const onTime = this.completos;
     return total > 0 ? Math.round((onTime / total) * 100) : 0;
   }
-
-  cambiarMes(delta: number): void {}
 
   exportarCSV(): void {
     const hoy = new Date();

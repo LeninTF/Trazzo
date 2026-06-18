@@ -1,6 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { ToastService } from '../../../services/toast.service';
+import { ExportService } from '../../../services/export.service';
 
 interface LogEvento {
   id: number;
@@ -19,8 +22,8 @@ interface LogEvento {
   eventId: string;
   ipAddress: string;
   userAgent: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
 }
 
 interface Metricas {
@@ -34,11 +37,14 @@ interface Metricas {
 @Component({
   selector: 'app-log-auditoria',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './log-auditoria.html',
   styleUrl: './log-auditoria.css',
 })
 export class LogAuditoria {
+
+  private readonly toastService = inject(ToastService);
+  private readonly exportService = inject(ExportService);
   
   // ==========================================
   // DATOS PRINCIPALES
@@ -266,7 +272,7 @@ export class LogAuditoria {
   
   exportarCSV(): void {
     const headers = ['FECHA/HORA', 'TENANT', 'TENANT ID', 'USUARIO', 'ACCION', 'TIPO', 'ENTIDAD', 'ENTIDAD ID', 'IP ADDRESS', 'USER AGENT'];
-    const csvData = this.logsFiltrado.map(log => [
+    const rows = this.logsFiltrado.map(log => [
       `${log.fecha.toLocaleDateString()} ${log.hora}`,
       log.tenant,
       log.tenantId,
@@ -279,18 +285,8 @@ export class LogAuditoria {
       log.userAgent
     ]);
     
-    const csvContent = [headers, ...csvData].map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.setAttribute('download', `log-auditoria-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    this.mostrarToast(' Exportando CSV...');
+    this.exportService.exportCSV(`log-auditoria-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    this.mostrarToast('Exportando CSV...');
   }
   
   // ==========================================
@@ -298,22 +294,6 @@ export class LogAuditoria {
   // ==========================================
   
   private mostrarToast(mensaje: string): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 }

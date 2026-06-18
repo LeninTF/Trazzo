@@ -41,7 +41,5 @@ export class GestionHorarios {
     setTimeout(() => this.turnosComponent?.openNewTurnoModal(), 50);
   }
 
-  resetAll(): void {}
 
-  saveAll(): void {}
 }

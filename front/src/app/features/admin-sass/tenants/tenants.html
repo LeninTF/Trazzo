@@ -160,25 +160,7 @@
     @if (tenantsFiltrado.length > 0) {
       <div class="table-card__footer">
         <span class="text-muted">Mostrando {{ inicioRegistro }} - {{ finRegistro }} de {{ tenantsFiltrado.length }} tenants</span>
-        <nav>
-          <ul class="pagination">
-            <li class="page-item" [class.disabled]="paginaActual === 1">
-              <a class="page-link" (click)="cambiarPagina(paginaActual - 1)">
-                <i class="bi bi-chevron-left"></i>
-              </a>
-            </li>
-            @for (pag of [].constructor(totalPaginas); let i = $index; track i) {
-              <li class="page-item" [class.active]="i + 1 === paginaActual">
-                <a class="page-link" (click)="cambiarPagina(i + 1)">{{ i + 1 }}</a>
-              </li>
-            }
-            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-              <a class="page-link" (click)="cambiarPagina(paginaActual + 1)">
-                <i class="bi bi-chevron-right"></i>
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <app-pagination [currentPage]="paginaActual" [totalPages]="totalPaginas" (pageChange)="cambiarPagina($event)"/>
       </div>
     }
   </div>

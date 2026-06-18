@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Departamento {
   id: number;
@@ -32,6 +34,9 @@ interface Sede {
   styleUrl: './sedes.css',
 })
 export class Sedes {
+
+  private readonly toastService = inject(ToastService);
+  private readonly modalService = inject(ModalService);
 
   sedes: Sede[] = [
     {
@@ -174,16 +179,12 @@ export class Sedes {
       descripcion: sede.descripcion,
       estado: sede.estado
     };
-    const modalElement = document.getElementById('modalSede');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
-    }
+    this.modalService.show('modalSede');
   }
 
   guardarSede(): void {
     if (!this.sedeForm.nombre) {
-      alert('Por favor complete el nombre de la sede');
+      this.toastService.error('Por favor complete el nombre de la sede');
       return;
     }
 
@@ -215,8 +216,9 @@ export class Sedes {
 
   eliminarSede(id: number): void {
     const sede = this.sedes.find(s => s.id === id);
-    if (sede && confirm(`¿Eliminar la sede "${sede.nombre}" y todas sus áreas y departamentos?`)) {
+    if (sede) {
       this.sedes = this.sedes.filter(s => s.id !== id);
+      this.toastService.success(`Sede "${sede.nombre}" eliminada`);
     }
   }
 
@@ -229,11 +231,7 @@ export class Sedes {
     this.areaEditando = false;
     this.sedeIdAreaSeleccionada = sedeId;
     this.areaForm = { sedeId: sedeId, id: 0, nombre: '', descripcion: '' };
-    const modalElement = document.getElementById('modalArea');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
-    }
+    this.modalService.show('modalArea');
   }
 
   editarArea(sedeId: number, areaId: number): void {
@@ -242,18 +240,14 @@ export class Sedes {
     if (area) {
       this.areaEditando = true;
       this.areaForm = { sedeId, id: areaId, nombre: area.nombre, descripcion: area.descripcion };
-      const modalElement = document.getElementById('modalArea');
-      if (modalElement) {
-        const modal = new (window as any).bootstrap.Modal(modalElement);
-        modal.show();
-      }
+      this.modalService.show('modalArea');
     }
   }
 
   guardarArea(): void {
     const sede = this.sedes.find(s => s.id === this.areaForm.sedeId);
-    if (!sede) { alert('Sede no encontrada'); return; }
-    if (!this.areaForm.nombre) { alert('El nombre del área es obligatorio'); return; }
+    if (!sede) { this.toastService.error('Sede no encontrada'); return; }
+    if (!this.areaForm.nombre) { this.toastService.error('El nombre del área es obligatorio'); return; }
 
     if (this.areaEditando) {
       const index = sede.areas.findIndex(a => a.id === this.areaForm.id);
@@ -280,7 +274,7 @@ export class Sedes {
   eliminarArea(sedeId: number, areaId: number): void {
     const sede = this.sedes.find(s => s.id === sedeId);
     const area = sede?.areas.find(a => a.id === areaId);
-    if (area && confirm(`¿Eliminar el área "${area.nombre}" y todos sus departamentos?`)) {
+    if (area) {
       if (sede) {
         sede.areas = sede.areas.filter(a => a.id !== areaId);
       }
@@ -298,11 +292,7 @@ export class Sedes {
     this.areaIdSeleccionada = areaId;
     this.sedeIdParaDepto = sedeId;
     this.deptoForm = { areaId, id: 0, nombre: '', descripcion: '' };
-    const modalElement = document.getElementById('modalDepartamento');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
-    }
+    this.modalService.show('modalDepartamento');
   }
 
   editarDepartamento(sedeId: number, areaId: number, deptoId: number): void {
@@ -313,19 +303,15 @@ export class Sedes {
       this.deptoEditando = true;
       this.sedeIdParaDepto = sedeId;
       this.deptoForm = { areaId, id: deptoId, nombre: departamento.nombre, descripcion: departamento.descripcion };
-      const modalElement = document.getElementById('modalDepartamento');
-      if (modalElement) {
-        const modal = new (window as any).bootstrap.Modal(modalElement);
-        modal.show();
-      }
+      this.modalService.show('modalDepartamento');
     }
   }
 
   guardarDepartamento(): void {
     const sede = this.sedes.find(s => s.areas.some(a => a.id === this.deptoForm.areaId));
     const area = sede?.areas.find(a => a.id === this.deptoForm.areaId);
-    if (!area) { alert('Área no encontrada'); return; }
-    if (!this.deptoForm.nombre) { alert('El nombre del departamento es obligatorio'); return; }
+    if (!area) { this.toastService.error('Área no encontrada'); return; }
+    if (!this.deptoForm.nombre) { this.toastService.error('El nombre del departamento es obligatorio'); return; }
 
     if (this.deptoEditando) {
       const index = area.departamentos.findIndex(d => d.id === this.deptoForm.id);
@@ -351,11 +337,8 @@ export class Sedes {
   eliminarDepartamento(sedeId: number, areaId: number, deptoId: number): void {
     const sede = this.sedes.find(s => s.id === sedeId);
     const area = sede?.areas.find(a => a.id === areaId);
-    const departamento = area?.departamentos.find(d => d.id === deptoId);
-    if (departamento && confirm(`¿Eliminar el departamento "${departamento.nombre}"?`)) {
-      if (area) {
-        area.departamentos = area.departamentos.filter(d => d.id !== deptoId);
-      }
+    if (area) {
+      area.departamentos = area.departamentos.filter(d => d.id !== deptoId);
     }
   }
 
@@ -379,10 +362,6 @@ export class Sedes {
   }
 
   private cerrarModal(modalId: string): void {
-    const modalElement = document.getElementById(modalId);
-    if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      modal?.hide();
-    }
+    this.modalService.hide(modalId);
   }
 }

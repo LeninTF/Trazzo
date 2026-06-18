@@ -10,14 +10,6 @@ describe('Monitoreo', () => {
       imports: [Monitoreo],
     }).compileComponents();
 
-    const mockModalInstance = { show: () => {}, hide: () => {} };
-    (window as any).bootstrap = {
-      Modal: Object.assign(
-        function () { return mockModalInstance; },
-        { getInstance: () => mockModalInstance }
-      ),
-    };
-
     fixture = TestBed.createComponent(Monitoreo);
     component = fixture.componentInstance;
     await fixture.whenStable();
@@ -25,7 +17,6 @@ describe('Monitoreo', () => {
 
   afterEach(() => {
     fixture.destroy();
-    delete (window as any).bootstrap;
   });
 
   it('should create', () => {
@@ -138,17 +129,9 @@ describe('Monitoreo', () => {
   });
 
   it('should eliminarEvento', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
     const lenBefore = component.eventos.length;
     component.eliminarEvento(1);
     expect(component.eventos.length).toBe(lenBefore - 1);
-  });
-
-  it('should not eliminarEvento with non-existent id', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
-    const lenBefore = component.eventos.length;
-    component.eliminarEvento(999);
-    expect(component.eventos.length).toBe(lenBefore);
   });
 
   it('should not eliminarEvento with non-existent id', () => {
@@ -158,7 +141,6 @@ describe('Monitoreo', () => {
   });
 
   it('should refrescarDatos', () => {
-    spyOn<any>(component, 'mostrarToast');
     const presentesBefore = component.metricas.presentesHoy;
     component.refrescarDatos();
     expect(component.metricas.presentesHoy).toBeGreaterThan(presentesBefore);

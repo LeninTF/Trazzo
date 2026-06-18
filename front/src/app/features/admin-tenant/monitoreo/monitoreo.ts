@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
 
 // Interfaces
 interface Evento {
@@ -39,6 +41,9 @@ interface Metricas {
   styleUrl: './monitoreo.css',
 })
 export class Monitoreo implements OnInit, OnDestroy {
+  
+  private readonly toastService = inject(ToastService);
+  private readonly modalService = inject(ModalService);
   
   // ==========================================
   // MÉTRICAS PRINCIPALES
@@ -128,7 +133,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ==========================================
   // TIMER PARA ACTUALIZACIÓN EN TIEMPO REAL
   // ==========================================
-  private intervalId: any;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   ultimaActualizacion: Date = new Date();
 
   // ==========================================
@@ -187,10 +192,8 @@ export class Monitoreo implements OnInit, OnDestroy {
    * Simula actualización en tiempo real
    */
   actualizarDatosTiempoReal(): void {
-    console.log(' Actualizando datos en tiempo real...');
     this.ultimaActualizacion = new Date();
-    
-    // Simular un nuevo evento aleatorio
+
     const nombres = ['María López', 'Pedro Sánchez', 'Ana García', 'Luis Fernández'];
     const roles = ['Administración', 'Docente', 'Personal de servicio', 'Invitado'];
     const escaneres = ['ESCÁNER 01', 'ESCÁNER 02', 'ESCÁNER 03'];
@@ -228,8 +231,6 @@ export class Monitoreo implements OnInit, OnDestroy {
         this.metricas.nivelTardanza = 'MEDIO';
       }
     }
-    
-    console.log(`📢 Nuevo evento: ${nuevoEvento.nombre} - ${nuevoEvento.estado}`);
   }
 
   // ==========================================
@@ -263,13 +264,13 @@ export class Monitoreo implements OnInit, OnDestroy {
     // Agregar evento de sistema
     this.agregarEventoDeSistema(`📡 Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
     
-    this.mostrarToast(` Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
+    this.mostrarToast(`Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
     
     // Limpiar formulario
     this.limpiarFormularioEscaner();
     
     // Cerrar modal
-    this.cerrarModal('modalRegistrarEscaner');
+    this.modalService.hide('modalRegistrarEscaner');
   }
   
   /**
@@ -278,12 +279,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   eliminarEscaner(id: number): void {
     this.escanerAEliminar = this.escaneres.find(e => e.id === id) || null;
     if (this.escanerAEliminar) {
-      const modalElement = document.getElementById('modalConfirmarEliminar');
-      if (modalElement) {
-        // @ts-ignore
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-      }
+      this.modalService.show('modalConfirmarEliminar');
     }
   }
   
@@ -292,20 +288,20 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   confirmarEliminarEscaner(): void {
     if (this.escanerAEliminar) {
-      const nombreEscaner = this.escanerAEliminar.nombre;
-      this.escaneres = this.escaneres.filter(e => e.id !== this.escanerAEliminar!.id);
+      const escaner = this.escanerAEliminar;
+      this.escaneres = this.escaneres.filter(e => e.id !== escaner.id);
       
       // Actualizar métricas
       this.metricas.totalDispositivos = this.escaneres.length;
       this.actualizarContadorDispositivos();
       
       // Agregar evento de sistema
-      this.agregarEventoDeSistema(`🗑️ Escáner eliminado: ${nombreEscaner}`);
+      this.agregarEventoDeSistema(`Escáner eliminado: ${escaner.nombre}`);
       
-      this.mostrarToast(`🗑️ Escáner "${nombreEscaner}" eliminado correctamente`);
+      this.mostrarToast(`Escáner "${escaner.nombre}" eliminado correctamente`);
       
       // Cerrar modal
-      this.cerrarModal('modalConfirmarEliminar');
+      this.modalService.hide('modalConfirmarEliminar');
       this.escanerAEliminar = null;
     }
   }
@@ -377,11 +373,8 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   eliminarEvento(id: number): void {
     const evento = this.eventos.find(e => e.id === id);
-    if (evento && confirm(`¿Eliminar evento de ${evento.nombre}?`)) {
+    if (evento) {
       this.eventos = this.eventos.filter(e => e.id !== id);
-      console.log(` Evento ${id} eliminado`);
-      
-      // Actualizar métricas (opcional)
       if (evento.estado === 'TARDE') {
         this.metricas.tardanzas -= 1;
       }
@@ -398,7 +391,6 @@ export class Monitoreo implements OnInit, OnDestroy {
    * Refrescar todos los datos manualmente
    */
   refrescarDatos(): void {
-    console.log('🔄 Refrescando datos manualmente...');
     this.actualizarDatosTiempoReal();
     this.mostrarToast('🔄 Datos actualizados correctamente');
   }
@@ -410,37 +402,7 @@ export class Monitoreo implements OnInit, OnDestroy {
   /**
    * Cerrar modal programáticamente
    */
-  cerrarModal(modalId: string): void {
-    const modalElement = document.getElementById(modalId);
-    if (modalElement) {
-      // @ts-ignore
-      const modal = bootstrap.Modal.getInstance(modalElement);
-      modal?.hide();
-    }
-  }
-  
-  /**
-   * Mostrar toast notification
-   */
   private mostrarToast(mensaje: string): void {
-    // Crear elemento toast
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    // Animar y eliminar
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 }

@@ -528,35 +528,6 @@
   color: var(--text-dark);
 }
 
-/* ===== TOAST NOTIFICATIONS ===== */
-.toast-notification {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.3s ease;
-}
-
-.toast-notification--show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.toast-notification__content {
-  background: var(--text-dark);
-  color: white;
-  padding: 12px 20px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: var(--shadow-md);
-}
-
 /* ===== RESPONSIVE ===== */
 @media (max-width: 991.98px) {
   .log-wrapper {

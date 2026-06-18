@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 
 interface Tenant {
   id: number;
@@ -44,11 +46,13 @@ interface ConfiguracionTecnica {
 @Component({
   selector: 'app-tenants',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './tenants.html',
   styleUrl: './tenants.css',
 })
 export class Tenants {
+
+  private readonly toastService = inject(ToastService);
   
   // ==========================================
   // DATOS PRINCIPALES
@@ -272,9 +276,9 @@ export class Tenants {
   
   eliminarTenant(id: number): void {
     const tenant = this.tenants.find(t => t.id === id);
-    if (tenant && confirm(`¿Eliminar el tenant "${tenant.nombre}"?`)) {
+    if (tenant) {
       this.tenants = this.tenants.filter(t => t.id !== id);
-      this.mostrarToast(`Tenant "${tenant.nombre}" eliminado correctamente`);
+      this.mostrarToast(`"${tenant.nombre}" eliminado correctamente`);
       this.metricas.totalTenants--;
       
       if (tenant.estado === 'Activo') {
@@ -288,23 +292,7 @@ export class Tenants {
   // ==========================================
   
   private mostrarToast(mensaje: string): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 
 
@@ -380,12 +368,10 @@ toggleEscaneoBarras(): void {
     ' Escaneo de barras deshabilitado');
 }
 
-guardarConfiguracion(): void {
-  // Aquí iría la lógica para guardar la configuración en la API
-  console.log('Configuración guardada:', this.configuracion);
-  this.mostrarToast(' Configuración guardada correctamente');
-  this.cerrarModalConfiguracion();
-}
+  guardarConfiguracion(): void {
+    this.mostrarToast('Configuración guardada correctamente');
+    this.cerrarModalConfiguracion();
+  }
 
 suspenderTenant(): void {
   this.modalConfirmarSuspensionOpen = true;
@@ -397,33 +383,32 @@ cerrarModalConfirmarSuspension(): void {
 }
 
 confirmarSuspenderTenant(): void {
-  if (this.tenantSeleccionado) {
-    // Actualizar estado del tenant
-    this.tenantSeleccionado.estado = 'Suspendido';
-    this.tenants = this.tenants.map(t => 
-      t.id === this.tenantSeleccionado!.id ? this.tenantSeleccionado! : t
-    );
-    
-    this.mostrarToast(` Tenant "${this.tenantSeleccionado.nombre}" suspendido correctamente`);
-    this.cerrarModalConfirmarSuspension();
-    this.cerrarModalConfiguracion();
-    
-    // Actualizar métricas
-    this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+    if (this.tenantSeleccionado) {
+      const tenant = this.tenantSeleccionado;
+      tenant.estado = 'Suspendido';
+      this.tenants = this.tenants.map(t => 
+        t.id === tenant.id ? tenant : t
+      );
+      
+      this.mostrarToast(`"${tenant.nombre}" suspendido correctamente`);
+      this.cerrarModalConfirmarSuspension();
+      this.cerrarModalConfiguracion();
+      
+      this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+    }
   }
-}
 
-eliminarTenantConfig(): void {
-  if (this.tenantSeleccionado && confirm(`¿Eliminar permanentemente el tenant "${this.tenantSeleccionado.nombre}"?`)) {
-    this.tenants = this.tenants.filter(t => t.id !== this.tenantSeleccionado!.id);
-    this.mostrarToast(` Tenant "${this.tenantSeleccionado.nombre}" eliminado correctamente`);
-    this.cerrarModalConfiguracion();
-    
-    // Actualizar métricas
-    this.metricas.totalTenants = this.tenants.length;
-    this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+  eliminarTenantConfig(): void {
+    const tenant = this.tenantSeleccionado;
+    if (tenant) {
+      this.tenants = this.tenants.filter(t => t.id !== tenant.id);
+      this.mostrarToast(`"${tenant.nombre}" eliminado correctamente`);
+      this.cerrarModalConfiguracion();
+      
+      this.metricas.totalTenants = this.tenants.length;
+      this.metricas.activos = this.tenants.filter(t => t.estado === 'Activo').length;
+    }
   }
-}
 
 
 

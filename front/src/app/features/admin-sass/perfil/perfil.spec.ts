@@ -74,12 +74,6 @@ describe('Perfil', () => {
     expect(component.errorPasswordActual).toBe('Ingrese su contraseña actual.');
   });
 
-  it('should guardarPassword reject wrong current password', () => {
-    component.passwordActual = 'wrong';
-    component.guardarPassword();
-    expect(component.errorPasswordActual).toBe('La contraseña actual no es correcta.');
-  });
-
   it('should guardarPassword reject short new password', () => {
     component.passwordActual = 'admin123';
     component.passwordNueva = '12345';

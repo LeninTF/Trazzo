@@ -150,16 +150,9 @@ describe('DirectorioPersonal', () => {
     expect(component.modalPersonalOpen).toBeTrue();
   });
 
-  it('should eliminarPersonal with confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+  it('should eliminarPersonal', () => {
     component.eliminarPersonal(1);
     expect(component.personal().length).toBe(9);
-  });
-
-  it('should not eliminarPersonal without confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
-    component.eliminarPersonal(1);
-    expect(component.personal().length).toBe(10);
   });
 
   it('should cambiarModoImagen', () => {

@@ -163,16 +163,8 @@
 					</tbody>
 				</table>
 				@if (paginated('pendiente').length) {
-					<nav class="pagination-bar">
-						<span class="pagination-info">Página {{ currentPage()['pendiente'] || 1 }} de {{ totalPages('pendiente') }}</span>
-						<div class="pagination-controls">
-							<button type="button" class="btn-page" (click)="prevPage('pendiente')" [disabled]="(currentPage()['pendiente'] || 1) <= 1">Anterior</button>
-							@for (p of pageNumbers('pendiente'); track p) {
-								<button type="button" class="btn-page" [class.btn-page--active]="p === (currentPage()['pendiente'] || 1)" (click)="goToPage('pendiente', p)">{{ p }}</button>
-							}
-							<button type="button" class="btn-page" (click)="nextPage('pendiente')" [disabled]="(currentPage()['pendiente'] || 1) >= totalPages('pendiente')">Siguiente</button>
-						</div>
-					</nav>
+					<span class="pagination-info">Página {{ currentPage()['pendiente'] || 1 }} de {{ totalPages('pendiente') }}</span>
+					<app-pagination [currentPage]="currentPage()['pendiente'] || 1" [totalPages]="totalPages('pendiente')" (pageChange)="goToPage('pendiente', $event)"/>
 				}
 			</div>
 		}
@@ -202,16 +194,8 @@
 					</tbody>
 				</table>
 				@if (paginated('aprobado').length) {
-					<nav class="pagination-bar">
-						<span class="pagination-info">Página {{ currentPage()['aprobado'] || 1 }} de {{ totalPages('aprobado') }}</span>
-						<div class="pagination-controls">
-							<button type="button" class="btn-page" (click)="prevPage('aprobado')" [disabled]="(currentPage()['aprobado'] || 1) <= 1">Anterior</button>
-							@for (p of pageNumbers('aprobado'); track p) {
-								<button type="button" class="btn-page" [class.btn-page--active]="p === (currentPage()['aprobado'] || 1)" (click)="goToPage('aprobado', p)">{{ p }}</button>
-							}
-							<button type="button" class="btn-page" (click)="nextPage('aprobado')" [disabled]="(currentPage()['aprobado'] || 1) >= totalPages('aprobado')">Siguiente</button>
-						</div>
-					</nav>
+					<span class="pagination-info">Página {{ currentPage()['aprobado'] || 1 }} de {{ totalPages('aprobado') }}</span>
+					<app-pagination [currentPage]="currentPage()['aprobado'] || 1" [totalPages]="totalPages('aprobado')" (pageChange)="goToPage('aprobado', $event)"/>
 				}
 			</div>
 		}
@@ -241,16 +225,8 @@
 					</tbody>
 				</table>
 				@if (paginated('rechazado').length) {
-					<nav class="pagination-bar">
-						<span class="pagination-info">Página {{ currentPage()['rechazado'] || 1 }} de {{ totalPages('rechazado') }}</span>
-						<div class="pagination-controls">
-							<button type="button" class="btn-page" (click)="prevPage('rechazado')" [disabled]="(currentPage()['rechazado'] || 1) <= 1">Anterior</button>
-							@for (p of pageNumbers('rechazado'); track p) {
-								<button type="button" class="btn-page" [class.btn-page--active]="p === (currentPage()['rechazado'] || 1)" (click)="goToPage('rechazado', p)">{{ p }}</button>
-							}
-							<button type="button" class="btn-page" (click)="nextPage('rechazado')" [disabled]="(currentPage()['rechazado'] || 1) >= totalPages('rechazado')">Siguiente</button>
-						</div>
-					</nav>
+					<span class="pagination-info">Página {{ currentPage()['rechazado'] || 1 }} de {{ totalPages('rechazado') }}</span>
+					<app-pagination [currentPage]="currentPage()['rechazado'] || 1" [totalPages]="totalPages('rechazado')" (pageChange)="goToPage('rechazado', $event)"/>
 				}
 			</div>
 		}
@@ -325,10 +301,4 @@
 		</div>
 	</div>
 
-	@if (toast(); as t) {
-		<div class="toast-notification" [class.toast--success]="t.type === 'success'" [class.toast--error]="t.type === 'error'" [class.toast--info]="t.type === 'info'">
-			<i class="bi" [class.bi-check-circle-fill]="t.type === 'success'" [class.bi-x-circle-fill]="t.type === 'error'" [class.bi-info-circle-fill]="t.type === 'info'"></i>
-			<span>{{ t.message }}</span>
-		</div>
-	}
 </div>
