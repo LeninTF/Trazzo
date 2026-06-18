@@ -41,6 +41,7 @@
 	<div class="filters-card">
 		<div class="filters-row">
 			<div class="filter-group filter-group--search">
+				<label for="solicitudes-busqueda" class="visually-hidden">Buscar por institución o contacto</label>
 				<i class="bi bi-search filter-group__icon"></i>
 				<input type="text" id="solicitudes-busqueda" class="filter-input" placeholder="Buscar por institución o contacto..." [formControl]="filterSearch">
 			</div>
@@ -91,11 +92,11 @@
 
 			@if (filterPeriodoSig() === 'personalizado') {
 				<div class="filter-group">
-					<span class="filter-date-label">Desde</span>
+					<label for="solicitudes-fecha-desde" class="filter-date-label">Desde</label>
 					<input type="date" id="solicitudes-fecha-desde" class="filter-input filter-input--date" [formControl]="filterFechaDesde">
 				</div>
 				<div class="filter-group">
-					<span class="filter-date-label">Hasta</span>
+					<label for="solicitudes-fecha-hasta" class="filter-date-label">Hasta</label>
 					<input type="date" id="solicitudes-fecha-hasta" class="filter-input filter-input--date" [formControl]="filterFechaHasta">
 				</div>
 			}

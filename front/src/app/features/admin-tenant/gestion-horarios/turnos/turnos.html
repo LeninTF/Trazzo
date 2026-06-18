@@ -14,14 +14,16 @@
       <div class="turno-header">
         @if (editingTurnoId === turno.id) {
           <div class="d-flex align-items-center gap-2 flex-grow-1">
-            <input
-              type="text"
-              class="gh-input-sm flex-grow-1"
-              [class.is-invalid]="editTurnoForm.get('nombre')?.invalid && editTurnoForm.get('nombre')?.touched"
-              formControlName="nombre"
-              [formGroup]="editTurnoForm"
-              placeholder="Nombre del turno"
-            >
+          <label for="turno-edit-nombre" class="visually-hidden">Nombre del turno</label>
+          <input
+            id="turno-edit-nombre"
+            type="text"
+            class="gh-input-sm flex-grow-1"
+            [class.is-invalid]="editTurnoForm.get('nombre')?.invalid && editTurnoForm.get('nombre')?.touched"
+            formControlName="nombre"
+            [formGroup]="editTurnoForm"
+            placeholder="Nombre del turno"
+          >
             <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditTurno(turno)" title="Guardar">
               <i class="bi bi-check-lg"></i>
             </button>
@@ -83,7 +85,9 @@
             <div class="horario-card">
               @if (isEditingHorario(turno.id, horario.id)) {
                 <div class="d-flex align-items-center gap-2 flex-grow-1">
+                  <label for="turno-horario-inicio" class="visually-hidden">Hora inicio</label>
                   <input
+                    id="turno-horario-inicio"
                     type="text"
                     class="gh-input-xs"
                     [class.is-invalid]="editHorarioForm.get('inicio')?.invalid && editHorarioForm.get('inicio')?.touched"
@@ -92,7 +96,9 @@
                     placeholder="HH:mm"
                   >
                   <span class="text-muted fw-bold">&ndash;</span>
+                  <label for="turno-horario-fin" class="visually-hidden">Hora fin</label>
                   <input
+                    id="turno-horario-fin"
                     type="text"
                     class="gh-input-xs"
                     [class.is-invalid]="editHorarioForm.get('fin')?.invalid && editHorarioForm.get('fin')?.touched"
@@ -130,7 +136,9 @@
           <!-- ──────── ADD HORARIO ──────── -->
           @if (activeHorarioTurnoId === turno.id) {
             <div class="horario-add">
+              <label for="turno-add-inicio" class="visually-hidden">Hora inicio</label>
               <input
+                id="turno-add-inicio"
                 type="text"
                 class="gh-input-xs"
                 [class.is-invalid]="horarioForm.get('inicio')?.invalid && horarioForm.get('inicio')?.touched"
@@ -139,7 +147,9 @@
                 placeholder="HH:mm"
               >
               <span class="text-muted fw-bold">&ndash;</span>
+              <label for="turno-add-fin" class="visually-hidden">Hora fin</label>
               <input
+                id="turno-add-fin"
                 type="text"
                 class="gh-input-xs"
                 [class.is-invalid]="horarioForm.get('fin')?.invalid && horarioForm.get('fin')?.touched"
@@ -187,8 +197,9 @@
           <form [formGroup]="turnoForm" (ngSubmit)="addTurno()">
             <div class="gh-modal-body">
               <div>
-                <label class="gh-label">Nombre del turno</label>
+                <label class="gh-label" for="turno-nuevo-nombre">Nombre del turno</label>
                 <input
+                  id="turno-nuevo-nombre"
                   type="text"
                   class="gh-input"
                   [class.is-invalid]="turnoForm.get('nombre')?.invalid && turnoForm.get('nombre')?.touched"

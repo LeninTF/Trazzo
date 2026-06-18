@@ -20,11 +20,11 @@
       </div>
 
       <div class="card__body">
-        <label class="slider-label">
+        <label class="slider-label" for="regla-tolerancia">
           <span>Tiempo de tolerancia para entrada</span>
           <span class="slider-value">{{ tolerancia() }} min</span>
         </label>
-        <input type="range" class="slider" min="0" max="60" step="1"
+        <input type="range" id="regla-tolerancia" class="slider" min="0" max="60" step="1"
           [value]="tolerancia()" (input)="tolerancia.set(+$any($event.target).value)" />
         <p class="slider-hint">{{ toleranciaTexto }}</p>
 

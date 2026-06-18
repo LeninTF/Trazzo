@@ -203,16 +203,16 @@
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
-          <label class="form-label">Nombre de la Sede <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="sedeForm.nombre" placeholder="Ej: Centro Logístico Valencia">
+          <label class="form-label" for="sede-nombre">Nombre de la Sede <span class="text-danger">*</span></label>
+          <input type="text" id="sede-nombre" class="form-control" [(ngModel)]="sedeForm.nombre" placeholder="Ej: Centro Logístico Valencia">
         </div>
         <div class="form-group">
-          <label class="form-label">Descripción</label>
-          <textarea class="form-control" [(ngModel)]="sedeForm.descripcion" placeholder="Ej: Centro de operaciones logísticas en la región de Valencia." rows="3"></textarea>
+          <label class="form-label" for="sede-descripcion">Descripción</label>
+          <textarea id="sede-descripcion" class="form-control" [(ngModel)]="sedeForm.descripcion" placeholder="Ej: Centro de operaciones logísticas en la región de Valencia." rows="3"></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label">Estado</label>
-          <select class="form-select" [(ngModel)]="sedeForm.estado">
+          <label class="form-label" for="sede-estado">Estado</label>
+          <select id="sede-estado" class="form-select" [(ngModel)]="sedeForm.estado">
             <option value="activo">Activo</option>
             <option value="inactivo">Inactivo</option>
           </select>
@@ -240,19 +240,19 @@
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
-          <label class="form-label">Sede</label>
-          <select class="form-select" [(ngModel)]="areaForm.sedeId" (change)="onSedeChangeForArea()">
+          <label class="form-label" for="area-sede">Sede</label>
+          <select id="area-sede" class="form-select" [(ngModel)]="areaForm.sedeId" (change)="onSedeChangeForArea()">
             <option [value]="0" disabled>Seleccione una sede</option>
             <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Nombre del Área <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="areaForm.nombre" placeholder="Ej: Operaciones">
+          <label class="form-label" for="area-nombre">Nombre del Área <span class="text-danger">*</span></label>
+          <input type="text" id="area-nombre" class="form-control" [(ngModel)]="areaForm.nombre" placeholder="Ej: Operaciones">
         </div>
         <div class="form-group">
-          <label class="form-label">Descripción</label>
-          <textarea class="form-control" [(ngModel)]="areaForm.descripcion" placeholder="Ej: Área encargada de la gestión operativa y de almacén." rows="3"></textarea>
+          <label class="form-label" for="area-descripcion">Descripción</label>
+          <textarea id="area-descripcion" class="form-control" [(ngModel)]="areaForm.descripcion" placeholder="Ej: Área encargada de la gestión operativa y de almacén." rows="3"></textarea>
         </div>
       </div>
       <div class="sede-modal__footer">
@@ -277,26 +277,26 @@
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
-          <label class="form-label">Sede</label>
-          <select class="form-select" [(ngModel)]="sedeIdParaDepto" (change)="onSedeChangeForDepto(sedeIdParaDepto)">
+          <label class="form-label" for="depto-sede">Sede</label>
+          <select id="depto-sede" class="form-select" [(ngModel)]="sedeIdParaDepto" (change)="onSedeChangeForDepto(sedeIdParaDepto)">
             <option [value]="0" disabled>Seleccione una sede</option>
             <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Área</label>
-          <select class="form-select" [(ngModel)]="deptoForm.areaId">
+          <label class="form-label" for="depto-area">Área</label>
+          <select id="depto-area" class="form-select" [(ngModel)]="deptoForm.areaId">
             <option [value]="0" disabled>Seleccione un área</option>
             <option *ngFor="let area of areasDeSedeSeleccionada" [value]="area.id">{{ area.nombre }}</option>
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Nombre del Departamento <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" [(ngModel)]="deptoForm.nombre" placeholder="Ej: Ventas Globales">
+          <label class="form-label" for="depto-nombre">Nombre del Departamento <span class="text-danger">*</span></label>
+          <input type="text" id="depto-nombre" class="form-control" [(ngModel)]="deptoForm.nombre" placeholder="Ej: Ventas Globales">
         </div>
         <div class="form-group">
-          <label class="form-label">Descripción</label>
-          <textarea class="form-control" [(ngModel)]="deptoForm.descripcion" placeholder="Ej: Ventas internacionales y nacionales." rows="3"></textarea>
+          <label class="form-label" for="depto-descripcion">Descripción</label>
+          <textarea id="depto-descripcion" class="form-control" [(ngModel)]="deptoForm.descripcion" placeholder="Ej: Ventas internacionales y nacionales." rows="3"></textarea>
         </div>
       </div>
       <div class="sede-modal__footer">

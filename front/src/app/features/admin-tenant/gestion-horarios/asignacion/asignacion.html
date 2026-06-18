@@ -12,9 +12,10 @@
   <div class="asig-filters">
     <div class="row g-2 align-items-end">
       <div class="col-md-5">
-        <label class="filter-label">Buscar</label>
+        <label class="filter-label" for="asig-buscar">Buscar</label>
         <input
           type="text"
+          id="asig-buscar"
           class="filter-input"
           placeholder="Buscar por trabajador o turno..."
           [ngModel]="searchTerm()"
@@ -23,8 +24,9 @@
         >
       </div>
       <div class="col-md-3">
-        <label class="filter-label">Filtrar por área</label>
+        <label class="filter-label" for="asig-area">Filtrar por área</label>
         <select
+          id="asig-area"
           class="filter-select"
           [ngModel]="areaFilter()"
           (ngModelChange)="onAreaFilter($event)"
@@ -120,8 +122,9 @@
           <form [formGroup]="asignacionForm" (ngSubmit)="submitAsignacion()">
             <div class="asig-modal-body">
               <div class="form-group">
-                <label class="form-label-custom">Trabajador</label>
+                <label class="form-label-custom" for="asig-trabajador">Trabajador</label>
                 <input
+                  id="asig-trabajador"
                   type="text"
                   class="input-custom"
                   [class.invalid]="asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched"
@@ -133,8 +136,9 @@
                 }
               </div>
               <div class="form-group">
-                <label class="form-label-custom">Área / Departamento</label>
+                <label class="form-label-custom" for="asig-area-select">Área / Departamento</label>
                 <select
+                  id="asig-area-select"
                   class="input-custom"
                   [class.invalid]="asignacionForm.get('area')?.invalid && asignacionForm.get('area')?.touched"
                   formControlName="area"
@@ -149,8 +153,9 @@
                 }
               </div>
               <div class="form-group">
-                <label class="form-label-custom">Turno</label>
+                <label class="form-label-custom" for="asig-turno">Turno</label>
                 <select
+                  id="asig-turno"
                   class="input-custom"
                   [class.invalid]="asignacionForm.get('turnoId')?.invalid && asignacionForm.get('turnoId')?.touched"
                   formControlName="turnoId"
@@ -166,8 +171,9 @@
                 }
               </div>
               <div class="form-group">
-                <label class="form-label-custom">Horario</label>
+                <label class="form-label-custom" for="asig-horario">Horario</label>
                 <select
+                  id="asig-horario"
                   class="input-custom"
                   [class.invalid]="asignacionForm.get('horarioId')?.invalid && asignacionForm.get('horarioId')?.touched"
                   formControlName="horarioId"

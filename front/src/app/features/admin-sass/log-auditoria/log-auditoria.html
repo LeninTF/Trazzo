@@ -52,10 +52,12 @@
     <div class="filters-card__body">
       <div class="filters-grid">
         <div class="search-input">
+          <label for="log-busqueda" class="visually-hidden">Buscar</label>
           <i class="bi bi-search search-input__icon"></i>
           <input type="text" class="form-control" id="log-busqueda" placeholder="Filtrar por descripción o entidad..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
         </div>
         <div class="date-filter">
+          <label for="log-fecha" class="visually-hidden">Filtrar por fecha</label>
           <i class="bi bi-calendar3 date-filter__icon"></i>
           <input type="date" class="form-control" id="log-fecha" [(ngModel)]="filtroFecha" (change)="filtrarLogs()" placeholder="Filtrar por fecha">
         </div>

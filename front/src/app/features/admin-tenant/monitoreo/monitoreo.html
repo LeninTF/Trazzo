@@ -194,12 +194,12 @@
 
         <form class="registrar-form">
           <div class="registrar-form-group">
-            <label class="registrar-label">NOMBRE DEL ESCÁNER <span class="text-danger">*</span></label>
-            <input type="text" class="registrar-input" placeholder="Ej: Escáner 03 - Puerta Sur" [(ngModel)]="nuevoEscaner.nombre" name="nombreEscaner">
+            <label class="registrar-label" for="escaner-nombre">NOMBRE DEL ESCÁNER <span class="text-danger">*</span></label>
+            <input type="text" id="escaner-nombre" class="registrar-input" placeholder="Ej: Escáner 03 - Puerta Sur" [(ngModel)]="nuevoEscaner.nombre" name="nombreEscaner">
           </div>
           <div class="registrar-form-group">
-            <label class="registrar-label">UBICACIÓN <span class="text-danger">*</span></label>
-            <input type="text" class="registrar-input" placeholder="Ej: PUERTA SUR, EDIFICIO C" [(ngModel)]="nuevoEscaner.ubicacion" name="ubicacion">
+            <label class="registrar-label" for="escaner-ubicacion">UBICACIÓN <span class="text-danger">*</span></label>
+            <input type="text" id="escaner-ubicacion" class="registrar-input" placeholder="Ej: PUERTA SUR, EDIFICIO C" [(ngModel)]="nuevoEscaner.ubicacion" name="ubicacion">
           </div>
           <div class="registrar-config-adicional">
             <div class="registrar-config-header">
