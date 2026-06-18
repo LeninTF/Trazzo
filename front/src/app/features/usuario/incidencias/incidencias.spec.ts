@@ -107,8 +107,7 @@ describe('Incidencias (usuario)', () => {
   });
 
   it('should descargarArchivo', () => {
-    interface AnchorMock { href: string; download: string; click: () => void; }
-    spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as AnchorMock);
+    spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
     const inc = component.incidencias().find(i => i.archivo);
     if (inc) {
       component.descargarArchivo(inc);

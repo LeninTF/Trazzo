@@ -112,8 +112,7 @@ describe('Incidencias (admin-tenant)', () => {
   });
 
   it('should descargarArchivo', () => {
-    interface AnchorMock { href: string; download: string; click: () => void; }
-    spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as AnchorMock);
+    spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
     component.descargarArchivo(component.solicitudes()[0]);
     expect(document.createElement).toHaveBeenCalledWith('a');
   });
