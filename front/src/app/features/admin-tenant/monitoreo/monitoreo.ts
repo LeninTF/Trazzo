@@ -193,13 +193,17 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   actualizarDatosTiempoReal(): void {
     this.ultimaActualizacion = new Date();
+    const nuevoEvento = this.crearEventoSimulado();
+    this.agregarEventoALista(nuevoEvento);
+    this.actualizarMetricasConEvento(nuevoEvento);
+  }
 
+  private crearEventoSimulado(): Evento {
     const nombres = ['María López', 'Pedro Sánchez', 'Ana García', 'Luis Fernández'];
     const roles = ['Administración', 'Docente', 'Personal de servicio', 'Invitado'];
     const escaneres = ['ESCÁNER 01', 'ESCÁNER 02', 'ESCÁNER 03'];
     const ubicaciones = ['ENTRADA PRINCIPAL', 'PUERTA NORTE', 'PUERTA SUR'];
-    
-    const nuevoEvento: Evento = {
+    return {
       id: Date.now(),
       nombre: nombres[Monitoreo.secureRandomInt(nombres.length)],
       rol: roles[Monitoreo.secureRandomInt(roles.length)],
@@ -208,22 +212,21 @@ export class Monitoreo implements OnInit, OnDestroy {
       estado: Monitoreo.secureRandom() > 0.8 ? 'TARDE' : 'A TIEMPO',
       escaner: escaneres[Monitoreo.secureRandomInt(escaneres.length)],
       ubicacion: ubicaciones[Monitoreo.secureRandomInt(ubicaciones.length)],
-      online: true
+      online: true,
     };
-    
-    // Agregar al inicio (más reciente primero)
-    this.eventos.unshift(nuevoEvento);
-    
-    // Mantener solo últimos 10 eventos
+  }
+
+  private agregarEventoALista(evento: Evento): void {
+    this.eventos.unshift(evento);
     if (this.eventos.length > 10) {
       this.eventos.pop();
     }
-    
-    // Actualizar métricas
+  }
+
+  private actualizarMetricasConEvento(evento: Evento): void {
     this.metricas.presentesHoy += 1;
     this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
-    
-    if (nuevoEvento.estado === 'TARDE') {
+    if (evento.estado === 'TARDE') {
       this.metricas.tardanzas += 1;
       if (this.metricas.tardanzas > 50) {
         this.metricas.nivelTardanza = 'ALTO';
@@ -241,36 +244,37 @@ export class Monitoreo implements OnInit, OnDestroy {
    * Registrar nuevo escáner
    */
   registrarEscaner(): void {
+    if (!this.validarFormularioEscaner()) return;
+    const nuevoEscanerObj = this.crearObjetoEscaner();
+    this.escaneres.push(nuevoEscanerObj);
+    this.actualizarMetricasEscaner();
+    this.agregarEventoDeSistema(`📡 Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
+    this.mostrarToast(`Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
+    this.limpiarFormularioEscaner();
+    this.modalService.hide('modalRegistrarEscaner');
+  }
+
+  private validarFormularioEscaner(): boolean {
     if (!this.nuevoEscaner.nombre || !this.nuevoEscaner.ubicacion) {
       this.mostrarToast('⚠️ Complete los campos obligatorios: Nombre y Ubicación');
-      return;
+      return false;
     }
-    
+    return true;
+  }
+
+  private crearObjetoEscaner(): Escaner {
     const nuevoId = Math.max(...this.escaneres.map(e => e.id), 0) + 1;
-    
-    const nuevoEscanerObj: Escaner = {
+    return {
       id: nuevoId,
       nombre: this.nuevoEscaner.nombre,
       ubicacion: this.nuevoEscaner.ubicacion,
-      online: this.nuevoEscaner.online
+      online: this.nuevoEscaner.online,
     };
-    
-    this.escaneres.push(nuevoEscanerObj);
-    
-    // Actualizar métricas
+  }
+
+  private actualizarMetricasEscaner(): void {
     this.metricas.totalDispositivos = this.escaneres.length;
     this.actualizarContadorDispositivos();
-    
-    // Agregar evento de sistema
-    this.agregarEventoDeSistema(`📡 Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
-    
-    this.mostrarToast(`Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
-    
-    // Limpiar formulario
-    this.limpiarFormularioEscaner();
-    
-    // Cerrar modal
-    this.modalService.hide('modalRegistrarEscaner');
   }
   
   /**

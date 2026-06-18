@@ -42,13 +42,17 @@ export abstract class BaseGestionRoles {
       this.permisos[rol.id] = {};
       this.respaldoPermisos[rol.id] = {};
       const defaults = this.PERMISOS_DEFAULT[rol.id] ?? {};
-      for (const modulo of this.modulos) {
-        for (const accion of modulo.acciones) {
-          const key = `${modulo.id}.${accion.id}`;
-          const value = defaults[key] ?? false;
-          this.permisos[rol.id][key] = value;
-          this.respaldoPermisos[rol.id][key] = value;
-        }
+      this.inicializarPermisosRol(rol.id, defaults);
+    }
+  }
+
+  private inicializarPermisosRol(rolId: string, defaults: Record<string, boolean>): void {
+    for (const modulo of this.modulos) {
+      for (const accion of modulo.acciones) {
+        const key = `${modulo.id}.${accion.id}`;
+        const value = defaults[key] ?? false;
+        this.permisos[rolId][key] = value;
+        this.respaldoPermisos[rolId][key] = value;
       }
     }
   }
@@ -170,13 +174,7 @@ export abstract class BaseGestionRoles {
     this.roles.push(nuevoRol);
     this.permisos[id] = {};
     this.respaldoPermisos[id] = {};
-    for (const modulo of this.modulos) {
-      for (const accion of modulo.acciones) {
-        const key = `${modulo.id}.${accion.id}`;
-        this.permisos[id][key] = false;
-        this.respaldoPermisos[id][key] = false;
-      }
-    }
+    this.inicializarPermisosRol(id, {});
 
     this.rolSeleccionado = id;
     this.mostrarModalRol = false;

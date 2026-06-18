@@ -95,7 +95,7 @@ export class Incidencias {
   aprobadas = computed(() => this.filtradas().filter(s => s.estado === 'Aprobado'));
   rechazadas = computed(() => this.filtradas().filter(s => s.estado === 'Rechazado'));
 
-  get metricas() {
+  get metricas(): { titulo: string; valor: number | string; subtitulo: string; icono: string; color: string; bg: string }[] {
     const p = this.pendientes().length;
     const a = this.aprobadas().length;
     const r = this.rechazadas().length;
@@ -183,35 +183,32 @@ export class Incidencias {
   }
 
   exportarCSV(): void {
+    const csv = this.generarContenidoCSV();
+    this.descargarArchivoCSV(csv);
+  }
+
+  private generarContenidoCSV(): string {
     const totales = this.solicitudes().length;
     const p = this.solicitudes().filter(s => s.estado === 'Pendiente').length;
     const a = this.solicitudes().filter(s => s.estado === 'Aprobado').length;
     const r = this.solicitudes().filter(s => s.estado === 'Rechazado').length;
     const fecha = new Date().toLocaleDateString('es-PE');
-
     const esc = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
-
     const lineas: string[] = [];
     lineas.push(`"Reporte de Incidencias - ${fecha}"`);
     lineas.push(`"Total: ${totales} | Pendientes: ${p} | Aprobadas: ${a} | Rechazadas: ${r}"`);
     lineas.push('');
     lineas.push(['Colaborador', 'Rol', 'Tipo', 'Periodo', 'Detalle', 'Estado', 'Descripción', 'Fecha Creación', 'Archivo Adjunto'].join(','));
-
     for (const s of this.solicitudes()) {
       lineas.push([
-        esc(s.colaborador),
-        esc(s.rol),
-        esc(s.tipo),
-        esc(s.periodo),
-        esc(s.detalle),
-        esc(s.estado),
-        esc(s.descripcion),
-        esc(s.fechaCreacion),
-        esc(s.archivo ? s.archivo.nombre : '—'),
+        esc(s.colaborador), esc(s.rol), esc(s.tipo), esc(s.periodo), esc(s.detalle),
+        esc(s.estado), esc(s.descripcion), esc(s.fechaCreacion), esc(s.archivo ? s.archivo.nombre : '—'),
       ].join(','));
     }
+    return lineas.join('\r\n');
+  }
 
-    const csv = lineas.join('\r\n');
+  private descargarArchivoCSV(csv: string): void {
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

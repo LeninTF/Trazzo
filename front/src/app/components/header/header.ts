@@ -36,4 +36,9 @@ export class Header {
     warning: '#f59e0b',
     success: '#10b981',
   };
+
+  protected onUserChipEnter(event: Event): void {
+    const target = event.currentTarget as HTMLElement;
+    target?.click();
+  }
 }

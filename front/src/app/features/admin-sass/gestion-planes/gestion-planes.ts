@@ -237,18 +237,57 @@ export class GestionPlanes {
       return;
     }
 
-    const v = this.planForm.value;
-    const modulosSeleccionados = this.modulosDisponibles
-      .filter(m => (v.modulos as any)[m.id])
-      .map(m => m.id);
-    const reglasSeleccionadas = this.reglasDisponibles
-      .filter(r => (v.reglas as any)[r.id])
-      .map(r => r.id);
+    const { modulosSeleccionados, reglasSeleccionadas } = this.obtenerModulosYReglasSeleccionados();
 
     if (this.mostrarFormNuevo()) {
-      const nuevoId = Math.max(...this.planes().map(p => p.id)) + 1;
-      this.planes.update(list => [...list, {
-        id: nuevoId,
+      this.crearNuevoPlan(modulosSeleccionados, reglasSeleccionadas);
+    } else {
+      this.actualizarPlanExistente(modulosSeleccionados, reglasSeleccionadas);
+    }
+
+    this.cancelarEdicion();
+  }
+
+  private obtenerModulosYReglasSeleccionados(): { modulosSeleccionados: string[]; reglasSeleccionadas: string[] } {
+    const v = this.planForm.value;
+    const modulosSeleccionados = this.modulosDisponibles
+      .filter(m => (v.modulos as Record<string, boolean>)[m.id])
+      .map(m => m.id);
+    const reglasSeleccionadas = this.reglasDisponibles
+      .filter(r => (v.reglas as Record<string, boolean>)[r.id])
+      .map(r => r.id);
+    return { modulosSeleccionados, reglasSeleccionadas };
+  }
+
+  private crearNuevoPlan(modulos: string[], reglas: string[]): void {
+    const v = this.planForm.value;
+    const nuevoId = Math.max(...this.planes().map(p => p.id)) + 1;
+    this.planes.update(list => [...list, {
+      id: nuevoId,
+      nombre: v.nombre!,
+      sku: v.sku!,
+      precioMensual: v.precioMensual!,
+      precioAnual: v.precioAnual!,
+      descripcion: v.descripcion || '',
+      maxTrabajadores: v.maxTrabajadores!,
+      maxSedes: v.maxSedes!,
+      almacenamiento: v.almacenamiento!,
+      sincronizacionNube: v.sincronizacionNube || false,
+      modulos,
+      reglas,
+      activo: true,
+      ultimaModificacion: { usuario: 'Jose Alata', fecha: new Date().toISOString().split('T')[0] },
+    }]);
+    this.mostrarToast('Plan creado correctamente.', 'success');
+  }
+
+  private actualizarPlanExistente(modulos: string[], reglas: string[]): void {
+    const v = this.planForm.value;
+    const id = this.editPlanId();
+    if (!id) return;
+    this.planes.update(list => list.map(p =>
+      p.id === id ? {
+        ...p,
         nombre: v.nombre!,
         sku: v.sku!,
         precioMensual: v.precioMensual!,
@@ -258,37 +297,13 @@ export class GestionPlanes {
         maxSedes: v.maxSedes!,
         almacenamiento: v.almacenamiento!,
         sincronizacionNube: v.sincronizacionNube || false,
-        modulos: modulosSeleccionados,
-        reglas: reglasSeleccionadas,
+        modulos,
+        reglas,
         activo: true,
         ultimaModificacion: { usuario: 'Jose Alata', fecha: new Date().toISOString().split('T')[0] },
-      }]);
-      this.mostrarToast('Plan creado correctamente.', 'success');
-    } else {
-      const id = this.editPlanId();
-      if (!id) return;
-      this.planes.update(list => list.map(p =>
-        p.id === id ? {
-          ...p,
-          nombre: v.nombre!,
-          sku: v.sku!,
-          precioMensual: v.precioMensual!,
-          precioAnual: v.precioAnual!,
-          descripcion: v.descripcion || '',
-          maxTrabajadores: v.maxTrabajadores!,
-          maxSedes: v.maxSedes!,
-          almacenamiento: v.almacenamiento!,
-          sincronizacionNube: v.sincronizacionNube || false,
-          modulos: modulosSeleccionados,
-          reglas: reglasSeleccionadas,
-          activo: true,
-          ultimaModificacion: { usuario: 'Jose Alata', fecha: new Date().toISOString().split('T')[0] },
-        } : p
-      ));
-      this.mostrarToast('Plan actualizado correctamente.', 'success');
-    }
-
-    this.cancelarEdicion();
+      } : p
+    ));
+    this.mostrarToast('Plan actualizado correctamente.', 'success');
   }
 
   confirmarEliminar(): void {

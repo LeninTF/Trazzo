@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -57,51 +57,43 @@ export class Login {
   ];
 
   private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
 
-  email: string = '';
-  password: string = '';
-  rememberSession: boolean = false;
-  passwordVisible = false;
-  isLoading: boolean = false;
-  errorMessage: string = '';
-
-  constructor(private router: Router) {}
+  readonly email = signal('');
+  readonly password = signal('');
+  readonly rememberSession = signal(false);
+  readonly passwordVisible = signal(false);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
 
   togglePasswordVisibility(): void {
-    this.passwordVisible = !this.passwordVisible;
+    this.passwordVisible.update(v => !v);
   }
 
-  // Método para manejar el inicio de sesión
   onSubmit(event: Event): void {
     event.preventDefault();
-    
-    if (!this.email || !this.password) {
-      this.errorMessage = 'Por favor, complete todos los campos';
-      this.toastService.error(this.errorMessage);
+
+    const email = this.email();
+    const password = this.password();
+
+    if (!email || !password) {
+      this.errorMessage.set('Por favor, complete todos los campos');
+      this.toastService.error(this.errorMessage());
       return;
     }
 
     const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(this.email)) {
-      this.errorMessage = 'Por favor, ingrese un email válido';
-      this.toastService.error(this.errorMessage);
+    if (!emailRegex.test(email)) {
+      this.errorMessage.set('Por favor, ingrese un email válido');
+      this.toastService.error(this.errorMessage());
       return;
     }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
     setTimeout(() => {
-      this.isLoading = false;
-      
-      if (this.rememberSession) {
-        localStorage.setItem('userEmail', this.email);
-        localStorage.setItem('isLoggedIn', 'true');
-      } else {
-        sessionStorage.setItem('userEmail', this.email);
-        sessionStorage.setItem('isLoggedIn', 'true');
-      }
-      
+      this.isLoading.set(false);
       this.router.navigate(['/sass/tenants']);
     }, 1500);
   }
