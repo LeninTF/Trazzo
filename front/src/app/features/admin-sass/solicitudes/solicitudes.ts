@@ -1,7 +1,6 @@
 import { Component, computed, signal, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
@@ -25,7 +24,6 @@ type ToastType = 'success' | 'error' | 'info';
   styleUrl: './solicitudes.css',
 })
 export class Solicitudes {
-  private readonly router = inject(Router);
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
 
@@ -59,7 +57,7 @@ export class Solicitudes {
   readonly estadoLabel = computed(() => this.estadoOptions.find(o => o.value === this.filterEstadoSig())?.label ?? 'Todos los estados');
   readonly periodoLabel = computed(() => this.periodoOptions.find(o => o.value === this.filterPeriodoSig())?.label ?? 'Últimos 30 días');
 
-  toggleDropdown(name: string, event: MouseEvent): void {
+  toggleDropdown(name: string, event: Event): void {
     event.stopPropagation();
     this.dropdownOpen.update(v => v === name ? null : name);
   }

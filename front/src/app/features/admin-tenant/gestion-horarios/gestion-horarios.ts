@@ -32,7 +32,7 @@ export class GestionHorarios {
     },
   };
 
-  get currentSection() {
+  get currentSection(): { title: string; subtitle: string; icon: string } {
     return this.sectionMeta[this.activeSection];
   }
 

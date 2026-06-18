@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { FormsModule } from '@angular/forms';
 import { Perfil } from './perfil';
 
+const CURRENT_PASSWORD = 'admin123';
+
 describe('Perfil', () => {
   let component: Perfil;
   let fixture: ComponentFixture<Perfil>;
@@ -75,14 +77,14 @@ describe('Perfil', () => {
   });
 
   it('should guardarPassword reject short new password', () => {
-    component.passwordActual = 'admin123';
+    component.passwordActual = CURRENT_PASSWORD;
     component.passwordNueva = '12345';
     component.guardarPassword();
     expect(component.errorPasswordNueva).toBe('Debe tener al menos 6 caracteres.');
   });
 
   it('should guardarPassword reject mismatched passwords', () => {
-    component.passwordActual = 'admin123';
+    component.passwordActual = CURRENT_PASSWORD;
     component.passwordNueva = 'newpass1';
     component.passwordConfirmar = 'different';
     component.guardarPassword();
@@ -90,7 +92,7 @@ describe('Perfil', () => {
   });
 
   it('should guardarPassword succeed', () => {
-    component.passwordActual = 'admin123';
+    component.passwordActual = CURRENT_PASSWORD;
     component.passwordNueva = 'newpass123';
     component.passwordConfirmar = 'newpass123';
     component.guardarPassword();

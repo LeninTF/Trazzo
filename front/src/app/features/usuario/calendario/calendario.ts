@@ -160,9 +160,16 @@ export class Calendario {
     const ultimoDia = new Date(año, mes + 1, 0);
     const inicioSemana = primerDia.getDay();
     const dias: DiaInfo[] = [];
-    const hoy = new Date();
-    const hoyStr = this.formatearFecha(hoy);
+    const hoyStr = this.formatearFecha(new Date());
 
+    this.agregarDiasPrevios(dias, año, mes, inicioSemana, hoyStr);
+    this.agregarDiasDelMes(dias, año, mes, ultimoDia.getDate(), hoyStr);
+    this.agregarDiasRestantes(dias, año, mes);
+
+    return dias;
+  }
+
+  private agregarDiasPrevios(dias: DiaInfo[], año: number, mes: number, inicioSemana: number, hoyStr: string): void {
     const diaPrevio = new Date(año, mes, 0);
     for (let i = inicioSemana - 1; i >= 0; i--) {
       const d = new Date(año, mes - 1, diaPrevio.getDate() - i);
@@ -176,8 +183,10 @@ export class Calendario {
         feriado: null,
       });
     }
+  }
 
-    for (let i = 1; i <= ultimoDia.getDate(); i++) {
+  private agregarDiasDelMes(dias: DiaInfo[], año: number, mes: number, totalDias: number, hoyStr: string): void {
+    for (let i = 1; i <= totalDias; i++) {
       const d = new Date(año, mes, i);
       const fechaStr = this.formatearFecha(d);
       const feriado = this.feriados().find(f => f.fecha === fechaStr) ?? null;
@@ -193,7 +202,9 @@ export class Calendario {
         feriado,
       });
     }
+  }
 
+  private agregarDiasRestantes(dias: DiaInfo[], año: number, mes: number): void {
     const restantes = 42 - dias.length;
     for (let i = 1; i <= restantes; i++) {
       const d = new Date(año, mes + 1, i);
@@ -207,8 +218,6 @@ export class Calendario {
         feriado: null,
       });
     }
-
-    return dias;
   }
 
   get diasSemana(): DiaSemana[] {
