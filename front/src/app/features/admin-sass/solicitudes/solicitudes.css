@@ -517,63 +517,10 @@
 	color: #b91c1c;
 }
 
-.pagination-bar {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0.75rem 1rem;
-	border-top: 1px solid rgba(30, 64, 175, 0.06);
-}
-
 .pagination-info {
 	font-size: 0.82rem;
 	font-weight: 500;
 	color: #6b7a98;
-}
-
-.pagination-controls {
-	display: flex;
-	align-items: center;
-	gap: 0.3rem;
-}
-
-.btn-page {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-width: 2.1rem;
-	height: 2.1rem;
-	padding: 0 0.5rem;
-	border: 1px solid rgba(30, 64, 175, 0.1);
-	border-radius: 0.55rem;
-	background: #ffffff;
-	color: #4b5b77;
-	font-size: 0.82rem;
-	font-weight: 500;
-	cursor: pointer;
-	transition: background 160ms, border-color 160ms, color 160ms;
-}
-
-.btn-page:hover:not(:disabled) {
-	background: rgba(30, 64, 175, 0.06);
-	border-color: rgba(30, 64, 175, 0.2);
-}
-
-.btn-page:disabled {
-	opacity: 0.4;
-	cursor: default;
-}
-
-.btn-page--active {
-	background: #1e40af;
-	border-color: #1e40af;
-	color: #ffffff;
-}
-
-.btn-page--active:hover {
-	background: #1e40af !important;
-	border-color: #1e40af !important;
-	color: #ffffff !important;
 }
 
 .modal-content--custom {
@@ -737,53 +684,6 @@
 .btn-reject-custom:hover {
 	background: #dc2626;
 }
-
-.toast-notification {
-	position: fixed;
-	bottom: 1.5rem;
-	right: 1.5rem;
-	display: flex;
-	align-items: center;
-	gap: 0.65rem;
-	padding: 0.85rem 1.25rem;
-	border-radius: 0.85rem;
-	background: #ffffff;
-	border: 1px solid rgba(30, 64, 175, 0.08);
-	box-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
-	font-size: 0.9rem;
-	font-weight: 500;
-	color: #1a2b4a;
-	z-index: 9999;
-	animation: toast-in 300ms ease-out;
-}
-
-.toast--success {
-	border-left: 4px solid #10b981;
-}
-
-.toast--success i {
-	color: #10b981;
-	font-size: 1.1rem;
-}
-
-.toast--error {
-	border-left: 4px solid #ef4444;
-}
-
-.toast--error i {
-	color: #ef4444;
-	font-size: 1.1rem;
-}
-
-.toast--info {
-	border-left: 4px solid #3b82f6;
-}
-
-.toast--info i {
-	color: #3b82f6;
-	font-size: 1.1rem;
-}
-
 /* ── Responsive ── */
 @media (max-width: 991.98px) {
 	.solicitudes-page {
@@ -866,12 +766,6 @@
 
 	.td-actions {
 		justify-content: flex-end;
-	}
-
-	.pagination-bar {
-		flex-direction: column;
-		gap: 0.5rem;
-		align-items: center;
 	}
 
 	.modal-header-custom,

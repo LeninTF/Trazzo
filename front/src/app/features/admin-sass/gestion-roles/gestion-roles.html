@@ -75,7 +75,7 @@
 
       <!-- Permission matrix -->
       <div class="roles-matrix">
-        @for (modulo of modulos; track modulo.id) {
+        @for (modulo of modulosVisibles(); track modulo.id) {
           <div class="roles-module" [class.is-empty]="getEstadoModulo(modulo.id) === 'vacio'">
             <div class="roles-module__header">
               <div class="roles-module__header-left">

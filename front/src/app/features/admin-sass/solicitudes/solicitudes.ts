@@ -1,7 +1,10 @@
-import { Component, computed, signal, effect, inject } from '@angular/core';
+import { Component, computed, signal, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Solicitud {
   id: number;
@@ -17,12 +20,14 @@ type ToastType = 'success' | 'error' | 'info';
 @Component({
   selector: 'app-solicitudes',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PaginationComponent],
   templateUrl: './solicitudes.html',
   styleUrl: './solicitudes.css',
 })
 export class Solicitudes {
   private readonly router = inject(Router);
+  private readonly toastService = inject(ToastService);
+  private readonly modalService = inject(ModalService);
 
   readonly filterSearch = new FormControl('');
   readonly filterEstado = new FormControl('todos');
@@ -81,8 +86,6 @@ export class Solicitudes {
 
   selectedSolicitud = signal<Solicitud | null>(null);
   confirmAction = signal<{ id: number; action: 'aprobar' | 'rechazar' | 'reconsiderar'; label: string } | null>(null);
-  toast = signal<{ message: string; type: ToastType } | null>(null);
-  private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly allSolicitudes: Solicitud[] = [
     { id: 1, institucion: 'Universidad Nacional de Ingeniería', contacto: 'Carlos Mendoza', plan: 'Plan Premium', fecha: '2026-06-04', estado: 'pendiente' },
@@ -210,32 +213,28 @@ export class Solicitudes {
 
   verDetalle(s: Solicitud): void {
     this.selectedSolicitud.set(s);
-    const el = document.getElementById('modalDetalle');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalDetalle');
   }
 
   confirmarAprobar(id: number): void {
     const s = this.allSolicitudes.find(x => x.id === id);
     if (!s) return;
     this.confirmAction.set({ id, action: 'aprobar', label: `¿Aprobar solicitud de "${s.institucion}"?` });
-    const el = document.getElementById('modalConfirmar');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalConfirmar');
   }
 
   confirmarRechazar(id: number): void {
     const s = this.allSolicitudes.find(x => x.id === id);
     if (!s) return;
     this.confirmAction.set({ id, action: 'rechazar', label: `¿Rechazar solicitud de "${s.institucion}"?` });
-    const el = document.getElementById('modalConfirmar');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalConfirmar');
   }
 
   confirmarReconsiderar(id: number): void {
     const s = this.allSolicitudes.find(x => x.id === id);
     if (!s) return;
     this.confirmAction.set({ id, action: 'reconsiderar', label: `¿Reconsiderar solicitud de "${s.institucion}"?` });
-    const el = document.getElementById('modalConfirmar');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalConfirmar');
   }
 
   ejecutarAccion(): void {
@@ -278,16 +277,10 @@ export class Solicitudes {
   }
 
   private cerrarModal(id: string): void {
-    const el = document.getElementById(id);
-    if (el) {
-      const modal = (window as any).bootstrap.Modal.getInstance(el);
-      modal?.hide();
-    }
+    this.modalService.hide(id);
   }
 
   private mostrarToast(message: string, type: ToastType): void {
-    if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toast.set({ message, type });
-    this.toastTimer = setTimeout(() => this.toast.set(null), 3500);
+    this.toastService.show(message, type);
   }
 }

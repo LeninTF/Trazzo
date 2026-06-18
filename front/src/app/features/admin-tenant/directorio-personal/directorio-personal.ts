@@ -1,6 +1,9 @@
-import { Component, signal, WritableSignal } from '@angular/core';
+import { Component, signal, WritableSignal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Personal {
   id: number;
@@ -29,11 +32,14 @@ interface Metricas {
 @Component({
   selector: 'app-directorio-personal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   templateUrl: './directorio-personal.html',
   styleUrl: './directorio-personal.css',
 })
 export class DirectorioPersonal {
+
+  private readonly toastService = inject(ToastService);
+  private readonly modalService = inject(ModalService);
   
   // ==========================================
   // DATOS PRINCIPALES
@@ -302,11 +308,9 @@ export class DirectorioPersonal {
   // ==========================================
   
   eliminarPersonal(id: number): void {
-    if (confirm('¿Está seguro de eliminar este registro?')) {
-      this.personal.update(list => list.filter(p => p.id !== id));
-      this.mostrarToast('🗑️ Personal eliminado correctamente');
-      this.metricas.personalTotal--;
-    }
+    this.personal.update(list => list.filter(p => p.id !== id));
+    this.mostrarToast('Personal eliminado correctamente');
+    this.metricas.personalTotal--;
   }
   
   // ==========================================
@@ -314,22 +318,6 @@ export class DirectorioPersonal {
   // ==========================================
   
   private mostrarToast(mensaje: string): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 }

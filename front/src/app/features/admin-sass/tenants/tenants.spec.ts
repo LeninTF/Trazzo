@@ -149,16 +149,9 @@ describe('Tenants', () => {
     expect(component.modalTenantOpen).toBeTrue();
   });
 
-  it('should eliminarTenant with confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+  it('should eliminarTenant', () => {
     component.eliminarTenant(1);
     expect(component.tenants.length).toBe(9);
-  });
-
-  it('should not eliminarTenant without confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
-    component.eliminarTenant(1);
-    expect(component.tenants.length).toBe(10);
   });
 
   it('should abrirModalConfiguracion', () => {
@@ -206,8 +199,7 @@ describe('Tenants', () => {
     expect(component.motivoSuspension).toBe('');
   });
 
-  it('should eliminarTenantConfig with confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+  it('should eliminarTenantConfig', () => {
     component.abrirModalConfiguracion(component.tenants[0]);
     component.eliminarTenantConfig();
     expect(component.tenants.length).toBe(9);

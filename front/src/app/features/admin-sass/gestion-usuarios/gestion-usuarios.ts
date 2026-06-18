@@ -1,5 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Usuario {
 	id: number;
@@ -19,7 +21,9 @@ interface Usuario {
 	styleUrl: './gestion-usuarios.css',
 })
 export class GestionUsuarios {
-	private readonly fb = new FormBuilder();
+  private readonly fb = new FormBuilder();
+  private readonly toastService = inject(ToastService);
+  private readonly modalService = inject(ModalService);
 
 	readonly usuarios = signal<Usuario[]>([
 		{ id: 1, nombre: 'Carlos Méndez', correo: 'carlos.mendez@trazzo.pe', rol: 'Superadmin', estado: 'activo', ultimaConexion: 'Hace 12 min' },
@@ -35,9 +39,7 @@ export class GestionUsuarios {
 	readonly filterEstado = signal('todos');
 	readonly vistaCrear = signal(false);
 	readonly paso = signal(1);
-	toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
 	editandoUsuario = signal<Usuario | null>(null);
-	private toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 	readonly usuariosFiltrados = computed(() =>
 		this.usuarios().filter(u => {
@@ -143,7 +145,7 @@ export class GestionUsuarios {
 			return;
 		}
 		const v = this.createForm.value;
-		const rolesSel = ['tenant', 'finanzas', 'auditoria'].filter(r => (v.roles as any)[r]);
+		const rolesSel = ['tenant', 'finanzas', 'auditoria'].filter(r => (v.roles as Record<string, boolean | null>)[r]);
 		const nuevoId = Math.max(...this.usuarios().map(u => u.id), 0) + 1;
 		this.usuarios.update(list => [...list, {
 			id: nuevoId,
@@ -176,11 +178,10 @@ export class GestionUsuarios {
 		this.mostrarToast(`${u.nombre} ahora está ${nuevoEstado === 'activo' ? 'activo' : 'inactivo'}.`, 'success');
 	}
 
-	confirmarEliminar(u: Usuario): void {
-		this.editandoUsuario.set(u);
-		const el = document.getElementById('modalConfirmarEliminar');
-		if (el) new (window as any).bootstrap.Modal(el).show();
-	}
+  confirmarEliminar(u: Usuario): void {
+    this.editandoUsuario.set(u);
+    this.modalService.show('modalConfirmarEliminar');
+  }
 
 	eliminarUsuario(): void {
 		const u = this.editandoUsuario();
@@ -191,14 +192,11 @@ export class GestionUsuarios {
 		this.editandoUsuario.set(null);
 	}
 
-	private cerrarModal(id: string): void {
-		const el = document.getElementById(id);
-		if (el) (window as any).bootstrap.Modal.getInstance(el)?.hide();
-	}
+  private cerrarModal(id: string): void {
+    this.modalService.hide(id);
+  }
 
-	private mostrarToast(message: string, type: 'success' | 'error'): void {
-		if (this.toastTimer) clearTimeout(this.toastTimer);
-		this.toast.set({ message, type });
-		this.toastTimer = setTimeout(() => this.toast.set(null), 3500);
-	}
+  private mostrarToast(message: string, type: 'success' | 'error'): void {
+    this.toastService.show(message, type);
+  }
 }

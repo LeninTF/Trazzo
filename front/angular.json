@@ -26,7 +26,14 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "bootstrap/dist/css/bootstrap.min.css",
+              "bootstrap-icons/font/bootstrap-icons.css",
+              "@fontsource/inter/300.css",
+              "@fontsource/inter/400.css",
+              "@fontsource/inter/600.css",
+              "@fontsource/inter/700.css",
+              "@fontsource/inter/800.css"
             ]
           },
           "configurations": {

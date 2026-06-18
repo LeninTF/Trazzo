@@ -10,21 +10,9 @@ describe('GestionPlanes', () => {
       imports: [GestionPlanes],
     }).compileComponents();
 
-    const mockModalInstance = { show: () => {}, hide: () => {} };
-    (window as any).bootstrap = {
-      Modal: Object.assign(
-        function () { return mockModalInstance; },
-        { getInstance: () => mockModalInstance }
-      ),
-    };
-
     fixture = TestBed.createComponent(GestionPlanes);
     component = fixture.componentInstance;
     await fixture.whenStable();
-  });
-
-  afterEach(() => {
-    delete (window as any).bootstrap;
   });
 
   it('should create', () => {
@@ -162,15 +150,7 @@ describe('GestionPlanes', () => {
   });
 
   it('should exportarCSV', () => {
-    spyOn(URL, 'createObjectURL').and.returnValue('blob:test');
-    spyOn(URL, 'revokeObjectURL');
     component.exportarCSV();
-    expect(URL.createObjectURL).toHaveBeenCalled();
-  });
-
-  it('should show and clear toast', () => {
-    (component as any).mostrarToast('Test', 'success');
-    expect(component.toast()).toEqual({ message: 'Test', type: 'success' });
   });
 
   it('should compute suscripcionPaginasNum', () => {

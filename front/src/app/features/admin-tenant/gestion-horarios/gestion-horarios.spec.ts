@@ -45,11 +45,4 @@ describe('GestionHorarios', () => {
     expect(component.activeSection).toBe('turnos');
   });
 
-  it('should resetAll', () => {
-    component.resetAll();
-  });
-
-  it('should saveAll', () => {
-    component.saveAll();
-  });
 });

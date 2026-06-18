@@ -6,6 +6,14 @@ import {
     platformBrowserDynamicTesting
 } from '@angular/platform-browser-dynamic/testing';
 
+const mockModalInstance = { show: () => {}, hide: () => {} };
+(window as any).bootstrap = {
+  Modal: Object.assign(
+    function () { return mockModalInstance; },
+    { getInstance: () => mockModalInstance }
+  ),
+};
+
 getTestBed().initTestEnvironment(
     BrowserDynamicTestingModule,
     platformBrowserDynamicTesting()

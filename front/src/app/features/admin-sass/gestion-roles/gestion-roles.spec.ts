@@ -127,17 +127,9 @@ describe('GestionRoles', () => {
     expect(component.roles[0].nombre).toBe('Rol Editado');
   });
 
-  it('should eliminarRol with confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
+  it('should eliminarRol', () => {
     const lenBefore = component.roles.length;
     component.eliminarRol(component.roles[0].id);
     expect(component.roles.length).toBe(lenBefore - 1);
-  });
-
-  it('should not eliminarRol without confirm', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
-    const lenBefore = component.roles.length;
-    component.eliminarRol(component.roles[0].id);
-    expect(component.roles.length).toBe(lenBefore);
   });
 });

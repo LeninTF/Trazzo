@@ -1,6 +1,7 @@
-import { Component, signal, WritableSignal, effect } from '@angular/core';
+import { Component, signal, WritableSignal, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
 
 interface Modulo {
   id: string;
@@ -43,6 +44,8 @@ interface LogEntry {
   styleUrl: './configuracion-tenant.css',
 })
 export class ConfiguracionTenant {
+
+  private readonly toastService = inject(ToastService);
   
   // ==========================================
   // SIGNALS PARA DATOS REACTIVOS
@@ -150,8 +153,7 @@ export class ConfiguracionTenant {
         this.modulos.set(datos.modulos);
         this.branding.set(datos.branding);
         this.aplicarColoresGlobales();
-      } catch (e) {
-        console.error('Error al cargar datos guardados', e);
+      } catch {
       }
     }
   }
@@ -332,22 +334,6 @@ export class ConfiguracionTenant {
   // ==========================================
   
   private mostrarToast(mensaje: string): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 }

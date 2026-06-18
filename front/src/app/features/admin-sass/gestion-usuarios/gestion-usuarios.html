@@ -349,9 +349,3 @@
 	</div>
 </div>
 
-@if (toast(); as t) {
-	<div class="toast" [class.toast--success]="t.type === 'success'" [class.toast--error]="t.type === 'error'">
-		<i class="bi" [class.bi-check-circle-fill]="t.type === 'success'" [class.bi-x-circle-fill]="t.type === 'error'"></i>
-		<span>{{ t.message }}</span>
-	</div>
-}

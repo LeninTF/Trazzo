@@ -259,16 +259,8 @@
 					}
 				</tbody>
 			</table>
-			<nav class="pagination-bar">
-				<span class="pagination-info">Página {{ suscripcionPagina() }} de {{ totalSuscripcionPaginas() }}</span>
-				<div class="pagination-controls">
-					<button type="button" class="btn-page" (click)="cambiarPaginaSuscripcion(-1)" [disabled]="suscripcionPagina() <= 1">Anterior</button>
-					@for (p of suscripcionPaginasNum(); track p) {
-						<button type="button" class="btn-page" [class.btn-page--active]="p === suscripcionPagina()" (click)="irPaginaSuscripcion(p)">{{ p }}</button>
-					}
-					<button type="button" class="btn-page" (click)="cambiarPaginaSuscripcion(1)" [disabled]="suscripcionPagina() >= totalSuscripcionPaginas()">Siguiente</button>
-				</div>
-			</nav>
+			<span class="pagination-info">Página {{ suscripcionPagina() }} de {{ totalSuscripcionPaginas() }}</span>
+			<app-pagination [currentPage]="suscripcionPagina()" [totalPages]="totalSuscripcionPaginas()" (pageChange)="irPaginaSuscripcion($event)"/>
 		</div>
 	</div>
 
@@ -340,10 +332,4 @@
 		</div>
 	</div>
 
-	@if (toast(); as t) {
-		<div class="toast-notification" [class.toast--success]="t.type === 'success'" [class.toast--error]="t.type === 'error'">
-			<i class="bi" [class.bi-check-circle-fill]="t.type === 'success'" [class.bi-x-circle-fill]="t.type === 'error'"></i>
-			<span>{{ t.message }}</span>
-		</div>
-	}
 </div>

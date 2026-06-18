@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../services/toast.service';
 
 type LoginField = {
   id: string;
@@ -55,9 +56,10 @@ export class Login {
     },
   ];
 
-  // Datos del formulario
-  email: string = 'admin@gmail.com';
-  password: string = 'admin123';
+  private readonly toastService = inject(ToastService);
+
+  email: string = '';
+  password: string = '';
   rememberSession: boolean = false;
   passwordVisible = false;
   isLoading: boolean = false;
@@ -73,33 +75,25 @@ export class Login {
   onSubmit(event: Event): void {
     event.preventDefault();
     
-    // Validar campos
     if (!this.email || !this.password) {
       this.errorMessage = 'Por favor, complete todos los campos';
-      this.mostrarToastError();
+      this.toastService.error(this.errorMessage);
       return;
     }
 
-    // Validar formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.email)) {
       this.errorMessage = 'Por favor, ingrese un email válido';
-      this.mostrarToastError();
+      this.toastService.error(this.errorMessage);
       return;
     }
 
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Simular autenticación (aquí iría tu llamada a API)
     setTimeout(() => {
       this.isLoading = false;
       
-      // Simular éxito de autenticación
-      // En producción, aquí validarías contra tu backend
-      console.log('Login exitoso:', { email: this.email, remember: this.rememberSession });
-      
-      // Guardar sesión (simulado)
       if (this.rememberSession) {
         localStorage.setItem('userEmail', this.email);
         localStorage.setItem('isLoggedIn', 'true');
@@ -108,28 +102,7 @@ export class Login {
         sessionStorage.setItem('isLoggedIn', 'true');
       }
       
-      // Redirigir a la vista de tenants en sass
       this.router.navigate(['/sass/tenants']);
     }, 1500);
-  }
-
-  private mostrarToastError(): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification toast-notification--error';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <span>${this.errorMessage}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }, 10);
   }
 }

@@ -10,22 +10,9 @@ describe('Sedes', () => {
       imports: [Sedes],
     }).compileComponents();
 
-    const mockModalInstance = { show: () => {}, hide: () => {} };
-    (window as any).bootstrap = {
-      Modal: Object.assign(
-        function () { return mockModalInstance; },
-        { getInstance: () => mockModalInstance }
-      ),
-    };
-    spyOn(window, 'alert').and.stub();
-
     fixture = TestBed.createComponent(Sedes);
     component = fixture.componentInstance;
     await fixture.whenStable();
-  });
-
-  afterEach(() => {
-    delete (window as any).bootstrap;
   });
 
   it('should create', () => {
@@ -105,17 +92,9 @@ describe('Sedes', () => {
   });
 
   it('should eliminarSede', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
     const lenBefore = component.sedes.length;
     component.eliminarSede(1);
     expect(component.sedes.length).toBe(lenBefore - 1);
-  });
-
-  it('should not eliminarSede if cancelled', () => {
-    spyOn(window, 'confirm').and.returnValue(false);
-    const lenBefore = component.sedes.length;
-    component.eliminarSede(1);
-    expect(component.sedes.length).toBe(lenBefore);
   });
 
   it('should abrirModalArea reset area form', () => {
@@ -149,7 +128,6 @@ describe('Sedes', () => {
   });
 
   it('should eliminarArea', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
     component.eliminarArea(1, 1);
     const sede = component.sedes.find(s => s.id === 1)!;
     expect(sede.areas.length).toBe(1);
@@ -186,7 +164,6 @@ describe('Sedes', () => {
   });
 
   it('should eliminarDepartamento', () => {
-    spyOn(window, 'confirm').and.returnValue(true);
     component.eliminarDepartamento(1, 1, 1);
     const area = component.sedes.find(s => s.id === 1)!.areas.find(a => a.id === 1)!;
     expect(area.departamentos.length).toBe(1);

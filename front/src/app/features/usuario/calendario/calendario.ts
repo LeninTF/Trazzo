@@ -146,7 +146,7 @@ export class Calendario {
   }
 
   irHoy(): void {
-    this.fechaActual.set(new Date(2026, 9, 1));
+    this.fechaActual.set(new Date());
   }
 
   cambiarVista(v: 'mensual' | 'semanal'): void {

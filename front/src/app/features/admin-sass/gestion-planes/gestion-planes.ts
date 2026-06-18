@@ -1,5 +1,9 @@
-import { Component, computed, signal } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, computed, signal, inject } from '@angular/core';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PaginationComponent } from '../../../shared/pagination/pagination.component';
+import { ToastService } from '../../../services/toast.service';
+import { ExportService } from '../../../services/export.service';
+import { ModalService } from '../../../services/modal.service';
 
 interface Modulo {
   id: string;
@@ -42,12 +46,15 @@ interface Suscripcion {
 @Component({
   selector: 'app-gestion-planes',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PaginationComponent],
   templateUrl: './gestion-planes.html',
   styleUrl: './gestion-planes.css',
 })
 export class GestionPlanes {
   private readonly fb = new FormBuilder();
+  private readonly toastService = inject(ToastService);
+  private readonly exportService = inject(ExportService);
+  private readonly modalService = inject(ModalService);
 
   readonly modulosDisponibles: Modulo[] = [
     { id: 'reportes', label: 'Reportes Avanzados', icono: 'bi-bar-chart' },
@@ -68,8 +75,7 @@ export class GestionPlanes {
   planSeleccionado = signal<Plan | null>(null);
   editPlanId = signal<number | null>(null);
   mostrarFormNuevo = signal(false);
-  toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
-  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
 
   suscripcionPagina = signal(1);
   readonly suscripcionPageSize = 5;
@@ -289,8 +295,7 @@ export class GestionPlanes {
     const id = this.editPlanId();
     const plan = this.planes().find(p => p.id === id);
     if (!plan) return;
-    const el = document.getElementById('modalEliminarPlan');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalEliminarPlan');
   }
 
   eliminarPlan(): void {
@@ -315,38 +320,24 @@ export class GestionPlanes {
 
   verDetalleSuscripcion(s: Suscripcion): void {
     this.suscripcionSeleccionada.set(s);
-    const el = document.getElementById('modalDetalleSuscripcion');
-    if (el) new (window as any).bootstrap.Modal(el).show();
+    this.modalService.show('modalDetalleSuscripcion');
   }
 
   exportarCSV(): void {
-    const cabeceras = ['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado'];
-    const filas = this.suscripciones.map(s =>
+    const headers = ['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado'];
+    const rows = this.suscripciones.map(s =>
       [s.tenant, s.plan, s.fechaInicio, s.fechaFin, s.monto.toString(), s.estado]
     );
-    const csv = [cabeceras.join(','), ...filas.map(f => f.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `historial-suscripciones-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    this.mostrarToast('CSV exportado correctamente.', 'success');
+    this.exportService.exportCSV(`historial-suscripciones-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    this.mostrarToast('CSV exportado correctamente.');
   }
 
   private cerrarModal(id: string): void {
-    const el = document.getElementById(id);
-    if (el) {
-      const modal = (window as any).bootstrap.Modal.getInstance(el);
-      modal?.hide();
-    }
+    this.modalService.hide(id);
   }
 
-  private mostrarToast(message: string, type: 'success' | 'error'): void {
-    if (this.toastTimer) clearTimeout(this.toastTimer);
-    this.toast.set({ message, type });
-    this.toastTimer = setTimeout(() => this.toast.set(null), 3500);
+  private mostrarToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+    this.toastService.show(message, type);
   }
 
 }
