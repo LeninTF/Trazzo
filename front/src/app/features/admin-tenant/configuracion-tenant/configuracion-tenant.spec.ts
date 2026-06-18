@@ -172,6 +172,7 @@ describe('ConfiguracionTenant', () => {
 
   it('should keep 50 max logs', () => {
     for (let i = 0; i < 60; i++) {
+      // @ts-expect-error - agregarLog is private, called for testing log rotation
       (component as any).agregarLog(`Log ${i}`, 'info');
     }
     expect(component.logs().length).toBeLessThanOrEqual(50);
