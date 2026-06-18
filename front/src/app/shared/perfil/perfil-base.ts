@@ -45,7 +45,7 @@ export abstract class PerfilBase {
       this.mensajeError = 'Nombres y apellidos son obligatorios.';
       return;
     }
-    if (!this.usuarioEdit.email.match(/^\S+@\S+\.\S+$/)) {
+    if (!this.usuarioEdit.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       this.mensajeError = 'Correo electrónico inválido.';
       return;
     }
