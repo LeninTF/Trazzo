@@ -60,7 +60,6 @@
   font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
-  border: none;
   background: var(--white);
   color: var(--primary);
   border: 1px solid var(--border-color);
@@ -221,7 +220,6 @@
   font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
-  border: none;
   background: var(--white);
   color: var(--primary);
   border: 1px solid var(--border-color);

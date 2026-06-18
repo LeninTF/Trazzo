@@ -14,7 +14,7 @@
           }
         </button>
         @if (filterOpen) {
-          <div class="filter-dropdown" (click)="$event.stopPropagation()">
+          <div class="filter-dropdown" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
             <div class="filter-section">
               <span class="filter-label">Estado</span>
               <div class="filter-chips">
@@ -238,8 +238,8 @@
 </div>
 
 @if (modalOpen && selectedSolicitud) {
-  <div class="modal-overlay" (click)="closeModal()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" role="button">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">

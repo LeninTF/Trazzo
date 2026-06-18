@@ -128,7 +128,7 @@
         </div>
         <div class="card-body">
           <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-            <div class="escaner-info" (click)="toggleEscaner(escaner.id)">
+            <div class="escaner-info" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
               <i class="bi bi-upc-scan fs-5 me-2" [ngClass]="escaner.online ? 'text-primary' : 'text-secondary'"></i>
               <div>
                 <strong>{{ escaner.nombre }}</strong>
@@ -136,7 +136,7 @@
               </div>
             </div>
             <div class="escaner-actions">
-              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'" (click)="toggleEscaner(escaner.id)">
+              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
                 <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
                 {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
               </span>

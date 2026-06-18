@@ -45,7 +45,7 @@
     </div>
     <div class="inc-card__body">
       @for (inc of filtradas; track inc.id) {
-        <div class="inc-item" (click)="abrirDetalle(inc)">
+        <div class="inc-item" (click)="abrirDetalle(inc)" (keydown.enter)="abrirDetalle(inc)" tabindex="0" role="button">
           <div class="inc-item__left">
             <div class="inc-item__icon"
               [class.inc-item__icon--pending]="inc.estado === 'Pendiente'"
@@ -98,8 +98,8 @@
 </div>
 
 @if (mostrarModalCrear) {
-  <div class="modal-overlay" (click)="cerrarModalCrear()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalCrear()" (keydown.escape)="cerrarModalCrear()" tabindex="0" role="button">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -144,8 +144,8 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Archivo Adjunto (opcional)</label>
-          <div class="file-upload" (click)="fileInput.click()">
+            <label class="form-label" for="incidencia-file-input">Archivo Adjunto (opcional)</label>
+          <div class="file-upload" (click)="fileInput.click()" (keydown.enter)="fileInput.click()" tabindex="0" role="button">
             @if (nuevaIncidencia.archivo) {
               <div class="file-upload__preview">
                 <i class="bi bi-file-earmark-text"></i>
@@ -162,7 +162,7 @@
               </div>
             }
           </div>
-          <input #fileInput type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.jpg,.png,.doc,.docx" />
+          <input #fileInput id="incidencia-file-input" type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.jpg,.png,.doc,.docx" />
         </div>
       </div>
 
@@ -177,8 +177,8 @@
 }
 
 @if (mostrarModalDetalle && selectedIncidencia) {
-  <div class="modal-overlay" (click)="cerrarDetalle()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarDetalle()" (keydown.escape)="cerrarDetalle()" tabindex="0" role="button">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">

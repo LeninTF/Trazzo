@@ -176,9 +176,9 @@
 
   <!-- ──────── MODAL ──────── -->
   @if (showNewTurnoModal) {
-    <div class="gh-overlay" (click)="cancelNewTurno()"></div>
+    <div class="gh-overlay" (click)="cancelNewTurno()" (keydown.escape)="cancelNewTurno()" tabindex="0" role="button"></div>
     <div class="gh-modal-wrap">
-      <div class="gh-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="gh-modal-dialog" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
         <div class="gh-modal">
           <div class="gh-modal-header">
             <div class="d-flex align-items-center gap-3">

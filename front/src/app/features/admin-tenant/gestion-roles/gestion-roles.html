@@ -135,8 +135,8 @@
   </div>
 
   @if (mostrarModalRol) {
-    <div class="modal-overlay" (click)="cerrarModalNuevoRol()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-overlay" (click)="cerrarModalNuevoRol()" (keydown.escape)="cerrarModalNuevoRol()" tabindex="0" role="button">
+      <div class="modal-card" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
         <div class="modal-card__header">
           <h3>{{ editandoRol ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
           <button type="button" class="modal-card__close" (click)="cerrarModalNuevoRol()">
