@@ -1,6 +1,7 @@
-import { Component, signal, WritableSignal, computed } from '@angular/core';
+import { Component, signal, WritableSignal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../../services/toast.service';
 
 interface Factura {
   id: number;
@@ -36,6 +37,8 @@ interface Metricas {
   styleUrl: './planes.css',
 })
 export class Planes {
+
+  private readonly toastService = inject(ToastService);
   
   // ==========================================
   // SIGNALS PARA DATOS REACTIVOS
@@ -192,13 +195,11 @@ export class Planes {
   // ==========================================
   
   exportarFacturas(): void {
-    this.mostrarToast(' Exportando facturas...');
-    // Aquí iría la lógica de exportación
+    this.mostrarToast('Exportando facturas...');
   }
   
   descargarFactura(): void {
-    this.mostrarToast(' Descargando factura...');
-    // Aquí iría la lógica de descarga
+    this.mostrarToast('Descargando factura...');
   }
   
   // ==========================================
@@ -206,22 +207,6 @@ export class Planes {
   // ==========================================
   
   private mostrarToast(mensaje: string): void {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.innerHTML = `
-      <div class="toast-notification__content">
-        <i class="bi bi-info-circle-fill me-2"></i>
-        <span>${mensaje}</span>
-      </div>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-      toast.classList.add('toast-notification--show');
-      setTimeout(() => {
-        toast.classList.remove('toast-notification--show');
-        setTimeout(() => toast.remove(), 300);
-      }, 2000);
-    }, 10);
+    this.toastService.info(mensaje);
   }
 }
