@@ -3,7 +3,7 @@
 @if (router.url.startsWith('/tenant') || router.url.startsWith('/sass') || router.url.startsWith('/usuario')) {
 	<div class="app-shell" [class.app-shell--sidebar-open]="roleService.sidebarOpen()">
 		@if (roleService.sidebarOpen()) {
-			<div class="app-shell__backdrop" (click)="roleService.closeSidebar()"></div>
+			<div class="app-shell__backdrop" (click)="roleService.closeSidebar()" (keydown.enter)="roleService.closeSidebar()" role="button" tabindex="0"></div>
 		}
 
 		<aside class="app-shell__sidebar">

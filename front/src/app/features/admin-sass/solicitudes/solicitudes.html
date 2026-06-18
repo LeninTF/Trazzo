@@ -42,10 +42,10 @@
 		<div class="filters-row">
 			<div class="filter-group filter-group--search">
 				<i class="bi bi-search filter-group__icon"></i>
-				<input type="text" class="filter-input" placeholder="Buscar por institución o contacto..." [formControl]="filterSearch">
+				<input type="text" id="solicitudes-busqueda" class="filter-input" placeholder="Buscar por institución o contacto..." [formControl]="filterSearch">
 			</div>
 
-			<div class="custom-select" (click)="toggleDropdown('estado', $event)">
+			<div class="custom-select" (click)="toggleDropdown('estado', $event)" (keydown.enter)="toggleDropdown('estado', $event)" role="button" tabindex="0">
 				<div class="custom-select__trigger">
 					<i class="bi bi-funnel filter-group__icon"></i>
 					<span class="custom-select__label">{{ estadoLabel() }}</span>
@@ -67,7 +67,7 @@
 				}
 			</div>
 
-			<div class="custom-select" (click)="toggleDropdown('periodo', $event)">
+			<div class="custom-select" (click)="toggleDropdown('periodo', $event)" (keydown.enter)="toggleDropdown('periodo', $event)" role="button" tabindex="0">
 				<div class="custom-select__trigger">
 					<i class="bi bi-calendar3 filter-group__icon"></i>
 					<span class="custom-select__label">{{ periodoLabel() }}</span>
@@ -92,11 +92,11 @@
 			@if (filterPeriodoSig() === 'personalizado') {
 				<div class="filter-group">
 					<span class="filter-date-label">Desde</span>
-					<input type="date" class="filter-input filter-input--date" [formControl]="filterFechaDesde">
+					<input type="date" id="solicitudes-fecha-desde" class="filter-input filter-input--date" [formControl]="filterFechaDesde">
 				</div>
 				<div class="filter-group">
 					<span class="filter-date-label">Hasta</span>
-					<input type="date" class="filter-input filter-input--date" [formControl]="filterFechaHasta">
+					<input type="date" id="solicitudes-fecha-hasta" class="filter-input filter-input--date" [formControl]="filterFechaHasta">
 				</div>
 			}
 
@@ -112,7 +112,7 @@
 	</div>
 
 	@if (dropdownOpen()) {
-		<div class="dropdown-backdrop" (click)="cerrarDropdowns()"></div>
+		<div class="dropdown-backdrop" (click)="cerrarDropdowns()" (keydown.enter)="cerrarDropdowns()" role="button" tabindex="0"></div>
 	}
 
 	<ul class="nav nav-tabs solicitudes-tabs" role="tablist">

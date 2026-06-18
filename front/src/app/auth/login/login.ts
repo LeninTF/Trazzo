@@ -81,7 +81,7 @@ export class Login {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^\S+@\S+\.\S+$/;
     if (!emailRegex.test(this.email)) {
       this.errorMessage = 'Por favor, ingrese un email válido';
       this.toastService.error(this.errorMessage);

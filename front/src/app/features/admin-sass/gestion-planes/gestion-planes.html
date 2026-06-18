@@ -14,7 +14,7 @@
 
 	<div class="planes-grid">
 		@for (plan of planes(); track plan.id) {
-			<div class="plan-card" [class.plan-card--selected]="editPlanId() === plan.id" (click)="seleccionarPlan(plan)">
+			<div class="plan-card" [class.plan-card--selected]="editPlanId() === plan.id" (click)="seleccionarPlan(plan)" (keydown.enter)="seleccionarPlan(plan)" role="button" tabindex="0">
 				<div class="plan-card__head">
 					<h3 class="plan-card__name">{{ plan.nombre }}</h3>
 					<span class="plan-card__sku">{{ plan.sku }}</span>
@@ -65,15 +65,15 @@
 					<h3 class="form-section__title">Información Básica</h3>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Nombre del plan</label>
-							<input type="text" class="form-input" formControlName="nombre" placeholder="Ej: Plan Premium">
+							<label class="form-label" for="plan-nombre">Nombre del plan</label>
+							<input id="plan-nombre" type="text" class="form-input" formControlName="nombre" placeholder="Ej: Plan Premium">
 							@if (planForm.get('nombre')?.invalid && planForm.get('nombre')?.touched) {
 								<span class="form-error">El nombre es obligatorio (mín. 3 caracteres)</span>
 							}
 						</div>
 						<div class="form-field">
-							<label class="form-label">Identificador interno (SKU)</label>
-							<input type="text" class="form-input" formControlName="sku" placeholder="Ej: PLAN-PRE-001">
+							<label class="form-label" for="plan-sku">Identificador interno (SKU)</label>
+							<input id="plan-sku" type="text" class="form-input" formControlName="sku" placeholder="Ej: PLAN-PRE-001">
 							@if (planForm.get('sku')?.invalid && planForm.get('sku')?.touched) {
 								<span class="form-error">El SKU es obligatorio</span>
 							}
@@ -81,23 +81,23 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Precio mensual (S/)</label>
-							<input type="number" class="form-input" formControlName="precioMensual" min="0">
+							<label class="form-label" for="plan-precio-mensual">Precio mensual (S/)</label>
+							<input id="plan-precio-mensual" type="number" class="form-input" formControlName="precioMensual" min="0">
 							@if (planForm.get('precioMensual')?.invalid && planForm.get('precioMensual')?.touched) {
 								<span class="form-error">Debe ser mayor a 0</span>
 							}
 						</div>
 						<div class="form-field">
-							<label class="form-label">Precio anual (S/)</label>
-							<input type="number" class="form-input" formControlName="precioAnual" min="0">
+							<label class="form-label" for="plan-precio-anual">Precio anual (S/)</label>
+							<input id="plan-precio-anual" type="number" class="form-input" formControlName="precioAnual" min="0">
 							@if (planForm.get('precioAnual')?.invalid && planForm.get('precioAnual')?.touched) {
 								<span class="form-error">Debe ser mayor a 0</span>
 							}
 						</div>
 					</div>
 					<div class="form-field form-field--full">
-						<label class="form-label">Descripción del plan</label>
-						<textarea class="form-input form-input--area" formControlName="descripcion" rows="3" placeholder="Describe las características principales del plan..."></textarea>
+						<label class="form-label" for="plan-descripcion">Descripción del plan</label>
+						<textarea id="plan-descripcion" class="form-input form-input--area" formControlName="descripcion" rows="3" placeholder="Describe las características principales del plan..."></textarea>
 					</div>
 				</div>
 
@@ -105,16 +105,16 @@
 					<h3 class="form-section__title">Límites Técnicos</h3>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Máximo trabajadores</label>
-							<input type="number" class="form-input" formControlName="maxTrabajadores" min="1">
+							<label class="form-label" for="plan-max-trabajadores">Máximo trabajadores</label>
+							<input id="plan-max-trabajadores" type="number" class="form-input" formControlName="maxTrabajadores" min="1">
 						</div>
 						<div class="form-field">
-							<label class="form-label">Máximo sedes</label>
-							<input type="number" class="form-input" formControlName="maxSedes" min="0">
+							<label class="form-label" for="plan-max-sedes">Máximo sedes</label>
+							<input id="plan-max-sedes" type="number" class="form-input" formControlName="maxSedes" min="0">
 						</div>
 						<div class="form-field">
-							<label class="form-label">Almacenamiento (GB)</label>
-							<input type="number" class="form-input" formControlName="almacenamiento" min="1">
+							<label class="form-label" for="plan-almacenamiento">Almacenamiento (GB)</label>
+							<input id="plan-almacenamiento" type="number" class="form-input" formControlName="almacenamiento" min="1">
 						</div>
 					</div>
 					<div class="form-field form-field--toggle">

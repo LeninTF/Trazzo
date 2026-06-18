@@ -59,21 +59,21 @@
       <div class="filters-grid">
         <div class="search-input">
           <i class="bi bi-search search-input__icon"></i>
-          <input type="text" class="form-control" placeholder="Buscar por nombre o ID de personal…" [(ngModel)]="searchTerm" (input)="filtrarPersonal()">
+          <input type="text" id="personal-busqueda" class="form-control" placeholder="Buscar por nombre o ID de personal…" [(ngModel)]="searchTerm" (input)="filtrarPersonal()">
         </div>
-        <select class="form-select" [(ngModel)]="filtroSede" (change)="filtrarPersonal()">
+        <select id="personal-filtro-sede" class="form-select" [(ngModel)]="filtroSede" (change)="filtrarPersonal()">
           <option value="">Todas las Sedes</option>
           @for (sede of sedesDisponibles; track sede) {
             <option [value]="sede">{{ sede }}</option>
           }
         </select>
-        <select class="form-select" [(ngModel)]="filtroArea" (change)="filtrarPersonal()">
+        <select id="personal-filtro-area" class="form-select" [(ngModel)]="filtroArea" (change)="filtrarPersonal()">
           <option value="">Todas las Áreas</option>
           @for (area of areasDisponibles; track area) {
             <option [value]="area">{{ area }}</option>
           }
         </select>
-        <select class="form-select" [(ngModel)]="filtroDepartamento" (change)="filtrarPersonal()">
+        <select id="personal-filtro-departamento" class="form-select" [(ngModel)]="filtroDepartamento" (change)="filtrarPersonal()">
           <option value="">Todos los Departamentos</option>
           @for (depto of departamentosDisponibles; track depto) {
             <option [value]="depto">{{ depto }}</option>
@@ -163,8 +163,8 @@
 <!-- MODAL: AGREGAR/EDITAR PERSONAL             -->
 <!-- ========================================== -->
 @if (modalPersonalOpen) {
-  <div class="modal-overlay" (click)="cerrarModalPersonal()">
-    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalPersonal()" (keydown.enter)="cerrarModalPersonal()" role="button" tabindex="0">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -184,8 +184,8 @@
           
           <!-- SECCIÓN DE IMAGEN -->
           <div class="image-upload-section">
-            <label class="form-label">Foto del Personal</label>
-            <div class="image-preview" (click)="abrirSelectorArchivo()">
+            <label class="form-label" for="personal-file-input">Foto del Personal</label>
+            <div class="image-preview" (click)="abrirSelectorArchivo()" (keydown.enter)="abrirSelectorArchivo()" role="button" tabindex="0">
               @if (imagenPreviewUrl) {
                 <img [src]="imagenPreviewUrl" alt="Preview" class="image-preview__img">
               } @else {
@@ -195,7 +195,7 @@
                 </div>
               }
             </div>
-            <input type="file" id="fileInput" accept="image/*" style="display: none" (change)="onFileSelected($event)">
+            <input type="file" id="personal-file-input" accept="image/*" style="display: none" (change)="onFileSelected($event)">
             
             <div class="image-mode-toggle">
               <div class="btn-group w-100">
@@ -205,7 +205,7 @@
             </div>
             
             @if (modoImagenUrl) {
-              <input type="text" class="form-control mt-2" [(ngModel)]="personalForm.imagenUrl" placeholder="https://ejemplo.com/imagen.jpg" (input)="actualizarPreviewUrl()">
+              <input type="text" id="personal-imagen-url" class="form-control mt-2" [(ngModel)]="personalForm.imagenUrl" placeholder="https://ejemplo.com/imagen.jpg" (input)="actualizarPreviewUrl()">
             }
           </div>
           
@@ -213,60 +213,60 @@
           <div class="form-fields">
             <div class="form-grid-2cols">
               <div class="form-group">
-                <label class="form-label">Nombre Completo <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" [(ngModel)]="personalForm.nombre" placeholder="Ej: Dr. Sarah Jenkins">
+                <label class="form-label" for="personal-nombre">Nombre Completo <span class="text-danger">*</span></label>
+                <input type="text" id="personal-nombre" class="form-control" [(ngModel)]="personalForm.nombre" placeholder="Ej: Dr. Sarah Jenkins">
               </div>
               <div class="form-group">
-                <label class="form-label">ID de Personal <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" [(ngModel)]="personalForm.idPersonal" placeholder="Ej: #AX-9021">
+                <label class="form-label" for="personal-id">ID de Personal <span class="text-danger">*</span></label>
+                <input type="text" id="personal-id" class="form-control" [(ngModel)]="personalForm.idPersonal" placeholder="Ej: #AX-9021">
               </div>
               <div class="form-group">
-                <label class="form-label">Sede</label>
-                <select class="form-select" [(ngModel)]="personalForm.sede">
+                <label class="form-label" for="personal-sede">Sede</label>
+                <select id="personal-sede" class="form-select" [(ngModel)]="personalForm.sede">
                   @for (sede of sedesDisponibles; track sede) {
                     <option [value]="sede">{{ sede }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Área</label>
-                <select class="form-select" [(ngModel)]="personalForm.area">
+                <label class="form-label" for="personal-area">Área</label>
+                <select id="personal-area" class="form-select" [(ngModel)]="personalForm.area">
                   @for (area of areasDisponibles; track area) {
                     <option [value]="area">{{ area }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Departamento</label>
-                <select class="form-select" [(ngModel)]="personalForm.departamento">
+                <label class="form-label" for="personal-departamento">Departamento</label>
+                <select id="personal-departamento" class="form-select" [(ngModel)]="personalForm.departamento">
                   @for (depto of departamentosDisponibles; track depto) {
                     <option [value]="depto">{{ depto }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Cargo</label>
-                <input type="text" class="form-control" [(ngModel)]="personalForm.cargo" placeholder="Ej: Lead Faculty">
+                <label class="form-label" for="personal-cargo">Cargo</label>
+                <input type="text" id="personal-cargo" class="form-control" [(ngModel)]="personalForm.cargo" placeholder="Ej: Lead Faculty">
               </div>
               <div class="form-group">
-                <label class="form-label">Estado</label>
-                <select class="form-select" [(ngModel)]="personalForm.estado">
+                <label class="form-label" for="personal-estado">Estado</label>
+                <select id="personal-estado" class="form-select" [(ngModel)]="personalForm.estado">
                   <option value="ACTIVO">ACTIVO</option>
                   <option value="PRUEBA">PRUEBA</option>
                   <option value="SUSPENDIDO">SUSPENDIDO</option>
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control" [(ngModel)]="personalForm.email" placeholder="ejemplo@empresa.com">
+                <label class="form-label" for="personal-email">Email</label>
+                <input type="email" id="personal-email" class="form-control" [(ngModel)]="personalForm.email" placeholder="ejemplo@empresa.com">
               </div>
               <div class="form-group">
-                <label class="form-label">Teléfono</label>
-                <input type="text" class="form-control" [(ngModel)]="personalForm.telefono" placeholder="+51 987 654 321">
+                <label class="form-label" for="personal-telefono">Teléfono</label>
+                <input type="text" id="personal-telefono" class="form-control" [(ngModel)]="personalForm.telefono" placeholder="+51 987 654 321">
               </div>
               <div class="form-group">
-                <label class="form-label">Fecha de Ingreso</label>
-                <input type="date" class="form-control" [(ngModel)]="personalForm.fechaIngreso">
+                <label class="form-label" for="personal-fecha-ingreso">Fecha de Ingreso</label>
+                <input type="date" id="personal-fecha-ingreso" class="form-control" [(ngModel)]="personalForm.fechaIngreso">
               </div>
             </div>
           </div>
@@ -284,8 +284,8 @@
 <!-- MODAL: DETALLE DE PERSONAL                 -->
 <!-- ========================================== -->
 @if (modalDetalleOpen && personalSeleccionado) {
-  <div class="modal-overlay" (click)="cerrarModalDetalle()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalDetalle()" (keydown.enter)="cerrarModalDetalle()" role="button" tabindex="0">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">

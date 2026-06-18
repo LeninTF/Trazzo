@@ -36,17 +36,17 @@
         <div class="config-card__body">
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Nombre Oficial del Tenant</label>
-              <input type="text" class="form-control" [(ngModel)]="tenantInfo().nombre" (ngModelChange)="marcarCambiosPendientes()" placeholder="Ej: Universidad Nacional">
+              <label class="form-label" for="config-nombre-tenant">Nombre Oficial del Tenant</label>
+              <input type="text" id="config-nombre-tenant" class="form-control" [(ngModel)]="tenantInfo().nombre" (ngModelChange)="marcarCambiosPendientes()" placeholder="Ej: Universidad Nacional">
             </div>
             <div class="form-group">
-              <label class="form-label">Correo Administrador</label>
-              <input type="email" class="form-control" [(ngModel)]="tenantInfo().email" (ngModelChange)="marcarCambiosPendientes()" placeholder="admin@ejemplo.com">
+              <label class="form-label" for="config-correo-admin">Correo Administrador</label>
+              <input type="email" id="config-correo-admin" class="form-control" [(ngModel)]="tenantInfo().email" (ngModelChange)="marcarCambiosPendientes()" placeholder="admin@ejemplo.com">
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">Logo Institucional</label>
-            <div class="logo-upload" (click)="abrirSelectorLogo()">
+            <div class="logo-upload" (click)="abrirSelectorLogo()" (keydown.enter)="abrirSelectorLogo()" role="button" tabindex="0">
               <div class="logo-upload__preview" *ngIf="tenantInfo().logoUrl">
                 <img [src]="tenantInfo().logoUrl" alt="Logo" class="logo-upload__image">
                 <button class="logo-upload__remove" (click)="eliminarLogo($event)">✕</button>
@@ -56,7 +56,7 @@
                 <p>Cambiar Logo</p>
                 <small>PNG, JPG hasta 2MB</small>
               </div>
-              <input type="file" #logoInput accept="image/*" style="display: none" (change)="cambiarLogo($event)">
+              <input type="file" #logoInput id="config-logo-input" accept="image/*" style="display: none" (change)="cambiarLogo($event)">
             </div>
           </div>
         </div>
@@ -76,15 +76,15 @@
         <div class="config-card__body">
           <div class="limits-grid">
             <div class="limit-item">
-              <input type="number" class="limit-item__input" [(ngModel)]="limites().maxUsuarios" (change)="validarLimiteMaxUsuarios()">
+              <input type="number" id="config-max-usuarios" class="limit-item__input" [(ngModel)]="limites().maxUsuarios" (change)="validarLimiteMaxUsuarios()">
               <span class="limit-item__label">Máximo de Usuarios</span>
             </div>
             <div class="limit-item">
-              <input type="number" class="limit-item__input" [(ngModel)]="limites().maxSedes" (change)="validarLimiteSedes()">
+              <input type="number" id="config-max-sedes" class="limit-item__input" [(ngModel)]="limites().maxSedes" (change)="validarLimiteSedes()">
               <span class="limit-item__label">Sedes Físicas</span>
             </div>
             <div class="limit-item">
-              <input type="date" class="limit-item__input" [(ngModel)]="limites().cicloFacturacion" (change)="marcarCambiosPendientes()">
+              <input type="date" id="config-ciclo-facturacion" class="limit-item__input" [(ngModel)]="limites().cicloFacturacion" (change)="marcarCambiosPendientes()">
               <span class="limit-item__label">Ciclo de Facturación</span>
             </div>
           </div>
@@ -113,7 +113,7 @@
                   </span>
                 </div>
                 <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" [(ngModel)]="modulo.activo" (change)="toggleModulo(modulo)">
+                  <input class="form-check-input" type="checkbox" id="config-modulo-{{modulo.id}}" [(ngModel)]="modulo.activo" (change)="toggleModulo(modulo)">
                 </div>
               </div>
             }
@@ -136,16 +136,16 @@
         </div>
         <div class="config-card__body">
           <div class="form-group">
-            <label class="form-label">Color Principal</label>
-            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorPrimario" (ngModelChange)="actualizarColorPrimario($event)">
+            <label class="form-label" for="config-color-primario">Color Principal</label>
+            <input type="color" id="config-color-primario" class="form-control form-control-color" [ngModel]="branding().colorPrimario" (ngModelChange)="actualizarColorPrimario($event)">
           </div>
           <div class="form-group">
-            <label class="form-label">Color Secundario</label>
-            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorSecundario" (ngModelChange)="actualizarColorSecundario($event)">
+            <label class="form-label" for="config-color-secundario">Color Secundario</label>
+            <input type="color" id="config-color-secundario" class="form-control form-control-color" [ngModel]="branding().colorSecundario" (ngModelChange)="actualizarColorSecundario($event)">
           </div>
           <div class="form-group">
-            <label class="form-label">Color de Acento</label>
-            <input type="color" class="form-control form-control-color" [ngModel]="branding().colorAcento" (ngModelChange)="actualizarColorAcento($event)">
+            <label class="form-label" for="config-color-acento">Color de Acento</label>
+            <input type="color" id="config-color-acento" class="form-control form-control-color" [ngModel]="branding().colorAcento" (ngModelChange)="actualizarColorAcento($event)">
           </div>
 
           <div class="preview-section">
@@ -175,8 +175,8 @@
 <!-- MODAL: CONFIRMACIÓN DE CAMBIOS             -->
 <!-- ========================================== -->
 @if (modalConfirmacionOpen) {
-  <div class="modal-overlay" (click)="cerrarModalConfirmacion()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalConfirmacion()" (keydown.enter)="cerrarModalConfirmacion()" role="button" tabindex="0">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -207,8 +207,8 @@
 <!-- MODAL: SUSPENDER TENANT                    -->
 <!-- ========================================== -->
 @if (modalSuspenderOpen) {
-  <div class="modal-overlay" (click)="cerrarModalSuspender()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalSuspender()" (keydown.enter)="cerrarModalSuspender()" role="button" tabindex="0">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header modal-header--danger">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -227,8 +227,8 @@
         <p>¿Está seguro de que desea <strong>suspender</strong> este tenant?</p>
         <p class="text-muted small">Al suspender el tenant, todos los usuarios perderán acceso al sistema hasta que se reactive la cuenta.</p>
         <div class="form-group mt-3">
-          <label class="form-label">Motivo de suspensión</label>
-          <textarea class="form-control" rows="2" [(ngModel)]="motivoSuspension" placeholder="Ej: Falta de pago, incumplimiento de términos..."></textarea>
+          <label class="form-label" for="config-motivo-suspension">Motivo de suspensión</label>
+          <textarea id="config-motivo-suspension" class="form-control" rows="2" [(ngModel)]="motivoSuspension" placeholder="Ej: Falta de pago, incumplimiento de términos..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -243,8 +243,8 @@
 <!-- MODAL: VER LOGS                            -->
 <!-- ========================================== -->
 @if (modalLogsOpen) {
-  <div class="modal-overlay" (click)="cerrarModalLogs()">
-    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalLogs()" (keydown.enter)="cerrarModalLogs()" role="button" tabindex="0">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">

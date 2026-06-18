@@ -134,8 +134,8 @@
 
   <!-- Modal for creating/editing roles -->
   @if (mostrarModalRol) {
-    <div class="modal-overlay" (click)="cerrarModalNuevoRol()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-overlay" (click)="cerrarModalNuevoRol()" (keydown.enter)="cerrarModalNuevoRol()" role="button" tabindex="0">
+      <div class="modal-card" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
         <div class="modal-card__header">
           <h3>{{ editandoRol ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
           <button type="button" class="modal-card__close" (click)="cerrarModalNuevoRol()">
@@ -143,10 +143,10 @@
           </button>
         </div>
         <div class="modal-card__body">
-          <label class="modal-card__label">Nombre del rol</label>
-          <input type="text" class="modal-card__input" placeholder="Ej: Auditor de sistemas" [(ngModel)]="nuevoRolNombre" (keyup.enter)="guardarRol()" />
-          <label class="modal-card__label modal-card__label--mt">Descripci&oacute;n</label>
-          <textarea class="modal-card__textarea" placeholder="Describe el alcance de este rol..." [(ngModel)]="nuevoRolDescripcion" rows="3"></textarea>
+          <label class="modal-card__label" for="rol-nombre">Nombre del rol</label>
+          <input type="text" class="modal-card__input" id="rol-nombre" placeholder="Ej: Auditor de sistemas" [(ngModel)]="nuevoRolNombre" (keyup.enter)="guardarRol()" />
+          <label class="modal-card__label modal-card__label--mt" for="rol-descripcion">Descripci&oacute;n</label>
+          <textarea class="modal-card__textarea" id="rol-descripcion" placeholder="Describe el alcance de este rol..." [(ngModel)]="nuevoRolDescripcion" rows="3"></textarea>
         </div>
         <div class="modal-card__footer">
           <button type="button" class="btn-roles btn-roles--outline" (click)="cerrarModalNuevoRol()">Cancelar</button>

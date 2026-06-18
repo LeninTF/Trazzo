@@ -201,13 +201,13 @@ export class Monitoreo implements OnInit, OnDestroy {
     
     const nuevoEvento: Evento = {
       id: Date.now(),
-      nombre: nombres[Math.floor(Math.random() * nombres.length)],
-      rol: roles[Math.floor(Math.random() * roles.length)],
+      nombre: nombres[Monitoreo.secureRandomInt(nombres.length)],
+      rol: roles[Monitoreo.secureRandomInt(roles.length)],
       hora: new Date().toLocaleTimeString(),
-      idDispositivo: `AX-${Math.floor(Math.random() * 9000 + 1000)}`,
-      estado: Math.random() > 0.8 ? 'TARDE' : 'A TIEMPO',
-      escaner: escaneres[Math.floor(Math.random() * escaneres.length)],
-      ubicacion: ubicaciones[Math.floor(Math.random() * ubicaciones.length)],
+      idDispositivo: `AX-${Monitoreo.secureRandomInt(9000) + 1000}`,
+      estado: Monitoreo.secureRandom() > 0.8 ? 'TARDE' : 'A TIEMPO',
+      escaner: escaneres[Monitoreo.secureRandomInt(escaneres.length)],
+      ubicacion: ubicaciones[Monitoreo.secureRandomInt(ubicaciones.length)],
       online: true
     };
     
@@ -393,6 +393,18 @@ export class Monitoreo implements OnInit, OnDestroy {
   refrescarDatos(): void {
     this.actualizarDatosTiempoReal();
     this.mostrarToast('🔄 Datos actualizados correctamente');
+  }
+
+  private static secureRandomInt(max: number): number {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    return array[0] % max;
+  }
+
+  private static secureRandom(): number {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    return array[0] / 0xFFFFFFFF;
   }
 
   // ==========================================
