@@ -51,6 +51,11 @@ jobs:
           find coverage -name "lcov.info"
         working-directory: ./front
 
+      # Limpiar análisis anterior
+      - name: Limpiar Sonar Scanner
+        run: rm -rf .scannerwork
+        working-directory: ./front
+
       - name: Análisis Estático y Quality Gate (SonarCloud Frontend)
         uses: SonarSource/sonarqube-scan-action@v6
         env:
