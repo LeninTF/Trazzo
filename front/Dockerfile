@@ -32,6 +32,9 @@ COPY --from=build /app/dist/front/browser /usr/share/nginx/html
 # 8. Copiar la configuración personalizada de Nginx para soportar el enrutamiento de la SPA
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Cambiar a usuario no-root para seguridad
+USER nginx
+
 # Exponer el puerto 80
 EXPOSE 80
 
