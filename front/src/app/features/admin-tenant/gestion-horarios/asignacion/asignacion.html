@@ -101,9 +101,9 @@
 
   <!-- Modal -->
   @if (showModal) {
-    <div class="asig-overlay" (click)="closeModal()"></div>
+    <div class="asig-overlay" (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" role="button"></div>
     <div class="asig-modal-wrap">
-      <div class="asig-modal-dialog" (click)="$event.stopPropagation()">
+      <div class="asig-modal-dialog" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
         <div class="asig-modal-content">
           <div class="asig-modal-header">
             <div class="d-flex align-items-center gap-3">

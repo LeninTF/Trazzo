@@ -163,8 +163,8 @@
 <!-- MODAL: HISTORIAL COMPLETO                 -->
 <!-- ========================================== -->
 @if (modalHistorialOpen) {
-  <div class="modal-overlay" (click)="cerrarModalHistorial()">
-    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalHistorial()" (keydown.escape)="cerrarModalHistorial()" tabindex="0" role="button">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
