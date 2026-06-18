@@ -72,8 +72,8 @@
 
 		<div class="filters" [formGroup]="filterForm">
 			<div class="filters__group">
-				<label class="filters__label">Estado</label>
-				<select class="filters__control" formControlName="estado" (change)="onEstadoChange()">
+				<label class="filters__label" for="facturas-filtro-estado">Estado</label>
+				<select id="facturas-filtro-estado" class="filters__control" formControlName="estado" (change)="onEstadoChange()">
 					<option value="todos">Todos</option>
 					<option value="pagado">Pagado</option>
 					<option value="pendiente">Pendiente</option>
@@ -81,20 +81,20 @@
 				</select>
 			</div>
 			<div class="filters__group">
-				<label class="filters__label">Rango de fechas</label>
-				<select class="filters__control" formControlName="rango" (change)="onRangoChange()">
+				<label class="filters__label" for="facturas-filtro-rango">Rango de fechas</label>
+				<select id="facturas-filtro-rango" class="filters__control" formControlName="rango" (change)="onRangoChange()">
 					<option value="ultimos-30">Últimos 30 días</option>
 					<option value="personalizado">Personalizado</option>
 				</select>
 			</div>
 			@if (filterForm.value.rango === 'personalizado') {
 			<div class="filters__group">
-				<label class="filters__label">Desde</label>
-				<input type="date" class="filters__control" formControlName="fechaDesde" (change)="onRangoChange()">
+				<label class="filters__label" for="facturas-fecha-desde">Desde</label>
+				<input id="facturas-fecha-desde" type="date" class="filters__control" formControlName="fechaDesde" (change)="onRangoChange()">
 			</div>
 			<div class="filters__group">
-				<label class="filters__label">Hasta</label>
-				<input type="date" class="filters__control" formControlName="fechaHasta" (change)="onRangoChange()">
+				<label class="filters__label" for="facturas-fecha-hasta">Hasta</label>
+				<input id="facturas-fecha-hasta" type="date" class="filters__control" formControlName="fechaHasta" (change)="onRangoChange()">
 			</div>
 			}
 			<div class="filters__spacer"></div>

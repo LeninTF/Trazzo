@@ -11,8 +11,8 @@
 			<div class="layout__main">
 				<div class="filters" role="group" aria-label="Filtros">
 					<div class="filters__group">
-						<label class="filters__label">Rol</label>
-						<select class="filters__control" [value]="filterRol()" (change)="setFilterRol(($any($event.target).value))">
+						<label class="filters__label" for="usuarios-filtro-rol">Rol</label>
+						<select class="filters__control" id="usuarios-filtro-rol" [value]="filterRol()" (change)="setFilterRol(($any($event.target).value))">
 							<option value="todos">Todos</option>
 							<option value="Superadmin">Superadmin</option>
 							<option value="Soporte">Soporte</option>
@@ -20,8 +20,8 @@
 						</select>
 					</div>
 					<div class="filters__group">
-						<label class="filters__label">Estado</label>
-						<select class="filters__control" [value]="filterEstado()" (change)="setFilterEstado(($any($event.target).value))">
+						<label class="filters__label" for="usuarios-filtro-estado">Estado</label>
+						<select class="filters__control" id="usuarios-filtro-estado" [value]="filterEstado()" (change)="setFilterEstado(($any($event.target).value))">
 							<option value="todos">Todos</option>
 							<option value="activo">Activo</option>
 							<option value="inactivo">Inactivo</option>
@@ -190,8 +190,8 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field form-field--full">
-							<label class="form-label">Nombre completo</label>
-							<input type="text" class="form-input" formControlName="nombreCompleto" placeholder="Ej: Juan Pérez">
+							<label class="form-label" for="usuario-nombre-completo">Nombre completo</label>
+							<input type="text" class="form-input" id="usuario-nombre-completo" formControlName="nombreCompleto" placeholder="Ej: Juan Pérez">
 							@if (createForm.get('nombreCompleto')?.invalid && createForm.get('nombreCompleto')?.touched) {
 								<span class="form-error">El nombre es obligatorio (mín. 3 caracteres)</span>
 							}
@@ -199,15 +199,15 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Tipo de documento</label>
-							<select class="form-input" formControlName="tipoDocumento">
+							<label class="form-label" for="usuario-tipo-documento">Tipo de documento</label>
+							<select class="form-input" id="usuario-tipo-documento" formControlName="tipoDocumento">
 								<option value="DNI">DNI</option>
 								<option value="Pasaporte">Pasaporte</option>
 							</select>
 						</div>
 						<div class="form-field">
-							<label class="form-label">Número de identificación</label>
-							<input type="text" class="form-input" formControlName="numDocumento" placeholder="Ej: 12345678">
+							<label class="form-label" for="usuario-num-documento">Número de identificación</label>
+							<input type="text" class="form-input" id="usuario-num-documento" formControlName="numDocumento" placeholder="Ej: 12345678">
 							@if (createForm.get('numDocumento')?.invalid && createForm.get('numDocumento')?.touched) {
 								<span class="form-error">Campo obligatorio</span>
 							}
@@ -215,22 +215,22 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Correo institucional</label>
-							<input type="email" class="form-input" formControlName="correo" placeholder="Ej: juan@trazzo.pe">
+							<label class="form-label" for="usuario-correo">Correo institucional</label>
+							<input type="email" class="form-input" id="usuario-correo" formControlName="correo" placeholder="Ej: juan@trazzo.pe">
 							@if (createForm.get('correo')?.invalid && createForm.get('correo')?.touched) {
 								<span class="form-error">Correo inválido</span>
 							}
 						</div>
 						<div class="form-field">
-							<label class="form-label">Teléfono</label>
-							<input type="tel" class="form-input" formControlName="telefono" placeholder="Ej: 999 888 777">
+							<label class="form-label" for="usuario-telefono">Teléfono</label>
+							<input type="tel" class="form-input" id="usuario-telefono" formControlName="telefono" placeholder="Ej: 999 888 777">
 							@if (createForm.get('telefono')?.invalid && createForm.get('telefono')?.touched) {
 								<span class="form-error">Campo obligatorio</span>
 							}
 						</div>
 						<div class="form-field">
-							<label class="form-label">Fecha de nacimiento</label>
-							<input type="date" class="form-input" formControlName="fechaNacimiento">
+							<label class="form-label" for="usuario-fecha-nacimiento">Fecha de nacimiento</label>
+							<input type="date" class="form-input" id="usuario-fecha-nacimiento" formControlName="fechaNacimiento">
 						</div>
 					</div>
 				</section>
@@ -241,8 +241,8 @@
 					<h2 class="form-section__title">Detalles de Empleado</h2>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">ID de empleado</label>
-							<input type="text" class="form-input" formControlName="empleadoId" placeholder="Ej: EMP-001">
+							<label class="form-label" for="usuario-empleado-id">ID de empleado</label>
+							<input type="text" class="form-input" id="usuario-empleado-id" formControlName="empleadoId" placeholder="Ej: EMP-001">
 							@if (createForm.get('empleadoId')?.invalid && createForm.get('empleadoId')?.touched) {
 								<span class="form-error">Campo obligatorio</span>
 							}
@@ -270,9 +270,9 @@
 					<h2 class="form-section__title">Credenciales de Acceso al Sistema</h2>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Nombre de usuario</label>
+							<label class="form-label" for="usuario-nombre-usuario">Nombre de usuario</label>
 							<div class="input-group">
-								<input type="text" class="form-input" formControlName="nombreUsuario" placeholder="Ej: juan.perez">
+								<input type="text" class="form-input" id="usuario-nombre-usuario" formControlName="nombreUsuario" placeholder="Ej: juan.perez">
 								<button type="button" class="btn btn--sm btn--outline" (click)="generarUsuario()">Auto-generar</button>
 							</div>
 							@if (createForm.get('nombreUsuario')?.invalid && createForm.get('nombreUsuario')?.touched) {
@@ -282,8 +282,8 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Contraseña inicial</label>
-							<input type="password" class="form-input" formControlName="contrasena" placeholder="••••••••">
+							<label class="form-label" for="usuario-contrasena">Contraseña inicial</label>
+							<input type="password" class="form-input" id="usuario-contrasena" formControlName="contrasena" placeholder="••••••••">
 							@if (createForm.get('contrasena')?.invalid && createForm.get('contrasena')?.touched) {
 								<span class="form-error">Mín. 8 caracteres</span>
 							}
@@ -291,8 +291,8 @@
 					</div>
 					<div class="form-row">
 						<div class="form-field">
-							<label class="form-label">Rol institucional</label>
-							<select class="form-input" formControlName="rolInstitucional">
+							<label class="form-label" for="usuario-rol-institucional">Rol institucional</label>
+							<select class="form-input" id="usuario-rol-institucional" formControlName="rolInstitucional">
 								<option value="Empleado Estandar">Empleado Estándar</option>
 								<option value="Administrador">Administrador</option>
 							</select>

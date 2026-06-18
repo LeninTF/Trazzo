@@ -53,11 +53,11 @@
       <div class="filters-grid">
         <div class="search-input">
           <i class="bi bi-search search-input__icon"></i>
-          <input type="text" class="form-control" placeholder="Filtrar por descripción o entidad..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
+          <input type="text" class="form-control" id="log-busqueda" placeholder="Filtrar por descripción o entidad..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
         </div>
         <div class="date-filter">
           <i class="bi bi-calendar3 date-filter__icon"></i>
-          <input type="date" class="form-control" [(ngModel)]="filtroFecha" (change)="filtrarLogs()" placeholder="Filtrar por fecha">
+          <input type="date" class="form-control" id="log-fecha" [(ngModel)]="filtroFecha" (change)="filtrarLogs()" placeholder="Filtrar por fecha">
         </div>
         <button class="btn btn-primary" (click)="aplicarFiltros()">
           <i class="bi bi-funnel me-2"></i> Filtrar
@@ -85,7 +85,7 @@
         </thead>
         <tbody>
           @for (log of logsPaginado; track log.id) {
-            <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)">
+            <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)" (keydown.enter)="seleccionarLog(log)" role="button" tabindex="0">
               <td class="log-table__date">
                 <strong>{{ log.fecha | date:'dd/MM/yyyy' }}</strong>
                 <div class="small text-muted">{{ log.hora }}</div>

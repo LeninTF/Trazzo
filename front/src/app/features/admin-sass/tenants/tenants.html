@@ -59,21 +59,21 @@
       <div class="filters-grid">
         <div class="search-input">
           <i class="bi bi-search search-input__icon"></i>
-          <input type="text" class="form-control" placeholder="Buscar por nombre o dominio…" [(ngModel)]="searchTerm" (input)="filtrarTenants()">
+          <input type="text" id="tenants-busqueda" class="form-control" placeholder="Buscar por nombre o dominio…" [(ngModel)]="searchTerm" (input)="filtrarTenants()">
         </div>
-        <select class="form-select" [(ngModel)]="filtroPlan" (change)="filtrarTenants()">
+        <select class="form-select" id="tenants-filtro-plan" [(ngModel)]="filtroPlan" (change)="filtrarTenants()">
           <option value="">Todos los Planes</option>
           @for (plan of planesDisponibles; track plan) {
             <option [value]="plan">{{ plan }}</option>
           }
         </select>
-        <select class="form-select" [(ngModel)]="filtroEstado" (change)="filtrarTenants()">
+        <select class="form-select" id="tenants-filtro-estado" [(ngModel)]="filtroEstado" (change)="filtrarTenants()">
           <option value="">Todos los Estados</option>
           @for (estado of estadosDisponibles; track estado) {
             <option [value]="estado">{{ estado }}</option>
           }
         </select>
-        <select class="form-select" [(ngModel)]="filtroIndustria" (change)="filtrarTenants()">
+        <select class="form-select" id="tenants-filtro-industria" [(ngModel)]="filtroIndustria" (change)="filtrarTenants()">
           <option value="">Todas las Industrias</option>
           @for (industria of industriasDisponibles; track industria) {
             <option [value]="industria">{{ industria }}</option>
@@ -170,8 +170,8 @@
 <!-- MODAL: CONFIGURACIÓN TÉCNICA DEL TENANT    -->
 <!-- ========================================== -->
 @if (modalConfiguracionOpen && tenantSeleccionado) {
-  <div class="modal-overlay" (click)="cerrarModalConfiguracion()">
-    <div class="modal-container modal-container--xlarge" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalConfiguracion()" (keydown.enter)="cerrarModalConfiguracion()" role="button" tabindex="0">
+    <div class="modal-container modal-container--xlarge" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -242,7 +242,7 @@
           <p class="config-section__desc">Define el modelo organizativo del tenant.</p>
 
           <div class="radio-group">
-            <label class="radio-option" [class.radio-option--active]="configuracion.modeloOrganizativo === 'Sede Unica'" (click)="configuracion.modeloOrganizativo = 'Sede Unica'">
+            <label class="radio-option" [class.radio-option--active]="configuracion.modeloOrganizativo === 'Sede Unica'" (click)="configuracion.modeloOrganizativo = 'Sede Unica'" (keydown.enter)="configuracion.modeloOrganizativo = 'Sede Unica'">
               <input type="radio" name="modelo" value="Sede Unica" [(ngModel)]="configuracion.modeloOrganizativo">
               <div>
                 <strong>Sede Única</strong>
@@ -251,7 +251,7 @@
               <span class="plan-tag plan-tag--included">INCLUIDO EN PLAN</span>
             </label>
 
-            <label class="radio-option" [class.radio-option--active]="configuracion.modeloOrganizativo === 'Multi-sede'" (click)="configuracion.modeloOrganizativo = 'Multi-sede'">
+            <label class="radio-option" [class.radio-option--active]="configuracion.modeloOrganizativo === 'Multi-sede'" (click)="configuracion.modeloOrganizativo = 'Multi-sede'" (keydown.enter)="configuracion.modeloOrganizativo = 'Multi-sede'">
               <input type="radio" name="modelo" value="Multi-sede" [(ngModel)]="configuracion.modeloOrganizativo">
               <div>
                 <strong>Multi-sede</strong>
@@ -285,7 +285,7 @@
                 <span>Integración con lectores USB para control de asistencia de personal físico.</span>
               </div>
             </div>
-            <div class="toggle-switch" [class.toggle-switch--on]="configuracion.biometricoHabilitado" (click)="toggleBiometrico()">
+            <div class="toggle-switch" [class.toggle-switch--on]="configuracion.biometricoHabilitado" (click)="toggleBiometrico()" (keydown.enter)="toggleBiometrico()" role="button" tabindex="0">
               <div class="toggle-switch__knob"></div>
             </div>
           </div>
@@ -298,7 +298,7 @@
                 <span>Habilita la entrada por código de barras para carnets o productos internos.</span>
               </div>
             </div>
-            <div class="toggle-switch" [class.toggle-switch--on]="configuracion.escaneoBarrasHabilitado" (click)="toggleEscaneoBarras()">
+            <div class="toggle-switch" [class.toggle-switch--on]="configuracion.escaneoBarrasHabilitado" (click)="toggleEscaneoBarras()" (keydown.enter)="toggleEscaneoBarras()" role="button" tabindex="0">
               <div class="toggle-switch__knob"></div>
             </div>
           </div>
@@ -354,8 +354,8 @@
 <!-- MODAL: AGREGAR/EDITAR TENANT               -->
 <!-- ========================================== -->
 @if (modalTenantOpen) {
-  <div class="modal-overlay" (click)="cerrarModalTenant()">
-    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalTenant()" (keydown.enter)="cerrarModalTenant()" role="button" tabindex="0">
+    <div class="modal-container modal-container--large" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -373,44 +373,44 @@
       <div class="modal-body">
         <div class="form-grid-2cols">
           <div class="form-group">
-            <label class="form-label">Nombre de la Empresa <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" [(ngModel)]="tenantForm.nombre" placeholder="Ej: Acme Corp">
+            <label class="form-label" for="tenant-nombre">Nombre de la Empresa <span class="text-danger">*</span></label>
+            <input type="text" id="tenant-nombre" class="form-control" [(ngModel)]="tenantForm.nombre" placeholder="Ej: Acme Corp">
           </div>
           <div class="form-group">
-            <label class="form-label">ID del Tenant <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" [(ngModel)]="tenantForm.idTenant" placeholder="Ej: acme-global">
+            <label class="form-label" for="tenant-id">ID del Tenant <span class="text-danger">*</span></label>
+            <input type="text" id="tenant-id" class="form-control" [(ngModel)]="tenantForm.idTenant" placeholder="Ej: acme-global">
           </div>
           <div class="form-group">
-            <label class="form-label">Dominio</label>
-            <input type="text" class="form-control" [(ngModel)]="tenantForm.dominio" placeholder="Ej: acme-global.saas.nexus">
+            <label class="form-label" for="tenant-dominio">Dominio</label>
+            <input type="text" id="tenant-dominio" class="form-control" [(ngModel)]="tenantForm.dominio" placeholder="Ej: acme-global.saas.nexus">
           </div>
           <div class="form-group">
-            <label class="form-label">Industria</label>
-            <select class="form-select" [(ngModel)]="tenantForm.industria">
+            <label class="form-label" for="tenant-industria">Industria</label>
+            <select class="form-select" id="tenant-industria" [(ngModel)]="tenantForm.industria">
               @for (industria of industriasDisponibles; track industria) {
                 <option [value]="industria">{{ industria }}</option>
               }
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Plan</label>
-            <select class="form-select" [(ngModel)]="tenantForm.plan">
+            <label class="form-label" for="tenant-plan">Plan</label>
+            <select class="form-select" id="tenant-plan" [(ngModel)]="tenantForm.plan">
               <option value="BASIC">Básico</option>
               <option value="PROFESSIONAL">Professional</option>
               <option value="ENTERPRISE">Enterprise</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Estado</label>
-            <select class="form-select" [(ngModel)]="tenantForm.estado">
+            <label class="form-label" for="tenant-estado">Estado</label>
+            <select class="form-select" id="tenant-estado" [(ngModel)]="tenantForm.estado">
               <option value="Activo">Activo</option>
               <option value="Trial">Trial</option>
               <option value="Suspendido">Suspendido</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Número de Usuarios</label>
-            <input type="number" class="form-control" [(ngModel)]="tenantForm.usuarios" placeholder="Ej: 2450">
+            <label class="form-label" for="tenant-usuarios">Número de Usuarios</label>
+            <input type="number" id="tenant-usuarios" class="form-control" [(ngModel)]="tenantForm.usuarios" placeholder="Ej: 2450">
           </div>
           <div class="form-group">
             <label class="form-label">Color del Logo</label>
@@ -430,8 +430,8 @@
 <!-- MODAL: DETALLE DE TENANT                   -->
 <!-- ========================================== -->
 @if (modalDetalleOpen && tenantSeleccionado) {
-  <div class="modal-overlay" (click)="cerrarModalDetalle()">
-    <div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalDetalle()" (keydown.enter)="cerrarModalDetalle()" role="button" tabindex="0">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -499,8 +499,8 @@
 <!-- MODAL: CONFIRMAR SUSPENSIÓN                -->
 <!-- ========================================== -->
 @if (modalConfirmarSuspensionOpen) {
-  <div class="modal-overlay" (click)="cerrarModalConfirmarSuspension()">
-    <div class="modal-container modal-container--small" (click)="$event.stopPropagation()">
+  <div class="modal-overlay" (click)="cerrarModalConfirmarSuspension()" (keydown.enter)="cerrarModalConfirmarSuspension()" role="button" tabindex="0">
+    <div class="modal-container modal-container--small" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
       <div class="modal-header modal-header--danger">
         <div class="modal-header-left">
           <div class="modal-icon">
@@ -519,8 +519,8 @@
         <p>¿Está seguro de que desea <strong>suspender</strong> el tenant <strong>{{ tenantSeleccionado?.nombre }}</strong>?</p>
         <p class="text-muted small">Al suspender el tenant, todos los usuarios perderán acceso hasta que se reactive la cuenta.</p>
         <div class="form-group mt-3">
-          <label class="form-label">Motivo de suspensión</label>
-          <textarea class="form-control" rows="2" [(ngModel)]="motivoSuspension" placeholder="Ej: Falta de pago, incumplimiento de términos..."></textarea>
+          <label class="form-label" for="tenant-motivo-suspension">Motivo de suspensión</label>
+          <textarea class="form-control" id="tenant-motivo-suspension" rows="2" [(ngModel)]="motivoSuspension" placeholder="Ej: Falta de pago, incumplimiento de términos..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
