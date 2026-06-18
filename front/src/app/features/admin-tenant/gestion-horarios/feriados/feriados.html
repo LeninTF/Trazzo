@@ -23,8 +23,9 @@
       <form [formGroup]="feriadoForm" (ngSubmit)="addFeriado()">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="fer-label">Fecha</label>
+            <label class="fer-label" for="fer-fecha">Fecha</label>
             <input
+              id="fer-fecha"
               type="date"
               class="fer-input"
               [class.invalid]="feriadoForm.get('fecha')?.invalid && feriadoForm.get('fecha')?.touched"
@@ -35,8 +36,9 @@
             }
           </div>
           <div class="col-md-4">
-            <label class="fer-label">Nombre</label>
+            <label class="fer-label" for="fer-nombre">Nombre</label>
             <input
+              id="fer-nombre"
               type="text"
               class="fer-input"
               [class.invalid]="feriadoForm.get('nombre')?.invalid && feriadoForm.get('nombre')?.touched"
@@ -80,7 +82,9 @@
             <form [formGroup]="editFeriadoForm">
               <div class="row g-2">
                 <div class="col-12">
+                  <label for="fer-edit-nombre" class="visually-hidden">Nombre del feriado</label>
                   <input
+                    id="fer-edit-nombre"
                     type="text"
                     class="fer-input-sm"
                     [class.invalid]="editFeriadoForm.get('nombre')?.invalid && editFeriadoForm.get('nombre')?.touched"
@@ -88,7 +92,9 @@
                   >
                 </div>
                 <div class="col-6">
+                  <label for="fer-edit-fecha" class="visually-hidden">Fecha del feriado</label>
                   <input
+                    id="fer-edit-fecha"
                     type="date"
                     class="fer-input-sm"
                     [class.invalid]="editFeriadoForm.get('fecha')?.invalid && editFeriadoForm.get('fecha')?.touched"

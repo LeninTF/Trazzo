@@ -58,21 +58,25 @@
     <div class="filters-card__body">
       <div class="filters-grid">
         <div class="search-input">
+          <label for="tenants-busqueda" class="visually-hidden">Buscar por nombre o dominio</label>
           <i class="bi bi-search search-input__icon"></i>
           <input type="text" id="tenants-busqueda" class="form-control" placeholder="Buscar por nombre o dominio…" [(ngModel)]="searchTerm" (input)="filtrarTenants()">
         </div>
+        <label for="tenants-filtro-plan" class="visually-hidden">Filtrar por plan</label>
         <select class="form-select" id="tenants-filtro-plan" [(ngModel)]="filtroPlan" (change)="filtrarTenants()">
           <option value="">Todos los Planes</option>
           @for (plan of planesDisponibles; track plan) {
             <option [value]="plan">{{ plan }}</option>
           }
         </select>
+        <label for="tenants-filtro-estado" class="visually-hidden">Filtrar por estado</label>
         <select class="form-select" id="tenants-filtro-estado" [(ngModel)]="filtroEstado" (change)="filtrarTenants()">
           <option value="">Todos los Estados</option>
           @for (estado of estadosDisponibles; track estado) {
             <option [value]="estado">{{ estado }}</option>
           }
         </select>
+        <label for="tenants-filtro-industria" class="visually-hidden">Filtrar por industria</label>
         <select class="form-select" id="tenants-filtro-industria" [(ngModel)]="filtroIndustria" (change)="filtrarTenants()">
           <option value="">Todas las Industrias</option>
           @for (industria of industriasDisponibles; track industria) {
@@ -413,8 +417,8 @@
             <input type="number" id="tenant-usuarios" class="form-control" [(ngModel)]="tenantForm.usuarios" placeholder="Ej: 2450">
           </div>
           <div class="form-group">
-            <label class="form-label">Color del Logo</label>
-            <input type="color" class="form-control form-control-color" [(ngModel)]="tenantForm.color">
+            <label class="form-label" for="tenant-color-logo">Color del Logo</label>
+            <input type="color" id="tenant-color-logo" class="form-control form-control-color" [(ngModel)]="tenantForm.color">
           </div>
         </div>
       </div>

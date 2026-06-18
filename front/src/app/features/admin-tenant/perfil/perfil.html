@@ -67,17 +67,17 @@
 
                 <div class="row g-4 mt-2">
                     <div class="col-md-6">
-                        <label class="perfil-field-label">Nombres</label>
+                        <label class="perfil-field-label" for="perfil-nombres">Nombres</label>
                         @if (editando) {
-                        <input class="perfil-input" [(ngModel)]="usuarioEdit.nombres" placeholder="Nombres" />
+                        <input id="perfil-nombres" class="perfil-input" [(ngModel)]="usuarioEdit.nombres" placeholder="Nombres" />
                         } @else {
                         <div class="perfil-field-value">{{ usuario.nombres }}</div>
                         }
                     </div>
                     <div class="col-md-6">
-                        <label class="perfil-field-label">Apellidos</label>
+                        <label class="perfil-field-label" for="perfil-apellidos">Apellidos</label>
                         @if (editando) {
-                        <input class="perfil-input" [(ngModel)]="usuarioEdit.apellidos" placeholder="Apellidos" />
+                        <input id="perfil-apellidos" class="perfil-input" [(ngModel)]="usuarioEdit.apellidos" placeholder="Apellidos" />
                         } @else {
                         <div class="perfil-field-value">{{ usuario.apellidos }}</div>
                         }
@@ -111,17 +111,17 @@
 
                 <div class="row g-4 mt-2">
                     <div class="col-md-6">
-                        <label class="perfil-field-label">Correo Electr&oacute;nico</label>
+                        <label class="perfil-field-label" for="perfil-email">Correo Electr&oacute;nico</label>
                         @if (editando) {
-                        <input class="perfil-input" [(ngModel)]="usuarioEdit.email" placeholder="correo@ejemplo.com" />
+                        <input id="perfil-email" class="perfil-input" [(ngModel)]="usuarioEdit.email" placeholder="correo@ejemplo.com" />
                         } @else {
                         <div class="perfil-field-value">{{ usuario.email }}</div>
                         }
                     </div>
                     <div class="col-md-6">
-                        <label class="perfil-field-label">Tel&eacute;fono</label>
+                        <label class="perfil-field-label" for="perfil-telefono">Tel&eacute;fono</label>
                         @if (editando) {
-                        <input class="perfil-input" [(ngModel)]="usuarioEdit.telefono" placeholder="+51 999 888 777" />
+                        <input id="perfil-telefono" class="perfil-input" [(ngModel)]="usuarioEdit.telefono" placeholder="+51 999 888 777" />
                         } @else {
                         <div class="perfil-field-value">{{ usuario.telefono }}</div>
                         }
@@ -146,8 +146,8 @@
                 <div class="perfil-password-section mt-4">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="perfil-field-label">Contrase&ntilde;a Actual</label>
-                            <input type="password" class="perfil-input"
+                            <label class="perfil-field-label" for="perfil-password-actual">Contrase&ntilde;a Actual</label>
+                            <input id="perfil-password-actual" type="password" class="perfil-input"
                                 [class.perfil-input--error]="errorPasswordActual" [(ngModel)]="passwordActual"
                                 placeholder="Contrase&ntilde;a actual" />
                             @if (errorPasswordActual) {
@@ -155,16 +155,16 @@
                             }
                         </div>
                         <div class="col-md-4">
-                            <label class="perfil-field-label">Nueva Contrase&ntilde;a</label>
-                            <input type="password" class="perfil-input" [class.perfil-input--error]="errorPasswordNueva"
+                            <label class="perfil-field-label" for="perfil-password-nueva">Nueva Contrase&ntilde;a</label>
+                            <input id="perfil-password-nueva" type="password" class="perfil-input" [class.perfil-input--error]="errorPasswordNueva"
                                 [(ngModel)]="passwordNueva" placeholder="Nueva contrase&ntilde;a" />
                             @if (errorPasswordNueva) {
                             <span class="perfil-field-error">{{ errorPasswordNueva }}</span>
                             }
                         </div>
                         <div class="col-md-4">
-                            <label class="perfil-field-label">Confirmar Contrase&ntilde;a</label>
-                            <input type="password" class="perfil-input"
+                            <label class="perfil-field-label" for="perfil-password-confirmar">Confirmar Contrase&ntilde;a</label>
+                            <input id="perfil-password-confirmar" type="password" class="perfil-input"
                                 [class.perfil-input--error]="errorPasswordConfirmar" [(ngModel)]="passwordConfirmar"
                                 placeholder="Confirme la nueva contrase&ntilde;a" />
                             @if (errorPasswordConfirmar) {

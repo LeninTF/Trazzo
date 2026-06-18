@@ -56,6 +56,7 @@
                 <p>Cambiar Logo</p>
                 <small>PNG, JPG hasta 2MB</small>
               </div>
+              <label for="config-logo-input" class="visually-hidden">Cambiar Logo</label>
               <input type="file" #logoInput id="config-logo-input" accept="image/*" style="display: none" (change)="cambiarLogo($event)">
             </div>
           </div>
@@ -76,14 +77,17 @@
         <div class="config-card__body">
           <div class="limits-grid">
             <div class="limit-item">
+              <label for="config-max-usuarios" class="visually-hidden">Máximo de Usuarios</label>
               <input type="number" id="config-max-usuarios" class="limit-item__input" [(ngModel)]="limites().maxUsuarios" (change)="validarLimiteMaxUsuarios()">
               <span class="limit-item__label">Máximo de Usuarios</span>
             </div>
             <div class="limit-item">
+              <label for="config-max-sedes" class="visually-hidden">Sedes Físicas</label>
               <input type="number" id="config-max-sedes" class="limit-item__input" [(ngModel)]="limites().maxSedes" (change)="validarLimiteSedes()">
               <span class="limit-item__label">Sedes Físicas</span>
             </div>
             <div class="limit-item">
+              <label for="config-ciclo-facturacion" class="visually-hidden">Ciclo de Facturación</label>
               <input type="date" id="config-ciclo-facturacion" class="limit-item__input" [(ngModel)]="limites().cicloFacturacion" (change)="marcarCambiosPendientes()">
               <span class="limit-item__label">Ciclo de Facturación</span>
             </div>

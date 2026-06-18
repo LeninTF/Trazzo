@@ -58,21 +58,25 @@
     <div class="filters-card__body">
       <div class="filters-grid">
         <div class="search-input">
+          <label for="personal-busqueda" class="visually-hidden">Buscar por nombre o ID de personal</label>
           <i class="bi bi-search search-input__icon"></i>
           <input type="text" id="personal-busqueda" class="form-control" placeholder="Buscar por nombre o ID de personal…" [(ngModel)]="searchTerm" (input)="filtrarPersonal()">
         </div>
+        <label for="personal-filtro-sede" class="visually-hidden">Filtrar por sede</label>
         <select id="personal-filtro-sede" class="form-select" [(ngModel)]="filtroSede" (change)="filtrarPersonal()">
           <option value="">Todas las Sedes</option>
           @for (sede of sedesDisponibles; track sede) {
             <option [value]="sede">{{ sede }}</option>
           }
         </select>
+        <label for="personal-filtro-area" class="visually-hidden">Filtrar por área</label>
         <select id="personal-filtro-area" class="form-select" [(ngModel)]="filtroArea" (change)="filtrarPersonal()">
           <option value="">Todas las Áreas</option>
           @for (area of areasDisponibles; track area) {
             <option [value]="area">{{ area }}</option>
           }
         </select>
+        <label for="personal-filtro-departamento" class="visually-hidden">Filtrar por departamento</label>
         <select id="personal-filtro-departamento" class="form-select" [(ngModel)]="filtroDepartamento" (change)="filtrarPersonal()">
           <option value="">Todos los Departamentos</option>
           @for (depto of departamentosDisponibles; track depto) {
@@ -205,6 +209,7 @@
             </div>
             
             @if (modoImagenUrl) {
+              <label for="personal-imagen-url" class="visually-hidden">URL de imagen</label>
               <input type="text" id="personal-imagen-url" class="form-control mt-2" [(ngModel)]="personalForm.imagenUrl" placeholder="https://ejemplo.com/imagen.jpg" (input)="actualizarPreviewUrl()">
             }
           </div>

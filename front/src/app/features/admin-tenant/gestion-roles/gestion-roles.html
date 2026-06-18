@@ -144,16 +144,18 @@
           </button>
         </div>
         <div class="modal-card__body">
-          <label class="modal-card__label">Nombre del rol</label>
+          <label class="modal-card__label" for="rol-nombre">Nombre del rol</label>
           <input
+            id="rol-nombre"
             type="text"
             class="modal-card__input"
             placeholder="Ej: Supervisor de piso"
             [(ngModel)]="nuevoRolNombre"
             (keyup.enter)="guardarRol()"
           />
-          <label class="modal-card__label modal-card__label--mt">Descripción</label>
+          <label class="modal-card__label modal-card__label--mt" for="rol-descripcion">Descripción</label>
           <textarea
+            id="rol-descripcion"
             class="modal-card__textarea"
             placeholder="Describe el alcance de este rol..."
             [(ngModel)]="nuevoRolDescripcion"

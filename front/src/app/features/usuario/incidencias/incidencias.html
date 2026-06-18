@@ -118,8 +118,8 @@
       <div class="modal-body">
         <div class="form-row">
           <div class="form-group form-group--flex">
-            <label class="form-label">Tipo de Incidencia *</label>
-            <select class="form-select" [(ngModel)]="nuevaIncidencia.tipo">
+            <label class="form-label" for="incidencia-tipo">Tipo de Incidencia *</label>
+            <select id="incidencia-tipo" class="form-select" [(ngModel)]="nuevaIncidencia.tipo">
               <option value="" disabled>Seleccionar tipo</option>
               @for (t of tiposDisponibles; track t) {
                 <option [value]="t">{{ t }}</option>
@@ -127,19 +127,19 @@
             </select>
           </div>
           <div class="form-group form-group--sm">
-            <label class="form-label">Días *</label>
-            <input type="number" class="form-input" [(ngModel)]="nuevaIncidencia.dias" min="1" max="30" />
+            <label class="form-label" for="incidencia-dias">Días *</label>
+            <input type="number" id="incidencia-dias" class="form-input" [(ngModel)]="nuevaIncidencia.dias" min="1" max="30" />
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Fecha de Inicio</label>
-          <input type="date" class="form-input" [(ngModel)]="nuevaIncidencia.fecha" />
+          <label class="form-label" for="incidencia-fecha">Fecha de Inicio</label>
+          <input type="date" id="incidencia-fecha" class="form-input" [(ngModel)]="nuevaIncidencia.fecha" />
         </div>
 
         <div class="form-group">
-          <label class="form-label">Descripción *</label>
-          <textarea class="form-textarea" rows="4" [(ngModel)]="nuevaIncidencia.descripcion"
+          <label class="form-label" for="incidencia-descripcion">Descripción *</label>
+          <textarea id="incidencia-descripcion" class="form-textarea" rows="4" [(ngModel)]="nuevaIncidencia.descripcion"
             placeholder="Describe el motivo de tu solicitud..."></textarea>
         </div>
 
