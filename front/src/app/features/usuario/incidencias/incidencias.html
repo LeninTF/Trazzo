@@ -1,0 +1,252 @@
+<div class="inc-wrapper">
+  <header class="inc-header">
+    <div>
+      <h1 class="inc-title">Incidencias</h1>
+      <p class="inc-subtitle">Solicitudes y registros de incidencias realizadas.</p>
+    </div>
+    <button class="inc-btn inc-btn--primary" (click)="abrirModalCrear()">
+      <i class="bi bi-plus-lg me-2"></i>Nueva Incidencia
+    </button>
+  </header>
+
+  <div class="inc-metrics">
+    @for (r of resumen; track r.label) {
+      <div class="inc-metric">
+        <div class="inc-metric__icon" [style.background]="r.bg">
+          <i class="bi" [class]="r.icono" [style.color]="r.color"></i>
+        </div>
+        <div class="inc-metric__info">
+          <span class="inc-metric__value" [style.color]="r.color">{{ r.valor }}</span>
+          <span class="inc-metric__label">{{ r.label }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="inc-tabs">
+    @for (e of ['Todos', 'Pendiente', 'Aprobado', 'Rechazado']; track e) {
+      <button class="inc-tab" [class.inc-tab--active]="filterEstado() === e" (click)="setFilterEstado(e)">
+        {{ e }}
+        @if (e === 'Pendiente' && pendientes > 0) {
+          <span class="inc-tab__badge">{{ pendientes }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <div class="inc-card">
+    <div class="inc-card__header">
+      <h2 class="inc-card__title">
+        <i class="bi bi-file-text me-2" style="color:var(--primary)"></i>
+        @if (filterEstado() === 'Todos') { Todas las Incidencias }
+        @else { {{ filterEstado() }}s }
+      </h2>
+      <span class="inc-card__count">{{ filtradas.length }} registros</span>
+    </div>
+    <div class="inc-card__body">
+      @for (inc of filtradas; track inc.id) {
+        <div class="inc-item" (click)="abrirDetalle(inc)" (keydown.enter)="abrirDetalle(inc)" tabindex="0" role="button">
+          <div class="inc-item__left">
+            <div class="inc-item__icon"
+              [class.inc-item__icon--pending]="inc.estado === 'Pendiente'"
+              [class.inc-item__icon--approved]="inc.estado === 'Aprobado'"
+              [class.inc-item__icon--rejected]="inc.estado === 'Rechazado'">
+              @if (inc.estado === 'Pendiente') {
+                <i class="bi bi-clock-history"></i>
+              } @else if (inc.estado === 'Aprobado') {
+                <i class="bi bi-check-lg"></i>
+              } @else {
+                <i class="bi bi-x-lg"></i>
+              }
+            </div>
+            <div class="inc-item__info">
+              <div class="inc-item__top">
+                <span class="inc-item__id">{{ inc.id }}</span>
+                <span class="inc-item__tipo">{{ inc.tipo }}</span>
+                @if (inc.archivo) {
+                  <span class="inc-item__tipo inc-item__tipo--file">
+                    <i class="bi bi-paperclip me-1"></i>1 adjunto
+                  </span>
+                }
+              </div>
+              <p class="inc-item__desc">{{ inc.descripcion }}</p>
+              <div class="inc-item__meta">
+                <span><i class="bi bi-calendar3 me-1"></i>{{ inc.fecha }}</span>
+                <span><i class="bi bi-calendar-week me-1"></i>{{ inc.dias }} {{ inc.dias === 1 ? 'día' : 'días' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="inc-item__right">
+            <span class="inc-badge"
+              [class.inc-badge--pending]="inc.estado === 'Pendiente'"
+              [class.inc-badge--approved]="inc.estado === 'Aprobado'"
+              [class.inc-badge--rejected]="inc.estado === 'Rechazado'">
+              <span class="inc-badge__dot"></span>
+              {{ inc.estado }}
+            </span>
+            <i class="bi bi-chevron-right inc-item__arrow"></i>
+          </div>
+        </div>
+      } @empty {
+        <div class="inc-empty">
+          <i class="bi bi-inbox fs-1" style="color:var(--text-soft)"></i>
+          <p>No hay incidencias {{ filterEstado() === 'Todos' ? '' : filterEstado().toLowerCase() + 's' }}.</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (mostrarModalCrear) {
+  <div class="modal-overlay" (click)="cerrarModalCrear()" (keydown.escape)="cerrarModalCrear()" tabindex="0" role="button">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-file-text"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Nueva Incidencia</h2>
+            <span class="modal-sub">Completa los campos para registrar tu solicitud</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalCrear()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group form-group--flex">
+            <label class="form-label" for="incidencia-tipo">Tipo de Incidencia *</label>
+            <select id="incidencia-tipo" class="form-select" [(ngModel)]="nuevaIncidencia.tipo">
+              <option value="" disabled>Seleccionar tipo</option>
+              @for (t of tiposDisponibles; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-group form-group--sm">
+            <label class="form-label" for="incidencia-dias">Días *</label>
+            <input type="number" id="incidencia-dias" class="form-input" [(ngModel)]="nuevaIncidencia.dias" min="1" max="30" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="incidencia-fecha">Fecha de Inicio</label>
+          <input type="date" id="incidencia-fecha" class="form-input" [(ngModel)]="nuevaIncidencia.fecha" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="incidencia-descripcion">Descripción *</label>
+          <textarea id="incidencia-descripcion" class="form-textarea" rows="4" [(ngModel)]="nuevaIncidencia.descripcion"
+            placeholder="Describe el motivo de tu solicitud..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="incidencia-file-input">Archivo Adjunto (opcional)</label>
+          <div class="file-upload" (click)="fileInput.click()" (keydown.enter)="fileInput.click()" tabindex="0" role="button">
+            @if (nuevaIncidencia.archivo) {
+              <div class="file-upload__preview">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>{{ nuevaIncidencia.archivo.name }}</span>
+                <button class="file-upload__remove" (click)="nuevaIncidencia.archivo = null; $event.stopPropagation()">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            } @else {
+              <div class="file-upload__placeholder">
+                <i class="bi bi-cloud-upload fs-3"></i>
+                <span>Haz clic para seleccionar un archivo</span>
+                <span class="file-upload__hint">PDF, JPG, PNG - Max 5 MB</span>
+              </div>
+            }
+          </div>
+          <input #fileInput id="incidencia-file-input" type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.jpg,.png,.doc,.docx" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="inc-btn inc-btn--outline" (click)="cerrarModalCrear()">Cancelar</button>
+        <button class="inc-btn inc-btn--primary" (click)="enviar()" [disabled]="!nuevaIncidencia.tipo || !nuevaIncidencia.descripcion">
+          <i class="bi bi-send me-2"></i>Enviar Solicitud
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (mostrarModalDetalle && selectedIncidencia) {
+  <div class="modal-overlay" (click)="cerrarDetalle()" (keydown.escape)="cerrarDetalle()" tabindex="0" role="button">
+    <div class="modal-container" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <i class="bi bi-file-text"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">{{ selectedIncidencia.id }}</h2>
+            <span class="modal-sub">{{ selectedIncidencia.tipo }}</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarDetalle()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="detail-grid">
+          <div class="detail-field">
+            <span class="detail-label">Estado</span>
+            <span class="inc-badge"
+              [class.inc-badge--pending]="selectedIncidencia.estado === 'Pendiente'"
+              [class.inc-badge--approved]="selectedIncidencia.estado === 'Aprobado'"
+              [class.inc-badge--rejected]="selectedIncidencia.estado === 'Rechazado'">
+              <span class="inc-badge__dot"></span>
+              {{ selectedIncidencia.estado }}
+            </span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Tipo</span>
+            <span class="detail-value">{{ selectedIncidencia.tipo }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Fecha de Registro</span>
+            <span class="detail-value">{{ selectedIncidencia.fecha }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Días Solicitados</span>
+            <span class="detail-value">{{ selectedIncidencia.dias }} {{ selectedIncidencia.dias === 1 ? 'día' : 'días' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3 class="detail-section-title">Descripción</h3>
+          <p class="detail-desc">{{ selectedIncidencia.descripcion }}</p>
+        </div>
+
+        @if (selectedIncidencia.archivo) {
+          <div class="detail-section">
+            <h3 class="detail-section-title">Archivo Adjunto</h3>
+            <div class="file-card">
+              <div class="file-card__icon">
+                <i class="bi bi-file-earmark-text"></i>
+              </div>
+              <div class="file-card__info">
+                <span class="file-card__name">{{ selectedIncidencia.archivo.nombre }}</span>
+                <span class="file-card__meta">{{ selectedIncidencia.archivo.tamano }}</span>
+              </div>
+              <button class="file-card__btn" (click)="descargarArchivo(selectedIncidencia)" title="Descargar">
+                <i class="bi bi-download"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button class="inc-btn inc-btn--outline" (click)="cerrarDetalle()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+}

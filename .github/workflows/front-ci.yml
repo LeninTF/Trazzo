@@ -40,6 +40,22 @@ jobs:
         run: npx madge --circular --extensions ts ./src
         working-directory: ./front
 
+      # Generar cobertura
+      - name: Ejecutar pruebas con cobertura
+        run: pnpm test
+        working-directory: ./front
+
+      # Verificar que se generó el archivo
+      - name: Verificar cobertura
+        run: |
+          find coverage -name "lcov.info"
+        working-directory: ./front
+
+      # Limpiar análisis anterior
+      - name: Limpiar Sonar Scanner
+        run: rm -rf .scannerwork
+        working-directory: ./front
+
       - name: Análisis Estático y Quality Gate (SonarCloud Frontend)
         uses: SonarSource/sonarqube-scan-action@v6
         env:

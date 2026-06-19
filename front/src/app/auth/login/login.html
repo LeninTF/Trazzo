@@ -1,87 +1,123 @@
 <main class="login-page">
-	<div class="container-fluid px-0">
-		<div class="row g-0 min-vh-100 login-shell">
-			<section class="col-12 col-lg-6 login-hero d-flex align-items-start align-items-lg-center">
-				<div class="hero-inner w-100">
-					<div class="brand-badge shadow-sm">
-						<img src="/assets/logo-trazzo.png" alt="Trazzo" class="brand-logo">
-					</div>
+  <div class="container-fluid px-0">
+    <div class="row g-0 min-vh-100 login-shell">
+      
+      <!-- Sección Hero (izquierda) -->
+      <section class="col-12 col-lg-6 login-hero d-flex align-items-start align-items-lg-center">
+        <div class="hero-inner w-100">
+          <div class="brand-badge shadow-sm">
+            <img src="/assets/logo-trazzo.png" alt="Trazzo" class="brand-logo">
+          </div>
 
-					<div class="hero-copy">
-						<h1 class="hero-title">{{ heroTitle }}</h1>
-						<p class="hero-description">{{ heroDescription }}</p>
-					</div>
+          <div class="hero-copy">
+            <h1 class="hero-title">{{ heroTitle }}</h1>
+            <p class="hero-description">{{ heroDescription }}</p>
+          </div>
 
-					<article class="security-card shadow-sm">
-						<div class="security-icon">
-							<i class="bi bi-shield-lock-fill"></i>
-						</div>
-						<div>
-							<p class="security-label mb-1">{{ securityLabel }}</p>
-							<p class="security-text mb-0">{{ securityText }}</p>
-						</div>
-					</article>
-				</div>
-			</section>
+          <article class="security-card shadow-sm">
+            <div class="security-icon">
+              <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <div>
+              <p class="security-label mb-1">{{ securityLabel }}</p>
+              <p class="security-text mb-0">{{ securityText }}</p>
+            </div>
+          </article>
+        </div>
+      </section>
 
-			<section class="col-12 col-lg-6 login-panel d-flex align-items-center">
-				<div class="panel-card w-100">
-					<div class="panel-copy mb-5">
-						<h2 class="panel-title">{{ panelTitle }}</h2>
-						<p class="panel-subtitle mb-0">{{ panelSubtitle }}</p>
-					</div>
+      <!-- Sección Panel (derecha) -->
+      <section class="col-12 col-lg-6 login-panel d-flex align-items-center">
+        <div class="panel-card w-100">
+          <div class="panel-copy mb-5">
+            <h2 class="panel-title">{{ panelTitle }}</h2>
+            <p class="panel-subtitle mb-0">{{ panelSubtitle }}</p>
+          </div>
 
-					<form class="login-form" autocomplete="on">
-						@for (field of fields; track field.id) {
-							<div class="mb-4" [class.mb-3]="field.hasToggle">
-								<div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-									<label [for]="field.id" class="form-label mb-0">{{ field.label }}</label>
-									@if (field.helpText) {
-										<a class="forgot-link" href="#">{{ field.helpText }}</a>
-									}
-								</div>
+          <!-- Mostrar error si existe -->
+          @if (errorMessage()) {
+            <div class="alert alert-danger mb-4">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              {{ errorMessage() }}
+            </div>
+          }
 
-								<div class="input-group input-group-lg login-input-group">
-									<span class="input-group-text"><i class="bi" [class]="field.icon"></i></span>
-									<input
-										[id]="field.id"
-										class="form-control"
-										[type]="field.hasToggle ? (passwordVisible ? 'text' : 'password') : field.type"
-										[placeholder]="field.placeholder"
-										[attr.autocomplete]="field.autocomplete"
-									>
-									@if (field.hasToggle) {
-										<button
-											type="button"
-											class="btn btn-link password-toggle"
-											(click)="togglePasswordVisibility()"
-											[attr.aria-label]="passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-										>
-											<i class="bi" [class.bi-eye-slash]="passwordVisible" [class.bi-eye]="!passwordVisible"></i>
-										</button>
-									}
-								</div>
-							</div>
-						}
+          <!-- Formulario de Login -->
+          <form class="login-form" (ngSubmit)="onSubmit($event)" autocomplete="on">
+            <!-- Campo: Email -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                <label for="corporateEmail" class="form-label mb-0">Email corporativo</label>
+              </div>
+              <div class="input-group input-group-lg login-input-group">
+                <span class="input-group-text"><i class="bi bi-at"></i></span>
+                <input
+                  id="corporateEmail"
+                  type="email"
+                  class="form-control"
+                  placeholder="nombre@institucion.com"
+                  autocomplete="email"
+                  [(ngModel)]="email"
+                  name="email"
+                  required
+                >
+              </div>
+            </div>
 
-						<div class="form-check remember-check mb-4">
-							<input class="form-check-input" type="checkbox" id="rememberSession">
-							<label class="form-check-label" for="rememberSession">{{ rememberLabel }}</label>
-						</div>
+            <!-- Campo: Contraseña -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+                <label for="password" class="form-label mb-0">Contraseña</label>
+                <a class="forgot-link" href="#">¿Olvidó su contraseña?</a>
+              </div>
+              <div class="input-group input-group-lg login-input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input
+                  id="password"
+                  [type]="passwordVisible() ? 'text' : 'password'"
+                  class="form-control"
+                  placeholder="••••••••••••"
+                  autocomplete="current-password"
+                  [(ngModel)]="password"
+                  name="password"
+                  required
+                >
+                <button
+                  type="button"
+                  class="btn btn-link password-toggle"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="passwordVisible() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <i class="bi" [class.bi-eye-slash]="passwordVisible()" [class.bi-eye]="!passwordVisible()"></i>
+                </button>
+              </div>
+            </div>
 
-						<button type="submit" class="btn btn-primary btn-lg login-submit w-100">
-							<span>{{ submitLabel }}</span>
-							<i class="bi bi-arrow-right-short"></i>
-						</button>
+            <!-- Checkbox: Recordar sesión -->
+            <div class="form-check remember-check mb-4">
+              <input class="form-check-input" type="checkbox" id="rememberSession" [(ngModel)]="rememberSession" name="rememberSession">
+              <label class="form-check-label" for="rememberSession">Mantener sesión iniciada</label>
+            </div>
 
-						<hr class="login-divider my-5">
+            <!-- Botón de envío -->
+            <button type="submit" class="btn btn-primary btn-lg login-submit w-100" [disabled]="isLoading()">
+              @if (isLoading()) {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span>Iniciando sesión...</span>
+              } @else {
+                <span>{{ submitLabel }}</span>
+                <i class="bi bi-arrow-right-short"></i>
+              }
+            </button>
 
-						<p class="access-copy mb-0">
-							{{ accessPrompt }} <a href="#">{{ accessAction }}</a>
-						</p>
-					</form>
-				</div>
-			</section>
-		</div>
-	</div>
+            <hr class="login-divider my-5">
+
+            <p class="access-copy mb-0">
+              {{ accessPrompt }} <a href="#">{{ accessAction }}</a>
+            </p>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
 </main>

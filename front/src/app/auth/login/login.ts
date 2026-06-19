@@ -1,4 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ToastService } from '../../services/toast.service';
 
 type LoginField = {
   id: string;
@@ -13,7 +17,8 @@ type LoginField = {
 
 @Component({
   selector: 'app-login',
-  imports: [],
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
@@ -29,6 +34,7 @@ export class Login {
   readonly emailHelp = '¿Olvidó su contraseña?';
   readonly rememberLabel = 'Mantener sesión iniciada';
   readonly submitLabel = 'Iniciar Sesión';
+  
   readonly fields: LoginField[] = [
     {
       id: 'corporateEmail',
@@ -50,9 +56,45 @@ export class Login {
     },
   ];
 
-  passwordVisible = false;
+  private readonly toastService = inject(ToastService);
+  private readonly router = inject(Router);
+
+  readonly email = signal('');
+  readonly password = signal('');
+  readonly rememberSession = signal(false);
+  readonly passwordVisible = signal(false);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
 
   togglePasswordVisibility(): void {
-    this.passwordVisible = !this.passwordVisible;
+    this.passwordVisible.update(v => !v);
+  }
+
+  onSubmit(event: Event): void {
+    event.preventDefault();
+
+    const email = this.email();
+    const password = this.password();
+
+    if (!email || !password) {
+      this.errorMessage.set('Por favor, complete todos los campos');
+      this.toastService.error(this.errorMessage());
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      this.errorMessage.set('Por favor, ingrese un email válido');
+      this.toastService.error(this.errorMessage());
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    setTimeout(() => {
+      this.isLoading.set(false);
+      this.router.navigate(['/sass/tenants']);
+    }, 1500);
   }
 }

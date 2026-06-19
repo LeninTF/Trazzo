@@ -1,0 +1,175 @@
+<div class="perfil-wrapper">
+    @if (mensajeExito) {
+    <div class="perfil-toast perfil-toast--success">
+        <i class="bi bi-check-circle-fill"></i> {{ mensajeExito }}
+    </div>
+    }
+    @if (mensajeError) {
+    <div class="perfil-toast perfil-toast--error">
+        <i class="bi bi-exclamation-circle-fill"></i> {{ mensajeError }}
+    </div>
+    }
+
+    <header class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h1 class="perfil-title">Mi Perfil</h1>
+            <p class="perfil-subtitle">Informaci&oacute;n personal y configuraci&oacute;n de la cuenta.</p>
+        </div>
+        @if (!editando) {
+        <button class="perfil-btn perfil-btn--primary" (click)="editar()">
+            <i class="bi bi-pencil"></i> Editar Perfil
+        </button>
+        }
+    </header>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="perfil-card rounded-4 p-4 text-center">
+                <div class="perfil-avatar">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <h2 class="perfil-name">{{ usuario.nombres }} {{ usuario.apellidos }}</h2>
+                <span class="perfil-badge">{{ usuario.rol }}</span>
+
+                <hr class="my-4" />
+
+                <div class="perfil-info-item">
+                    <i class="bi bi-globe2"></i>
+                    <div>
+                        <span class="perfil-info-label">Rol SASS</span>
+                        <span class="perfil-info-value">{{ usuario['rolSass'] }}</span>
+                    </div>
+                </div>
+
+                <div class="perfil-info-item">
+                    <i class="bi bi-calendar3"></i>
+                    <div>
+                        <span class="perfil-info-label">Ingreso</span>
+                        <span class="perfil-info-value">{{ usuario.fechaIngreso }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8 d-flex flex-column gap-4">
+            <div class="perfil-card rounded-4 p-4">
+                <h3 class="perfil-section-title">
+                    <i class="bi bi-person-lines-fill"></i> Datos Personales
+                </h3>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <label class="perfil-field-label" for="perfil-nombres">Nombres</label>
+                        @if (editando) {
+                        <input id="perfil-nombres" class="perfil-input" [(ngModel)]="usuarioEdit.nombres" placeholder="Nombres" />
+                        } @else {
+                        <div class="perfil-field-value">{{ usuario.nombres }}</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="perfil-field-label" for="perfil-apellidos">Apellidos</label>
+                        @if (editando) {
+                        <input id="perfil-apellidos" class="perfil-input" [(ngModel)]="usuarioEdit.apellidos" placeholder="Apellidos" />
+                        } @else {
+                        <div class="perfil-field-value">{{ usuario.apellidos }}</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="perfil-field-label">DNI</label>
+                        <div class="perfil-field-value">{{ usuario.dni }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="perfil-field-label">Rol</label>
+                        <div class="perfil-field-value">{{ usuario.rol }}</div>
+                    </div>
+                </div>
+
+                @if (editando) {
+                <div class="d-flex gap-2 mt-4">
+                    <button class="perfil-btn perfil-btn--primary" (click)="guardarCambios()">
+                        <i class="bi bi-check-lg"></i> Guardar Cambios
+                    </button>
+                    <button class="perfil-btn perfil-btn--outline" (click)="cancelarEdicion()">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                </div>
+                }
+            </div>
+
+            <div class="perfil-card rounded-4 p-4">
+                <h3 class="perfil-section-title">
+                    <i class="bi bi-envelope-fill"></i> Contacto
+                </h3>
+
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <label class="perfil-field-label" for="perfil-correo">Correo Electr&oacute;nico</label>
+                        @if (editando) {
+                        <input id="perfil-correo" class="perfil-input" [(ngModel)]="usuarioEdit.email" placeholder="correo@ejemplo.com" />
+                        } @else {
+                        <div class="perfil-field-value">{{ usuario.email }}</div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="perfil-field-label" for="perfil-telefono">Tel&eacute;fono</label>
+                        @if (editando) {
+                        <input id="perfil-telefono" class="perfil-input" [(ngModel)]="usuarioEdit.telefono" placeholder="+51 999 888 777" />
+                        } @else {
+                        <div class="perfil-field-value">{{ usuario.telefono }}</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="perfil-card rounded-4 p-4">
+                <h3 class="perfil-section-title">
+                    <i class="bi bi-shield-lock-fill"></i> Seguridad
+                </h3>
+
+                <div class="mt-3">
+                    <button class="perfil-btn perfil-btn--outline"
+                        (click)="mostrarCambiarPassword = !mostrarCambiarPassword; limpiarMensajes()">
+                        <i class="bi bi-key"></i>
+                        {{ mostrarCambiarPassword ? 'Cancelar' : 'Cambiar Contrase&ntilde;a' }}
+                    </button>
+                </div>
+
+                @if (mostrarCambiarPassword) {
+                <div class="perfil-password-section mt-4">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="perfil-field-label" for="perfil-password-actual">Contrase&ntilde;a Actual</label>
+                            <input id="perfil-password-actual" type="password" class="perfil-input"
+                                [class.perfil-input--error]="errorPasswordActual" [(ngModel)]="passwordActual"
+                                placeholder="Contrase&ntilde;a actual" />
+                            @if (errorPasswordActual) {
+                            <span class="perfil-field-error">{{ errorPasswordActual }}</span>
+                            }
+                        </div>
+                        <div class="col-md-4">
+                            <label class="perfil-field-label" for="perfil-password-nueva">Nueva Contrase&ntilde;a</label>
+                            <input id="perfil-password-nueva" type="password" class="perfil-input" [class.perfil-input--error]="errorPasswordNueva"
+                                [(ngModel)]="passwordNueva" placeholder="Nueva contrase&ntilde;a" />
+                            @if (errorPasswordNueva) {
+                            <span class="perfil-field-error">{{ errorPasswordNueva }}</span>
+                            }
+                        </div>
+                        <div class="col-md-4">
+                            <label class="perfil-field-label" for="perfil-password-confirmar">Confirmar Contrase&ntilde;a</label>
+                            <input id="perfil-password-confirmar" type="password" class="perfil-input"
+                                [class.perfil-input--error]="errorPasswordConfirmar" [(ngModel)]="passwordConfirmar"
+                                placeholder="Confirme la nueva contrase&ntilde;a" />
+                            @if (errorPasswordConfirmar) {
+                            <span class="perfil-field-error">{{ errorPasswordConfirmar }}</span>
+                            }
+                        </div>
+                    </div>
+                    <button class="perfil-btn perfil-btn--primary mt-3" (click)="guardarPassword()">
+                        <i class="bi bi-check-lg"></i> Guardar Contrase&ntilde;a
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
