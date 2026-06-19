@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Tenants } from './tenants';
+import { Tenants } from '../../admin-sass/tenants/tenants';
 
 describe('Tenants', () => {
   let component: Tenants;
