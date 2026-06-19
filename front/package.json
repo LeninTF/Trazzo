@@ -28,14 +28,6 @@
     "tslib": "^2.3.0",
     "zone.js": "^0.14.0"
   },
-  "pnpm": {
-    "overrides": {
-      "http-proxy-middleware": "3.0.7"
-    }
-  },
-  "resolutions": {
-    "http-proxy-middleware": "3.0.7"
-  },
   "devDependencies": {
     "@angular-devkit/build-angular": "^21.2.16",
     "@angular/build": "^21.2.16",
