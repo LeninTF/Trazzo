@@ -11,8 +11,8 @@
     <groupId>trazzo</groupId>
     <artifactId>back</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>back</name>
-    <description>back</description>
+    <name>Trazzo Backend</name>
+    <description>Backend para la plataforma Trazzo</description>
     <url/>
     <licenses>
         <license/>

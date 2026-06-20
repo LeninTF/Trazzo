@@ -38,7 +38,6 @@ jobs:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -f back/pom.xml -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
-          -Dsonar.projectName="Trazzo Backend (Java)" \
           -Dsonar.projectKey=methodsync-trazzo-back \
           -Dsonar.organization=methodsync \
           -Dsonar.sources=src/main,pom.xml,Dockerfile \
