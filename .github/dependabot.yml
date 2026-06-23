@@ -22,21 +22,30 @@ updates:
         patterns:
           - "*"
 
-  # 2. Configuración para el Frontend (Angular / pnpm)
+ # 2. Configuración para el Frontend (Angular / pnpm)
   - package-ecosystem: "npm" # CRÍTICO: Se usa 'npm' aunque uses pnpm
     directory: "/front" # Esta ruta apunta a la carpeta del frontend
     schedule:
       interval: "weekly"
       day: "monday"
+
     commit-message:
       prefix: "chore(front)"
-    groups:
+
+      # Mantener Angular en la versión 21.x
+      ignore:
+        - dependency-name: "@angular/*"
+          versions:
+          - ">=22.0.0"
+
+      groups:
       # Agrupará todas las dependencias del ecosistema Angular en un solo PR
       angular-updates:
         patterns:
           - "@angular/*"
+
       # Agrupará el resto de librerías del frontend
-      all-other-frontend:
+        all-other-frontend:
         patterns:
           - "*"
 
