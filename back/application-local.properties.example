@@ -1,0 +1,9 @@
+# Copia este archivo como application-local.properties y completa tus valores locales.
+# Este archivo SI se versiona. application-local.properties NO se versiona.
+
+DB_URL=jdbc:postgresql://localhost:5432/postgres
+DB_USERNAME=postgres
+DB_PASSWORD=TU_PASSWORD_AQUI
+
+# Genera un secret con: openssl rand -hex 32
+JWT_SECRET=TU_JWT_SECRET_DE_256_BITS_AQUI
