@@ -1,11 +1,14 @@
-HELP.md
+# --- Java / Maven ---
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
-.apt_generated
+# --- IDEs y Herramientas ---
+.idea
+*.iws
+*.iml
+*.ipr
 .classpath
 .factorypath
 .project
@@ -15,14 +18,15 @@ target/
 *.sublime-workspace
 .c9/
 *.launch
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
+# --- NetBeans ---
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -32,37 +36,19 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-
-# Visual Studio Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/mcp.json
-.history/*
-
-### Security ###
-.env
-
-### Frontend ###
-# Compiled output
+# --- Frontend (Node/Angular/etc) ---
 /dist
 /tmp
 /out-tsc
 /bazel-out
-
-# Node
 /node_modules
 npm-debug.log
 yarn-error.log
 
-### Logs ###
+# --- Logs y Archivos temporales ---
 logs/
 *.log
 logs/**/*.log
-
-# Miscellaneous
 /.angular/cache
 .sass-cache/
 /connect.lock
@@ -73,6 +59,12 @@ testem.log
 __screenshots__/
 .42c
 
-# System files
+# --- Sistema ---
 .DS_Store
 Thumbs.db
+
+# --- Configuración Privada y Seguridad (CRÍTICO) ---
+.env
+application.properties
+application-local.properties
+*.secret
