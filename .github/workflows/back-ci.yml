@@ -30,6 +30,9 @@ jobs:
           cache: maven
 
       - name: Compilar y Testear (Maven)
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET_TEST }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD_TEST }}
         run: mvn -f back/pom.xml clean verify
 
       - name: Análisis Estático y Quality Gate (SonarCloud)

@@ -1,3 +1,4 @@
 version: 2
 ignore-paths:
-  - back/src/test/
+  - back/src/test
+  - back/application-local.properties.example

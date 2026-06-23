@@ -1,0 +1,6 @@
+[allowlist]
+description = "Archivos de ejemplo y recursos de test"
+paths = [
+    '''back/application-local\.properties\.example''',
+    '''back/src/test/.*'''
+]
