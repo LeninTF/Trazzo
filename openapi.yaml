@@ -14,8 +14,9 @@ info:
       |---------------|-----------------|-------------------|-----------------|
       | `/saas/users` | Panel Trazzo    | MasterRole válido | `master_db`      |
       | `/usuarios`   | Panel Tenant    | TenantRole válido | `tenant_{slug}_db` |
-  # Cubre Autenticación, Gestión de Usuarios y Control de Asistencia Biométrica.
-  version: 2.0.0
+      | `/incidentes` | Panel Tenant    | TenantRole válido | `tenant_{slug}_db` |
+  # Cubre Autenticación, Gestión de Usuarios, Control de Asistencia Biométrica e Incidencias.
+  version: 2.1.0
 servers:
   - url: https://api.trazzo.pe/api/v1
     description: Servidor Central de Producción
@@ -187,6 +188,72 @@ components:
       schema:
         type: string
         format: uuid
+
+    # ─── Parámetros para Incidencias ───────────────────────────────────────
+    IncidentId:
+      name: id
+      in: path
+      required: true
+      description: ID único de la incidencia.
+      schema:
+        type: integer
+        example: 42
+
+    IncidentTypeId:
+      name: id
+      in: path
+      required: true
+      description: ID único del tipo de incidencia.
+      schema:
+        type: integer
+        example: 5
+
+    IncidentEvidenceId:
+      name: evidenceId
+      in: path
+      required: true
+      description: ID único de la evidencia.
+      schema:
+        type: integer
+        example: 12
+
+    IncidentStateParam:
+      name: state
+      in: query
+      required: false
+      description: Filtra incidencias por estado.
+      schema:
+        type: string
+        enum: [PENDIENTE, APROBADO, DENEGADO]
+
+    IncidentTypeFilterParam:
+      name: tipo_id
+      in: query
+      required: false
+      description: Filtra incidencias por tipo.
+      schema:
+        type: integer
+        example: 3
+
+    DateFromParam:
+      name: desde
+      in: query
+      required: false
+      description: Filtra incidencias creadas desde esta fecha (inclusive).
+      schema:
+        type: string
+        format: date
+        example: "2026-01-01"
+
+    DateToParam:
+      name: hasta
+      in: query
+      required: false
+      description: Filtra incidencias creadas hasta esta fecha (inclusive).
+      schema:
+        type: string
+        format: date
+        example: "2026-12-31"
 
   schemas:
     # ==========================================
@@ -1209,6 +1276,373 @@ components:
               message:
                 type: string
 
+    # ==========================================
+    # SECCIÓN: INCIDENCIAS
+    # ==========================================
+    # ── IncidentType ──────────────────────────────────────────────────────
+    IncidentTypeProfile:
+      type: object
+      description: "Tipo de incidencia definido por el tenant."
+      properties:
+        id:
+          type: integer
+          example: 5
+        nombre:
+          type: string
+          example: "Permiso por Salud"
+        descripcion:
+          type: string
+          nullable: true
+          example: "Permiso por consulta médica o enfermedad"
+        activo:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentTypeListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentTypeProfile'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateIncidentTypeRequest:
+      type: object
+      required:
+        - nombre
+      description: |
+        Crea un nuevo tipo de incidencia para el tenant.
+        Se crea con `activo = true` por defecto.
+      properties:
+        nombre:
+          type: string
+          example: "Permiso por Salud"
+        descripcion:
+          type: string
+          nullable: true
+          example: "Permiso por consulta médica o enfermedad"
+
+    PatchIncidentTypeRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Actualización parcial de un tipo de incidencia.
+        - `activo = false` desactiva el tipo: las incidencias históricas
+          siguen visibles, pero no se pueden crear nuevas con este tipo.
+        - `activo = true` reactiva un tipo desactivado.
+      properties:
+        nombre:
+          type: string
+          example: "Permiso Médico"
+        descripcion:
+          type: string
+          nullable: true
+        activo:
+          type: boolean
+          example: false
+
+    # ── Incident ──────────────────────────────────────────────────────────
+    IncidentEvidenceProfile:
+      type: object
+      description: "Evidencia asociada a una incidencia (archivo subido a Cloudflare R2)."
+      properties:
+        id:
+          type: integer
+          example: 12
+        incidencia_id:
+          type: integer
+          example: 42
+        file_name:
+          type: string
+          example: "certificado_medico.pdf"
+        file_url:
+          type: string
+          format: uri
+          description: "URL pública del archivo en Cloudflare R2."
+          example: "https://r2.trazzo.pe/evidencias/42/certificado_medico.pdf"
+        mime_type:
+          type: string
+          example: "application/pdf"
+        file_size:
+          type: integer
+          description: "Tamaño del archivo en bytes."
+          example: 1048576
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentPermissionProfile:
+      type: object
+      description: |
+        Registro de permiso asociado a una incidencia aprobada.
+        Solo se crea cuando una incidencia es aprobada y su tipo lo requiere.
+      properties:
+        id:
+          type: integer
+          example: 8
+        incidencia_id:
+          type: integer
+          example: 42
+        start_date:
+          type: string
+          format: date
+          description: "Fecha de inicio del permiso (calculada automáticamente)."
+          example: "2026-06-15"
+        start_finish:
+          type: string
+          format: date
+          description: "Fecha de fin del permiso (calculada automáticamente)."
+          example: "2026-06-17"
+        days_granted:
+          type: integer
+          description: "Días otorgados (ingresado por el administrador al aprobar)."
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentProfile:
+      type: object
+      description: "Perfil completo de una incidencia de asistencia."
+      properties:
+        id:
+          type: integer
+          example: 42
+        tenant_user_id:
+          type: integer
+          description: "ID del trabajador afectado (TenantUser)."
+          example: 15
+        incidencia_type_id:
+          type: integer
+          description: "ID del tipo de incidencia."
+          example: 5
+        state:
+          type: string
+          enum: [PENDIENTE, APROBADO, DENEGADO]
+          example: "PENDIENTE"
+        comment:
+          type: string
+          nullable: true
+          description: |
+            Comentario o justificación del trabajador.
+            Almacenado en Redis para acceso rápido.
+          example: "Adjunto certificado médico por inasistencia del 15 al 17 de junio"
+        tipo:
+          $ref: '#/components/schemas/IncidentTypeProfile'
+        permiso:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/IncidentPermissionProfile'
+        evidencias:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentEvidenceProfile'
+        tenant_user:
+          type: object
+          description: "Datos básicos del trabajador afectado."
+          properties:
+            id:
+              type: integer
+            nombre:
+              type: string
+            apellido_paterno:
+              type: string
+            apellido_materno:
+              type: string
+            email:
+              type: string
+              format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    IncidentListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentProfile'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        scope_aplicado:
+          type: string
+          enum: [ALL_TENANT, MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO, SELF]
+          example: "MY_ASSIGNMENTS"
+
+    # ── Request bodies ────────────────────────────────────────────────────
+    CreateIncidentRequest:
+      type: object
+      required:
+        - incidencia_type_id
+      description: |
+        Crea una nueva incidencia en estado `PENDIENTE`.
+
+        **Origen de creación:**
+        - **Manual (trabajador):** el `tenant_user_id` se obtiene del JWT
+          (el trabajador crea su propia incidencia).
+        - **Automática (sistema):** el sistema crea la incidencia al detectar
+          falta al finalizar el turno. El `tenant_user_id` es el trabajador afectado.
+          Requiere el permiso `CREATE_INCIDENT` para creación manual.
+
+        El campo `comment` es opcional y se cachea en Redis al crearse.
+      properties:
+        incidencia_type_id:
+          type: integer
+          description: "ID del tipo de incidencia. Debe estar activo."
+          example: 5
+        comment:
+          type: string
+          nullable: true
+          description: "Comentario o justificación del trabajador."
+          example: "Adjunto certificado médico por inasistencia"
+        tenant_user_id:
+          type: integer
+          nullable: true
+          description: |
+            Solo para creación automática por el sistema.
+            Si se omite (creación manual), se usa el `sub` del JWT.
+          example: 15
+
+    PatchIncidentRequest:
+      type: object
+      minProperties: 1
+      description: |
+        **PATCH — Actualización parcial de una incidencia.**
+
+        **Reglas:**
+        - Solo se puede editar mientras está `PENDIENTE`.
+        - Solo el trabajador afectado puede editar su incidencia.
+        - Únicamente se puede modificar `comment`.
+      properties:
+        comment:
+          type: string
+          nullable: true
+          description: |
+            Comentario o justificación. Se cachea en Redis.
+          example: "Adjunto nuevo certificado médico actualizado"
+
+    IncidentStateChangeRequest:
+      type: object
+      required:
+        - state
+      description: |
+        Cambio de estado de una incidencia (APROBAR o DENEGAR).
+
+        **Reglas:**
+        - Solo transiciones válidas: `PENDIENTE → APROBADO` | `PENDIENTE → DENEGADO`.
+        - Solo un administrador con permiso `APPROVE_INCIDENT` puede ejecutarlo.
+        - Si se aprueba con `start_date` y `start_finish`, se crea automáticamente
+          un registro en `incidents_permission`.
+        - Al aprobar, se dispara un evento asíncrono para justificar los días
+          de asistencia afectados (vía `POST /incidentes/{id}/justificar`).
+        - Se notifica al trabajador vía WebSocket y email (Resend).
+      properties:
+        state:
+          type: string
+          enum: [APROBADO, DENEGADO]
+          example: "APROBADO"
+        days_granted:
+          type: integer
+          nullable: true
+          description: |
+            Días otorgados. Obligatorio al aprobar una incidencia que requiera
+            registro de permiso (ej. licencia médica). Lo ingresa el administrador.
+          example: 3
+        motivo_rechazo:
+          type: string
+          nullable: true
+          description: "Motivo del rechazo. Requerido cuando `state = DENEGADO`."
+          example: "Documentación insuficiente"
+
+    CreateEvidenceRequest:
+      type: object
+      required:
+        - file_name
+        - file_url
+        - mime_type
+        - file_size
+      description: |
+        Registra una evidencia asociada a una incidencia.
+
+        **Flujo:**
+        1. El frontend verifica que el archivo no exceda 15MB.
+        2. El frontend sube el archivo directamente a Cloudflare R2 (bucket público).
+        3. Cloudflare R2 devuelve la URL pública del archivo.
+        4. El frontend envía la URL y metadatos al backend para su registro en BD.
+
+        **Restricciones:**
+        - Solo una evidencia por incidencia.
+        - Solo se puede agregar mientras la incidencia está `PENDIENTE`
+          (o antes de generar el reporte mensual).
+        - Formatos permitidos: PDF, Word, imágenes, videos.
+      properties:
+        file_name:
+          type: string
+          description: "Nombre original del archivo."
+          example: "certificado_medico.pdf"
+        file_url:
+          type: string
+          format: uri
+          description: "URL pública del archivo en Cloudflare R2."
+          example: "https://r2.trazzo.pe/evidencias/42/certificado_medico.pdf"
+        mime_type:
+          type: string
+          description: "Tipo MIME del archivo."
+          example: "application/pdf"
+        file_size:
+          type: integer
+          description: "Tamaño del archivo en bytes (máx 15MB = 15728640 bytes)."
+          maximum: 15728640
+          example: 1048576
+
+    NotifyIncidentRequest:
+      type: object
+      description: |
+        Dispara una notificación por email vía Resend al trabajador afectado
+        informando el cambio de estado de su incidencia.
+      properties:
+        tipo:
+          type: string
+          enum: [EMAIL, SISTEMA, AMBOS]
+          default: AMBOS
+          description: |
+            - `EMAIL`: solo envía correo vía Resend.
+            - `SISTEMA`: solo notificación en el sistema (WebSocket).
+            - `AMBOS`: ambas vías.
+          example: "AMBOS"
+      required:
+        - tipo
+
 # Forzamos por defecto que todas las transacciones utilicen Validación Dual del Tenant
 security:
   - bearerAuth: []
@@ -2123,3 +2557,748 @@ paths:
       responses:
         "202":
           description: Lote aceptado para procesamiento asíncrono en segundo plano.
+
+  # ----------------------------------------
+  # MÓDULO: INCIDENCIAS
+  # Contexto: tenant_{slug}_db · Requiere X-Tenant-ID
+  # ----------------------------------------
+
+  # ── Incident Types ─────────────────────────────────────────────────────
+  /incidentes/tipos:
+    get:
+      tags:
+        - Incidencias (Tipos)
+      summary: Listar tipos de incidencia del tenant
+      operationId: listarIncidentTypes
+      description: |
+        Devuelve lista paginada de tipos de incidencia.
+
+        **Redis:** la lista de tipos activos se cachea en Redis (TTL: 1 hora)
+        para reducir carga en la base de datos.
+
+        **Permisos requeridos:** `VIEW_OWN_INCIDENTS` (para consulta básica),
+        `MANAGE_INCIDENT_TYPES` (para ver tipos inactivos).
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - name: activo
+          in: query
+          required: false
+          description: "Filtra por estado activo/inactivo. Si se omite, muestra solo activos."
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        "200":
+          description: Lista paginada de tipos de incidencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeListResponse'
+        "403":
+          description: Sin permiso suficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Incidencias (Tipos)
+      summary: Crear un nuevo tipo de incidencia
+      operationId: createIncidentType
+      description: |
+        Crea un nuevo tipo de incidencia. Se crea con `activo = true`.
+
+        **Validaciones:**
+        - El `nombre` debe ser único dentro del tenant.
+        - Longitud máxima: 100 caracteres.
+
+        **Permisos requeridos:** `MANAGE_INCIDENT_TYPES`
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIncidentTypeRequest'
+      responses:
+        "201":
+          description: Tipo de incidencia creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeProfile'
+        "400":
+          description: Nombre inválido o duplicado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin permiso `MANAGE_INCIDENT_TYPES`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /incidentes/tipos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IncidentTypeId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    get:
+      tags:
+        - Incidencias (Tipos)
+      summary: Obtener un tipo de incidencia por ID
+      operationId: getIncidentTypeById
+      description: |
+        Devuelve los detalles de un tipo de incidencia.
+
+        **Redis:** si el tipo está activo, se sirve desde caché cuando esté disponible.
+
+        **Permisos requeridos:** `VIEW_OWN_INCIDENTS` o `MANAGE_INCIDENT_TYPES`
+      responses:
+        "200":
+          description: Tipo de incidencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeProfile'
+        "404":
+          description: Tipo de incidencia no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Incidencias (Tipos)
+      summary: Actualizar parcialmente un tipo de incidencia
+      operationId: patchIncidentType
+      description: |
+        Actualiza los campos enviados de un tipo de incidencia.
+
+        **Casos de uso:**
+        - `{ "activo": false }`: desactiva el tipo. Las incidencias históricas
+          siguen visibles, pero no se pueden crear nuevas con este tipo.
+        - `{ "activo": true }`: reactiva un tipo desactivado.
+        - `{ "nombre": "Nuevo Nombre" }`: renombra el tipo (debe ser único).
+
+        **Permisos requeridos:** `MANAGE_INCIDENT_TYPES`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchIncidentTypeRequest'
+      responses:
+        "200":
+          description: Tipo de incidencia actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentTypeProfile'
+        "400":
+          description: Nombre duplicado o inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin permiso `MANAGE_INCIDENT_TYPES`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Tipo de incidencia no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Incidents ──────────────────────────────────────────────────────────
+  /incidentes:
+    get:
+      tags:
+        - Incidencias
+      summary: Listar incidencias con visibilidad basada en permisos
+      operationId: listarIncidencias
+      description: |
+        Devuelve lista paginada de incidencias. El **scope** se resuelve
+        automáticamente según los permisos del JWT:
+
+        | Permiso del solicitante              | Scope por defecto  |
+        |--------------------------------------|--------------------|
+        | `VIEW_ALL_INCIDENTS`                 | Todo el tenant     |
+        | `VIEW_AREA_INCIDENTS` (sin VIEW_ALL) | Solo sus asignaciones (`MY_ASSIGNMENTS`) |
+        | `VIEW_OWN_INCIDENTS`                 | Solo sus propias incidencias (`SELF`) |
+        | Ninguno de los anteriores            | `403 Forbidden`    |
+
+        **Redis:** los conteos de incidencias por estado se cachean en
+        Redis (TTL: 5 minutos) para el dashboard del supervisor.
+
+        **Permisos requeridos:** `VIEW_OWN_INCIDENTS`, `VIEW_AREA_INCIDENTS`
+        o `VIEW_ALL_INCIDENTS`
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+        - $ref: '#/components/parameters/ScopeParam'
+        - $ref: '#/components/parameters/SedeIdParam'
+        - $ref: '#/components/parameters/AreaIdParam'
+        - $ref: '#/components/parameters/DepartamentoIdParam'
+        - $ref: '#/components/parameters/IncidentStateParam'
+        - $ref: '#/components/parameters/IncidentTypeFilterParam'
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        "200":
+          description: Lista paginada de incidencias según el scope resuelto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentListResponse'
+        "403":
+          description: Sin permiso suficiente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Incidencias
+      summary: Crear una nueva incidencia
+      operationId: createIncidente
+      description: |
+        Crea una nueva incidencia en estado `PENDIENTE`.
+
+        **Origen de creación:**
+        - **Manual (trabajador):** omite `tenant_user_id`. El backend usa
+          el `sub` del JWT. Requiere permiso `CREATE_INCIDENT`.
+        - **Automática (sistema):** envía `tenant_user_id` del trabajador
+          afectado. Requiere un rol de sistema (sin validación de `CREATE_INCIDENT`).
+
+        **Redis:** el `comment` se cachea en Redis para acceso rápido
+        en el dashboard de incidencias.
+
+        **Permisos requeridos:** `CREATE_INCIDENT` (para creación manual)
+      parameters:
+        - $ref: '#/components/parameters/TenantIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIncidentRequest'
+      responses:
+        "201":
+          description: Incidencia creada en estado PENDIENTE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentProfile'
+        "400":
+          description: Datos inválidos o tipo de incidencia inactivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin permiso `CREATE_INCIDENT`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /incidentes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    get:
+      tags:
+        - Incidencias
+      summary: Obtener una incidencia por ID
+      operationId: getIncidenteById
+      description: |
+        Devuelve el detalle completo de una incidencia, incluyendo:
+        - Tipo de incidencia.
+        - Datos básicos del trabajador afectado.
+        - Evidencias asociadas.
+        - Permiso generado (si aplica).
+
+        **Regla de visibilidad:** aplica las mismas reglas que `GET /incidentes`.
+        El trabajador siempre puede ver sus propias incidencias (`VIEW_OWN_INCIDENTS`).
+
+        **Permisos requeridos:** `VIEW_OWN_INCIDENTS`, `VIEW_AREA_INCIDENTS`
+        o `VIEW_ALL_INCIDENTS`
+      responses:
+        "200":
+          description: Detalle completo de la incidencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentProfile'
+        "403":
+          description: La incidencia no está dentro del scope del solicitante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Incidencias
+      summary: Editar comentario de una incidencia (solo PENDIENTE)
+      operationId: patchIncidente
+      description: |
+        Actualiza el campo `comment` de una incidencia.
+
+        **Reglas:**
+        - Solo mientras la incidencia está `PENDIENTE`.
+        - Solo el trabajador afectado puede editarla.
+        - Únicamente se modifica `comment`.
+
+        **Redis:** el `comment` se actualiza en Redis al modificarse.
+
+        **Permisos requeridos:** El trabajador es el propietario de la incidencia
+        (se valida contra el `sub` del JWT). No requiere permiso adicional.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchIncidentRequest'
+      responses:
+        "200":
+          description: Incidencia actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentProfile'
+        "400":
+          description: Incidencia no está en estado PENDIENTE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: No eres el propietario de esta incidencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Incident State ─────────────────────────────────────────────────────
+  /incidentes/{id}/estado:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    patch:
+      tags:
+        - Incidencias
+      summary: Cambiar estado de una incidencia (APROBAR / DENEGAR)
+      operationId: changeIncidentState
+      description: |
+        Cambia el estado de una incidencia de `PENDIENTE` a `APROBADO` o `DENEGADO`.
+
+        **Flujo al aprobar:**
+        1. Valida que el estado actual sea `PENDIENTE`.
+        2. Si `days_granted` está presente, crea registro en `incidents_permission`.
+        3. Cambia el estado a `APROBADO`.
+        4. Dispara evento asíncrono `POST /incidentes/{id}/justificar` para
+           marcar los días como justificados en asistencia.
+        5. Notifica al trabajador vía WebSocket y email (Resend).
+
+        **Flujo al denegar:**
+        1. Valida que el estado actual sea `PENDIENTE`.
+        2. `motivo_rechazo` es requerido.
+        3. Cambia el estado a `DENEGADO`.
+        4. Notifica al trabajador vía WebSocket y email (Resend).
+
+        **Permisos requeridos:** `APPROVE_INCIDENT`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentStateChangeRequest'
+      responses:
+        "200":
+          description: Estado actualizado. Notificación enviada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentProfile'
+        "400":
+          description: |
+            - Estado actual no es `PENDIENTE`.
+            - `motivo_rechazo` ausente al denegar.
+            - `days_granted` inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin permiso `APPROVE_INCIDENT`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Evidence ───────────────────────────────────────────────────────────
+  /incidentes/{id}/evidencias:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    post:
+      tags:
+        - Incidencias (Evidencias)
+      summary: Registrar evidencia para una incidencia
+      operationId: createEvidence
+      description: |
+        Registra una evidencia (archivo subido a Cloudflare R2) para una incidencia.
+
+        **Flujo desde el frontend:**
+        1. El frontend verifica que el archivo no exceda 15MB.
+        2. El frontend sube el archivo directamente a Cloudflare R2.
+        3. Cloudflare R2 devuelve la URL pública.
+        4. El frontend envía esta solicitud con la URL y metadatos.
+
+        **Restricciones:**
+        - Solo una evidencia por incidencia.
+        - Solo mientras la incidencia está `PENDIENTE`.
+        - Formatos permitidos: PDF, Word, imágenes, videos.
+
+        **Permisos requeridos:** `CREATE_INCIDENT` (para su propia incidencia)
+        o el sistema en creación automática.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEvidenceRequest'
+      responses:
+        "201":
+          description: Evidencia registrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentEvidenceProfile'
+        "400":
+          description: |
+            - Ya existe una evidencia para esta incidencia.
+            - Incidencia no está en `PENDIENTE`.
+            - Tamaño excede 15MB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: No eres el propietario de esta incidencia.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Incidencias (Evidencias)
+      summary: Listar evidencias de una incidencia
+      operationId: listEvidence
+      description: |
+        Devuelve las evidencias asociadas a una incidencia.
+
+        **Visibilidad:**
+        - El trabajador afectado puede ver sus propias evidencias.
+        - Los administradores con permiso `VIEW_EVIDENCE` pueden ver
+          evidencias de incidencias dentro de su scope.
+
+        **Permisos requeridos:** `VIEW_EVIDENCE` o ser el propietario
+        de la incidencia.
+      responses:
+        "200":
+          description: Lista de evidencias.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IncidentEvidenceProfile'
+        "403":
+          description: Sin permiso `VIEW_EVIDENCE`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /incidentes/{id}/evidencias/{evidenceId}:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/IncidentEvidenceId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    delete:
+      tags:
+        - Incidencias (Evidencias)
+      summary: Eliminar una evidencia
+      operationId: deleteEvidence
+      description: |
+        Elimina una evidencia de una incidencia.
+
+        **Reglas:**
+        - Solo el trabajador que subió la evidencia puede eliminarla.
+        - Solo dentro de los 15 minutos posteriores a la subida.
+        - Una vez que la incidencia pasa a `APROBADO` o `DENEGADO`,
+          no se puede eliminar manualmente.
+        - La eliminación es lógica (se marca como eliminada en BD).
+        El archivo en Cloudflare R2 no se elimina.
+
+        **Permisos requeridos:** `DELETE_EVIDENCE`
+      responses:
+        "204":
+          description: Evidencia eliminada. Sin cuerpo de respuesta.
+        "403":
+          description: |
+            - Ventana de 15 minutos expirada.
+            - Incidencia ya no está `PENDIENTE`.
+            - No eres el propietario de la evidencia.
+            - Sin permiso `DELETE_EVIDENCE`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Evidencia o incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Notifications ──────────────────────────────────────────────────────
+  /incidentes/{id}/notificar:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    post:
+      tags:
+        - Incidencias (Notificaciones)
+      summary: Enviar notificación de cambio de estado
+      operationId: notifyIncident
+      description: |
+        Dispara una notificación al trabajador afectado informando el
+        cambio de estado de su incidencia.
+
+        **Vías de notificación:**
+        - **Email:** envía correo vía Resend con los detalles del cambio.
+        - **Sistema:** envía notificación en tiempo real vía WebSocket
+          al canal específico del usuario.
+
+        **WebSocket — Topología de canales:**
+        ```
+        STOMP endpoint: /ws/incidents
+        Canal usuario:   /user/{userId}/queue/incidents
+        ```
+        El aislamiento por tenant se logra porque el broker STOMP enruta
+        por `userId`, y los userIds son únicos dentro de cada tenant.
+        El JWT del WebSocket valida el `tenant_id` antes de suscribir.
+
+        **Payload del mensaje WebSocket:**
+        ```json
+        {
+          "tipo": "INCIDENCIA_ESTADO",
+          "incidencia_id": 42,
+          "estado_anterior": "PENDIENTE",
+          "estado_nuevo": "APROBADO",
+          "timestamp": "2026-06-23T15:30:00Z",
+          "mensaje": "Tu incidencia ha sido aprobada."
+        }
+        ```
+
+        **Permisos requeridos:** `APPROVE_INCIDENT`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotifyIncidentRequest'
+      responses:
+        "202":
+          description: Notificación encolada para envío.
+        "403":
+          description: Sin permiso `APPROVE_INCIDENT`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ── Justify Attendance ────────────────────────────────────────────────
+  /incidentes/{id}/justificar:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    post:
+      tags:
+        - Incidencias
+      summary: Justificar asistencia por incidencia aprobada
+      operationId: justifyIncident
+      description: |
+        **Endpoint asíncrono** que marca los días de asistencia afectados
+        como "justificados" para una incidencia ya aprobada.
+
+        **Flujo:**
+        1. El endpoint `PATCH /incidentes/{id}/estado` (al aprobar) dispara
+           este endpoint de forma asíncrona.
+        2. Este endpoint consulta los registros de asistencia del trabajador
+           en el período cubierto (`start_date` a `start_finish`) y los marca
+           como justificados.
+        3. Si no existe `incidents_permission` (ej. tardanza de 1 día),
+           se justifica únicamente el día de la incidencia.
+
+        **Principio SOLID:** este endpoint existe para mantener la atomicidad
+        del endpoint de aprobación, separando la responsabilidad de justificar
+        asistencia en un proceso independiente.
+
+        **Permisos requeridos:** El sistema interno (sin exposición directa
+        al frontend). Invocado por `APPROVE_INCIDENT`.
+      responses:
+        "202":
+          description: Proceso de justificación encolado.
+        "400":
+          description: La incidencia no está en estado `APROBADO`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ----------------------------------------
+  # MÓDULO: WEBSOCKET CONFIGURATION
+  # ----------------------------------------
+  /ws/incidents:
+    get:
+      tags:
+        - WebSocket
+      summary: Información de conexión WebSocket para incidencias
+      description: |
+        Endpoint informativo que describe la configuración de WebSocket
+        para el módulo de incidencias.
+
+        ## Configuración STOMP
+
+        **Endpoint de conexión:** `/ws/incidents`
+        **Protocolo:** STOMP sobre WebSocket (SockJS como fallback)
+
+        **Autenticación:**
+        Se usa el mismo JWT del REST API, enviado como query param:
+        ```
+        /ws/incidents?token={JWT}
+        ```
+
+        **Canales de suscripción:**
+
+        | Canal | Receptor | Descripción |
+        |-------|----------|-------------|
+        | `/user/{userId}/queue/incidents` | Trabajador | Notificaciones de cambio de estado de sus incidencias |
+        | `/topic/tenant/{tenantId}/incidents` | Supervisores | Notificaciones de nuevas incidencias creadas (fin de turno) |
+
+        **Payload de notificación:**
+        ```json
+        {
+          "tipo": "INCIDENCIA_ESTADO",
+          "incidencia_id": 42,
+          "tenant_user_id": 15,
+          "estado_anterior": "PENDIENTE",
+          "estado_nuevo": "APROBADO",
+          "timestamp": "2026-06-23T15:30:00Z",
+          "mensaje": "Tu incidencia ha sido aprobada."
+        }
+        ```
+
+        **Aislamiento:**
+        - Usuarios del Tenant A no reciben eventos del Tenant B.
+        - Cada usuario recibe solo sus propias notificaciones.
+        - El aislamiento se logra mediante la combinación de:
+          1. JWT que contiene `tenant_id` validado al conectar.
+          2. Canales STOMP con prefijo `/user/{userId}/` que enrutan
+             exclusivamente al usuario destino.
+          3. El topic `/topic/tenant/{tenantId}/` incluye el `tenant_id`
+             como parte del channel, imposibilitando la escucha cruzada.
+      responses:
+        "200":
+          description: Información de configuración WebSocket.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  endpoint:
+                    type: string
+                    example: "/ws/incidents"
+                  protocol:
+                    type: string
+                    example: "STOMP"
+                  auth_method:
+                    type: string
+                    example: "JWT"
+                  channels:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        channel:
+                          type: string
+                        description:
+                          type: string
