@@ -48,8 +48,8 @@ RUN mkdir -p /var/cache/nginx/client_temp \
 # Cambiar a usuario no-root para seguridad
 USER nginx
 
-# Exponer el puerto 80
-EXPOSE 80
+# Exponer el puerto 8080 (no-root)
+EXPOSE 8080
 
 # Iniciar Nginx
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

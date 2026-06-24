@@ -44,26 +44,46 @@ jobs:
         run: |
           CONTAINER_ID=$(docker run -d trazzo-front-test:ci)
           sleep 3
+
+          # 1. Verificar estado del contenedor con docker inspect
+          STATUS=$(docker inspect "$CONTAINER_ID" --format='{{.State.Status}}' 2>/dev/null)
+          EXIT_CODE=$(docker inspect "$CONTAINER_ID" --format='{{.State.ExitCode}}' 2>/dev/null)
+
+          if [ "$STATUS" != "running" ]; then
+            echo "❌ ERROR: el contenedor no está en ejecución (status=$STATUS, exit_code=$EXIT_CODE)"
+            docker logs "$CONTAINER_ID" 2>&1 || true
+            docker rm -f "$CONTAINER_ID" > /dev/null 2>&1 || true
+            exit 1
+          fi
+
+          # 2. Revisar logs en busca de errores críticos
           LOGS=$(docker logs "$CONTAINER_ID" 2>&1 || true)
-          docker stop "$CONTAINER_ID" > /dev/null 2>&1 || true
-          docker rm "$CONTAINER_ID" > /dev/null 2>&1 || true
 
           if echo "$LOGS" | grep -qi "emerg"; then
             echo "❌ ERROR: nginx encontró un problema crítico (emerg):"
-            echo "$LOGS" | grep -i "emerg"
+            echo "$LOGS"
+            docker stop "$CONTAINER_ID" > /dev/null 2>&1 || true
+            docker rm "$CONTAINER_ID" > /dev/null 2>&1 || true
             exit 1
           fi
 
           if echo "$LOGS" | grep -qi "permission denied"; then
             echo "❌ ERROR: nginx tiene errores de permisos:"
-            echo "$LOGS" | grep -i "permission denied"
+            echo "$LOGS"
+            docker stop "$CONTAINER_ID" > /dev/null 2>&1 || true
+            docker rm "$CONTAINER_ID" > /dev/null 2>&1 || true
             exit 1
           fi
 
           if echo "$LOGS" | grep -qi "cannot"; then
             echo "❌ ERROR: nginx no pudo arrancar:"
             echo "$LOGS"
+            docker stop "$CONTAINER_ID" > /dev/null 2>&1 || true
+            docker rm "$CONTAINER_ID" > /dev/null 2>&1 || true
             exit 1
           fi
+
+          docker stop "$CONTAINER_ID" > /dev/null 2>&1 || true
+          docker rm "$CONTAINER_ID" > /dev/null 2>&1 || true
 
           echo "✅ Contenedor inició correctamente sin errores críticos de nginx"
