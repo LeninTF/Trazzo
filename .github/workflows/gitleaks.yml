@@ -10,6 +10,9 @@ jobs:
   gitleaks:
     runs-on: ubuntu-latest
     name: Buscar credenciales expuestas
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout del código
         uses: actions/checkout@v6

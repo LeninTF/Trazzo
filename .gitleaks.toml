@@ -1,0 +1,5 @@
+[allowlist]
+  description = "Archivos de ejemplo/plantilla con placeholders, no secretos reales"
+  paths = [
+    '''.*\.example$'''
+  ]
