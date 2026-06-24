@@ -102,6 +102,7 @@ public class JwtService {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .requireIssuer(ISSUER)
+                .requireAudience(AUDIENCE)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

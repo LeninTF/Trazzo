@@ -1,12 +1,14 @@
 package trazzo.back.saasglobal.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.RoleMaster;
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.AuthResponse;
@@ -15,6 +17,8 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.RegisterRequest
 import trazzo.back.saasglobal.infrastructure.adapters.out.persistence.entity.RefreshTokenEntity;
 import trazzo.back.saasglobal.infrastructure.adapters.out.persistence.entity.UserEntity;
 import trazzo.back.shared.security.service.JwtService;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +33,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("El email ya está registrado");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El email ya está registrado");
         }
         UserEntity user = UserEntity.builder()
                 .email(request.email())
@@ -47,18 +51,25 @@ public class AuthService {
         );
         UserEntity user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
-        // Revoca tokens previos antes de emitir uno nuevo (rotación)
         refreshTokenService.revokeAllByUser(user.getId());
         return buildAuthResponse(user);
     }
 
     @Transactional
     public AuthResponse refreshToken(String rawRefreshToken) {
-        RefreshTokenEntity refreshToken = refreshTokenService.validate(rawRefreshToken);
-        UserEntity user = refreshToken.getUser();
-        // Rotación: revoca el token usado y emite uno nuevo
-        refreshTokenService.revokeByToken(rawRefreshToken);
-        return buildAuthResponse(user);
+        // Atomic CAS: only one concurrent request can win; returns 0 if already revoked/used.
+        int revoked = refreshTokenService.revokeAtomically(rawRefreshToken);
+        if (revoked == 0) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Refresh token ya utilizado, revocado o no encontrado");
+        }
+        RefreshTokenEntity token = refreshTokenService.findByToken(rawRefreshToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Refresh token no encontrado"));
+        if (token.getExpiryDate().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expirado");
+        }
+        return buildAuthResponse(token.getUser());
     }
 
     @Transactional

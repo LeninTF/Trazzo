@@ -36,4 +36,10 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepositoryPort
     public void revokeByToken(String token) {
         springDataRepo.revokeByToken(token);
     }
+
+    @Override
+    @Transactional
+    public int revokeByTokenIfActive(String token) {
+        return springDataRepo.revokeByTokenIfActive(token);
+    }
 }

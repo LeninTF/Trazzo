@@ -5,6 +5,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.shared.security.config.AppSecurityProperties;
 
@@ -18,6 +20,7 @@ public class LoginAttemptService {
     private final AppSecurityProperties securityProperties;
 
     @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAuthenticationFailure(AbstractAuthenticationFailureEvent event) {
         String email = event.getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(user -> {
@@ -33,6 +36,7 @@ public class LoginAttemptService {
     }
 
     @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
         String email = event.getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(user -> {

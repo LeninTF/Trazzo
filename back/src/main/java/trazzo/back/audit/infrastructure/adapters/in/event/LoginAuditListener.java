@@ -5,6 +5,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import trazzo.back.audit.domain.model.master.LogInHistory;
@@ -20,6 +22,7 @@ public class LoginAuditListener {
     private final LogInHistoryRepository repository;
 
     @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
         repository.save(LogInHistory.builder()
                 .email(event.getAuthentication().getName())
@@ -31,6 +34,7 @@ public class LoginAuditListener {
     }
 
     @EventListener
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAuthenticationFailure(AbstractAuthenticationFailureEvent event) {
         repository.save(LogInHistory.builder()
                 .email(event.getAuthentication().getName())

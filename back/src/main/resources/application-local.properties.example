@@ -14,7 +14,7 @@ SHOW_SQL=true
 # ── JWT ────────────────────────────────────────────────────────────────────────
 # Genera un secreto seguro de mínimo 32 caracteres (256 bits) para HS256.
 # Ejemplo: openssl rand -hex 32
-JWT_SECRET=cambia_esto_por_un_secreto_largo_y_seguro_de_al_menos_32_chars
+JWT_SECRET=REPLACE_ME_run_openssl_rand_hex_32_and_paste_result_here
 JWT_EXPIRATION_MS=900000
 JWT_REFRESH_EXPIRATION_MS=604800000
 

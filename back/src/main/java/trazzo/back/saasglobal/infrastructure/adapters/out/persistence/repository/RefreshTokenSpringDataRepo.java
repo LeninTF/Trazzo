@@ -18,4 +18,8 @@ public interface RefreshTokenSpringDataRepo extends JpaRepository<RefreshTokenEn
     @Modifying
     @Query("UPDATE RefreshTokenEntity r SET r.revoked = true WHERE r.token = :token")
     void revokeByToken(String token);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE RefreshTokenEntity r SET r.revoked = true WHERE r.token = :token AND r.revoked = false")
+    int revokeByTokenIfActive(String token);
 }

@@ -8,6 +8,7 @@ import trazzo.back.saasglobal.infrastructure.adapters.out.persistence.entity.Use
 import trazzo.back.shared.security.config.JwtProperties;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -26,18 +27,16 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(token);
     }
 
-    public RefreshTokenEntity validate(String rawToken) {
-        RefreshTokenEntity token = refreshTokenRepository.findByToken(rawToken)
-                .orElseThrow(() -> new IllegalArgumentException("Refresh token no encontrado"));
+    public Optional<RefreshTokenEntity> findByToken(String rawToken) {
+        return refreshTokenRepository.findByToken(rawToken);
+    }
 
-        if (token.isRevoked()) {
-            throw new IllegalArgumentException("Refresh token revocado");
-        }
-        if (token.getExpiryDate().isBefore(Instant.now())) {
-            refreshTokenRepository.revokeByToken(rawToken);
-            throw new IllegalArgumentException("Refresh token expirado");
-        }
-        return token;
+    /**
+     * Atomic CAS revocation: returns 1 if the token was active and is now revoked, 0 if already used.
+     * Call this before validating to prevent concurrent replay attacks.
+     */
+    public int revokeAtomically(String rawToken) {
+        return refreshTokenRepository.revokeByTokenIfActive(rawToken);
     }
 
     public void revokeByToken(String rawToken) {

@@ -9,4 +9,5 @@ public interface RefreshTokenRepositoryPort {
     Optional<RefreshTokenEntity> findByToken(String token);
     void revokeAllByUserId(Long userId);
     void revokeByToken(String token);
+    int revokeByTokenIfActive(String token);
 }

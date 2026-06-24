@@ -59,8 +59,14 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = corsProperties.allowedOrigins();
+        if (origins.contains("*")) {
+            throw new IllegalStateException(
+                    "CORS: allowedOrigins no puede contener '*' con allowCredentials=true. " +
+                    "Configura orígenes explícitos en CORS_ALLOWED_ORIGINS.");
+        }
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(corsProperties.allowedOrigins());
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         config.setExposedHeaders(List.of("Authorization"));
