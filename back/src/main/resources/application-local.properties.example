@@ -1,0 +1,26 @@
+# Copia este archivo como application-local.properties y rellena tus valores locales.
+# application-local.properties está en .gitignore y NUNCA debe subirse al repositorio.
+
+# ── Base de Datos ──────────────────────────────────────────────────────────────
+DB_URL=jdbc:postgresql://localhost:5432/trazzo_db
+DB_USERNAME=trazzo
+DB_PASSWORD=tu_password_local
+
+# ── JPA ────────────────────────────────────────────────────────────────────────
+# create-drop para desarrollo; en producción usar validate o none
+JPA_DDL_AUTO=create-drop
+SHOW_SQL=true
+
+# ── JWT ────────────────────────────────────────────────────────────────────────
+# Genera un secreto seguro de mínimo 32 caracteres (256 bits) para HS256.
+# Ejemplo: openssl rand -hex 32
+JWT_SECRET=cambia_esto_por_un_secreto_largo_y_seguro_de_al_menos_32_chars
+JWT_EXPIRATION_MS=900000
+JWT_REFRESH_EXPIRATION_MS=604800000
+
+# ── CORS ───────────────────────────────────────────────────────────────────────
+CORS_ALLOWED_ORIGINS=http://localhost:4200,http://localhost:3000
+
+# ── Seguridad: fuerza bruta ────────────────────────────────────────────────────
+MAX_FAILED_ATTEMPTS=5
+LOCKOUT_DURATION_MINUTES=30

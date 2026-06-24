@@ -1,0 +1,7 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "sonarlint.connectedMode.project": {
+        "connectionId": "methodsync",
+        "projectKey": "methodsync-trazzo-middleware"
+    }
+}
