@@ -32,6 +32,20 @@ COPY --from=build /app/dist/front/browser /usr/share/nginx/html
 # 8. Copiar la configuración personalizada de Nginx para soportar el enrutamiento de la SPA
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# 9. Crear directorios de caché con permisos para el usuario no-root
+RUN mkdir -p /var/cache/nginx/client_temp \
+             /var/cache/nginx/proxy_temp \
+             /var/cache/nginx/fastcgi_temp \
+             /var/cache/nginx/uwsgi_temp \
+             /var/cache/nginx/scgi_temp && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chmod -R 755 /var/cache/nginx && \
+    mkdir -p /var/run/nginx /var/log/nginx && \
+    chown -R nginx:nginx /var/run/nginx /var/log/nginx
+
+# 10. Eliminar la directiva "user" del nginx.conf por defecto para evitar warning al correr como no-root
+RUN sed -i '/^user /s/^/#/' /etc/nginx/nginx.conf
+
 # Cambiar a usuario no-root para seguridad
 USER nginx
 
