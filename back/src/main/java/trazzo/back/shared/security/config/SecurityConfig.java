@@ -60,6 +60,11 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         List<String> origins = corsProperties.allowedOrigins();
+        if (origins == null || origins.isEmpty()) {
+            throw new IllegalStateException(
+                    "CORS: allowedOrigins no está configurado. " +
+                    "Define CORS_ALLOWED_ORIGINS en tu .env o application-local.properties.");
+        }
         if (origins.contains("*")) {
             throw new IllegalStateException(
                     "CORS: allowedOrigins no puede contener '*' con allowCredentials=true. " +
