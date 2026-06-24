@@ -46,6 +46,9 @@ RUN mkdir -p /var/cache/nginx/client_temp \
 # 10. Eliminar la directiva "user" del nginx.conf por defecto para evitar warning al correr como no-root
 RUN sed -i '/^user /s/^/#/' /etc/nginx/nginx.conf
 
+# 11. Cambiar la ruta del pid a un directorio escribible por el usuario no-root
+RUN sed -i 's|^pid .*|pid /var/run/nginx/nginx.pid;|' /etc/nginx/nginx.conf
+
 # Cambiar a usuario no-root para seguridad
 USER nginx
 
