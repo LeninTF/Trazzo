@@ -122,6 +122,25 @@ components:
         enum: [MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO]
         default: MY_ASSIGNMENTS
 
+    IncidentScopeParam:
+      name: scope
+      in: query
+      required: false
+      description: |
+        Alcance de visibilidad para incidencias. Se resuelve segun los permisos
+        del JWT y puede restringirse con los filtros de ubicacion/asignacion.
+        - `ALL_TENANT`: todas las incidencias del tenant.
+        - `MY_ASSIGNMENTS` *(default)*: incidencias de las sedes/areas/departamentos
+          a los que el solicitante esta asignado.
+        - `SEDE`: incidencias de la sede indicada en `sede_id`.
+        - `AREA`: incidencias del area indicada en `area_id`.
+        - `DEPARTAMENTO`: incidencias del departamento indicado en `departamento_id`.
+        - `SELF`: incidencias propias del solicitante.
+      schema:
+        type: string
+        enum: [ALL_TENANT, MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO, SELF]
+        default: MY_ASSIGNMENTS
+
     SedeIdParam:
       name: sede_id
       in: query
@@ -145,6 +164,33 @@ components:
       in: query
       required: false
       description: Requerido cuando `scope=DEPARTAMENTO`.
+      schema:
+        type: integer
+        example: 2
+
+    IncidentSedeIdParam:
+      name: sede_id
+      in: query
+      required: false
+      description: Filtra incidencias por una sede especifica. Requerido cuando `scope=SEDE`.
+      schema:
+        type: integer
+        example: 3
+
+    IncidentAreaIdParam:
+      name: area_id
+      in: query
+      required: false
+      description: Filtra incidencias por un area especifica. Requerido cuando `scope=AREA`.
+      schema:
+        type: integer
+        example: 7
+
+    IncidentDepartamentoIdParam:
+      name: departamento_id
+      in: query
+      required: false
+      description: Filtra incidencias por un departamento especifico. Requerido cuando `scope=DEPARTAMENTO`.
       schema:
         type: integer
         example: 2
@@ -1405,7 +1451,7 @@ components:
           format: date
           description: "Fecha de inicio del permiso (calculada automáticamente)."
           example: "2026-06-15"
-        start_finish:
+        end_date:
           type: string
           format: date
           description: "Fecha de fin del permiso (calculada automáticamente)."
@@ -1455,6 +1501,7 @@ components:
             - $ref: '#/components/schemas/IncidentPermissionProfile'
         evidencias:
           type: array
+          maxItems: 1
           items:
             $ref: '#/components/schemas/IncidentEvidenceProfile'
         tenant_user:
@@ -1561,8 +1608,9 @@ components:
         **Reglas:**
         - Solo transiciones válidas: `PENDIENTE → APROBADO` | `PENDIENTE → DENEGADO`.
         - Solo un administrador con permiso `APPROVE_INCIDENT` puede ejecutarlo.
-        - Si se aprueba con `start_date` y `start_finish`, se crea automáticamente
-          un registro en `incidents_permission`.
+        - Si se aprueba con `days_granted`, el backend calcula automáticamente
+          las fechas del permiso a partir de la incidencia y crea un registro
+          en `incidents_permission`.
         - Al aprobar, se dispara un evento asíncrono para justificar los días
           de asistencia afectados (vía `POST /incidentes/{id}/justificar`).
         - Se notifica al trabajador vía WebSocket y email (Resend).
@@ -2745,10 +2793,10 @@ paths:
         o `VIEW_ALL_INCIDENTS`
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
-        - $ref: '#/components/parameters/ScopeParam'
-        - $ref: '#/components/parameters/SedeIdParam'
-        - $ref: '#/components/parameters/AreaIdParam'
-        - $ref: '#/components/parameters/DepartamentoIdParam'
+        - $ref: '#/components/parameters/IncidentScopeParam'
+        - $ref: '#/components/parameters/IncidentSedeIdParam'
+        - $ref: '#/components/parameters/IncidentAreaIdParam'
+        - $ref: '#/components/parameters/IncidentDepartamentoIdParam'
         - $ref: '#/components/parameters/IncidentStateParam'
         - $ref: '#/components/parameters/IncidentTypeFilterParam'
         - $ref: '#/components/parameters/DateFromParam'
@@ -3040,7 +3088,7 @@ paths:
       summary: Listar evidencias de una incidencia
       operationId: listEvidence
       description: |
-        Devuelve las evidencias asociadas a una incidencia.
+        Devuelve 0 o 1 evidencias asociadas a una incidencia.
 
         **Visibilidad:**
         - El trabajador afectado puede ver sus propias evidencias.
@@ -3051,11 +3099,12 @@ paths:
         de la incidencia.
       responses:
         "200":
-          description: Lista de evidencias.
+          description: Evidencias asociadas a la incidencia (0..1).
           content:
             application/json:
               schema:
                 type: array
+                maxItems: 1
                 items:
                   $ref: '#/components/schemas/IncidentEvidenceProfile'
         "403":
@@ -3197,7 +3246,7 @@ paths:
         1. El endpoint `PATCH /incidentes/{id}/estado` (al aprobar) dispara
            este endpoint de forma asíncrona.
         2. Este endpoint consulta los registros de asistencia del trabajador
-           en el período cubierto (`start_date` a `start_finish`) y los marca
+           en el período cubierto (`start_date` a `end_date`) y los marca
            como justificados.
         3. Si no existe `incidents_permission` (ej. tardanza de 1 día),
            se justifica únicamente el día de la incidencia.
@@ -3242,10 +3291,13 @@ paths:
         **Protocolo:** STOMP sobre WebSocket (SockJS como fallback)
 
         **Autenticación:**
-        Se usa el mismo JWT del REST API, enviado como query param:
+        Se usa el mismo esquema seguro del REST API durante el handshake
+        WebSocket, enviando el JWT y tenant por headers:
         ```
-        /ws/incidents?token={JWT}
+        Authorization: Bearer <JWT>
+        X-Tenant-ID: <tenant-uuid>
         ```
+        No se debe enviar el JWT como query parameter.
 
         **Canales de suscripción:**
 
@@ -3292,7 +3344,7 @@ paths:
                     example: "STOMP"
                   auth_method:
                     type: string
-                    example: "JWT"
+                    example: "Authorization Bearer header + X-Tenant-ID"
                   channels:
                     type: array
                     items:
