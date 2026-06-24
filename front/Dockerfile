@@ -32,7 +32,7 @@ COPY --from=build /app/dist/front/browser /usr/share/nginx/html
 # 8. Copiar la configuración personalizada de Nginx para soportar el enrutamiento de la SPA
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 9. Crear directorios de caché con permisos para el usuario no-root
+# 9. Configurar directorios y nginx.conf para usuario no-root
 RUN mkdir -p /var/cache/nginx/client_temp \
              /var/cache/nginx/proxy_temp \
              /var/cache/nginx/fastcgi_temp \
@@ -41,13 +41,9 @@ RUN mkdir -p /var/cache/nginx/client_temp \
     chown -R nginx:nginx /var/cache/nginx && \
     chmod -R 755 /var/cache/nginx && \
     mkdir -p /var/run/nginx /var/log/nginx && \
-    chown -R nginx:nginx /var/run/nginx /var/log/nginx
-
-# 10. Eliminar la directiva "user" del nginx.conf por defecto para evitar warning al correr como no-root
-RUN sed -i '/^user /s/^/#/' /etc/nginx/nginx.conf
-
-# 11. Cambiar la ruta del pid a un directorio escribible por el usuario no-root
-RUN sed -i 's|^pid .*|pid /var/run/nginx/nginx.pid;|' /etc/nginx/nginx.conf
+    chown -R nginx:nginx /var/run/nginx /var/log/nginx && \
+    sed -i '/^user /s/^/#/' /etc/nginx/nginx.conf && \
+    sed -i 's|^pid .*|pid /var/run/nginx/nginx.pid;|' /etc/nginx/nginx.conf
 
 # Cambiar a usuario no-root para seguridad
 USER nginx
