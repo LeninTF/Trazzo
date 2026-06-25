@@ -31,8 +31,11 @@ class IncidentEvidenceTest {
         assertEquals(1024, evidence.getFileSize());
         assertFalse(evidence.isDeleted());
         assertNull(evidence.getDeletedAt());
+        assertNotNull(evidence.getUploadedAt());
         assertNotNull(evidence.getCreatedAt());
         assertNotNull(evidence.getUpdatedAt());
+        assertFalse(evidence.getUploadedAt().isBefore(before));
+        assertFalse(evidence.getUploadedAt().isAfter(after));
         assertFalse(evidence.getCreatedAt().isBefore(before));
         assertFalse(evidence.getCreatedAt().isAfter(after));
         assertFalse(evidence.getUpdatedAt().isBefore(before));
@@ -141,6 +144,7 @@ class IncidentEvidenceTest {
         assertEquals(1024, evidence.getFileSize());
         assertFalse(evidence.isDeleted());
         assertNull(evidence.getDeletedAt());
+        assertEquals(now, evidence.getUploadedAt());
         assertEquals(now, evidence.getCreatedAt());
         assertEquals(now, evidence.getUpdatedAt());
     }
@@ -177,6 +181,36 @@ class IncidentEvidenceTest {
 
         assertTrue(evidence.isDeleted());
         assertNull(evidence.getDeletedAt());
+    }
+
+    @Test
+    void restoreWithExplicitUploadedAtKeepsUploadTimestamp() {
+        var uploadedAt = LocalDateTime.now().minusMinutes(5);
+        var createdAt = LocalDateTime.now();
+        var updatedAt = createdAt.plusMinutes(1);
+
+        var evidence = IncidentEvidence.restore(
+                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                100, false, null, uploadedAt, createdAt, updatedAt
+        );
+
+        assertEquals(uploadedAt, evidence.getUploadedAt());
+        assertEquals(createdAt, evidence.getCreatedAt());
+        assertEquals(updatedAt, evidence.getUpdatedAt());
+    }
+
+    @Test
+    void restoreWithoutCreatedAtBackfillsUploadedAtFromUpdatedAt() {
+        var updatedAt = LocalDateTime.now();
+
+        var evidence = IncidentEvidence.restore(
+                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                100, false, null, null, updatedAt
+        );
+
+        assertEquals(updatedAt, evidence.getUploadedAt());
+        assertNull(evidence.getCreatedAt());
+        assertEquals(updatedAt, evidence.getUpdatedAt());
     }
 
     /* == MARK AS DELETED TESTS == */
@@ -231,6 +265,23 @@ class IncidentEvidenceTest {
         evidence.markAsDeleted();
 
         assertTrue(evidence.getUpdatedAt().isAfter(originalUpdatedAt));
+    }
+
+    @Test
+    void canBeDeletedUsesUploadedAtInsteadOfCreatedAt() {
+        var uploadedAt = LocalDateTime.of(2026, 6, 24, 12, 0);
+        var createdAt = uploadedAt.minusHours(1);
+        var updatedAt = uploadedAt.plusHours(1);
+        var evidence = IncidentEvidence.restore(
+                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                100, false, null, uploadedAt, createdAt, updatedAt
+        );
+        var clock = Clock.fixed(
+                uploadedAt.plusMinutes(10).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
+
+        assertTrue(evidence.canBeDeleted(clock));
     }
 
     /* == BELONGS TO TESTS == */

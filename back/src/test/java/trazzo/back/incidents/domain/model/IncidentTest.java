@@ -2,6 +2,9 @@ package trazzo.back.incidents.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import java.lang.reflect.Modifier;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import trazzo.back.incidents.domain.event.IncidentCreatedEvent;
 
 class IncidentTest {
 
@@ -22,7 +26,8 @@ class IncidentTest {
         var incident = Incident.create("user-1", "type-1", "Comentario");
         var after = LocalDateTime.now();
 
-        assertNull(incident.getId());
+        assertNotNull(incident.getId());
+        assertFalse(incident.getId().isBlank());
         assertEquals("user-1", incident.getTenantUserId());
         assertEquals("type-1", incident.getIncidentTypeId());
         assertEquals(IncidentState.PENDIENTE, incident.getState());
@@ -37,6 +42,33 @@ class IncidentTest {
         assertFalse(incident.getCreatedAt().isAfter(after));
         assertFalse(incident.getUpdatedAt().isBefore(before));
         assertFalse(incident.getUpdatedAt().isAfter(after));
+    }
+
+    @Test
+    void createRecordsCreatedEventWithIncidentId() {
+        var incident = Incident.create("user-1", "type-1", "Comentario");
+
+        assertEquals(1, incident.getDomainEvents().size());
+        var event = assertInstanceOf(IncidentCreatedEvent.class, incident.getDomainEvents().getFirst());
+        assertEquals(incident.getId(), event.incidentId());
+        assertFalse(event.incidentId().isBlank());
+    }
+
+    @Test
+    void domainEventsFieldIsTransient() throws NoSuchFieldException {
+        var field = Incident.class.getDeclaredField("domainEvents");
+
+        assertTrue(Modifier.isTransient(field.getModifiers()));
+    }
+
+    @Test
+    void domainEventsAreNotSerialized() throws Exception {
+        var incident = Incident.create("user-1", "type-1", "Comentario");
+        var mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+        var json = mapper.writeValueAsString(incident);
+
+        assertFalse(json.contains("domainEvents"));
     }
 
     @ParameterizedTest
@@ -307,12 +339,12 @@ class IncidentTest {
     }
 
     @Test
-    void addEvidenceToIncidentWithoutIdThrowsException() {
+    void addEvidenceWhenEvidenceBelongsToDifferentIncidentThrowsException() {
         var incident = Incident.create("user-1", "type-1", "comment");
         var evidence = IncidentEvidence.create("different-id", "doc.pdf", "http://url", "pdf", 100);
 
         assertThrows(
-                IllegalStateException.class,
+                IllegalArgumentException.class,
                 () -> incident.addEvidence(evidence)
         );
     }
@@ -474,13 +506,14 @@ class IncidentTest {
     }
 
     @Test
-    void approveWithPermissionWhenIdIsNullThrowsException() {
+    void approveWithPermissionCreatedIncidentCreatesPermissionAndChangesState() {
         var incident = Incident.create("user-1", "type-1", "comment");
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> incident.approveWithPermission(LocalDate.now(), LocalDate.now().plusDays(1), 1)
-        );
+        incident.approveWithPermission(LocalDate.now(), LocalDate.now().plusDays(1), 1);
+
+        assertEquals(IncidentState.APROBADO, incident.getState());
+        assertNotNull(incident.getPermission());
+        assertEquals(incident.getId(), incident.getPermission().getIncidentId());
     }
 
     @Test

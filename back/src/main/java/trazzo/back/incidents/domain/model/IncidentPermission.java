@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import trazzo.back.incidents.domain.exception.InvalidIncidentPermissionException;
+import trazzo.back.incidents.domain.specification.IncidentPermissionSpec;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -77,30 +79,28 @@ public class IncidentPermission {
 
     private static LocalDate requireDate(LocalDate value, String fieldName) {
         if (value == null) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new InvalidIncidentPermissionException(fieldName + " is required");
         }
         return value;
     }
 
     private static LocalDate requireValidEndDate(LocalDate startDate, LocalDate endDate) {
-        requireDate(startDate, "startDate");
-        requireDate(endDate, "endDate");
-        if (endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("endDate cannot be before startDate");
+        if (!new IncidentPermissionSpec().hasValidPeriod(startDate, endDate)) {
+            throw new InvalidIncidentPermissionException("endDate cannot be before startDate");
         }
         return endDate;
     }
 
     private static int requirePositiveDays(int daysGranted) {
-        if (daysGranted <= 0) {
-            throw new IllegalArgumentException("daysGranted must be greater than zero");
+        if (!new IncidentPermissionSpec().hasValidDaysGranted(daysGranted)) {
+            throw new InvalidIncidentPermissionException("daysGranted must be greater than zero");
         }
         return daysGranted;
     }
 
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new InvalidIncidentPermissionException(fieldName + " is required");
         }
         return value.trim();
     }

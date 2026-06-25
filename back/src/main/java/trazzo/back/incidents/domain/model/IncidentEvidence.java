@@ -5,12 +5,15 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import trazzo.back.incidents.domain.exception.InvalidIncidentEvidenceException;
+import trazzo.back.incidents.domain.specification.EvidenceDeletionWindowSpec;
+import trazzo.back.incidents.domain.specification.IncidentEvidenceSpec;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IncidentEvidence {
 
-    public static final int MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+    public static final int MAX_FILE_SIZE_BYTES = IncidentEvidenceSpec.MAX_FILE_SIZE_BYTES;
 
     private String id;
     private String incidentId;
@@ -20,6 +23,7 @@ public class IncidentEvidence {
     private int fileSize;
     private boolean deleted;
     private LocalDateTime deletedAt;
+    private LocalDateTime uploadedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     transient Clock clock = Clock.systemDefaultZone();
@@ -33,6 +37,7 @@ public class IncidentEvidence {
             int fileSize,
             boolean deleted,
             LocalDateTime deletedAt,
+            LocalDateTime uploadedAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -44,6 +49,7 @@ public class IncidentEvidence {
         this.fileSize = requireValidFileSize(fileSize);
         this.deleted = deleted;
         this.deletedAt = deletedAt;
+        this.uploadedAt = requireUploadTimestamp(uploadedAt, createdAt, updatedAt, deletedAt);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -66,6 +72,7 @@ public class IncidentEvidence {
                 false,
                 null,
                 now,
+                now,
                 now
         );
     }
@@ -82,6 +89,34 @@ public class IncidentEvidence {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
+        return restore(
+                id,
+                incidentId,
+                fileName,
+                fileUrl,
+                mimeType,
+                fileSize,
+                deleted,
+                deletedAt,
+                createdAt,
+                createdAt,
+                updatedAt
+        );
+    }
+
+    public static IncidentEvidence restore(
+            String id,
+            String incidentId,
+            String fileName,
+            String fileUrl,
+            String mimeType,
+            int fileSize,
+            boolean deleted,
+            LocalDateTime deletedAt,
+            LocalDateTime uploadedAt,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         return new IncidentEvidence(
                 id,
                 incidentId,
@@ -91,6 +126,7 @@ public class IncidentEvidence {
                 fileSize,
                 deleted,
                 deletedAt,
+                uploadedAt,
                 createdAt,
                 updatedAt
         );
@@ -101,8 +137,12 @@ public class IncidentEvidence {
             return;
         }
         this.deleted = true;
-        this.deletedAt = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now(clock);
         touch();
+    }
+
+    public boolean canBeDeleted(Clock clock) {
+        return !deleted && new EvidenceDeletionWindowSpec().isSatisfiedBy(this, clock);
     }
 
     public boolean belongsTo(String incidentId) {
@@ -114,18 +154,15 @@ public class IncidentEvidence {
     }
 
     private static int requireValidFileSize(int fileSize) {
-        if (fileSize <= 0) {
-            throw new IllegalArgumentException("fileSize must be greater than zero");
-        }
-        if (fileSize > MAX_FILE_SIZE_BYTES) {
-            throw new IllegalArgumentException("fileSize must not exceed 15MB");
+        if (!new IncidentEvidenceSpec().isValidFileSize(fileSize)) {
+            throw new InvalidIncidentEvidenceException("fileSize must be greater than zero and must not exceed 15MB");
         }
         return fileSize;
     }
 
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new InvalidIncidentEvidenceException(fieldName + " is required");
         }
         return value.trim();
     }
@@ -135,5 +172,26 @@ public class IncidentEvidence {
             return null;
         }
         return value.trim();
+    }
+
+    private static LocalDateTime requireUploadTimestamp(
+            LocalDateTime uploadedAt,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            LocalDateTime deletedAt
+    ) {
+        if (uploadedAt != null) {
+            return uploadedAt;
+        }
+        if (createdAt != null) {
+            return createdAt;
+        }
+        if (updatedAt != null) {
+            return updatedAt;
+        }
+        if (deletedAt != null) {
+            return deletedAt;
+        }
+        return LocalDateTime.now();
     }
 }

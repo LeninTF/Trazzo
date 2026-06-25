@@ -1,14 +1,30 @@
 package trazzo.back.incidents.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import trazzo.back.incidents.domain.event.IncidentCreatedEvent;
+import trazzo.back.incidents.domain.event.IncidentDomainEvent;
+import trazzo.back.incidents.domain.event.IncidentEvidenceDeletedEvent;
+import trazzo.back.incidents.domain.event.IncidentEvidenceRegisteredEvent;
+import trazzo.back.incidents.domain.event.IncidentJustificationRequestedEvent;
+import trazzo.back.incidents.domain.event.IncidentStateChangedEvent;
+import trazzo.back.incidents.domain.exception.InactiveIncidentTypeException;
+import trazzo.back.incidents.domain.exception.IncidentValidationException;
+import trazzo.back.incidents.domain.exception.InvalidIncidentEvidenceException;
+import trazzo.back.incidents.domain.exception.InvalidIncidentPermissionException;
+import trazzo.back.incidents.domain.exception.InvalidIncidentStateException;
+import trazzo.back.incidents.domain.specification.ActiveIncidentTypeSpec;
+import trazzo.back.incidents.domain.specification.IncidentEvidenceSpec;
+import trazzo.back.incidents.domain.specification.IncidentStateTransitionSpec;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -23,8 +39,10 @@ public class Incident {
     private IncidentType type;
     private IncidentPermission permission;
     private List<IncidentEvidence> evidences = new ArrayList<>();
+    private transient List<IncidentDomainEvent> domainEvents = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @JsonIgnore
     transient Clock clock = Clock.systemDefaultZone();
 
     private Incident(
@@ -59,19 +77,19 @@ public class Incident {
             return;
         }
         if (permission != null && !permission.belongsTo(id)) {
-            throw new IllegalArgumentException("permission does not belong to this incident");
+            throw new InvalidIncidentPermissionException("permission does not belong to this incident");
         }
         for (IncidentEvidence evidence : this.evidences) {
             if (!evidence.belongsTo(id)) {
-                throw new IllegalArgumentException("evidence does not belong to this incident");
+                throw new InvalidIncidentEvidenceException("evidence does not belong to this incident");
             }
         }
     }
 
     public static Incident create(String tenantUserId, String incidentTypeId, String comment) {
         LocalDateTime now = LocalDateTime.now();
-        return new Incident(
-                null,
+        Incident incident = new Incident(
+                generateId(),
                 tenantUserId,
                 incidentTypeId,
                 IncidentState.PENDIENTE,
@@ -83,6 +101,13 @@ public class Incident {
                 now,
                 now
         );
+        incident.recordEvent(new IncidentCreatedEvent(
+                incident.getId(),
+                incident.getTenantUserId(),
+                incident.getIncidentTypeId(),
+                now
+        ));
+        return incident;
     }
 
     public static Incident restore(
@@ -117,6 +142,17 @@ public class Incident {
         return Collections.unmodifiableList(evidences);
     }
 
+    @JsonIgnore
+    public List<IncidentDomainEvent> getDomainEvents() {
+        return Collections.unmodifiableList(domainEvents);
+    }
+
+    public List<IncidentDomainEvent> pullDomainEvents() {
+        List<IncidentDomainEvent> events = List.copyOf(domainEvents);
+        domainEvents.clear();
+        return events;
+    }
+
     public void updateComment(String comment) {
         requirePending("Only pending incidents can update comment");
         this.comment = normalizeOptionalText(comment);
@@ -127,6 +163,9 @@ public class Incident {
         requirePending("Only pending incidents can accept a type");
         if (type == null) {
             throw new IllegalArgumentException("type is required");
+        }
+        if (!new ActiveIncidentTypeSpec().isSatisfiedBy(type)) {
+            throw new InactiveIncidentTypeException("incident type must be active");
         }
         this.type = type;
         touch();
@@ -139,30 +178,37 @@ public class Incident {
             throw new IllegalArgumentException("evidence is required");
         }
         if (hasActiveEvidence()) {
-            throw new IllegalStateException("Only one active evidence is allowed");
+            throw new InvalidIncidentStateException("Only one active evidence is allowed");
         }
         if (!evidence.belongsTo(id)) {
-            throw new IllegalArgumentException("evidence does not belong to this incident");
+            throw new InvalidIncidentEvidenceException("evidence does not belong to this incident");
         }
         this.evidences.add(evidence);
         touch();
+        recordEvent(new IncidentEvidenceRegisteredEvent(id, evidence.getId(), evidence.getFileName(), evidence.getFileUrl(), updatedAt));
     }
 
     public void deleteEvidence(String evidenceId) {
         requirePending("Only pending incidents can delete evidence");
         IncidentEvidence evidence = findEvidence(evidenceId);
+        if (!evidence.canBeDeleted(clock)) {
+            throw new InvalidIncidentStateException("Evidence can only be deleted within 15 minutes after upload");
+        }
         evidence.markAsDeleted();
         touch();
+        recordEvent(new IncidentEvidenceDeletedEvent(id, evidence.getId(), updatedAt));
     }
 
     public void approve() {
         changePendingStateTo(IncidentState.APROBADO, null);
+        recordEvent(new IncidentJustificationRequestedEvent(id, tenantUserId, null, null, updatedAt));
     }
 
     public void approveWithPermission(LocalDate startDate, LocalDate endDate, int daysGranted) {
         requirePersistedId();
         this.permission = IncidentPermission.create(id, startDate, endDate, daysGranted);
         changePendingStateTo(IncidentState.APROBADO, null);
+        recordEvent(new IncidentJustificationRequestedEvent(id, tenantUserId, startDate, endDate, updatedAt));
     }
 
     public void deny(String rejectionReason) {
@@ -182,24 +228,25 @@ public class Incident {
     }
 
     private void changePendingStateTo(IncidentState targetState, String rejectionReason) {
-        requirePending("Only pending incidents can change state");
-        if (targetState != IncidentState.APROBADO && targetState != IncidentState.DENEGADO) {
-            throw new IllegalArgumentException("targetState must be APROBADO or DENEGADO");
+        IncidentState previousState = this.state;
+        if (!new IncidentStateTransitionSpec().canTransition(previousState, targetState)) {
+            throw new InvalidIncidentStateException("Only pending incidents can change state to APROBADO or DENEGADO");
         }
         this.state = targetState;
         this.rejectionReason = normalizeOptionalText(rejectionReason);
         touch();
+        recordEvent(new IncidentStateChangedEvent(id, tenantUserId, previousState, targetState, this.rejectionReason, updatedAt));
     }
 
     private void requirePending(String message) {
         if (!isPending()) {
-            throw new IllegalStateException(message);
+            throw new InvalidIncidentStateException(message);
         }
     }
 
     private void requirePersistedId() {
         if (id == null || id.isBlank()) {
-            throw new IllegalStateException("incident id is required to create a permission");
+            throw new InvalidIncidentStateException("incident id is required to create a permission");
         }
     }
 
@@ -212,16 +259,20 @@ public class Incident {
         return evidences.stream()
                 .filter(evidence -> normalizedId.equals(evidence.getId()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("evidence was not found"));
+                .orElseThrow(() -> new InvalidIncidentEvidenceException("evidence was not found"));
     }
 
     private void touch() {
         this.updatedAt = LocalDateTime.now(clock);
     }
 
+    private void recordEvent(IncidentDomainEvent event) {
+        this.domainEvents.add(event);
+    }
+
     private static IncidentState requireState(IncidentState state) {
         if (state == null) {
-            throw new IllegalArgumentException("state is required");
+            throw new IncidentValidationException("state is required");
         }
         return state;
     }
@@ -230,15 +281,15 @@ public class Incident {
         if (evidences == null || evidences.isEmpty()) {
             return new ArrayList<>();
         }
-        if (evidences.stream().filter(evidence -> !evidence.isDeleted()).count() > 1) {
-            throw new IllegalArgumentException("Only one active evidence is allowed");
+        if (!new IncidentEvidenceSpec().allowsSingleActiveEvidence(evidences)) {
+            throw new InvalidIncidentEvidenceException("Only one active evidence is allowed");
         }
         return new ArrayList<>(evidences);
     }
 
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new IncidentValidationException(fieldName + " is required");
         }
         return value.trim();
     }
@@ -255,5 +306,9 @@ public class Incident {
             return null;
         }
         return value.trim();
+    }
+
+    private static String generateId() {
+        return UUID.randomUUID().toString();
     }
 }

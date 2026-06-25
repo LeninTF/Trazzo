@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import trazzo.back.incidents.domain.exception.IncidentValidationException;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -76,7 +77,7 @@ public class IncidentType {
 
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " is required");
+            throw new IncidentValidationException(fieldName + " is required");
         }
         return value.trim();
     }
