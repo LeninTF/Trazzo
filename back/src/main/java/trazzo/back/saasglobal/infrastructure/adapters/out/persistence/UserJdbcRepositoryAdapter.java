@@ -19,15 +19,15 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
     @Override
     public Optional<User> findByEmail(String email) {
         String sql = """
-                SELECT u."id", u."personId", u."tenantId", u."email", u."phone", u."password",
-                       u."createdAt", u."updatedAt", u."deletedAt",
-                       COALESCE(array_agg(r."name") FILTER (WHERE r."name" IS NOT NULL), '{}') AS roles
-                FROM "Users" u
-                LEFT JOIN "UserRolesMaster" ur ON ur."userId" = u."id"
-                LEFT JOIN "RolesMaster" r ON r."id" = ur."rolesMasterId"
-                WHERE u."email" = ? AND u."deletedAt" IS NULL
-                GROUP BY u."id", u."personId", u."tenantId", u."email", u."phone", u."password",
-                         u."createdAt", u."updatedAt", u."deletedAt"
+                SELECT u.id, u.person_id, u.tenant_id, u.email, u.phone, u.password,
+                       u.created_at, u.updated_at, u.deleted_at,
+                       COALESCE(array_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '{}') AS roles
+                FROM users u
+                LEFT JOIN user_roles_master ur ON ur.user_id = u.id
+                LEFT JOIN roles_master r ON r.id = ur.roles_master_id
+                WHERE u.email = ? AND u.deleted_at IS NULL
+                GROUP BY u.id, u.person_id, u.tenant_id, u.email, u.phone, u.password,
+                         u.created_at, u.updated_at, u.deleted_at
                 """;
         try {
             User user = jdbc.queryForObject(sql, (rs, rowNum) -> {
@@ -35,16 +35,16 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
                 String[] rolesArr = rolesArray != null ? (String[]) rolesArray.getArray() : new String[0];
                 return User.restore(
                         rs.getString("id"),
-                        rs.getInt("personId"),
-                        rs.getString("tenantId"),
+                        rs.getInt("person_id"),
+                        rs.getString("tenant_id"),
                         rs.getString("email"),
                         rs.getString("phone"),
                         rs.getString("password"),
                         List.of(rolesArr),
-                        rs.getTimestamp("createdAt").toLocalDateTime(),
-                        rs.getTimestamp("updatedAt").toLocalDateTime(),
-                        rs.getTimestamp("deletedAt") != null
-                                ? rs.getTimestamp("deletedAt").toLocalDateTime() : null
+                        rs.getTimestamp("created_at").toLocalDateTime(),
+                        rs.getTimestamp("updated_at").toLocalDateTime(),
+                        rs.getTimestamp("deleted_at") != null
+                                ? rs.getTimestamp("deleted_at").toLocalDateTime() : null
                 );
             }, email);
             return Optional.ofNullable(user);
@@ -56,8 +56,8 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
     @Override
     public User save(User user) {
         jdbc.update("""
-                INSERT INTO "Users" ("id", "personId", "tenantId", "email", "phone",
-                                     "password", "createdAt", "updatedAt")
+                INSERT INTO users (id, person_id, tenant_id, email, phone,
+                                   password, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 user.getId(), user.getPersonId(), user.getTenantId(), user.getEmail(),

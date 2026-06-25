@@ -22,16 +22,16 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
     @Override
     public Subscription save(Subscription subscription) {
         jdbc.update("""
-                INSERT INTO "Subscriptions"
-                    ("id", "planId", "tenantId", "dateStart", "dateEnd", "status", "purchasePrice", "createdAt")
+                INSERT INTO subscriptions
+                    (id, plan_id, tenant_id, date_start, date_end, status, purchase_price, created_at)
                 VALUES (?, ?, ?::uuid, ?, ?, CAST(? AS subscription_status_enum), ?, ?)
-                ON CONFLICT ("id") DO UPDATE SET
-                    "planId"        = EXCLUDED."planId",
-                    "tenantId"      = EXCLUDED."tenantId",
-                    "dateStart"     = EXCLUDED."dateStart",
-                    "dateEnd"       = EXCLUDED."dateEnd",
-                    "status"        = EXCLUDED."status",
-                    "purchasePrice" = EXCLUDED."purchasePrice"
+                ON CONFLICT (id) DO UPDATE SET
+                    plan_id        = EXCLUDED.plan_id,
+                    tenant_id      = EXCLUDED.tenant_id,
+                    date_start     = EXCLUDED.date_start,
+                    date_end       = EXCLUDED.date_end,
+                    status         = EXCLUDED.status,
+                    purchase_price = EXCLUDED.purchase_price
                 """,
                 subscription.getId(),
                 subscription.getPlanId(),
@@ -47,7 +47,7 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
     @Override
     public Optional<Subscription> findById(String id) {
         List<Subscription> rows = jdbc.query(
-                "SELECT * FROM \"Subscriptions\" WHERE \"id\" = ?::uuid",
+                "SELECT * FROM subscriptions WHERE id = ?::uuid",
                 this::mapRow, id);
         return rows.stream().findFirst();
     }
@@ -55,8 +55,8 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
     @Override
     public Optional<Subscription> findActiveByTenantId(String tenantId) {
         List<Subscription> rows = jdbc.query(
-                "SELECT * FROM \"Subscriptions\" WHERE \"tenantId\" = ?::uuid"
-                + " AND \"status\" IN ('TRIAL','ACTIVE') ORDER BY \"createdAt\" DESC LIMIT 1",
+                "SELECT * FROM subscriptions WHERE tenant_id = ?::uuid"
+                + " AND status IN ('TRIAL','ACTIVE') ORDER BY created_at DESC LIMIT 1",
                 this::mapRow, tenantId);
         return rows.stream().findFirst();
     }
@@ -64,12 +64,12 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
     private Subscription mapRow(ResultSet rs, int rowNum) throws SQLException {
         return Subscription.restore(
                 rs.getString("id"),
-                rs.getObject("planId", Integer.class),
-                rs.getString("tenantId"),
-                rs.getObject("dateStart", LocalDate.class),
-                rs.getObject("dateEnd", LocalDate.class),
+                rs.getObject("plan_id", Integer.class),
+                rs.getString("tenant_id"),
+                rs.getObject("date_start", LocalDate.class),
+                rs.getObject("date_end", LocalDate.class),
                 SubscriptionStatus.valueOf(rs.getString("status")),
-                rs.getBigDecimal("purchasePrice"),
-                rs.getObject("createdAt", LocalDateTime.class));
+                rs.getBigDecimal("purchase_price"),
+                rs.getObject("created_at", LocalDateTime.class));
     }
 }
