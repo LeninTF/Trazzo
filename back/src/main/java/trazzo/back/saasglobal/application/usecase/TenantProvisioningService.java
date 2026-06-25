@@ -37,6 +37,7 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
     @Override
     @Transactional
     public TenantResultDto createTrial(CreateTrialTenantCommand cmd) {
+        validateSubDomainFormat(cmd.subDomain());
         validateSubDomainUnique(cmd.subDomain());
 
         Tenant tenant = Tenant.createTrial(
@@ -65,6 +66,7 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
      * 2. Load tenant
      * 3. Create new isolated DB + run schema
      * 4. Assign settings to tenant + activate + persist
+     * If master DB operations fail after provisioning, deprovision() is called as compensation.
      */
     @Override
     @Transactional
@@ -79,12 +81,21 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
                 .orElseThrow(() -> new IllegalArgumentException("tenant not found: " + subscription.getTenantId()));
 
         TenantSettings settings = schemaProvisioning.provisionNew(tenant.getId(), tenant.getSubDomain());
+        try {
+            tenant.assignSettings(settings);
+            tenant.activate();
+            return toResult(tenantRepository.save(tenant));
+        } catch (Exception e) {
+            schemaProvisioning.deprovision(settings.getDbName(), settings.getDbUser());
+            throw e;
+        }
+    }
 
-        tenant.assignSettings(settings);
-        tenant.activate();
-        Tenant saved = tenantRepository.save(tenant);
-
-        return toResult(saved);
+    private void validateSubDomainFormat(String subDomain) {
+        if (subDomain == null || !subDomain.matches("[a-z0-9][a-z0-9\\-]*[a-z0-9]|[a-z0-9]")) {
+            throw new IllegalArgumentException(
+                    "subDomain must use only lowercase letters, digits, and hyphens: " + subDomain);
+        }
     }
 
     private void validateSubDomainUnique(String subDomain) {

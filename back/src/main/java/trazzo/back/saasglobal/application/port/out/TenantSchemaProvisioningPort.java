@@ -14,4 +14,10 @@ public interface TenantSchemaProvisioningPort {
      * TRIAL flow: runs the tenant schema script against an existing database.
      */
     void provisionExisting(TenantSettings settings);
+
+    /**
+     * Best-effort cleanup: drops the database and user created by provisionNew().
+     * Called as compensation if the master transaction fails after provisioning.
+     */
+    void deprovision(String dbName, String dbUser);
 }

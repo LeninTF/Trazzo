@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,13 +18,21 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
+import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class TenantJdbcRepositoryAdapterTest {
 
     @Mock JdbcTemplate jdbc;
+    @Mock EncryptionService encryptionService;
     @InjectMocks TenantJdbcRepositoryAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        when(encryptionService.encrypt(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(encryptionService.decrypt(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
 
     private static TenantSettings settings() {
         return TenantSettings.of("t-1", "localhost", "5432", "db", "user", "pass");
