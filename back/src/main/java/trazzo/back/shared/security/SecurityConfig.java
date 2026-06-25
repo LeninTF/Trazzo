@@ -1,4 +1,4 @@
-package trazzo.back.saasglobal.infrastructure.config;
+package trazzo.back.shared.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
