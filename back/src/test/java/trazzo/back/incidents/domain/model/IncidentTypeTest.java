@@ -2,7 +2,9 @@ package trazzo.back.incidents.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -129,8 +131,11 @@ class IncidentTypeTest {
     void renameUpdatesUpdatedAt() {
         var type = IncidentType.create("Original", "Desc");
         var originalUpdatedAt = type.getUpdatedAt();
+        type.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         type.rename("Modificado");
 
         assertTrue(type.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -160,8 +165,11 @@ class IncidentTypeTest {
     void updateDescriptionUpdatesUpdatedAt() {
         var type = IncidentType.create("Tipo", "Original");
         var originalUpdatedAt = type.getUpdatedAt();
+        type.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         type.updateDescription("Nueva desc");
 
         assertTrue(type.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -195,8 +203,11 @@ class IncidentTypeTest {
         var now = LocalDateTime.now();
         var type = IncidentType.restore("id-1", "Tipo", "Desc", false, now, now);
         var originalUpdatedAt = type.getUpdatedAt();
+        type.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         type.activate();
 
         assertTrue(type.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -206,8 +217,11 @@ class IncidentTypeTest {
     void deactivationUpdatesUpdatedAt() {
         var type = IncidentType.create("Tipo", "Desc");
         var originalUpdatedAt = type.getUpdatedAt();
+        type.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         type.deactivate();
 
         assertTrue(type.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -255,13 +269,4 @@ class IncidentTypeTest {
         assertEquals("Normal", type.getNombre());
     }
 
-    /* == HELPER == */
-
-    private static void sleep() {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

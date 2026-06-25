@@ -2,8 +2,10 @@ package trazzo.back.incidents.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -210,8 +212,11 @@ class IncidentPermissionTest {
                 "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         var originalUpdatedAt = permission.getUpdatedAt();
+        permission.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         permission.reschedule(LocalDate.now().plusDays(1), LocalDate.now().plusDays(2), 2);
 
         assertTrue(permission.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -278,13 +283,4 @@ class IncidentPermissionTest {
         assertEquals("inc-1", permission.getIncidentId());
     }
 
-    /* == HELPER == */
-
-    private static void sleep() {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

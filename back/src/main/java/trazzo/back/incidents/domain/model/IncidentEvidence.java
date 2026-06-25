@@ -1,5 +1,6 @@
 package trazzo.back.incidents.domain.model;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,6 +22,7 @@ public class IncidentEvidence {
     private LocalDateTime deletedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentEvidence(
             String id,
@@ -108,7 +110,7 @@ public class IncidentEvidence {
     }
 
     private void touch() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(clock);
     }
 
     private static int requireValidFileSize(int fileSize) {

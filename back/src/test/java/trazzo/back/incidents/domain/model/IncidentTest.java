@@ -2,8 +2,10 @@ package trazzo.back.incidents.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -161,7 +163,7 @@ class IncidentTest {
                 "ev-2", "inc-1", "b.pdf", "http://b", "pdf", 200, true, null, now, now
         );
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
                 null, null, null, null, List.of(ev1, ev2), now, now
         );
         assertEquals(2, incident.getEvidences().size());
@@ -204,8 +206,11 @@ class IncidentTest {
     void updateCommentUpdatesUpdatedAt() {
         var incident = Incident.create("user-1", "type-1", "Original");
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.updateComment("Modificado");
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -228,8 +233,12 @@ class IncidentTest {
 
     @Test
     void addEvidenceToPendingIncident() {
-        var incident = Incident.create("user-1", "type-1", "comment");
-        var evidence = IncidentEvidence.create("user-1", "doc.pdf", "http://url", "pdf", 100);
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
+        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
 
         incident.addEvidence(evidence);
 
@@ -239,7 +248,11 @@ class IncidentTest {
 
     @Test
     void addEvidenceWhenEvidenceIsNullThrowsException() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
         assertThrows(
                 IllegalArgumentException.class,
                 () -> incident.addEvidence(null)
@@ -248,9 +261,13 @@ class IncidentTest {
 
     @Test
     void addEvidenceWhenActiveEvidenceExistsThrowsException() {
-        var incident = Incident.create("user-1", "type-1", "comment");
-        var ev1 = IncidentEvidence.create("user-1", "a.pdf", "http://a", "pdf", 100);
-        var ev2 = IncidentEvidence.create("user-1", "b.pdf", "http://b", "pdf", 200);
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
+        var ev1 = IncidentEvidence.create("inc-1", "a.pdf", "http://a", "pdf", 100);
+        var ev2 = IncidentEvidence.create("inc-1", "b.pdf", "http://b", "pdf", 200);
 
         incident.addEvidence(ev1);
         assertThrows(
@@ -290,22 +307,30 @@ class IncidentTest {
     }
 
     @Test
-    void addEvidenceToIncidentWithoutIdSkipsBelongsToCheck() {
+    void addEvidenceToIncidentWithoutIdThrowsException() {
         var incident = Incident.create("user-1", "type-1", "comment");
         var evidence = IncidentEvidence.create("different-id", "doc.pdf", "http://url", "pdf", 100);
 
-        incident.addEvidence(evidence);
-
-        assertEquals(1, incident.getEvidences().size());
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.addEvidence(evidence)
+        );
     }
 
     @Test
     void addEvidenceUpdatesUpdatedAt() {
-        var incident = Incident.create("user-1", "type-1", "comment");
-        var evidence = IncidentEvidence.create("user-1", "doc.pdf", "http://url", "pdf", 100);
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
+        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.addEvidence(evidence);
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -375,8 +400,11 @@ class IncidentTest {
                 null, null, null, null, List.of(evidence), now, now
         );
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.deleteEvidence(evidence.getId());
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -413,8 +441,11 @@ class IncidentTest {
     void approveUpdatesUpdatedAt() {
         var incident = Incident.create("user-1", "type-1", "comment");
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.approve();
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -460,8 +491,11 @@ class IncidentTest {
                 null, null, null, null, List.of(), now, now
         );
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.approveWithPermission(LocalDate.now(), LocalDate.now().plusDays(1), 1);
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -510,8 +544,11 @@ class IncidentTest {
     void denyUpdatesUpdatedAt() {
         var incident = Incident.create("user-1", "type-1", "comment");
         var originalUpdatedAt = incident.getUpdatedAt();
+        incident.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         incident.deny("Razón");
 
         assertTrue(incident.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -610,13 +647,4 @@ class IncidentTest {
         );
     }
 
-    /* == HELPER == */
-
-    private static void sleep() {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

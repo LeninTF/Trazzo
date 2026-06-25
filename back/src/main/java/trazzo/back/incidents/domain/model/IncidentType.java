@@ -1,5 +1,6 @@
 package trazzo.back.incidents.domain.model;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -15,6 +16,7 @@ public class IncidentType {
     private boolean activo;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentType(
             String id,
@@ -69,7 +71,7 @@ public class IncidentType {
     }
 
     private void touch() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(clock);
     }
 
     private static String requireText(String value, String fieldName) {

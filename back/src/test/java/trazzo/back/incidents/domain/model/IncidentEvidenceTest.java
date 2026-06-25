@@ -2,7 +2,9 @@ package trazzo.back.incidents.domain.model;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -203,8 +205,11 @@ class IncidentEvidenceTest {
         );
         var deletedAtBefore = evidence.getDeletedAt();
         var updatedAtBefore = evidence.getUpdatedAt();
+        evidence.clock = Clock.fixed(
+                updatedAtBefore.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         evidence.markAsDeleted();
 
         assertTrue(evidence.isDeleted());
@@ -218,8 +223,11 @@ class IncidentEvidenceTest {
                 "inc-1", "doc.pdf", "http://url", "pdf", 100
         );
         var originalUpdatedAt = evidence.getUpdatedAt();
+        evidence.clock = Clock.fixed(
+                originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
+                ZoneId.systemDefault()
+        );
 
-        sleep();
         evidence.markAsDeleted();
 
         assertTrue(evidence.getUpdatedAt().isAfter(originalUpdatedAt));
@@ -292,13 +300,4 @@ class IncidentEvidenceTest {
         assertEquals("pdf", evidence.getMimeType());
     }
 
-    /* == HELPER == */
-
-    private static void sleep() {
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

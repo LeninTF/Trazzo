@@ -1,5 +1,6 @@
 package trazzo.back.incidents.domain.model;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ public class Incident {
     private List<IncidentEvidence> evidences = new ArrayList<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    transient Clock clock = Clock.systemDefaultZone();
 
     private Incident(
             String id,
@@ -49,6 +51,21 @@ public class Incident {
         this.evidences = normalizeEvidences(evidences);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        validateAggregateConsistency();
+    }
+
+    private void validateAggregateConsistency() {
+        if (id == null) {
+            return;
+        }
+        if (permission != null && !permission.belongsTo(id)) {
+            throw new IllegalArgumentException("permission does not belong to this incident");
+        }
+        for (IncidentEvidence evidence : this.evidences) {
+            if (!evidence.belongsTo(id)) {
+                throw new IllegalArgumentException("evidence does not belong to this incident");
+            }
+        }
     }
 
     public static Incident create(String tenantUserId, String incidentTypeId, String comment) {
@@ -107,10 +124,16 @@ public class Incident {
     }
 
     public void attachType(IncidentType type) {
+        requirePending("Only pending incidents can accept a type");
+        if (type == null) {
+            throw new IllegalArgumentException("type is required");
+        }
         this.type = type;
+        touch();
     }
 
     public void addEvidence(IncidentEvidence evidence) {
+        requirePersistedId();
         requirePending("Only pending incidents can add evidence");
         if (evidence == null) {
             throw new IllegalArgumentException("evidence is required");
@@ -118,7 +141,7 @@ public class Incident {
         if (hasActiveEvidence()) {
             throw new IllegalStateException("Only one active evidence is allowed");
         }
-        if (id != null && !evidence.belongsTo(id)) {
+        if (!evidence.belongsTo(id)) {
             throw new IllegalArgumentException("evidence does not belong to this incident");
         }
         this.evidences.add(evidence);
@@ -193,7 +216,7 @@ public class Incident {
     }
 
     private void touch() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(clock);
     }
 
     private static IncidentState requireState(IncidentState state) {

@@ -1,5 +1,6 @@
 package trazzo.back.incidents.domain.model;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -17,6 +18,7 @@ public class IncidentPermission {
     private int daysGranted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentPermission(
             String id,
@@ -70,7 +72,7 @@ public class IncidentPermission {
     }
 
     private void touch() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(clock);
     }
 
     private static LocalDate requireDate(LocalDate value, String fieldName) {
