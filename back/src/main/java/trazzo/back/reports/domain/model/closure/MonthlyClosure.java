@@ -45,4 +45,10 @@ public class MonthlyClosure {
         this.createdByUserId = Objects.requireNonNull(createdByUserId);
         this.createdAt = Objects.requireNonNull(createdAt);
     }
+
+    public MonthlyClosure withReportUrls(String excelReportUrl, String pdfReportUrl) {
+        return new MonthlyClosure(
+                this.id, this.month, this.year, this.totalEmployees,
+                excelReportUrl, pdfReportUrl, this.createdByUserId, this.createdAt);
+    }
 }
