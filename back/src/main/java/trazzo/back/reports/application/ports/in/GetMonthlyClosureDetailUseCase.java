@@ -4,5 +4,5 @@ import java.util.UUID;
 import trazzo.back.reports.application.dto.result.MonthlyClosureDetailResult;
 
 public interface GetMonthlyClosureDetailUseCase {
-     MonthlyClosureDetailResult execute(UUID id);
+    MonthlyClosureDetailResult execute(UUID id);
 }
