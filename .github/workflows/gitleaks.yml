@@ -12,7 +12,7 @@ jobs:
     name: Buscar credenciales expuestas
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Crítico para que escanee todo el árbol de git
 

@@ -10,7 +10,7 @@ jobs:
     name: Revisar historial de commits
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Crítico: Necesita el historial del PR para validar todos los commits nuevos
 
