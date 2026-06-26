@@ -32,6 +32,9 @@ updates:
       - dependency-name: "@angular/*"
         versions:
           - ">=22.0.0"
+      - dependency-name: "@angular-devkit/*"
+        versions:
+          - ">=22.0.0"
     groups:
       angular-updates:
         patterns:
