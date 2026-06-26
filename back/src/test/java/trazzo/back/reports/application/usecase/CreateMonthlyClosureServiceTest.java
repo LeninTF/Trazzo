@@ -106,7 +106,7 @@ class CreateMonthlyClosureServiceTest {
         MonthlyClosureResult result = service.execute(command);
 
         assertEquals(2, result.totalEmployees());
-        verify(detailRepository).saveAll(argThat(details -> ((List<MonthlyClosureDetail>) details).size() == 2));
+        verify(detailRepository).saveAll(argThat((List<MonthlyClosureDetail> details) -> details.size() == 2));
         verify(eventPublisher).publishEvent(any());
     }
 
