@@ -1,0 +1,22 @@
+name: Seguridad - Escáner de Secretos (Gitleaks)
+
+on:
+  pull_request:
+    branches: [ "master" ]
+  push:
+    branches: [ "master" ]
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    name: Buscar credenciales expuestas
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Crítico para que escanee todo el árbol de git
+
+      - name: Ejecutar Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

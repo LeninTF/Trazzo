@@ -1,1 +1,73 @@
+/* Global styles and imports */
+/* Bootstrap, Bootstrap Icons, and Inter font are loaded via angular.json */
+
+/* Override some defaults to keep consistency */
+html, body {
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	background: #f7faff;
+	color: #1a1a1a;
+}
+
+body {
+	min-height: 100vh;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+/* Global design tokens */
+:root {
+	--primary: #1E40AF;
+	--muted: #6b7280;
+}
+
+/* Force Bootstrap components to use primary color tokens */
+.btn-primary {
+	background-color: var(--primary) !important;
+	border-color: var(--primary) !important;
+	color: #fff !important;
+	box-shadow: 0 8px 20px rgba(30,64,175,0.12);
+}
+.btn-primary:hover, .btn-primary:focus {
+	background-color: #16307f !important;
+	border-color: #16307f !important;
+}
+.btn-outline-primary {
+	color: var(--primary) !important;
+	border-color: var(--primary) !important;
+}
+
+/* Navbar styles to ensure visibility */
+.navbar {
+	background: #fff !important;
+	border-bottom: 1px solid rgba(15,23,42,0.04);
+	z-index: 1100 !important;
+}
+.navbar-brand { color: var(--primary) !important; font-weight:700; }
+.navbar .nav-link { color: var(--muted) !important; }
+.navbar .nav-link.active, .navbar .nav-link:hover { color: var(--primary) !important; }
+
+/* Make the login CTA clearly visible */
+.navbar .btn-primary {
+	padding: .45rem .9rem;
+	border-radius: 999px;
+	font-weight:600;
+}
+
+/* Toggler (mobile) color */
+.navbar-light .navbar-toggler-icon { filter: none; }
+
+/* High-specificity fallbacks to ensure overrides apply over Bootstrap defaults */
+header.hero .navbar .btn-primary,
+.navbar .btn-primary {
+	background-color: var(--primary) !important;
+	border-color: var(--primary) !important;
+	color: #fff !important;
+	box-shadow: 0 8px 20px rgba(30,64,175,0.12) !important;
+}
+
+
 /* You can add global styles to this file, and also import other style files */

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  trazzo-backend:
+    # 1. build para compilar localmente
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: trazzo-backend-local
+    # 2. Exponemos el puerto para que el frontend local pueda hablarle
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=local
+      - DB_URL=jdbc:postgresql://postgres-local:5432/trazzo_db
+    networks:
+      - trazzo-local-net
+
+  trazzo-frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: trazzo-frontend-local
+    # 3. Exponemos el puerto 8080 hacia tu localhost:4000
+    ports:
+      - "4000:8080"
+    networks:
+      - trazzo-local-net
+    depends_on:
+      - trazzo-backend
+
+  # Incluimos la BD aquí para que el backend contenedorizado tenga donde conectarse
+  postgres-local:
+    image: postgres:15-alpine
+    container_name: trazzo-db-local
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: trazzo_db
+    networks:
+      - trazzo-local-net
+
+networks:
+  trazzo-local-net:
+    driver: bridge

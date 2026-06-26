@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj" />
+  <Project Path="Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj" />
+  <Project Path="Trazzo.Biometric.Agent/Trazzo.Biometric.Agent.csproj" />
+</Solution>

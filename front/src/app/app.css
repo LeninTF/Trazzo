@@ -1,0 +1,110 @@
+:host {
+	display: block;
+	min-height: 100vh;
+	background: #f4f8ff;
+	--sidebar-width: 274px;
+	--header-height: 72px;
+}
+
+.app-shell {
+	min-height: 100vh;
+	background:
+		radial-gradient(circle at top right, rgba(30, 64, 175, 0.08), transparent 30%),
+		linear-gradient(180deg, #f7faff 0%, #f3f7fd 100%);
+	color: #1f2937;
+}
+
+.app-shell__backdrop {
+	display: none;
+}
+
+.app-shell__sidebar {
+	position: fixed;
+	inset: 0 auto 0 0;
+	width: var(--sidebar-width);
+	z-index: 1030;
+	background: transparent;
+}
+
+.app-shell__header {
+	position: fixed;
+	top: 0;
+	left: var(--sidebar-width);
+	right: 0;
+	height: var(--header-height);
+	z-index: 1020;
+	background: transparent;
+}
+
+.app-shell__content {
+	min-height: 100vh;
+	padding-top: calc(var(--header-height) + 1rem);
+	padding-left: calc(var(--sidebar-width) + 1.5rem);
+	padding-right: 1.5rem;
+	padding-bottom: 1.5rem;
+}
+
+@media (max-width: 1199.98px) {
+	:host {
+		--sidebar-width: 248px;
+	}
+
+	.app-shell__content {
+		padding-left: calc(var(--sidebar-width) + 1rem);
+	}
+}
+
+@media (max-width: 991.98px) {
+	.app-shell__sidebar {
+		transform: translateX(-100%);
+		transition: transform 0.25s ease;
+		box-shadow: none;
+	}
+
+	.app-shell--sidebar-open .app-shell__sidebar {
+		transform: translateX(0);
+		box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+	}
+
+	.app-shell__backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 1029;
+		background: rgba(15, 23, 42, 0.45);
+		backdrop-filter: blur(3px);
+		animation: fadeIn 0.2s ease;
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	.app-shell__header {
+		left: 0;
+	}
+
+	.app-shell__content {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+}
+
+@media (max-width: 575.98px) {
+	:host {
+		--header-height: 60px;
+		--sidebar-width: 100%;
+	}
+
+	.app-shell__sidebar {
+		width: 280px;
+	}
+
+	.app-shell__content {
+		padding-top: calc(var(--header-height) + 0.75rem);
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+		padding-bottom: 0.75rem;
+	}
+}

@@ -34,6 +34,7 @@ build/
 
 
 # Visual Studio Code
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -71,6 +72,7 @@ logs/**/*.log
 testem.log
 /typings
 __screenshots__/
+.42c
 
 # System files
 .DS_Store

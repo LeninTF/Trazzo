@@ -1,0 +1,24 @@
+name: Gobernanza - Freno de Emergencia (Code Freeze)
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+# Permisos necesarios para que la acción pueda leer las alertas de seguridad de tu repo
+permissions:
+  contents: read
+  security-events: read
+
+jobs:
+  check-dependabot-alerts:
+    runs-on: ubuntu-latest
+    name: Verificar salud de la rama Master
+    steps:
+      - name: Consultar Alertas Activas de Dependabot
+        uses: bennycode/stop-merging@v1.0.1
+        with:
+          # Inyecta el token nativo de GitHub para autenticarse contra la API de seguridad
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_BRANCH: 'master'
+          BYPASS_PREFIX: 'fix' # GitHub permitirá fusionar es un PR cuyo título empiece con esta palabra.
+
