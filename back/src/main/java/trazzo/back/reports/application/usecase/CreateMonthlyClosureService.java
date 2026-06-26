@@ -97,7 +97,7 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
     }
 
     private void publishEventAfterCommit(MonthlyClosureCreatedEvent event) {
-        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
