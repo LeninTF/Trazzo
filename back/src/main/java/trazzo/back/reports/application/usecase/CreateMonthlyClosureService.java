@@ -47,14 +47,15 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
     @Transactional
     public MonthlyClosureResult execute(CreateMonthlyClosureCommand command) {
         ClosurePeriod period = new ClosurePeriod(command.month(), command.year());
+        int month = period.month();
+        int year = period.year();
 
-        List<MonthlyClosure> existing = closureRepository.findByMonthAndYear(period.month(), period.year());
-        if (!existing.isEmpty()) {
-            throw new DuplicateClosureException(period.month(), period.year());
+        if (closureRepository.findAndLockByMonthAndYear(month, year).isPresent()) {
+            throw new DuplicateClosureException(month, year);
         }
 
         List<EmployeeMonthlySummary> summaries = attendanceSummaryPort.getMonthlySummaries(
-                period.month(), period.year());
+                month, year);
 
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
@@ -76,7 +77,7 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
                 .toList();
 
         MonthlyClosure closure = new MonthlyClosure(
-                closureId, period.month(), period.year(),
+                closureId, month, year,
                 summaries.size(), null, null,
                 command.createdByUserId(), now);
 
@@ -91,7 +92,7 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
         publishEventAfterCommit(new MonthlyClosureCreatedEvent(closureId, period, command.createdByUserId(), now));
 
         return new MonthlyClosureResult(
-                closureId, period.month(), period.year(),
+                closureId, month, year,
                 summaries.size(), excelUrl, pdfUrl, now);
     }
 

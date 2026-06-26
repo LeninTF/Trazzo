@@ -24,6 +24,7 @@ import trazzo.back.reports.domain.model.closure.MonthlyClosureDetail;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,7 +52,7 @@ class CreateMonthlyClosureServiceTest {
 
     @Test
     void shouldCreateMonthlyClosureSuccessfully() {
-        when(closureRepository.findByMonthAndYear(6, 2025)).thenReturn(List.of());
+        when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
 
         EmployeeMonthlySummary summary = new EmployeeMonthlySummary(
                 "user-1", "Juan Perez", "12345678",
@@ -76,7 +77,7 @@ class CreateMonthlyClosureServiceTest {
         assertEquals("pdf-url", result.pdfReportUrl());
         assertNotNull(result.createdAt());
 
-        verify(closureRepository).findByMonthAndYear(6, 2025);
+        verify(closureRepository).findAndLockByMonthAndYear(6, 2025);
         verify(attendanceSummaryPort).getMonthlySummaries(6, 2025);
         verify(closureRepository).save(any(MonthlyClosure.class));
         verify(detailRepository).saveAll(anyList());
@@ -87,7 +88,7 @@ class CreateMonthlyClosureServiceTest {
 
     @Test
     void shouldCreateWithMultipleEmployees() {
-        when(closureRepository.findByMonthAndYear(6, 2025)).thenReturn(List.of());
+        when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
         EmployeeMonthlySummary emp1 = new EmployeeMonthlySummary(
                 "u1", "Juan", "111", "TI", "Dev", 160.0, 5.0, 0, 10.0);
         EmployeeMonthlySummary emp2 = new EmployeeMonthlySummary(
@@ -111,7 +112,7 @@ class CreateMonthlyClosureServiceTest {
 
     @Test
     void shouldHandleEmptyEmployeeList() {
-        when(closureRepository.findByMonthAndYear(6, 2025)).thenReturn(List.of());
+        when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
         when(attendanceSummaryPort.getMonthlySummaries(6, 2025))
                 .thenReturn(List.of());
         when(reportGenerationPort.generateExcelReport(any(MonthlyClosure.class), anyList()))
@@ -131,15 +132,15 @@ class CreateMonthlyClosureServiceTest {
 
     @Test
     void shouldThrowExceptionWhenDuplicateClosureExists() {
-        when(closureRepository.findByMonthAndYear(6, 2025))
-                .thenReturn(List.of(new MonthlyClosure(
+        when(closureRepository.findAndLockByMonthAndYear(6, 2025))
+                .thenReturn(Optional.of(new MonthlyClosure(
                         UUID.randomUUID(), 6, 2025, 10, null, null, "user", LocalDateTime.now())));
 
         CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, "creator-1");
 
         assertThrows(DuplicateClosureException.class, () -> service.execute(command));
 
-        verify(closureRepository).findByMonthAndYear(6, 2025);
+        verify(closureRepository).findAndLockByMonthAndYear(6, 2025);
         verifyNoInteractions(attendanceSummaryPort);
         verifyNoInteractions(eventPublisher);
     }
