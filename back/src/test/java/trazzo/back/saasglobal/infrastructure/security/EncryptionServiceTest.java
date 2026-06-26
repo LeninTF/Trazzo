@@ -54,4 +54,11 @@ class EncryptionServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("256 bits");
     }
+
+    @Test
+    void constructor_throwsWhenKeyIsAllZero() {
+        assertThatThrownBy(() -> new EncryptionService("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("APP_ENCRYPTION_KEY");
+    }
 }

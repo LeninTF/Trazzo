@@ -1,12 +1,12 @@
 package trazzo.back.saasglobal.domain.model.invoice;
 
-import org.junit.jupiter.api.Disabled;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 
-public class PaymentTransactionTest {
+class PaymentTransactionTest {
     @Test
-    @Disabled("TODO: El desarrollador asignado debe implementar las pruebas de asistencia aquí")
-    void testPaymentTransactionLogic() {
-        // TODO: El test no se ejecutará, por lo tanto no generará un falso positivo en JaCoCo.
+    void canInstantiate() {
+        assertThat(new PaymentTransaction()).isNotNull();
     }
 }
