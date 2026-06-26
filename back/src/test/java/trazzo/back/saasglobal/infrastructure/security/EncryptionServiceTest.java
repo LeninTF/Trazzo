@@ -13,7 +13,7 @@ class EncryptionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EncryptionService("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        service = new EncryptionService("AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=");
     }
 
     @Test

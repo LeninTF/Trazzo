@@ -26,6 +26,14 @@ public class EncryptionService {
         if (keyBytes.length != 32) {
             throw new IllegalArgumentException("Encryption key must be 256 bits (32 bytes)");
         }
+        boolean allZero = true;
+        for (byte b : keyBytes) {
+            if (b != 0) { allZero = false; break; }
+        }
+        if (allZero) {
+            throw new IllegalStateException(
+                    "Encryption key is the known placeholder (all-zero). Set APP_ENCRYPTION_KEY to a real secret.");
+        }
         this.keySpec = new SecretKeySpec(keyBytes, "AES");
     }
 
