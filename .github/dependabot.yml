@@ -8,44 +8,35 @@ updates:
       day: "monday"
     commit-message:
       prefix: "chore(back)"
-    ignore: #Ignora versiones mayores a 4.x para que no haga PR's
+    ignore:
       - dependency-name: "org.springframework.boot:*"
         versions:
           - ">= 4.0.0"
     groups:
-      # Agrupará todas las dependencias de Spring Boot en un solo Pull Request
       spring-boot-updates:
         patterns:
           - "org.springframework.boot:*"
-      # Agrupará cualquier otra actualización de Maven en otro Pull Request
       all-other-maven:
         patterns:
           - "*"
 
- # 2. Configuración para el Frontend (Angular / pnpm)
-  - package-ecosystem: "npm" # CRÍTICO: Se usa 'npm' aunque uses pnpm
-    directory: "/front" # Esta ruta apunta a la carpeta del frontend
+  # 2. Configuración para el Frontend (Angular / pnpm)
+  - package-ecosystem: "npm"
+    directory: "/front"
     schedule:
       interval: "weekly"
       day: "monday"
-
     commit-message:
       prefix: "chore(front)"
-
-      # Mantener Angular en la versión 21.x
-      ignore:
-        - dependency-name: "@angular/*"
-          versions:
+    ignore:
+      - dependency-name: "@angular/*"
+        versions:
           - ">=22.0.0"
-
-      groups:
-      # Agrupará todas las dependencias del ecosistema Angular en un solo PR
+    groups:
       angular-updates:
         patterns:
           - "@angular/*"
-
-      # Agrupará el resto de librerías del frontend
-        all-other-frontend:
+      all-other-frontend:
         patterns:
           - "*"
 
