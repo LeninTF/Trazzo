@@ -1,12 +1,28 @@
 package trazzo.back.saasglobal.domain.model.iam;
 
-import org.junit.jupiter.api.Disabled;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
-public class UserRolesMasterTest {
+class UserRolesMasterTest {
+
     @Test
-    @Disabled("TODO: El desarrollador asignado debe implementar las pruebas de asistencia aquí")
-    void testUserRolesMasterLogic() {
-        // TODO: El test no se ejecutará, por lo tanto no generará un falso positivo en JaCoCo.
+    void assign_setsUserIdAndRoleId() {
+        var assignment = UserRolesMaster.assign("user-1", 5);
+
+        assertThat(assignment.getUserId()).isEqualTo("user-1");
+        assertThat(assignment.getRolesMasterId()).isEqualTo(5);
+        assertThat(assignment.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void restore_setsAllFields() {
+        LocalDateTime now = LocalDateTime.now();
+        var assignment = UserRolesMaster.restore("user-2", 3, now);
+
+        assertThat(assignment.getUserId()).isEqualTo("user-2");
+        assertThat(assignment.getRolesMasterId()).isEqualTo(3);
+        assertThat(assignment.getCreatedAt()).isEqualTo(now);
     }
 }

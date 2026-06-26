@@ -1,0 +1,9 @@
+{
+  "properties": [
+    {
+      "name": "app.encryption.key",
+      "type": "java.lang.String",
+      "description": "AES-256-GCM encryption key (Base64-encoded 32 bytes) for encrypting tenant DB passwords. Override in production via APP_ENCRYPTION_KEY environment variable."
+    }
+  ]
+}

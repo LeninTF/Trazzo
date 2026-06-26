@@ -131,4 +131,27 @@ class MonthlyClosureTest {
                         "user",
                         null));
     }
+
+    @Test
+    void shouldCreateNewInstanceWithUpdatedReportUrls() {
+        UUID id = UUID.randomUUID();
+        LocalDateTime createdAt = LocalDateTime.now();
+
+        MonthlyClosure closure = new MonthlyClosure(
+                id, 6, 2025, 100, null, null, "user-1", createdAt);
+
+        MonthlyClosure updated = closure.withReportUrls("new-excel", "new-pdf");
+
+        assertEquals(id, updated.getId());
+        assertEquals("new-excel", updated.getExcelReportUrl());
+        assertEquals("new-pdf", updated.getPdfReportUrl());
+        assertEquals(6, updated.getMonth());
+        assertEquals(2025, updated.getYear());
+        assertEquals(100, updated.getTotalEmployees());
+        assertEquals("user-1", updated.getCreatedByUserId());
+        assertEquals(createdAt, updated.getCreatedAt());
+
+        assertNull(closure.getExcelReportUrl());
+        assertNull(closure.getPdfReportUrl());
+    }
 }
