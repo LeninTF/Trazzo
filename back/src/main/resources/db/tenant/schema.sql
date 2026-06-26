@@ -131,10 +131,10 @@ CREATE TABLE shift (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_shift (
+CREATE TABLE user_schedule (
     id SERIAL PRIMARY KEY,
     tenant_user_id INT REFERENCES tenant_user(id) ON DELETE CASCADE,
-    shift_id INT REFERENCES shift(id) ON DELETE CASCADE,
+    schedule_id INT REFERENCES schedule(id) ON DELETE CASCADE,
     description TEXT,
     entry_time TIME NOT NULL,
     departure_time TIME NOT NULL,
