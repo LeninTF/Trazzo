@@ -1,0 +1,335 @@
+<div class="planes-page">
+	<div class="page-header">
+		<div>
+			<h1 class="page-title">Gestor de Planes</h1>
+			<p class="page-desc">Administra los planes de suscripción, sus límites técnicos y reglas de negocio.</p>
+		</div>
+	</div>
+
+	<div class="panel-actions">
+		<button type="button" class="btn-action-primary" (click)="nuevoPlan()">
+			<i class="bi bi-plus-lg"></i> Nuevo Plan
+		</button>
+	</div>
+
+	<div class="planes-grid">
+		@for (plan of planes(); track plan.id) {
+			<div class="plan-card" [class.plan-card--selected]="editPlanId() === plan.id" (click)="seleccionarPlan(plan)" (keydown.enter)="seleccionarPlan(plan)" role="button" tabindex="0">
+				<div class="plan-card__head">
+					<h3 class="plan-card__name">{{ plan.nombre }}</h3>
+					<span class="plan-card__sku">{{ plan.sku }}</span>
+				</div>
+				<div class="plan-card__price">
+					<strong>S/{{ plan.precioMensual }}</strong>
+					<span>/mes</span>
+				</div>
+				<div class="plan-card__features">
+					<div class="plan-card__feature">
+						<i class="bi bi-people"></i>
+						<span>Hasta {{ plan.maxTrabajadores === 9999 ? '∞' : plan.maxTrabajadores }} trabajadores</span>
+					</div>
+					<div class="plan-card__feature">
+						<i class="bi bi-building"></i>
+						<span>{{ plan.maxSedes === 9999 ? '∞' : plan.maxSedes }} {{ plan.maxSedes === 1 ? 'sede' : 'sedes' }}</span>
+					</div>
+					<div class="plan-card__feature">
+						<i class="bi bi-cloud"></i>
+						<span>{{ plan.almacenamiento }} GB almacenamiento</span>
+					</div>
+					<div class="plan-card__feature">
+						<i class="bi bi-grid-3x3-gap"></i>
+						<span>{{ plan.modulos.length }} módulo{{ plan.modulos.length !== 1 ? 's' : '' }}{{ plan.modulos.length === 0 ? ' (ninguno)' : '' }}</span>
+					</div>
+				</div>
+				<div class="plan-card__action">
+					<span class="plan-card__edit-btn">Modificar <i class="bi bi-chevron-right"></i></span>
+				</div>
+			</div>
+		}
+	</div>
+
+	@if (editando()) {
+		<div class="edit-section">
+			<div class="edit-section__header">
+				<h2 class="edit-section__title">
+					<i class="bi bi-pencil-square"></i>
+					{{ mostrarFormNuevo() ? 'Nuevo Plan' : 'Editar: ' + planSeleccionado()?.nombre }}
+				</h2>
+				<button type="button" class="btn-cancel" (click)="cancelarEdicion()">
+					<i class="bi bi-x-lg"></i>
+				</button>
+			</div>
+
+			<form [formGroup]="planForm" class="edit-form">
+				<div class="form-section">
+					<h3 class="form-section__title">Información Básica</h3>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="plan-nombre">Nombre del plan</label>
+							<input id="plan-nombre" type="text" class="form-input" formControlName="nombre" placeholder="Ej: Plan Premium">
+							@if (planForm.get('nombre')?.invalid && planForm.get('nombre')?.touched) {
+								<span class="form-error">El nombre es obligatorio (mín. 3 caracteres)</span>
+							}
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="plan-sku">Identificador interno (SKU)</label>
+							<input id="plan-sku" type="text" class="form-input" formControlName="sku" placeholder="Ej: PLAN-PRE-001">
+							@if (planForm.get('sku')?.invalid && planForm.get('sku')?.touched) {
+								<span class="form-error">El SKU es obligatorio</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="plan-precio-mensual">Precio mensual (S/)</label>
+							<input id="plan-precio-mensual" type="number" class="form-input" formControlName="precioMensual" min="0">
+							@if (planForm.get('precioMensual')?.invalid && planForm.get('precioMensual')?.touched) {
+								<span class="form-error">Debe ser mayor a 0</span>
+							}
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="plan-precio-anual">Precio anual (S/)</label>
+							<input id="plan-precio-anual" type="number" class="form-input" formControlName="precioAnual" min="0">
+							@if (planForm.get('precioAnual')?.invalid && planForm.get('precioAnual')?.touched) {
+								<span class="form-error">Debe ser mayor a 0</span>
+							}
+						</div>
+					</div>
+					<div class="form-field form-field--full">
+						<label class="form-label" for="plan-descripcion">Descripción del plan</label>
+						<textarea id="plan-descripcion" class="form-input form-input--area" formControlName="descripcion" rows="3" placeholder="Describe las características principales del plan..."></textarea>
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h3 class="form-section__title">Límites Técnicos</h3>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="plan-max-trabajadores">Máximo trabajadores</label>
+							<input id="plan-max-trabajadores" type="number" class="form-input" formControlName="maxTrabajadores" min="1">
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="plan-max-sedes">Máximo sedes</label>
+							<input id="plan-max-sedes" type="number" class="form-input" formControlName="maxSedes" min="0">
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="plan-almacenamiento">Almacenamiento (GB)</label>
+							<input id="plan-almacenamiento" type="number" class="form-input" formControlName="almacenamiento" min="1">
+						</div>
+					</div>
+					<div class="form-field form-field--toggle">
+						<label class="toggle" [class.toggle--on]="planForm.get('sincronizacionNube')?.value">
+							<input type="checkbox" formControlName="sincronizacionNube" class="toggle__input">
+							<span class="toggle__slider"></span>
+							<span class="toggle__label">Sincronización en la nube</span>
+						</label>
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h3 class="form-section__title">Gestión de Módulos & Hardware</h3>
+					<div class="toggle-grid" [formGroupName]="'modulos'">
+						@for (mod of modulosDisponibles; track mod.id) {
+							<label class="toggle" [class.toggle--on]="planForm.get('modulos.' + mod.id)?.value">
+								<input type="checkbox" class="toggle__input" formControlName="{{ mod.id }}">
+								<span class="toggle__slider"></span>
+								<span class="toggle__label"><i class="bi" [class]="mod.icono"></i>{{ mod.label }}</span>
+							</label>
+						}
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h3 class="form-section__title">Reglas de Negocio</h3>
+					<div class="checks-grid" [formGroupName]="'reglas'">
+						@for (reg of reglasDisponibles; track reg.id) {
+							<label class="check-item" [class.check-item--on]="planForm.get('reglas.' + reg.id)?.value">
+								<input type="checkbox" class="check-item__input" formControlName="{{ reg.id }}">
+								<span class="check-item__mark">
+									<i class="bi bi-check-lg"></i>
+								</span>
+								<span class="check-item__label">{{ reg.label }}</span>
+							</label>
+						}
+					</div>
+				</div>
+
+				<div class="form-section">
+					<h3 class="form-section__title">Resumen de Activación</h3>
+					<div class="summary-grid">
+						<div class="summary-card">
+							<span class="summary-card__label">Precio mensual</span>
+							<strong class="summary-card__value">S/{{ precioFinal().mensual }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Precio anual</span>
+							<strong class="summary-card__value">S/{{ precioFinal().anual }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Trabajadores</span>
+							<strong class="summary-card__value">{{ planForm.get('maxTrabajadores')?.value || 0 }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Sedes</span>
+							<strong class="summary-card__value">{{ planForm.get('maxSedes')?.value || 0 }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Almacenamiento</span>
+							<strong class="summary-card__value">{{ planForm.get('almacenamiento')?.value || 0 }} GB</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Módulos activos</span>
+							<strong class="summary-card__value">{{ modulosActivos().length }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Reglas activas</span>
+							<strong class="summary-card__value">{{ reglasActivas().length }}</strong>
+						</div>
+						<div class="summary-card">
+							<span class="summary-card__label">Soporte</span>
+							<strong class="summary-card__value">{{ modulosForm.get('soporte-24-7')?.value ? '24/7' : 'Estándar' }}</strong>
+						</div>
+					</div>
+				</div>
+
+				<div class="edit-footer">
+					<div class="edit-footer__info">
+						@if (planSeleccionado(); as p) {
+							<span class="edit-footer__meta">
+								Última modificación por <strong>{{ p.ultimaModificacion.usuario }}</strong> — {{ p.ultimaModificacion.fecha }}
+							</span>
+						}
+					</div>
+					<div class="edit-footer__actions">
+						@if (!mostrarFormNuevo()) {
+							<button type="button" class="btn-delete" (click)="confirmarEliminar()">
+								<i class="bi bi-trash3"></i> Eliminar este plan
+							</button>
+						}
+						<button type="button" class="btn-secondary" (click)="cancelarEdicion()">Cancelar</button>
+						<button type="button" class="btn-primary" (click)="guardarPlan()">
+							<i class="bi bi-check-lg"></i> {{ mostrarFormNuevo() ? 'Crear Plan' : 'Guardar Cambios' }}
+						</button>
+					</div>
+				</div>
+			</form>
+		</div>
+	}
+
+	<div class="history-section">
+		<div class="history-section__header">
+			<h2 class="history-section__title">Historial de Suscripciones</h2>
+			<button type="button" class="btn-export" (click)="exportarCSV()">
+				<i class="bi bi-download"></i> Exportar CSV
+			</button>
+		</div>
+
+		<div class="table-shell">
+			<table class="history-table">
+				<thead>
+					<tr>
+						<th>Tenant</th>
+						<th>Plan</th>
+						<th>Fecha Inicio</th>
+						<th>Fecha Fin</th>
+						<th>Monto</th>
+						<th>Estado</th>
+						<th>Acciones</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (s of suscripcionesPaginadas(); track s.id) {
+						<tr>
+							<td class="td-primary">{{ s.tenant }}</td>
+							<td>{{ s.plan }}</td>
+							<td>{{ s.fechaInicio }}</td>
+							<td>{{ s.fechaFin }}</td>
+							<td>S/{{ s.monto }}</td>
+							<td>
+								<span class="status-badge" [class.status-badge--active]="s.estado === 'activo'" [class.status-badge--vencido]="s.estado === 'vencido'" [class.status-badge--pendiente]="s.estado === 'pendiente'">
+									{{ s.estado === 'activo' ? 'Activo' : s.estado === 'vencido' ? 'Vencido' : 'Pendiente' }}
+								</span>
+							</td>
+							<td class="td-actions">
+								<button type="button" class="btn-action btn-action--view" title="Ver detalle" (click)="verDetalleSuscripcion(s)"><i class="bi bi-eye"></i></button>
+							</td>
+						</tr>
+					} @empty {
+						<tr><td colspan="7" class="td-empty">No hay suscripciones registradas</td></tr>
+					}
+				</tbody>
+			</table>
+			<span class="pagination-info">Página {{ suscripcionPagina() }} de {{ totalSuscripcionPaginas() }}</span>
+			<app-pagination [currentPage]="suscripcionPagina()" [totalPages]="totalSuscripcionPaginas()" (pageChange)="irPaginaSuscripcion($event)"/>
+		</div>
+	</div>
+
+	<div class="modal fade" id="modalEliminarPlan" tabindex="-1" data-bs-backdrop="static">
+		<div class="modal-dialog modal-dialog-centered modal-sm">
+			<div class="modal-content modal-content--custom">
+				<div class="modal-header-custom">
+					<h5 class="modal-title-custom">Eliminar plan</h5>
+				</div>
+				<div class="modal-body-custom">
+					<p class="confirm-text">¿Estás seguro de eliminar el plan <strong>{{ planSeleccionado()?.nombre }}</strong>? Esta acción no se puede deshacer.</p>
+				</div>
+				<div class="modal-footer-custom">
+					<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-reject-custom" data-bs-dismiss="modal" (click)="eliminarPlan()">Eliminar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="modalDetalleSuscripcion" tabindex="-1" data-bs-backdrop="static">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content modal-content--custom">
+				<div class="modal-header-custom">
+					<h5 class="modal-title-custom">Detalle de Suscripción</h5>
+					<button type="button" class="btn-cancel" data-bs-dismiss="modal">
+						<i class="bi bi-x-lg"></i>
+					</button>
+				</div>
+				<div class="modal-body-custom">
+					@if (suscripcionSeleccionada(); as s) {
+						<div style="display:flex;flex-direction:column;gap:0.85rem;">
+							<div style="display:flex;align-items:center;justify-content:space-between;">
+								<div>
+									<div style="font-size:0.75rem;font-weight:600;color:#6b7a98;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.15rem;">Tenant</div>
+									<div style="font-size:1.05rem;font-weight:700;color:#1a2b4a;">{{ s.tenant }}</div>
+								</div>
+								<span class="status-badge" [class.status-badge--active]="s.estado === 'activo'" [class.status-badge--vencido]="s.estado === 'vencido'" [class.status-badge--pendiente]="s.estado === 'pendiente'" style="font-size:0.82rem;padding:0.3rem 0.8rem;">
+									{{ s.estado === 'activo' ? 'Activo' : s.estado === 'vencido' ? 'Vencido' : 'Pendiente' }}
+								</span>
+							</div>
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+								<div>
+									<div style="font-size:0.75rem;font-weight:600;color:#6b7a98;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.15rem;">Plan</div>
+									<div style="font-weight:600;color:#1a2b4a;">{{ s.plan }}</div>
+								</div>
+								<div>
+									<div style="font-size:0.75rem;font-weight:600;color:#6b7a98;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.15rem;">Monto</div>
+									<div style="font-weight:600;color:#1a2b4a;">S/{{ s.monto }}</div>
+								</div>
+								<div>
+									<div style="font-size:0.75rem;font-weight:600;color:#6b7a98;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.15rem;">Fecha de inicio</div>
+									<div style="font-weight:500;color:#2a3a5a;">{{ s.fechaInicio }}</div>
+								</div>
+								<div>
+									<div style="font-size:0.75rem;font-weight:600;color:#6b7a98;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:0.15rem;">Fecha de fin</div>
+									<div style="font-weight:500;color:#2a3a5a;">{{ s.fechaFin }}</div>
+								</div>
+							</div>
+						</div>
+					}
+				</div>
+				<div class="modal-footer-custom">
+					<button type="button" class="btn-primary" data-bs-dismiss="modal">
+						<i class="bi bi-check-lg"></i> Cerrar
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>

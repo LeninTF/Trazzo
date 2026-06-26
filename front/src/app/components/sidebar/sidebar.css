@@ -102,11 +102,11 @@
 
 .sidebar-nav__item:hover {
 	background: rgba(30, 64, 175, 0.06);
-	color: #173c97;
+	color: #0f2a6e;
 }
 
 .sidebar-nav__item:hover i {
-	color: #173c97;
+	color: #0f2a6e;
 }
 
 .sidebar-nav__item.is-active {
@@ -177,6 +177,12 @@
 	color: #7080a6;
 }
 
+.profile-card:hover {
+	background: rgba(255, 255, 255, 0.9);
+	box-shadow: 0 8px 20px rgba(30, 64, 175, 0.1);
+	cursor: pointer;
+}
+
 .logout-link {
 	display: inline-flex;
 	align-items: center;
@@ -191,6 +197,6 @@
 
 .logout-link:hover {
 	background: rgba(30, 64, 175, 0.08);
-	color: #173c97;
+	color: #0f2a6e;
 }
 

@@ -21,9 +21,9 @@ services:
       context: ./front
       dockerfile: Dockerfile
     container_name: trazzo-frontend-local
-    # 3. Exponemos el puerto 80 hacia tu localhost:80 (o 4000 si el 80 está ocupado)
+    # 3. Exponemos el puerto 8080 hacia tu localhost:4000
     ports:
-      - "4000:80"
+      - "4000:8080"
     networks:
       - trazzo-local-net
     depends_on:
