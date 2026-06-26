@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Getter
-public class MonthlyClosureCreatedEvent {
+public class MonthlyClosureCreatedEvent implements DomainEvent {
 
     private final UUID closureId;
     private final ClosurePeriod period;

@@ -1,5 +1,9 @@
 package trazzo.back.reports.application.usecase;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import trazzo.back.reports.application.dto.command.CreateMonthlyClosureCommand;
 import trazzo.back.reports.application.dto.result.MonthlyClosureResult;
 import trazzo.back.reports.application.ports.in.CreateMonthlyClosureUseCase;
@@ -40,6 +44,7 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
     }
 
     @Override
+    @Transactional
     public MonthlyClosureResult execute(CreateMonthlyClosureCommand command) {
         ClosurePeriod period = new ClosurePeriod(command.month(), command.year());
 
@@ -83,10 +88,23 @@ public class CreateMonthlyClosureService implements CreateMonthlyClosureUseCase 
         closureRepository.save(finalClosure);
         detailRepository.saveAll(details);
 
-        eventPublisher.publishEvent(new MonthlyClosureCreatedEvent(closureId, period, command.createdByUserId(), now));
+        publishEventAfterCommit(new MonthlyClosureCreatedEvent(closureId, period, command.createdByUserId(), now));
 
         return new MonthlyClosureResult(
                 closureId, period.month(), period.year(),
                 summaries.size(), excelUrl, pdfUrl, now);
+    }
+
+    private void publishEventAfterCommit(MonthlyClosureCreatedEvent event) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    eventPublisher.publishEvent(event);
+                }
+            });
+        } else {
+            eventPublisher.publishEvent(event);
+        }
     }
 }
