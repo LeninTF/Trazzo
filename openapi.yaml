@@ -124,7 +124,7 @@ components:
         `VIEW_TENANT_USERS` pero sin `VIEW_ALL_TENANT_USERS`.
         - `MY_ASSIGNMENTS` *(default)*: usuarios de las sedes/áreas/departamentos
           a los que el solicitante está asignado.
-        - `SEDE`: todos los usuarios de la sede indicada en `sede_id`.
+        - `SEDE`: todos los usuarios de la sede indicada en `branch_id`.
         - `AREA`: todos los usuarios del área indicada en `area_id`.
         - `DEPARTAMENTO`: todos los usuarios del departamento indicado en `departamento_id`.
         Ignorado si el solicitante tiene `VIEW_ALL_TENANT_USERS`.
@@ -151,15 +151,6 @@ components:
         type: string
         enum: [ALL_TENANT, MY_ASSIGNMENTS, SEDE, AREA, DEPARTAMENTO, SELF]
         default: MY_ASSIGNMENTS
-
-    SedeIdParam:
-      name: sede_id
-      in: query
-      required: false
-      description: Filtra usuarios de una sede específica. Requerido cuando `scope=SEDE`.
-      schema:
-        type: integer
-        example: 3
 
     AreaIdParam:
       name: area_id
@@ -436,7 +427,7 @@ components:
       name: branch_id
       in: query
       required: false
-      description: "Filtra dispositivos o asistencias por sede."
+      description: "Filtra por sede (branch). Requerido cuando `scope=SEDE`."
       schema:
         type: integer
         example: 2
@@ -1256,7 +1247,8 @@ components:
         - templateCifrado
         - llaveAesCifrada
         - timestampLocal
-        - dispositivoId
+        - device_code
+        - tenant_user_id
       properties:
         templateCifrado:
           type: string
@@ -1268,9 +1260,14 @@ components:
           type: string
           format: date-time
           description: Hora exacta capturada en el hardware local.
-        dispositivoId:
+        device_code:
           type: string
-          description: Número de serie del escáner ZKTeco físico.
+          description: "Campo `code` de la tabla `device` (serial ZKTeco del dispositivo)."
+          example: "ZK-C2PRO-00123"
+        tenant_user_id:
+          type: integer
+          description: "ID del trabajador (TenantUser) que realiza la marcación."
+          example: 42
 
     MarcacionSyncRequest:
       type: array
@@ -2572,7 +2569,7 @@ components:
           example: "2026-06-25"
         minutes_late:
           type: integer
-          description: "Tardanza bruta en minutos (sin descontar tolerancia). 0 si es puntual."
+          description: "Tardanza neta en minutos (tolerancia ya descontada). 0 si es puntual."
           example: 12
         state:
           type: string
@@ -2899,6 +2896,22 @@ components:
         is_primary:
           type: boolean
 
+    # ── Response Messages ───────────────────────────────────────────────
+    MessageResponse:
+      type: object
+      description: "Respuesta informativa para operaciones asíncronas o de confirmación."
+      properties:
+        message:
+          type: string
+          description: "Mensaje legible del resultado de la operación."
+          example: "Lote aceptado para procesamiento en segundo plano."
+        status:
+          type: string
+          description: "Estado de la operación (ej. queued, accepted, processed)."
+          example: "queued"
+      required:
+        - message
+
 security:
   - bearerAuth: []
     tenantHeader: []
@@ -2972,7 +2985,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ScopeParam'
-        - $ref: '#/components/parameters/SedeIdParam'
+        - $ref: '#/components/parameters/BranchIdParam'
         - $ref: '#/components/parameters/AreaIdParam'
         - $ref: '#/components/parameters/DepartamentoIdParam'
         - $ref: '#/components/parameters/StatusParam'
@@ -2989,7 +3002,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TenantUserListResponse'
         "400":
-          description: "`scope=SEDE` sin `sede_id`, o `scope=AREA` sin `area_id`, etc."
+          description: "`scope=SEDE` sin `branch_id`, o `scope=AREA` sin `area_id`, etc."
           content:
             application/json:
               schema:
@@ -3856,6 +3869,10 @@ paths:
       responses:
         "200":
           description: Marcación procesada correctamente (Entrada/Salida registrada).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceProfile"
         "403":
           description: Conflicto de incongruencia de Tenant.
 
@@ -3881,6 +3898,10 @@ paths:
       responses:
         "202":
           description: Lote aceptado para procesamiento asíncrono en segundo plano.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
 
   # ----------------------------------------
   # MÓDULO: INCIDENCIAS
@@ -4492,6 +4513,10 @@ paths:
       responses:
         "202":
           description: Notificación encolada para envío.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         "403":
           description: Sin permiso `APPROVE_INCIDENT`.
           content:
@@ -4538,6 +4563,10 @@ paths:
       responses:
         "202":
           description: Proceso de justificación encolado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         "400":
           description: La incidencia no está en estado `APROBADO`.
           content:
@@ -5682,7 +5711,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/IncidentScopeParam'
-        - $ref: '#/components/parameters/SedeIdParam'
+        - $ref: '#/components/parameters/BranchIdParam'
         - $ref: '#/components/parameters/AreaIdParam'
         - $ref: '#/components/parameters/DepartamentoIdParam'
         - $ref: '#/components/parameters/AttendanceDateFromParam'
