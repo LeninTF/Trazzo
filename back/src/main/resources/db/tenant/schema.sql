@@ -158,6 +158,7 @@ CREATE TABLE tolerancia (
     schedule_id INT REFERENCES schedule(id) ON DELETE CASCADE,
     name VARCHAR(100),
     type tolerancia_type_enum NOT NULL,
+    minutes INTEGER NOT NULL,
     description TEXT,
     activo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
