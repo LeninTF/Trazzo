@@ -27,18 +27,18 @@ jobs:
 
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Requerido por SonarCloud
 
       - name: Configurar Java JDK 17 (Requerido por SonarScanner)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Configurar .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
@@ -105,7 +105,7 @@ jobs:
 
       - name: Subir resultados de tests
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: middleware/TestResults/
@@ -120,10 +120,10 @@ jobs:
 
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configurar .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
@@ -142,7 +142,7 @@ jobs:
         run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
 
       - name: Subir MSI (Español) como artefacto
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Trazzo.Biometric.Agent-es-ES-build${{ github.run_number }}
           path: middleware/Trazzo.Biometric.Agent.Installer/bin/Release/es-ES/Trazzo.Biometric.Agent.msi

@@ -57,7 +57,7 @@ jobs:
         working-directory: ./front
 
       - name: Análisis Estático y Quality Gate (SonarCloud Frontend)
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
