@@ -176,6 +176,7 @@ CREATE TABLE device (
     ip VARCHAR(45),
     puerto INT,
     ubicacion VARCHAR(255),
+    branch_id INT REFERENCES branch(id) ON DELETE SET NULL,
     state BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
