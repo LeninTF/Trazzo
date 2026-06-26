@@ -7,14 +7,18 @@ on:
 jobs:
   commitlint:
     runs-on: ubuntu-latest
-    name: Revisar historial de commits
+
     steps:
-      - name: Checkout del código
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Crítico: Necesita el historial del PR para validar todos los commits nuevos
 
+      - name: Omitir Commitlint para Dependabot
+        if: github.actor == 'dependabot[bot]'
+        run: echo "Commitlint omitido para Dependabot."
+
       - name: Ejecutar Commitlint
+        if: github.actor != 'dependabot[bot]'
         uses: wagoid/commitlint-github-action@v6
         with:
           configFile: commitlint.config.mjs
