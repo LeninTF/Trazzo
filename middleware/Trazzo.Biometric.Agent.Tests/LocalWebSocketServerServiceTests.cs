@@ -269,13 +269,17 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     [Fact]
     public async Task DeviceMonitor_CuandoLectorSeConecta_NotificaCliente()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         FakeBiometricScannerService scanner = new();
         Start(scanner: scanner, deviceMonitorIntervalSeconds: 1);
         using ClientWebSocket client = new();
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(200), cts.Token);
+        // Esperar 1.5 s garantiza que el primer poll del monitor ocurra con
+        // IsConnected=false antes de cambiar el status, incluso en CI (Windows Server
+        // tiene scheduler más lento que Windows 11). Sin este margen el primer poll
+        // puede llegar después de cambiar el status y no se detecta el cambio.
+        await Task.Delay(TimeSpan.FromMilliseconds(1500), cts.Token);
         scanner.Status = ConnectedStatus();
         string response = await ReceiveStringAsync(client, cts.Token);
 
@@ -286,13 +290,15 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     [Fact]
     public async Task DeviceMonitor_CuandoLectorSeDesconecta_NotificaYContinuaBuscando()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         FakeBiometricScannerService scanner = new() { Status = ConnectedStatus() };
         Start(scanner: scanner, deviceMonitorIntervalSeconds: 1);
         using ClientWebSocket client = new();
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(200), cts.Token);
+        // Mismo motivo que DeviceMonitor_CuandoLectorSeConecta: el primer poll debe
+        // registrar IsConnected=true antes del cambio para que el monitor detecte la desconexión.
+        await Task.Delay(TimeSpan.FromMilliseconds(1500), cts.Token);
         scanner.Status = DisconnectedStatus();
         string disconnected = await ReceiveStringAsync(client, cts.Token);
         string connecting = await ReceiveStringAsync(client, cts.Token);

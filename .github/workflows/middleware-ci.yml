@@ -104,13 +104,17 @@ jobs:
         run: dotnet build -c Debug --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
+        timeout-minutes: 15
         run: >
           dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
           -c Debug
           --no-build
           --no-restore
           --logger "trx;LogFileName=test-results.trx"
-          --results-directory TestResults --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --collect:"XPlat Code Coverage"
+          --blame-hang
+          --blame-hang-timeout 3min
 
       - name: Finalizar análisis de SonarCloud (End)
         env:
@@ -208,13 +212,17 @@ jobs:
         run: dotnet build -c Debug --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
+        timeout-minutes: 15
         run: >
           dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
           -c Debug
           --no-build
           --no-restore
           --logger "trx;LogFileName=test-results.trx"
-          --results-directory TestResults --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --collect:"XPlat Code Coverage"
+          --blame-hang
+          --blame-hang-timeout 3min
 
       - name: Finalizar análisis de SonarCloud (End)
         env:
