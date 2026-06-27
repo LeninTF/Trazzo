@@ -11,7 +11,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write  # Permite a SonarCloud decorar el PR con comentarios inline
+  pull-requests: write
 
 defaults:
   run:
@@ -19,122 +19,10 @@ defaults:
 
 jobs:
   # ─────────────────────────────────────────────
-  # PR: Build + Tests + Sonar decoración
-  # Sonar analiza solo el código cambiado y comenta en el PR.
-  # No bloquea el merge — el Quality Gate es solo informativo.
-  # ─────────────────────────────────────────────
-  build-test-sonar-pr:
-    name: Build, Tests y Análisis PR x(~10-15 min)
-    if: github.event_name == 'pull_request'
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout del código
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configurar Java JDK 17 (Requerido por SonarScanner)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Configurar .NET 10
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.x'
-
-      - name: Caché de paquetes NuGet
-        uses: actions/cache@v4
-        with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('middleware/**/*.csproj', 'middleware/**/*.wixproj') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Caché de herramientas dotnet globales
-        id: cache-dotnet-tools
-        uses: actions/cache@v4
-        with:
-          path: ~/.dotnet/tools
-          key: ${{ runner.os }}-dotnet-tools-sonarscanner-${{ hashFiles('.github/workflows/middleware-ci.yml') }}
-
-      - name: Decodificar ZKTeco SDK DLL (libzkfpcsharp x64)
-        shell: pwsh
-        env:
-          ZKFP_DLL_BASE64: ${{ secrets.ZKFP_DLL_BASE64 }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:ZKFP_DLL_BASE64)) {
-            Write-Host "ZKFP_DLL_BASE64 no configurado; se omite la decodificación de libzkfpcsharp.dll."
-            exit 0
-          }
-          $dllDir  = "Trazzo.Biometric.Agent\Native\x64"
-          $dllPath = "$dllDir\libzkfpcsharp.dll"
-          New-Item -ItemType Directory -Force -Path $dllDir | Out-Null
-          $bytes = [Convert]::FromBase64String($env:ZKFP_DLL_BASE64)
-          [System.IO.File]::WriteAllBytes("$PWD\$dllPath", $bytes)
-          Write-Host "libzkfpcsharp.dll lista: $($bytes.Length) bytes"
-
-      - name: Instalar SonarCloud scanner para .NET
-        if: steps.cache-dotnet-tools.outputs.cache-hit != 'true'
-        run: dotnet tool install --global dotnet-sonarscanner
-
-      - name: Iniciar análisis de SonarCloud (Begin)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet sonarscanner begin `
-            /k:"methodsync-trazzo-middleware" `
-            /o:"methodsync" `
-            /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
-            /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
-            /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
-            /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**" `
-            /d:sonar.pullrequest.key="${{ github.event.pull_request.number }}" `
-            /d:sonar.pullrequest.branch="${{ github.head_ref }}" `
-            /d:sonar.pullrequest.base="${{ github.base_ref }}"
-
-      - name: Restaurar dependencias
-        run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
-
-      - name: Compilar (Build)
-        run: dotnet build -c Debug --no-restore
-
-      - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
-        timeout-minutes: 15
-        run: >
-          dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
-          -c Debug
-          --no-build
-          --no-restore
-          --logger "trx;LogFileName=test-results.trx"
-          --results-directory TestResults
-          --collect:"XPlat Code Coverage"
-          --blame-hang
-          --blame-hang-timeout 3min
-
-      - name: Finalizar análisis de SonarCloud (End)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-
-      - name: Subir resultados de tests
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-pr
-          path: middleware/TestResults/
-          retention-days: 7
-
-  # ─────────────────────────────────────────────
-  # PUSH: Build + Tests + Sonar análisis completo + Publish (~15-20 min)
+  # Build + Tests + Sonar (push y pull_request)
   # ─────────────────────────────────────────────
   build-test-analyze:
     name: Tests y Análisis (.NET 10 / win-x64)
-    if: github.event_name == 'push'
     runs-on: windows-latest
 
     steps:
@@ -189,7 +77,8 @@ jobs:
         if: steps.cache-dotnet-tools.outputs.cache-hit != 'true'
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Iniciar análisis de SonarCloud (Begin)
+      - name: Iniciar análisis de SonarCloud — Push
+        if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -203,6 +92,25 @@ jobs:
             /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
             /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
+
+      - name: Iniciar análisis de SonarCloud — PR
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin `
+            /k:"methodsync-trazzo-middleware" `
+            /o:"methodsync" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.qualitygate.wait=false `
+            /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
+            /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
+            /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**" `
+            /d:sonar.pullrequest.key="${{ github.event.pull_request.number }}" `
+            /d:sonar.pullrequest.branch="${{ github.head_ref }}" `
+            /d:sonar.pullrequest.base="${{ github.base_ref }}"
 
       - name: Restaurar dependencias
         run: |
@@ -231,6 +139,7 @@ jobs:
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Publicar aplicación (Release / Self-Contained / win-x64)
+        if: github.event_name == 'push'
         run: >
           dotnet publish Trazzo.Biometric.Agent/Trazzo.Biometric.Agent.csproj
           -c Release -r win-x64 -p:SelfContained=true
@@ -238,6 +147,7 @@ jobs:
           --no-restore
 
       - name: Subir binarios publicados para el MSI
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: agent-publish-output
@@ -253,7 +163,7 @@ jobs:
           retention-days: 7
 
   # ─────────────────────────────────────────────
-  # PUSH: Generar instalador .msi (en paralelo al análisis principal)
+  # PUSH: Generar instalador .msi
   # ─────────────────────────────────────────────
   package-msi:
     name: Build MSI (Self-Contained / win-x64)
