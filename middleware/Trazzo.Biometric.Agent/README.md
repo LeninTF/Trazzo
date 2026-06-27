@@ -34,7 +34,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Recuperación de fallos | Servicio se reinicia solo en 10 s tras crash (configurado en el MSI) |
 | Instalador visual | Bienvenida → Selección de ruta → Progreso → Finalizar |
 | Imágenes del instalador | Banner 493×58 px y panel 493×312 px personalizados |
-| CI/CD | GitHub Actions: 4 jobs — PR decorativo + push con Quality Gate y MSI en paralelo |
+| CI/CD | GitHub Actions: 2 jobs — `build-test-analyze` (push y PR) + `package-msi` (solo push) |
 | Tests | 218 pruebas xUnit (unitarias + integración), sin hardware real |
 | Reporte de inicio | Log completo del estado de todos los módulos al arrancar |
 
@@ -49,7 +49,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Publicar en GitHub Releases | CI/CD | Agregar paso en el workflow para crear Release pública automáticamente en cada push a master. Sin esto el MSI solo es descargable por miembros del repo |
 | Publicar manifiesto de auto-update | Infraestructura | Hostear el JSON de versiones en HTTPS (puede apuntar a GitHub Releases) para que el auto-updater funcione |
 | Firma digital del MSI | Trazzo | Certificado de firma de código para evitar alertas de SmartScreen en Windows |
-| Versión del MSI desde ensamblado | Middleware | Actualmente fija en `1.0.0` en el `.wixproj` |
+| Publicar en GitHub Releases | CI/CD | Falta el paso que sube el MSI con URL pública accesible para los técnicos de los colegios |
 
 ---
 
@@ -57,7 +57,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 
 ```text
 middleware/
-├── Directory.Build.props                # Suprime NU1903 (SQLite — mitigado con SourceGear.sqlite3)
+├── Directory.Build.props                # NuGetAuditSuppress GHSA-2m69-gcr7-jv3q (SQLite — mitigado con SourceGear.sqlite3)
 ├── Trazzo.Biometric.Agent/              # Servicio principal
 │   ├── AutoUpdate/                      # Auto-updater silencioso
 │   ├── Contracts/                       # Tipos de respuesta WebSocket
@@ -215,21 +215,14 @@ El MSI es **self-contained**: incluye el runtime de .NET 10. La PC del colegio n
 
 El pipeline `.github/workflows/middleware-ci.yml` se activa automáticamente en push (ramas `master` y `feature/**`) y en pull requests hacia `master`.
 
-### Flujo en Pull Request
+### Jobs
 
-| Job | Runner | Descripción |
-|---|---|---|
-| `build-test-sonar-pr` | Windows | Compila, ejecuta los 218 tests y envía análisis decorativo a SonarCloud. El Quality Gate es informativo y no bloquea el merge. |
-
-### Flujo en Push
-
-| Job | Runner | Depende de | Descripción |
+| Job | Trigger | Runner | Descripción |
 |---|---|---|---|
-| `build-test-analyze` | Windows | — | Compila, ejecuta los 218 tests con cobertura (Coverlet), analiza con SonarCloud y publica el agente self-contained. Sube los binarios como artefacto interno para el MSI. |
-| `sonar-quality-gate` | Ubuntu | `build-test-analyze` | Consulta el Quality Gate de SonarCloud. Bloquea el pipeline si no supera el umbral. |
-| `package-msi` | Windows | `build-test-analyze` | Descarga los binarios del job anterior y genera el MSI con WiX v4. No re-publica el agente. |
+| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 218 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
+| `package-msi` | solo push | Windows | Descarga los binarios del job anterior y genera el MSI con WiX v4 (`-p:SkipAgentPublish=true`). No re-publica el agente. |
 
-Los jobs `sonar-quality-gate` y `package-msi` corren en paralelo tras el análisis, reduciendo el tiempo total del pipeline a ~20-30 minutos en push.
+El job `package-msi` depende de `build-test-analyze` y sólo corre en push, por lo que en pull requests sólo se ejecuta el primer job.
 
 ### Distribución a los colegios
 
@@ -452,13 +445,13 @@ Enrolamiento de 3 muestras con DBMerge. Envía mensajes de progreso durante el p
 
 ## Dependencias de Seguridad
 
-### SQLite — GHSA-2m69-gcr7-jv3q
+### SQLite — CVE-2025-6965 / GHSA-2m69-gcr7-jv3q
 
-`Microsoft.Data.Sqlite` depende transitivamente de `SQLitePCLRaw.lib.e_sqlite3` 2.1.11, que tiene una vulnerabilidad alta en su binario nativo `e_sqlite3.dll` (CVE corregido en SQLite 3.50.4).
+`Microsoft.Data.Sqlite` depende transitivamente de `SQLitePCLRaw.lib.e_sqlite3` 2.1.11, que embebe SQLite < 3.50.2. En esa versión el número de términos de un `aggregate` puede exceder las columnas disponibles, causando corrupción de memoria (vulnerabilidad alta).
 
-**Mitigación activa:** el proyecto referencia `SourceGear.sqlite3` 3.50.4.5, que provee `e_sqlite3.dll` con SQLite 3.50.4 (parcheado). NuGet carga los assets directos antes que los transitivos, por lo que en runtime se usa la versión segura.
+**Mitigación activa:** el proyecto referencia `SourceGear.sqlite3` 3.50.4.5, que provee `e_sqlite3.dll` con SQLite 3.50.4 (≥ 3.50.2, parcheado). NuGet da prioridad a assets directos sobre transitivos, por lo que en runtime se carga la versión segura.
 
-El paquete vulnerable sigue visible en el grafo de dependencias (NuGet no puede actualizar paquetes transitivos de terceros), por lo que NuGet audit reporta `NU1903`. Esta advertencia está suprimida en `Directory.Build.props` con `<NoWarn>NU1903</NoWarn>` como falso positivo documentado — el binario cargado en runtime ya es seguro.
+`SQLitePCLRaw.lib.e_sqlite3` no tiene versión parcheada disponible, por lo que sigue visible en el grafo transitivo y NuGet audit reporta `NU1903`. En `Directory.Build.props` se usa `<NuGetAuditSuppress>` apuntando exactamente al advisory `GHSA-2m69-gcr7-jv3q` para no ocultar futuros `NU1903` no relacionados. Las alertas Dependabot asociadas deben descartarse manualmente en GitHub como "riesgo tolerable — mitigado en runtime".
 
 ---
 

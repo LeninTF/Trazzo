@@ -1,15 +1,20 @@
 <Project>
   <ItemGroup>
     <!--
-      NU1903 — SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q, High)
+      CVE-2025-6965 / GHSA-2m69-gcr7-jv3q (High) — SQLitePCLRaw.lib.e_sqlite3 2.1.11
 
-      MITIGACIÓN ACTIVA: SourceGear.sqlite3 3.50.4.5 reemplaza e_sqlite3.dll en
-      runtime con SQLite 3.50.4 (parcheado). El paquete vulnerable sigue en el
-      grafo de dependencias transitivas de Microsoft.Data.Sqlite, por lo que NuGet
-      audit sigue reportando NU1903 aunque el binario cargado en runtime sea seguro.
+      El número de términos de aggregate puede exceder las columnas disponibles en
+      SQLite < 3.50.2, causando corrupción de memoria.
 
-      NuGetAuditSuppress apunta al advisory exacto en vez de suprimir todo NU1903,
-      evitando ocultar futuros hallazgos no relacionados con este advisory.
+      MITIGACIÓN ACTIVA: SourceGear.sqlite3 3.50.4.5 provee e_sqlite3.dll con
+      SQLite 3.50.4 (≥ 3.50.2). NuGet da prioridad a assets directos sobre
+      transitivos, por lo que en runtime se carga la versión segura.
+
+      SQLitePCLRaw.lib.e_sqlite3 no tiene versión parcheada, por lo que sigue
+      visible en el grafo transitivo y NuGet audit sigue reportando NU1903.
+      NuGetAuditSuppress apunta al advisory exacto para no ocultar futuros NU1903
+      no relacionados. Las alertas Dependabot #29 y #30 deben descartarse
+      manualmente en GitHub (tolerable risk — mitigado en runtime).
     -->
     <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </ItemGroup>

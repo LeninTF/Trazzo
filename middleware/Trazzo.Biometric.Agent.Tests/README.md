@@ -53,7 +53,7 @@ Todos los tests usan implementaciones falsas definidas en `Fakes.cs`:
 
 - **xUnit** 2.9 — framework de pruebas
 - **Microsoft.Data.Sqlite** — SQLite real en memoria para `SqliteEventQueueTests`
-- **SourceGear.sqlite3** 3.50.4.5 — reemplaza `e_sqlite3.dll` de `SQLitePCLRaw.lib.e_sqlite3` con SQLite 3.50.4 parcheado (GHSA-2m69-gcr7-jv3q)
+- **SourceGear.sqlite3** 3.50.4.5 — reemplaza `e_sqlite3.dll` de `SQLitePCLRaw.lib.e_sqlite3` con SQLite 3.50.4 parcheado (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q)
 - **coverlet** — cobertura de código
 
 ---
