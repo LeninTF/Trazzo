@@ -17,8 +17,9 @@ class MonthlyClosureMapperTest {
     @Test
     void shouldMapClosureDomainToEntity() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure domain = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosure domain = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", userId, now);
         MonthlyClosureEntity entity = mapper.toEntity(domain);
         assertEquals(id, entity.getId());
         assertEquals(6, entity.getMonth());
@@ -26,15 +27,16 @@ class MonthlyClosureMapperTest {
         assertEquals(10, entity.getTotalEmployees());
         assertEquals("excel", entity.getExcelReportUrl());
         assertEquals("pdf", entity.getPdfReportUrl());
-        assertEquals("user-1", entity.getCreatedByUserId());
+        assertEquals(userId, entity.getCreatedByUserId());
         assertEquals(now, entity.getCreatedAt());
     }
 
     @Test
     void shouldMapClosureEntityToDomain() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosureEntity entity = new MonthlyClosureEntity(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosureEntity entity = new MonthlyClosureEntity(id, 6, 2025, 10, "excel", "pdf", userId, now);
         MonthlyClosure domain = mapper.toDomain(entity);
         assertEquals(id, domain.getId());
         assertEquals(6, domain.getMonth());
@@ -42,7 +44,7 @@ class MonthlyClosureMapperTest {
         assertEquals(10, domain.getTotalEmployees());
         assertEquals("excel", domain.getExcelReportUrl());
         assertEquals("pdf", domain.getPdfReportUrl());
-        assertEquals("user-1", domain.getCreatedByUserId());
+        assertEquals(userId, domain.getCreatedByUserId());
         assertEquals(now, domain.getCreatedAt());
     }
 
@@ -58,18 +60,18 @@ class MonthlyClosureMapperTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail domain = new MonthlyClosureDetail(
-                id, closureId, "user-1", "Juan Perez", "12345678",
-                "TI", "Developer", 160.0, 10.0, 1, 5.0, now);
+                id, closureId, 1, "Juan Perez", "12345678",
+                "TI", "Developer", 160.0, 10, 1, 5.0, now);
         MonthlyClosureDetailEntity entity = mapper.toEntity(domain);
         assertEquals(id, entity.getId());
         assertEquals(closureId, entity.getMonthClosureId());
-        assertEquals("user-1", entity.getTenantUserId());
+        assertEquals(Integer.valueOf(1), entity.getTenantUserId());
         assertEquals("Juan Perez", entity.getTenantUserFullName());
         assertEquals("12345678", entity.getTenantUserDocument());
         assertEquals("TI", entity.getDepartmentName());
         assertEquals("Developer", entity.getRoleName());
         assertEquals(160.0, entity.getTotalWorkedHours());
-        assertEquals(10.0, entity.getTotalTardinessMinutes());
+        assertEquals(Integer.valueOf(10), entity.getTotalTardinessMinutes());
         assertEquals(1, entity.getTotalAbsences());
         assertEquals(5.0, entity.getTotalOvertimeHours());
         assertEquals(now, entity.getCreatedAt());
@@ -81,18 +83,18 @@ class MonthlyClosureMapperTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailEntity entity = new MonthlyClosureDetailEntity(
-                id, closureId, "user-1", "Juan Perez", "12345678",
-                "TI", "Developer", 160.0, 10.0, 1, 5.0, now);
+                id, closureId, 1, "Juan Perez", "12345678",
+                "TI", "Developer", 160.0, 10, 1, 5.0, now);
         MonthlyClosureDetail domain = mapper.toDomain(entity);
         assertEquals(id, domain.getId());
         assertEquals(closureId, domain.getMonthClosureId());
-        assertEquals("user-1", domain.getTenantUserId());
+        assertEquals(Integer.valueOf(1), domain.getTenantUserId());
         assertEquals("Juan Perez", domain.getTenantUserFullName());
         assertEquals("12345678", domain.getTenantUserDocument());
         assertEquals("TI", domain.getDepartmentName());
         assertEquals("Developer", domain.getRoleName());
         assertEquals(160.0, domain.getTotalWorkedHours());
-        assertEquals(10.0, domain.getTotalTardinessMinutes());
+        assertEquals(Integer.valueOf(10), domain.getTotalTardinessMinutes());
         assertEquals(1, domain.getTotalAbsences());
         assertEquals(5.0, domain.getTotalOvertimeHours());
         assertEquals(now, domain.getCreatedAt());

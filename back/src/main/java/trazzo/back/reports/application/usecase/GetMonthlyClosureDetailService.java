@@ -21,10 +21,11 @@ public class GetMonthlyClosureDetailService implements GetMonthlyClosureDetailUs
         MonthlyClosureDetail detail = detailRepository.findById(id)
                 .orElseThrow(() -> new MonthlyClosureDetailNotFoundException(id));
         return new MonthlyClosureDetailResult(
-                detail.getId(), detail.getMonthClosureId(), detail.getTenantUserFullName(),
-                detail.getTenantUserDocument(), detail.getDepartmentName(),
-                detail.getRoleName(), detail.getTotalWorkedHours(),
-                detail.getTotalTardinessMinutes(), detail.getTotalAbsences(),
-                detail.getTotalOvertimeHours(), detail.getCreatedAt());
+                detail.getId(), detail.getMonthClosureId(), detail.getTenantUserId(),
+                detail.getTenantUserFullName(), detail.getTenantUserDocument(),
+                detail.getDepartmentName(), detail.getRoleName(),
+                detail.getTotalWorkedHours(), detail.getTotalTardinessMinutes(),
+                detail.getTotalAbsences(), detail.getTotalOvertimeHours(),
+                detail.getCreatedAt());
     }
 }

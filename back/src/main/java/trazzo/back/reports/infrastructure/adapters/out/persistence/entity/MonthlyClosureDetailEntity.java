@@ -7,13 +7,13 @@ public class MonthlyClosureDetailEntity {
 
     private UUID id;
     private UUID monthClosureId;
-    private String tenantUserId;
+    private Integer tenantUserId;
     private String tenantUserFullName;
     private String tenantUserDocument;
     private String departmentName;
     private String roleName;
     private Double totalWorkedHours;
-    private Double totalTardinessMinutes;
+    private Integer totalTardinessMinutes;
     private int totalAbsences;
     private Double totalOvertimeHours;
     private LocalDateTime createdAt;
@@ -21,10 +21,10 @@ public class MonthlyClosureDetailEntity {
     public MonthlyClosureDetailEntity() {
     }
 
-    public MonthlyClosureDetailEntity(UUID id, UUID monthClosureId, String tenantUserId,
+    public MonthlyClosureDetailEntity(UUID id, UUID monthClosureId, Integer tenantUserId,
                                        String tenantUserFullName, String tenantUserDocument,
                                        String departmentName, String roleName,
-                                       Double totalWorkedHours, Double totalTardinessMinutes,
+                                       Double totalWorkedHours, Integer totalTardinessMinutes,
                                        int totalAbsences, Double totalOvertimeHours,
                                        LocalDateTime createdAt) {
         this.id = id;
@@ -57,11 +57,11 @@ public class MonthlyClosureDetailEntity {
         this.monthClosureId = monthClosureId;
     }
 
-    public String getTenantUserId() {
+    public Integer getTenantUserId() {
         return tenantUserId;
     }
 
-    public void setTenantUserId(String tenantUserId) {
+    public void setTenantUserId(Integer tenantUserId) {
         this.tenantUserId = tenantUserId;
     }
 
@@ -105,11 +105,11 @@ public class MonthlyClosureDetailEntity {
         this.totalWorkedHours = totalWorkedHours;
     }
 
-    public Double getTotalTardinessMinutes() {
+    public Integer getTotalTardinessMinutes() {
         return totalTardinessMinutes;
     }
 
-    public void setTotalTardinessMinutes(Double totalTardinessMinutes) {
+    public void setTotalTardinessMinutes(Integer totalTardinessMinutes) {
         this.totalTardinessMinutes = totalTardinessMinutes;
     }
 

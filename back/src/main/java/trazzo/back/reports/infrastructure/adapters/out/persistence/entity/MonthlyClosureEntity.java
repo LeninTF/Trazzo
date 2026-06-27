@@ -11,7 +11,7 @@ public class MonthlyClosureEntity {
     private int totalEmployees;
     private String excelReportUrl;
     private String pdfReportUrl;
-    private String createdByUserId;
+    private UUID createdByUserId;
     private LocalDateTime createdAt;
 
     public MonthlyClosureEntity() {
@@ -19,7 +19,7 @@ public class MonthlyClosureEntity {
 
     public MonthlyClosureEntity(UUID id, int month, int year, int totalEmployees,
                                  String excelReportUrl, String pdfReportUrl,
-                                 String createdByUserId, LocalDateTime createdAt) {
+                                 UUID createdByUserId, LocalDateTime createdAt) {
         this.id = id;
         this.month = month;
         this.year = year;
@@ -78,11 +78,11 @@ public class MonthlyClosureEntity {
         this.pdfReportUrl = pdfReportUrl;
     }
 
-    public String getCreatedByUserId() {
+    public UUID getCreatedByUserId() {
         return createdByUserId;
     }
 
-    public void setCreatedByUserId(String createdByUserId) {
+    public void setCreatedByUserId(UUID createdByUserId) {
         this.createdByUserId = createdByUserId;
     }
 

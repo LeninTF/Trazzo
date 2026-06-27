@@ -14,6 +14,7 @@ class MonthlyClosureTest {
         UUID id = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
 
+        UUID userId = UUID.randomUUID();
         MonthlyClosure closure = new MonthlyClosure(
                 id,
                 6,
@@ -21,7 +22,7 @@ class MonthlyClosureTest {
                 100,
                 "excel-url",
                 "pdf-url",
-                "user-1",
+                userId,
                 createdAt);
 
         assertEquals(id, closure.getId());
@@ -30,7 +31,7 @@ class MonthlyClosureTest {
         assertEquals(100, closure.getTotalEmployees());
         assertEquals("excel-url", closure.getExcelReportUrl());
         assertEquals("pdf-url", closure.getPdfReportUrl());
-        assertEquals("user-1", closure.getCreatedByUserId());
+        assertEquals(userId, closure.getCreatedByUserId());
         assertEquals(createdAt, closure.getCreatedAt());
     }
 
@@ -50,7 +51,7 @@ class MonthlyClosureTest {
                         10,
                         "excel",
                         "pdf",
-                        "user",
+                        UUID.randomUUID(),
                         createdAt));
     }
 
@@ -66,7 +67,7 @@ class MonthlyClosureTest {
                         10,
                         "excel",
                         "pdf",
-                        "user",
+                        UUID.randomUUID(),
                         createdAt));
     }
 
@@ -82,7 +83,7 @@ class MonthlyClosureTest {
                         -1,
                         "excel",
                         "pdf",
-                        "user",
+                        UUID.randomUUID(),
                         createdAt));
     }
 
@@ -97,7 +98,7 @@ class MonthlyClosureTest {
                         10,
                         "excel",
                         "pdf",
-                        "user",
+                        UUID.randomUUID(),
                         createdAt));
     }
 
@@ -128,17 +129,18 @@ class MonthlyClosureTest {
                         10,
                         "excel",
                         "pdf",
-                        "user",
+                        UUID.randomUUID(),
                         null));
     }
 
     @Test
     void shouldCreateNewInstanceWithUpdatedReportUrls() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
 
         MonthlyClosure closure = new MonthlyClosure(
-                id, 6, 2025, 100, null, null, "user-1", createdAt);
+                id, 6, 2025, 100, null, null, userId, createdAt);
 
         MonthlyClosure updated = closure.withReportUrls("new-excel", "new-pdf");
 
@@ -148,7 +150,7 @@ class MonthlyClosureTest {
         assertEquals(6, updated.getMonth());
         assertEquals(2025, updated.getYear());
         assertEquals(100, updated.getTotalEmployees());
-        assertEquals("user-1", updated.getCreatedByUserId());
+        assertEquals(userId, updated.getCreatedByUserId());
         assertEquals(createdAt, updated.getCreatedAt());
 
         assertNull(closure.getExcelReportUrl());

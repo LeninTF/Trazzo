@@ -31,7 +31,7 @@ class SpringEventPublisherAdapterTest {
     @Test
     void shouldPublishDomainEvent() {
         DomainEvent event = new MonthlyClosureCreatedEvent(
-                UUID.randomUUID(), new ClosurePeriod(6, 2025), "user-1", LocalDateTime.now());
+                UUID.randomUUID(), new ClosurePeriod(6, 2025), UUID.randomUUID(), LocalDateTime.now());
 
         adapter.publishEvent(event);
 

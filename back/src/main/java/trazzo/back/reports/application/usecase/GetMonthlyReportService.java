@@ -32,11 +32,12 @@ public class GetMonthlyReportService implements GetMonthlyReportUseCase {
 
         List<MonthlyClosureDetailResult> detailResults = details.stream()
                 .map(d -> new MonthlyClosureDetailResult(
-                        d.getId(), d.getMonthClosureId(), d.getTenantUserFullName(),
-                        d.getTenantUserDocument(), d.getDepartmentName(),
-                        d.getRoleName(), d.getTotalWorkedHours(),
-                        d.getTotalTardinessMinutes(), d.getTotalAbsences(),
-                        d.getTotalOvertimeHours(), d.getCreatedAt()))
+                        d.getId(), d.getMonthClosureId(), d.getTenantUserId(),
+                        d.getTenantUserFullName(), d.getTenantUserDocument(),
+                        d.getDepartmentName(), d.getRoleName(),
+                        d.getTotalWorkedHours(), d.getTotalTardinessMinutes(),
+                        d.getTotalAbsences(), d.getTotalOvertimeHours(),
+                        d.getCreatedAt()))
                 .toList();
 
         return new MonthlyClosureWithDetailsResult(

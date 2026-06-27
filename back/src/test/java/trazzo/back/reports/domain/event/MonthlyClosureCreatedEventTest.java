@@ -13,7 +13,7 @@ class MonthlyClosureCreatedEventTest {
     void shouldCreateEventSuccessfully() {
         UUID closureId = UUID.randomUUID();
         ClosurePeriod period = new ClosurePeriod(6, 2025);
-        String userId = "user-1";
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
 
         MonthlyClosureCreatedEvent event = new MonthlyClosureCreatedEvent(closureId, period, userId, now);
@@ -27,13 +27,13 @@ class MonthlyClosureCreatedEventTest {
     @Test
     void shouldThrowExceptionWhenClosureIdIsNull() {
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosureCreatedEvent(null, new ClosurePeriod(6, 2025), "user", LocalDateTime.now()));
+                () -> new MonthlyClosureCreatedEvent(null, new ClosurePeriod(6, 2025), UUID.randomUUID(), LocalDateTime.now()));
     }
 
     @Test
     void shouldThrowExceptionWhenPeriodIsNull() {
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosureCreatedEvent(UUID.randomUUID(), null, "user", LocalDateTime.now()));
+                () -> new MonthlyClosureCreatedEvent(UUID.randomUUID(), null, UUID.randomUUID(), LocalDateTime.now()));
     }
 
     @Test
@@ -45,6 +45,6 @@ class MonthlyClosureCreatedEventTest {
     @Test
     void shouldThrowExceptionWhenCreatedAtIsNull() {
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosureCreatedEvent(UUID.randomUUID(), new ClosurePeriod(6, 2025), "user", null));
+                () -> new MonthlyClosureCreatedEvent(UUID.randomUUID(), new ClosurePeriod(6, 2025), UUID.randomUUID(), null));
     }
 }

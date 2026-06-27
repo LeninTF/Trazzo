@@ -4,10 +4,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record MonthlyClosureDetailResponse(
-        UUID id, UUID monthClosureId,
+        UUID id, UUID monthClosureId, Integer tenantUserId,
         String tenantUserFullName, String tenantUserDocument,
         String departmentName, String roleName,
-        Double totalWorkedHours, Double totalTardinessMinutes,
+        Double totalWorkedHours, Integer totalTardinessMinutes,
         int totalAbsences, Double totalOvertimeHours,
         LocalDateTime createdAt) {
 }

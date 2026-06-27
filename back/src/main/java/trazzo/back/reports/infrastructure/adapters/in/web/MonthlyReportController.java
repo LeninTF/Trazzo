@@ -42,7 +42,7 @@ public class MonthlyReportController {
 
     private MonthlyClosureDetailResponse toDetailResponse(MonthlyClosureDetailResult detail) {
         return new MonthlyClosureDetailResponse(
-                detail.id(), detail.monthClosureId(),
+                detail.id(), detail.monthClosureId(), detail.tenantUserId(),
                 detail.tenantUserFullName(), detail.tenantUserDocument(),
                 detail.departmentName(), detail.roleName(),
                 detail.totalWorkedHours(), detail.totalTardinessMinutes(),

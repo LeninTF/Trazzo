@@ -34,11 +34,12 @@ class MonthlyClosureJdbcRepositoryTest {
     @Test
     void shouldSaveClosure() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", userId, now);
 
         when(jdbcTemplate.update(anyString(),
-                eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq("user-1"), eq(now)))
+                eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq(userId), eq(now)))
                 .thenReturn(1);
 
         MonthlyClosure result = repository.save(closure);
@@ -46,14 +47,14 @@ class MonthlyClosureJdbcRepositoryTest {
         assertEquals(id, result.getId());
         assertEquals(6, result.getMonth());
         verify(jdbcTemplate).update(anyString(),
-                eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq("user-1"), eq(now));
+                eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq(userId), eq(now));
     }
 
     @Test
     void shouldFindByIdWhenExists() {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(id)))
                 .thenReturn(List.of(closure));
@@ -79,8 +80,8 @@ class MonthlyClosureJdbcRepositoryTest {
     @Test
     void shouldFindAll() {
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure c1 = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e1", "p1", "u1", now);
-        MonthlyClosure c2 = new MonthlyClosure(UUID.randomUUID(), 7, 2025, 5, "e2", "p2", "u2", now);
+        MonthlyClosure c1 = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e1", "p1", UUID.randomUUID(), now);
+        MonthlyClosure c2 = new MonthlyClosure(UUID.randomUUID(), 7, 2025, 5, "e2", "p2", UUID.randomUUID(), now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class)))
                 .thenReturn(List.of(c1, c2));
@@ -93,7 +94,7 @@ class MonthlyClosureJdbcRepositoryTest {
     @Test
     void shouldFindByMonthAndYear() {
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", "u", now);
+        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", UUID.randomUUID(), now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(6), eq(2025)))
                 .thenReturn(List.of(closure));
@@ -108,7 +109,7 @@ class MonthlyClosureJdbcRepositoryTest {
     @Test
     void shouldFindAndLockByMonthAndYear() {
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", "u", now);
+        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", UUID.randomUUID(), now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(6), eq(2025)))
                 .thenReturn(List.of(closure));

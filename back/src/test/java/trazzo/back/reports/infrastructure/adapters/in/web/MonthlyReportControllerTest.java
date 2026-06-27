@@ -35,7 +35,7 @@ class MonthlyReportControllerTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResult detail = new MonthlyClosureDetailResult(
-                UUID.randomUUID(), id, "Juan", "123", "TI", "Dev", 160.0, 10.0, 1, 5.0, now);
+                UUID.randomUUID(), id, 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
         MonthlyClosureWithDetailsResult result = new MonthlyClosureWithDetailsResult(
                 id, 6, 2025, 1, "excel", "pdf", now, List.of(detail));
 

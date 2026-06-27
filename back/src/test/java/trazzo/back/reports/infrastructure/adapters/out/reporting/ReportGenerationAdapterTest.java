@@ -17,7 +17,7 @@ class ReportGenerationAdapterTest {
     @Test
     void shouldGenerateExcelReportUrl() {
         MonthlyClosure closure = new MonthlyClosure(
-                UUID.randomUUID(), 6, 2025, 10, null, null, "user-1", LocalDateTime.now());
+                UUID.randomUUID(), 6, 2025, 10, null, null, UUID.randomUUID(), LocalDateTime.now());
         List<MonthlyClosureDetail> details = List.of();
 
         String url = adapter.generateExcelReport(closure, details);
@@ -30,7 +30,7 @@ class ReportGenerationAdapterTest {
     @Test
     void shouldGeneratePdfReportUrl() {
         MonthlyClosure closure = new MonthlyClosure(
-                UUID.randomUUID(), 6, 2025, 10, null, null, "user-1", LocalDateTime.now());
+                UUID.randomUUID(), 6, 2025, 10, null, null, UUID.randomUUID(), LocalDateTime.now());
         List<MonthlyClosureDetail> details = List.of();
 
         String url = adapter.generatePdfReport(closure, details);
@@ -43,9 +43,9 @@ class ReportGenerationAdapterTest {
     @Test
     void shouldGenerateDifferentUrlsForDifferentClosures() {
         MonthlyClosure c1 = new MonthlyClosure(
-                UUID.randomUUID(), 6, 2025, 10, null, null, "user-1", LocalDateTime.now());
+                UUID.randomUUID(), 6, 2025, 10, null, null, UUID.randomUUID(), LocalDateTime.now());
         MonthlyClosure c2 = new MonthlyClosure(
-                UUID.randomUUID(), 7, 2025, 5, null, null, "user-2", LocalDateTime.now());
+                UUID.randomUUID(), 7, 2025, 5, null, null, UUID.randomUUID(), LocalDateTime.now());
 
         String excel1 = adapter.generateExcelReport(c1, List.of());
         String excel2 = adapter.generateExcelReport(c2, List.of());

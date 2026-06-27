@@ -10,15 +10,16 @@ class MonthlyClosureEntityTest {
     @Test
     void shouldCreateEntitySuccessfully() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosureEntity entity = new MonthlyClosureEntity(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosureEntity entity = new MonthlyClosureEntity(id, 6, 2025, 10, "excel", "pdf", userId, now);
         assertEquals(id, entity.getId());
         assertEquals(6, entity.getMonth());
         assertEquals(2025, entity.getYear());
         assertEquals(10, entity.getTotalEmployees());
         assertEquals("excel", entity.getExcelReportUrl());
         assertEquals("pdf", entity.getPdfReportUrl());
-        assertEquals("user-1", entity.getCreatedByUserId());
+        assertEquals(userId, entity.getCreatedByUserId());
         assertEquals(now, entity.getCreatedAt());
     }
 
@@ -32,6 +33,7 @@ class MonthlyClosureEntityTest {
     void shouldSupportSetters() {
         MonthlyClosureEntity entity = new MonthlyClosureEntity();
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         entity.setId(id);
         entity.setMonth(6);
@@ -39,7 +41,7 @@ class MonthlyClosureEntityTest {
         entity.setTotalEmployees(10);
         entity.setExcelReportUrl("excel");
         entity.setPdfReportUrl("pdf");
-        entity.setCreatedByUserId("user-1");
+        entity.setCreatedByUserId(userId);
         entity.setCreatedAt(now);
         assertEquals(id, entity.getId());
         assertEquals(6, entity.getMonth());
@@ -47,7 +49,7 @@ class MonthlyClosureEntityTest {
         assertEquals(10, entity.getTotalEmployees());
         assertEquals("excel", entity.getExcelReportUrl());
         assertEquals("pdf", entity.getPdfReportUrl());
-        assertEquals("user-1", entity.getCreatedByUserId());
+        assertEquals(userId, entity.getCreatedByUserId());
         assertEquals(now, entity.getCreatedAt());
     }
 }

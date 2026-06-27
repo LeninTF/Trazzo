@@ -1,8 +1,10 @@
 package trazzo.back.reports.infrastructure.adapters.out.persistence.repository;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.reports.application.ports.out.MonthlyClosureRepositoryPort;
+import trazzo.back.reports.domain.exception.DuplicateClosureException;
 import trazzo.back.reports.domain.model.closure.MonthlyClosure;
 
 import java.sql.ResultSet;
@@ -33,11 +35,15 @@ public class MonthlyClosureJdbcRepository implements MonthlyClosureRepositoryPor
 
     @Override
     public MonthlyClosure save(MonthlyClosure closure) {
-        jdbcTemplate.update(INSERT,
-                closure.getId(), closure.getMonth(), closure.getYear(),
-                closure.getTotalEmployees(), closure.getExcelReportUrl(),
-                closure.getPdfReportUrl(), closure.getCreatedByUserId(),
-                closure.getCreatedAt());
+        try {
+            jdbcTemplate.update(INSERT,
+                    closure.getId(), closure.getMonth(), closure.getYear(),
+                    closure.getTotalEmployees(), closure.getExcelReportUrl(),
+                    closure.getPdfReportUrl(), closure.getCreatedByUserId(),
+                    closure.getCreatedAt());
+        } catch (DuplicateKeyException e) {
+            throw new DuplicateClosureException(closure.getMonth(), closure.getYear());
+        }
         return closure;
     }
 
@@ -73,7 +79,7 @@ public class MonthlyClosureJdbcRepository implements MonthlyClosureRepositoryPor
                     rs.getInt("total_employees"),
                     rs.getString("excel_report_url"),
                     rs.getString("pdf_report_url"),
-                    rs.getString("created_by_user_id"),
+                    rs.getObject("created_by_user_id", UUID.class),
                     rs.getObject("created_at", LocalDateTime.class));
         }
     }

@@ -37,7 +37,7 @@ class GetMonthlyClosureServiceTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosure closure = new MonthlyClosure(
-                id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+                id, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), now);
         when(closureRepository.findById(id)).thenReturn(Optional.of(closure));
 
         MonthlyClosureResult result = service.execute(new GetMonthlyClosureCommand(id));

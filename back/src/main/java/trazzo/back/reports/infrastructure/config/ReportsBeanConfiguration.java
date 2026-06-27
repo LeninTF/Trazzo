@@ -55,8 +55,8 @@ public class ReportsBeanConfiguration {
     }
 
     @Bean
-    public EmployeeAttendanceSummaryPort employeeAttendanceSummaryPort() {
-        return new EmployeeAttendanceSummaryAdapter();
+    public EmployeeAttendanceSummaryPort employeeAttendanceSummaryPort(JdbcTemplate jdbcTemplate) {
+        return new EmployeeAttendanceSummaryAdapter(jdbcTemplate);
     }
 
     @Bean

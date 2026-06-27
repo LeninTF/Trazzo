@@ -29,7 +29,7 @@ public class MonthlyClosureDetailController {
 
     private MonthlyClosureDetailResponse toResponse(MonthlyClosureDetailResult result) {
         return new MonthlyClosureDetailResponse(
-                result.id(), result.monthClosureId(),
+                result.id(), result.monthClosureId(), result.tenantUserId(),
                 result.tenantUserFullName(), result.tenantUserDocument(),
                 result.departmentName(), result.roleName(),
                 result.totalWorkedHours(), result.totalTardinessMinutes(),

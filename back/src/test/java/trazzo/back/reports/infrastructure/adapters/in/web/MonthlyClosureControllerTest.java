@@ -49,7 +49,7 @@ class MonthlyClosureControllerTest {
 
     @Test
     void shouldCreateClosure() throws Exception {
-        CreateMonthlyClosureRequest request = new CreateMonthlyClosureRequest(6, 2025, "user-1");
+        CreateMonthlyClosureRequest request = new CreateMonthlyClosureRequest(6, 2025, UUID.randomUUID());
         MonthlyClosureResult result = new MonthlyClosureResult(UUID.randomUUID(), 6, 2025, 5, "excel", "pdf", LocalDateTime.now());
 
         when(createUseCase.execute(any(CreateMonthlyClosureCommand.class))).thenReturn(result);
