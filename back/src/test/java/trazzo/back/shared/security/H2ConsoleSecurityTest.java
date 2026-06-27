@@ -58,7 +58,8 @@ class H2ConsoleSecurityTest {
     @SpringBootApplication(
             excludeName = {
                     "org.springframework.modulith.runtime.autoconfigure.SpringModulithRuntimeAutoConfiguration",
-                    "org.springframework.modulith.actuator.autoconfigure.ApplicationModulesEndpointConfiguration"
+                    "org.springframework.modulith.actuator.autoconfigure.ApplicationModulesEndpointConfiguration",
+                    "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration"
             })
     @Import(SecurityConfig.class)
     static class TestApplication {
