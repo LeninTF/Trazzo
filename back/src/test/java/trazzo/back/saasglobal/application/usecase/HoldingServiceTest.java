@@ -31,7 +31,7 @@ class HoldingServiceTest {
 
     @Test
     void create_savesAndReturnsResult() {
-        var command = new CreateHoldingCommand("20111111111", "Corp SA", "PUBLIC");
+        var command = new CreateHoldingCommand("20111111111", "Corp SA", "PUBLICO");
         when(holdingRepository.existsByTaxId("20111111111")).thenReturn(false);
         when(holdingRepository.save(any())).thenReturn(holding(1));
 
@@ -46,7 +46,7 @@ class HoldingServiceTest {
     @Test
     void create_throwsWhenTaxIdAlreadyExists() {
         when(holdingRepository.existsByTaxId("20111111111")).thenReturn(true);
-        var command = new CreateHoldingCommand("20111111111", "Corp SA", "PUBLIC");
+        var command = new CreateHoldingCommand("20111111111", "Corp SA", "PUBLICO");
 
         assertThrows(IllegalArgumentException.class, () -> service.create(command));
         verify(holdingRepository, never()).save(any());
