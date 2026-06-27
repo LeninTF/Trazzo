@@ -1,14 +1,16 @@
 <Project>
   <PropertyGroup>
     <!--
-      GHSA-2m69-gcr7-jv3q — SQLitePCLRaw.lib.e_sqlite3 2.1.11 (High)
-      Motivo de supresión: no existe versión parcheada publicada en NuGet.
-      2.1.11 es la última versión disponible. La vulnerabilidad está en la
-      biblioteca nativa SQLite empaquetada por el autor (ericsink).
-      Acción pendiente: actualizar SQLitePCLRaw.lib.e_sqlite3 en cuanto
-      se publique la versión 2.1.12 o superior.
-      Advisory: https://github.com/advisories/GHSA-2m69-gcr7-jv3q
+      NU1903 — SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q, High)
+
+      MITIGACIÓN ACTIVA: SourceGear.sqlite3 3.50.4.5 reemplaza e_sqlite3.dll en
+      runtime con SQLite 3.50.4 (parcheado). El paquete vulnerable sigue en el
+      grafo de dependencias transitivas de Microsoft.Data.Sqlite, por lo que NuGet
+      audit sigue reportando NU1903 aunque el binario cargado en runtime sea seguro.
+
+      NoWarn suprime el falso positivo mientras SQLitePCLRaw.lib.e_sqlite3 no
+      publique una versión >= 2.1.12 que incluya SQLite >= 3.50.4.
     -->
-    <NuGetAuditSuppress>https://github.com/advisories/GHSA-2m69-gcr7-jv3q</NuGetAuditSuppress>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 </Project>
