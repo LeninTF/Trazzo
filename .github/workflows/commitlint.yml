@@ -2,41 +2,19 @@ name: Validar Mensajes de Commit (Commitlint)
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
-      - edited
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   commitlint:
     runs-on: ubuntu-latest
     name: Revisar historial de commits
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Crítico: Necesita el historial del PR para validar todos los commits nuevos
 
-      # Detectar Dependabot
-      - name: Detectar Dependabot
-        id: botcheck
-        run: |
-          if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
-            echo "dependabot=true" >> $GITHUB_OUTPUT
-          else
-            echo "dependabot=false" >> $GITHUB_OUTPUT
-          fi
-
-      # Si es Dependabot, no validamos nada pero el job sigue OK
-      - name: Marcar como válido para Dependabot
-        if: steps.botcheck.outputs.dependabot == 'true'
-        run: echo "Dependabot detectado, se marca como OK."
-
-      # Commitlint real SOLO para humanos
       - name: Ejecutar Commitlint
-        if: steps.botcheck.outputs.dependabot == 'false'
         uses: wagoid/commitlint-github-action@v6
         with:
           configFile: commitlint.config.mjs
