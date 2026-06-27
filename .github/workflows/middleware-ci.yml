@@ -175,22 +175,20 @@ jobs:
   # ─────────────────────────────────────────────
   package-msi:
     name: Build MSI (WiX v4 / Self-Contained)
+    if: github.event_name == 'push'
     runs-on: windows-latest
     needs: build-test-analyze
 
     steps:
       - name: Checkout del código
-        if: github.event_name == 'push'
         uses: actions/checkout@v7
 
       - name: Configurar .NET 10
-        if: github.event_name == 'push'
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
       - name: Caché de paquetes NuGet
-        if: github.event_name == 'push'
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
@@ -199,18 +197,15 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Descargar binarios publicados (build-test-analyze)
-        if: github.event_name == 'push'
         uses: actions/download-artifact@v4
         with:
           name: agent-publish-output
           path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
 
       - name: Compilar MSI (WiX v4)
-        if: github.event_name == 'push'
         run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release -p:RuntimeIdentifier=win-x64 -p:SelfContained=true -p:SkipAgentPublish=true
 
       - name: Subir MSI (Español) como artefacto
-        if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: Trazzo.Biometric.Agent-es-ES-build${{ github.run_number }}
