@@ -275,13 +275,18 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         using ClientWebSocket client = new();
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
 
-        // Esperar 1.5 s garantiza que el primer poll del monitor ocurra con
-        // IsConnected=false antes de cambiar el status, incluso en CI (Windows Server
-        // tiene scheduler más lento que Windows 11). Sin este margen el primer poll
-        // puede llegar después de cambiar el status y no se detecta el cambio.
+        // Esperar >1 s garantiza que el primer poll establezca el baseline
+        // (IsConnected=false) antes de cambiar el estado. Los polls posteriores
+        // emiten "device.connecting" mientras el scanner sigue desconectado; los
+        // drenamos hasta recibir el "device.status.changed" definitivo.
         await Task.Delay(TimeSpan.FromMilliseconds(1500), cts.Token);
         scanner.Status = ConnectedStatus();
-        string response = await ReceiveStringAsync(client, cts.Token);
+
+        string response;
+        do
+        {
+            response = await ReceiveStringAsync(client, cts.Token);
+        } while (response.Contains("device.connecting", StringComparison.Ordinal));
 
         Assert.Contains("device.status.changed", response);
         Assert.Contains("\"isConnected\":true", response);
