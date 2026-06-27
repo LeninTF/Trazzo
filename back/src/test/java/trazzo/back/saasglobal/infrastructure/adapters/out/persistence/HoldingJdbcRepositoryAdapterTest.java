@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -106,5 +107,60 @@ class HoldingJdbcRepositoryAdapterTest {
         when(jdbc.queryForObject(anyString(), eq(Integer.class), any())).thenReturn(null);
 
         assertFalse(adapter.existsByTaxId("00000000000"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findById_returnsMappedHoldingPublico() throws Exception {
+        var now = LocalDateTime.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getInt("id")).thenReturn(1);
+        when(rs.getString("tax_id")).thenReturn("20123456789");
+        when(rs.getString("reason_social")).thenReturn("Empresa SAC");
+        when(rs.getString("type")).thenReturn("PUBLICO");
+        when(rs.getBoolean("state")).thenReturn(true);
+        when(rs.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("updated_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("deleted_at", LocalDateTime.class)).thenReturn(null);
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<Holding> mapper = inv.getArgument(1);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        Optional<Holding> result = adapter.findById(1);
+
+        assertTrue(result.isPresent());
+        assertEquals("Empresa SAC", result.get().getLegalName());
+        assertTrue(result.get().isActive());
+        assertEquals(HoldingType.PUBLIC, result.get().getType());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findByTaxId_returnsMappedHoldingPrivado() throws Exception {
+        var now = LocalDateTime.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getInt("id")).thenReturn(2);
+        when(rs.getString("tax_id")).thenReturn("20999999999");
+        when(rs.getString("reason_social")).thenReturn("Corp SAC");
+        when(rs.getString("type")).thenReturn("PRIVADO");
+        when(rs.getBoolean("state")).thenReturn(false);
+        when(rs.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("updated_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("deleted_at", LocalDateTime.class)).thenReturn(null);
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<Holding> mapper = inv.getArgument(1);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        Optional<Holding> result = adapter.findByTaxId("20999999999");
+
+        assertTrue(result.isPresent());
+        assertEquals(HoldingType.PRIVATE, result.get().getType());
+        assertFalse(result.get().isActive());
     }
 }

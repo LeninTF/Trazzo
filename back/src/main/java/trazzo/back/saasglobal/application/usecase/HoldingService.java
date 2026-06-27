@@ -14,6 +14,8 @@ import trazzo.back.saasglobal.domain.model.multitenancy.HoldingType;
 @RequiredArgsConstructor
 public class HoldingService implements HoldingUseCase {
 
+    private static final String NOT_FOUND_MSG = "Holding not found: ";
+
     private final HoldingRepositoryPort holdingRepository;
 
     @Override
@@ -30,7 +32,7 @@ public class HoldingService implements HoldingUseCase {
     public HoldingResult getById(Integer id) {
         return holdingRepository.findById(id)
                 .map(this::toResult)
-                .orElseThrow(() -> new IllegalArgumentException("Holding not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
     }
 
     @Override
@@ -41,7 +43,7 @@ public class HoldingService implements HoldingUseCase {
     @Override
     public HoldingResult activate(Integer id) {
         Holding holding = holdingRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Holding not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
         holding.activate();
         return toResult(holdingRepository.save(holding));
     }
@@ -49,7 +51,7 @@ public class HoldingService implements HoldingUseCase {
     @Override
     public HoldingResult deactivate(Integer id) {
         Holding holding = holdingRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Holding not found: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
         holding.deactivate();
         return toResult(holdingRepository.save(holding));
     }

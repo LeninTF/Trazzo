@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -49,5 +52,33 @@ class PlanJdbcRepositoryAdapterTest {
         List<Plan> result = adapter.findAllActive();
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findById_returnsMappedPlan() throws Exception {
+        var now = LocalDateTime.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getInt("id")).thenReturn(1);
+        when(rs.getString("name")).thenReturn("Basic");
+        when(rs.getBigDecimal("price")).thenReturn(BigDecimal.valueOf(99));
+        when(rs.getString("currency")).thenReturn("SOLES");
+        when(rs.getString("billing_period")).thenReturn("MONTHLY");
+        when(rs.getBoolean("is_active")).thenReturn(true);
+        when(rs.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("updated_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("deleted_at", LocalDateTime.class)).thenReturn(null);
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<Plan> mapper = inv.getArgument(1);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        Optional<Plan> result = adapter.findById(1);
+
+        assertTrue(result.isPresent());
+        assertEquals("Basic", result.get().getName());
+        assertTrue(result.get().isActive());
     }
 }

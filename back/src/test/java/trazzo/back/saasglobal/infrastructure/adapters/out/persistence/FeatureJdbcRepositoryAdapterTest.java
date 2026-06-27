@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -76,5 +77,29 @@ class FeatureJdbcRepositoryAdapterTest {
         adapter.deleteById(5);
 
         verify(jdbc).update(anyString(), eq(5));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findById_returnsMappedFeature() throws Exception {
+        var now = LocalDateTime.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getInt("id")).thenReturn(1);
+        when(rs.getString("name")).thenReturn("Biometric Access");
+        when(rs.getString("description")).thenReturn("Fingerprint auth");
+        when(rs.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("updated_at", LocalDateTime.class)).thenReturn(now);
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<Feature> mapper = inv.getArgument(1);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        Optional<Feature> result = adapter.findById(1);
+
+        assertTrue(result.isPresent());
+        assertEquals("Biometric Access", result.get().getName());
+        assertEquals("Fingerprint auth", result.get().getDescription());
     }
 }
