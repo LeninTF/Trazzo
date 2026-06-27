@@ -46,18 +46,18 @@ class HoldingServiceTest {
     @Test
     void create_throwsWhenTaxIdAlreadyExists() {
         when(holdingRepository.existsByTaxId("20111111111")).thenReturn(true);
+        var command = new CreateHoldingCommand("20111111111", "Corp SA", "PUBLIC");
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.create(new CreateHoldingCommand("20111111111", "Corp SA", "PUBLIC")));
+        assertThrows(IllegalArgumentException.class, () -> service.create(command));
         verify(holdingRepository, never()).save(any());
     }
 
     @Test
     void create_throwsWhenTypeInvalid() {
         when(holdingRepository.existsByTaxId(any())).thenReturn(false);
+        var command = new CreateHoldingCommand("20111111111", "Corp SA", "INVALID");
 
-        assertThrows(IllegalArgumentException.class,
-                () -> service.create(new CreateHoldingCommand("20111111111", "Corp SA", "INVALID")));
+        assertThrows(IllegalArgumentException.class, () -> service.create(command));
     }
 
     @Test
