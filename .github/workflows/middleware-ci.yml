@@ -199,6 +199,7 @@ jobs:
             /o:"methodsync" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.qualitygate.wait=true `
             /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
             /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
@@ -243,13 +244,6 @@ jobs:
           path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
           retention-days: 1
 
-      - name: Subir reporte de tarea SonarCloud
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonar-report
-          path: middleware/.sonarqube/out/.sonar/report-task.txt
-          retention-days: 1
-
       - name: Subir resultados de tests
         if: always()
         uses: actions/upload-artifact@v4
@@ -259,31 +253,7 @@ jobs:
           retention-days: 7
 
   # ─────────────────────────────────────────────
-  # PUSH: Quality Gate bloqueante (Ubuntu — paralelo al MSI)
-  # ─────────────────────────────────────────────
-  sonar-quality-gate:
-    name: Quality Gate SonarCloud
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    needs: build-test-analyze
-
-    steps:
-      - name: Descargar reporte de tarea SonarCloud
-        uses: actions/download-artifact@v4
-        with:
-          name: sonar-report
-          path: middleware/.sonarqube/out/.sonar/
-
-      - name: Verificar Quality Gate de SonarCloud
-        uses: SonarSource/sonarqube-quality-gate-action@v1
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: middleware/.sonarqube/out/.sonar/report-task.txt
-
-  # ─────────────────────────────────────────────
-  # PUSH: Generar instalador .msi (paralelo al Quality Gate)
+  # PUSH: Generar instalador .msi (en paralelo al análisis principal)
   # ─────────────────────────────────────────────
   package-msi:
     name: Build MSI (WiX v4 / Self-Contained)
