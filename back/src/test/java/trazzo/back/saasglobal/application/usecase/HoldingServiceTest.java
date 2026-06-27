@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreateHoldingCommand;
+import trazzo.back.saasglobal.application.dto.command.UpdateHoldingCommand;
 import trazzo.back.saasglobal.application.dto.result.HoldingResult;
 import trazzo.back.saasglobal.application.port.out.HoldingRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Holding;
@@ -120,5 +121,49 @@ class HoldingServiceTest {
         when(holdingRepository.findById(99)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> service.deactivate(99));
+    }
+
+    @Test
+    void update_savesAndReturnsUpdated() {
+        var command = new UpdateHoldingCommand(1, "Corp Nueva SA", "PUBLICO");
+        when(holdingRepository.findById(1)).thenReturn(Optional.of(holding(1)));
+        when(holdingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        HoldingResult result = service.update(command);
+
+        assertEquals("Corp Nueva SA", result.legalName());
+        assertEquals("PUBLICO", result.type());
+    }
+
+    @Test
+    void update_throwsWhenNotFound() {
+        when(holdingRepository.findById(99)).thenReturn(Optional.empty());
+        var command = new UpdateHoldingCommand(99, "Corp", "PUBLICO");
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(command));
+    }
+
+    @Test
+    void update_throwsWhenTypeInvalid() {
+        when(holdingRepository.findById(1)).thenReturn(Optional.of(holding(1)));
+        var command = new UpdateHoldingCommand(1, "Corp", "INVALID");
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(command));
+    }
+
+    @Test
+    void deleteById_setsDeletedAndSaves() {
+        when(holdingRepository.findById(1)).thenReturn(Optional.of(holding(1)));
+        when(holdingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertDoesNotThrow(() -> service.deleteById(1));
+        verify(holdingRepository).save(any());
+    }
+
+    @Test
+    void deleteById_throwsWhenNotFound() {
+        when(holdingRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> service.deleteById(99));
     }
 }

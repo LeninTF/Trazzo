@@ -42,4 +42,27 @@ class FeatureTest {
         assertThrows(IllegalArgumentException.class,
                 () -> Feature.create(name, "description"));
     }
+
+    @Test
+    void update_changesNameAndDescription() {
+        Feature f = Feature.create("Biometric", "Fingerprint auth");
+        f.update("GPS", "Location tracking");
+        assertEquals("GPS", f.getName());
+        assertEquals("Location tracking", f.getDescription());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    void update_throwsWhenNameBlank(String name) {
+        Feature f = Feature.create("Biometric", "Fingerprint auth");
+        assertThrows(IllegalArgumentException.class, () -> f.update(name, "desc"));
+    }
+
+    @Test
+    void update_allowsNullDescription() {
+        Feature f = Feature.create("Biometric", "Fingerprint auth");
+        assertDoesNotThrow(() -> f.update("GPS", null));
+        assertNull(f.getDescription());
+    }
 }

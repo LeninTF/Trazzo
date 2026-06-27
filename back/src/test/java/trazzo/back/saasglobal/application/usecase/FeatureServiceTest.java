@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreateFeatureCommand;
+import trazzo.back.saasglobal.application.dto.command.UpdateFeatureCommand;
 import trazzo.back.saasglobal.application.dto.result.FeatureResult;
 import trazzo.back.saasglobal.application.port.out.FeatureRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Feature;
@@ -77,5 +78,25 @@ class FeatureServiceTest {
 
         assertDoesNotThrow(() -> service.deleteById(1));
         verify(featureRepository).deleteById(1);
+    }
+
+    @Test
+    void update_savesAndReturnsUpdated() {
+        when(featureRepository.findById(1)).thenReturn(Optional.of(feature(1)));
+        when(featureRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var command = new UpdateFeatureCommand(1, "GPS", "Location tracking");
+
+        FeatureResult result = service.update(command);
+
+        assertEquals("GPS", result.name());
+        assertEquals("Location tracking", result.description());
+    }
+
+    @Test
+    void update_throwsWhenNotFound() {
+        when(featureRepository.findById(99)).thenReturn(Optional.empty());
+        var command = new UpdateFeatureCommand(99, "GPS", "desc");
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(command));
     }
 }

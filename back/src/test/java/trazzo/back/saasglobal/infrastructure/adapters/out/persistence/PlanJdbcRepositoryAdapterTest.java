@@ -81,4 +81,29 @@ class PlanJdbcRepositoryAdapterTest {
         assertEquals("Basic", result.get().getName());
         assertTrue(result.get().isActive());
     }
+
+    @Test
+    void save_insertsNewPlanAndReturnsWithId() {
+        Plan newPlan = Plan.create("Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY");
+        when(jdbc.queryForObject(anyString(), eq(Integer.class),
+                any(), any(), any(), any(), any(), any(), any())).thenReturn(42);
+
+        Plan saved = adapter.save(newPlan);
+
+        assertEquals(42, saved.getId());
+        assertEquals("Basic", saved.getName());
+        assertTrue(saved.isActive());
+    }
+
+    @Test
+    void save_updatesExistingPlanAndReturnsSameInstance() {
+        var now = LocalDateTime.now();
+        Plan existing = Plan.restore(1, "Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY",
+                true, now, now, null);
+
+        Plan saved = adapter.save(existing);
+
+        assertSame(existing, saved);
+        verify(jdbc).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
 }

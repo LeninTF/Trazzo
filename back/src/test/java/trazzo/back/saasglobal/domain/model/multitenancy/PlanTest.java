@@ -94,4 +94,50 @@ class PlanTest {
         plan.activate();
         assertTrue(plan.isActive());
     }
+
+    @Test
+    void update_changesFields() {
+        var plan = Plan.create("Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY");
+        plan.update("Pro", BigDecimal.valueOf(199), "DOLAR", "ANNUAL");
+        assertEquals("Pro", plan.getName());
+        assertEquals(BigDecimal.valueOf(199), plan.getPrice());
+        assertEquals("DOLAR", plan.getCurrency());
+        assertEquals("ANNUAL", plan.getBillingPeriod());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    void update_throwsWhenNameBlank(String name) {
+        var plan = Plan.create("Basic", BigDecimal.ONE, "SOLES", "MONTHLY");
+        assertThrows(IllegalArgumentException.class,
+                () -> plan.update(name, BigDecimal.ONE, "SOLES", "MONTHLY"));
+    }
+
+    @Test
+    void update_throwsWhenPriceNegative() {
+        var plan = Plan.create("Basic", BigDecimal.ONE, "SOLES", "MONTHLY");
+        var negative = new BigDecimal("-1");
+        assertThrows(IllegalArgumentException.class,
+                () -> plan.update("Basic", negative, "SOLES", "MONTHLY"));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    void update_throwsWhenCurrencyBlank(String currency) {
+        var plan = Plan.create("Basic", BigDecimal.ONE, "SOLES", "MONTHLY");
+        assertThrows(IllegalArgumentException.class,
+                () -> plan.update("Basic", BigDecimal.ONE, currency, "MONTHLY"));
+    }
+
+    @Test
+    void delete_setsIsActiveAndDeletedAt() {
+        var plan = Plan.create("Basic", BigDecimal.ONE, "SOLES", "MONTHLY");
+        assertTrue(plan.isActive());
+        assertNull(plan.getDeletedAt());
+        plan.delete();
+        assertFalse(plan.isActive());
+        assertNotNull(plan.getDeletedAt());
+    }
 }

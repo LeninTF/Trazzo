@@ -80,4 +80,36 @@ class HoldingTest {
         h.activate();
         assertTrue(h.isActive());
     }
+
+    @Test
+    void update_changesLegalNameAndType() {
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
+        h.update("Nueva Corp", HoldingType.PUBLICO);
+        assertEquals("Nueva Corp", h.getLegalName());
+        assertEquals(HoldingType.PUBLICO, h.getType());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" "})
+    void update_throwsWhenLegalNameBlank(String legalName) {
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
+        assertThrows(IllegalArgumentException.class, () -> h.update(legalName, HoldingType.PUBLICO));
+    }
+
+    @Test
+    void update_throwsWhenTypeNull() {
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
+        assertThrows(IllegalArgumentException.class, () -> h.update("Corp SA", null));
+    }
+
+    @Test
+    void delete_setsActiveAndDeletedAt() {
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
+        assertTrue(h.isActive());
+        assertNull(h.getDeletedAt());
+        h.delete();
+        assertFalse(h.isActive());
+        assertNotNull(h.getDeletedAt());
+    }
 }
