@@ -12,7 +12,14 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=local
-      - DB_URL=jdbc:postgresql://postgres-local:5432/trazzo_db
+      - DB_URL=jdbc:postgresql://postgres-local:5432/trazzo_dev_db
+      - DB_USER=postgres
+      - DB_PASSWORD=admin
+      - PROVISIONING_ADMIN_URL=jdbc:postgresql://postgres-local:5432/postgres
+      - PROVISIONING_ADMIN_USER=postgres
+      - PROVISIONING_ADMIN_PASS=admin
+      - PROVISIONING_DB_HOST=postgres-local
+      - PROVISIONING_DB_PORT=5432
     networks:
       - trazzo-local-net
 
@@ -34,9 +41,9 @@ services:
     image: postgres:15-alpine
     container_name: trazzo-db-local
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: trazzo_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: trazzo_dev_db
     networks:
       - trazzo-local-net
 

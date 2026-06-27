@@ -1,11 +1,13 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import trazzo.back.incidents.application.dto.command.NotifyIncidentCommand;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 
 @RequiredArgsConstructor
+@Service
 public class NotificationService implements NotificationUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

@@ -1,6 +1,7 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
+@Service
 public class IncidentService implements IncidentUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

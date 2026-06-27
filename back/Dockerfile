@@ -20,7 +20,7 @@ RUN ./mvnw clean package -DskipTests
 
 # 5. Extraer el JAR en capas (Layered JAR) usando jarmode (Spring Boot 3.3+)
 WORKDIR /build/extracted
-RUN java -Djarmode=tools -jar /build/target/*.jar extract --layers --destination .
+RUN java -Djarmode=tools -jar /build/target/*.jar extract --launcher --layers --destination .
 
 # Etapa 2: Imagen de Ejecución Ligera (Runtime)
 FROM eclipse-temurin:21-jre
