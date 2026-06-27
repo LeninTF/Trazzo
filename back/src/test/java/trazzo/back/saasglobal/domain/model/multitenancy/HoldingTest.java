@@ -13,13 +13,13 @@ class HoldingTest {
     @Test
     void create_setsFieldsCorrectly() {
         var before = LocalDateTime.now();
-        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVATE);
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
         var after = LocalDateTime.now();
 
         assertNull(h.getId());
         assertEquals("20123456789", h.getTaxId());
         assertEquals("Empresa SAC", h.getLegalName());
-        assertEquals(HoldingType.PRIVATE, h.getType());
+        assertEquals(HoldingType.PRIVADO, h.getType());
         assertTrue(h.isActive());
         assertNull(h.getDeletedAt());
         assertFalse(h.getCreatedAt().isBefore(before));
@@ -31,7 +31,7 @@ class HoldingTest {
     @ValueSource(strings = {" "})
     void create_throwsWhenTaxIdBlank(String taxId) {
         assertThrows(IllegalArgumentException.class,
-                () -> Holding.create(taxId, "Empresa SAC", HoldingType.PRIVATE));
+                () -> Holding.create(taxId, "Empresa SAC", HoldingType.PRIVADO));
     }
 
     @ParameterizedTest
@@ -39,7 +39,7 @@ class HoldingTest {
     @ValueSource(strings = {" "})
     void create_throwsWhenLegalNameBlank(String legalName) {
         assertThrows(IllegalArgumentException.class,
-                () -> Holding.create("20123456789", legalName, HoldingType.PRIVATE));
+                () -> Holding.create("20123456789", legalName, HoldingType.PRIVADO));
     }
 
     @Test
@@ -51,13 +51,13 @@ class HoldingTest {
     @Test
     void restore_setsAllFields() {
         var now = LocalDateTime.now();
-        var h = Holding.restore(3, "20999999999", "Corp SA", HoldingType.PUBLIC,
+        var h = Holding.restore(3, "20999999999", "Corp SA", HoldingType.PUBLICO,
                 false, now, now, now);
 
         assertEquals(3, h.getId());
         assertEquals("20999999999", h.getTaxId());
         assertEquals("Corp SA", h.getLegalName());
-        assertEquals(HoldingType.PUBLIC, h.getType());
+        assertEquals(HoldingType.PUBLICO, h.getType());
         assertFalse(h.isActive());
         assertEquals(now, h.getCreatedAt());
         assertEquals(now, h.getDeletedAt());
@@ -65,7 +65,7 @@ class HoldingTest {
 
     @Test
     void deactivate_setsActiveFalse() {
-        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVATE);
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
         assertTrue(h.isActive());
         h.deactivate();
         assertFalse(h.isActive());
@@ -74,7 +74,7 @@ class HoldingTest {
     @Test
     void activate_setsActiveTrue() {
         var now = LocalDateTime.now();
-        var h = Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PRIVATE,
+        var h = Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PRIVADO,
                 false, now, now, null);
         assertFalse(h.isActive());
         h.activate();

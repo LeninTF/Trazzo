@@ -26,7 +26,7 @@ class HoldingServiceTest {
 
     private static Holding holding(int id) {
         var now = LocalDateTime.now();
-        return Holding.restore(id, "20111111111", "Corp SA", HoldingType.PUBLIC, true, now, now, null);
+        return Holding.restore(id, "20111111111", "Corp SA", HoldingType.PUBLICO, true, now, now, null);
     }
 
     @Test
@@ -88,7 +88,7 @@ class HoldingServiceTest {
     @Test
     void activate_savesAndReturnsActivatedHolding() {
         var now = LocalDateTime.now();
-        var inactive = Holding.restore(1, "20111111111", "Corp SA", HoldingType.PUBLIC,
+        var inactive = Holding.restore(1, "20111111111", "Corp SA", HoldingType.PUBLICO,
                 false, now, now, null);
         when(holdingRepository.findById(1)).thenReturn(Optional.of(inactive));
         when(holdingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

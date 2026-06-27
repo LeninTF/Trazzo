@@ -28,12 +28,12 @@ class HoldingJdbcRepositoryAdapterTest {
     @InjectMocks HoldingJdbcRepositoryAdapter adapter;
 
     private static Holding newHolding() {
-        return Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVATE);
+        return Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
     }
 
     private static Holding savedHolding() {
         var now = LocalDateTime.now();
-        return Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PUBLIC,
+        return Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PUBLICO,
                 true, now, now, null);
     }
 
@@ -134,7 +134,7 @@ class HoldingJdbcRepositoryAdapterTest {
         assertTrue(result.isPresent());
         assertEquals("Empresa SAC", result.get().getLegalName());
         assertTrue(result.get().isActive());
-        assertEquals(HoldingType.PUBLIC, result.get().getType());
+        assertEquals(HoldingType.PUBLICO, result.get().getType());
     }
 
     @Test
@@ -160,7 +160,7 @@ class HoldingJdbcRepositoryAdapterTest {
         Optional<Holding> result = adapter.findByTaxId("20999999999");
 
         assertTrue(result.isPresent());
-        assertEquals(HoldingType.PRIVATE, result.get().getType());
+        assertEquals(HoldingType.PRIVADO, result.get().getType());
         assertFalse(result.get().isActive());
     }
 }

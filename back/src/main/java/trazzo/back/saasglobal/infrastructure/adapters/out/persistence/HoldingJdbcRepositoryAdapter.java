@@ -97,10 +97,10 @@ public class HoldingJdbcRepositoryAdapter implements HoldingRepositoryPort {
     }
 
     private static String toSqlType(HoldingType type) {
-        return type == HoldingType.PUBLIC ? "PUBLICO" : "PRIVADO";
+        return type == HoldingType.PUBLICO ? "PUBLICO" : "PRIVADO";
     }
 
     private static HoldingType fromSqlType(String type) {
-        return "PUBLICO".equals(type) ? HoldingType.PUBLIC : HoldingType.PRIVATE;
+        return "PUBLICO".equals(type) ? HoldingType.PUBLICO : HoldingType.PRIVADO;
     }
 }
