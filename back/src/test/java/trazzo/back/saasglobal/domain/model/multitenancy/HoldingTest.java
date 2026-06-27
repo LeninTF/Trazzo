@@ -13,14 +13,14 @@ class HoldingTest {
     @Test
     void create_setsFieldsCorrectly() {
         var before = LocalDateTime.now();
-        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVATE);
         var after = LocalDateTime.now();
 
         assertNull(h.getId());
         assertEquals("20123456789", h.getTaxId());
-        assertEquals("Empresa SAC", h.getReasonSocial());
-        assertEquals(HoldingType.PRIVADO, h.getType());
-        assertTrue(h.isState());
+        assertEquals("Empresa SAC", h.getLegalName());
+        assertEquals(HoldingType.PRIVATE, h.getType());
+        assertTrue(h.isActive());
         assertNull(h.getDeletedAt());
         assertFalse(h.getCreatedAt().isBefore(before));
         assertFalse(h.getCreatedAt().isAfter(after));
@@ -31,15 +31,15 @@ class HoldingTest {
     @ValueSource(strings = {" "})
     void create_throwsWhenTaxIdBlank(String taxId) {
         assertThrows(IllegalArgumentException.class,
-                () -> Holding.create(taxId, "Empresa SAC", HoldingType.PRIVADO));
+                () -> Holding.create(taxId, "Empresa SAC", HoldingType.PRIVATE));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" "})
-    void create_throwsWhenReasonSocialBlank(String reasonSocial) {
+    void create_throwsWhenLegalNameBlank(String legalName) {
         assertThrows(IllegalArgumentException.class,
-                () -> Holding.create("20123456789", reasonSocial, HoldingType.PRIVADO));
+                () -> Holding.create("20123456789", legalName, HoldingType.PRIVATE));
     }
 
     @Test
@@ -51,33 +51,33 @@ class HoldingTest {
     @Test
     void restore_setsAllFields() {
         var now = LocalDateTime.now();
-        var h = Holding.restore(3, "20999999999", "Corp SA", HoldingType.PUBLICO,
+        var h = Holding.restore(3, "20999999999", "Corp SA", HoldingType.PUBLIC,
                 false, now, now, now);
 
         assertEquals(3, h.getId());
         assertEquals("20999999999", h.getTaxId());
-        assertEquals("Corp SA", h.getReasonSocial());
-        assertEquals(HoldingType.PUBLICO, h.getType());
-        assertFalse(h.isState());
+        assertEquals("Corp SA", h.getLegalName());
+        assertEquals(HoldingType.PUBLIC, h.getType());
+        assertFalse(h.isActive());
         assertEquals(now, h.getCreatedAt());
         assertEquals(now, h.getDeletedAt());
     }
 
     @Test
-    void deactivate_setsStateFalse() {
-        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVADO);
-        assertTrue(h.isState());
+    void deactivate_setsActiveFalse() {
+        var h = Holding.create("20123456789", "Empresa SAC", HoldingType.PRIVATE);
+        assertTrue(h.isActive());
         h.deactivate();
-        assertFalse(h.isState());
+        assertFalse(h.isActive());
     }
 
     @Test
-    void activate_setsStateTrue() {
+    void activate_setsActiveTrue() {
         var now = LocalDateTime.now();
-        var h = Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PRIVADO,
+        var h = Holding.restore(1, "20123456789", "Empresa SAC", HoldingType.PRIVATE,
                 false, now, now, null);
-        assertFalse(h.isState());
+        assertFalse(h.isActive());
         h.activate();
-        assertTrue(h.isState());
+        assertTrue(h.isActive());
     }
 }
