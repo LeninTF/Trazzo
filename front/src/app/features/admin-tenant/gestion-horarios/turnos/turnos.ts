@@ -1,5 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from '../../../../api/services/api.service';
+import { ToastService } from '../../../../services/toast.service';
 
 interface Horario {
   id: number;
@@ -19,32 +22,12 @@ interface Turno {
   templateUrl: './turnos.html',
   styleUrl: './turnos.css',
 })
-export class TurnosComponent {
-  turnos: Turno[] = [
-    {
-      id: 1,
-      nombre: 'Turno Mañana',
-      horarios: [
-        { id: 1, inicio: '08:00', fin: '12:00' },
-        { id: 2, inicio: '14:00', fin: '18:00' },
-      ],
-    },
-    {
-      id: 2,
-      nombre: 'Turno Tarde',
-      horarios: [
-        { id: 3, inicio: '13:00', fin: '17:00' },
-        { id: 4, inicio: '18:00', fin: '22:00' },
-      ],
-    },
-    {
-      id: 3,
-      nombre: 'Turno Noche',
-      horarios: [
-        { id: 5, inicio: '22:00', fin: '02:00' },
-      ],
-    },
-  ];
+export class TurnosComponent implements OnInit {
+  private readonly api = inject(ApiService);
+  private readonly toastService = inject(ToastService);
+  readonly loading = signal(false);
+
+  turnos: Turno[] = [];
 
   turnoForm: FormGroup;
   editTurnoForm: FormGroup;
@@ -55,9 +38,6 @@ export class TurnosComponent {
   editingTurnoId: number | null = null;
   activeHorarioTurnoId: number | null = null;
   editingHorarioKey: string | null = null;
-
-  private nextTurnoId = 4;
-  private nextHorarioId = 6;
 
   constructor(private fb: FormBuilder) {
     this.turnoForm = this.fb.group({
@@ -76,6 +56,30 @@ export class TurnosComponent {
     });
   }
 
+  async ngOnInit(): Promise<void> {
+    await this.cargarTurnos();
+  }
+
+  async cargarTurnos(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const res = await firstValueFrom(this.api.horarios.listShifts({ size: 50 }));
+      this.turnos = res.content.map(s => ({
+        id: s.id,
+        nombre: s.name,
+        horarios: (s.schedules ?? []).map(h => ({
+          id: h.id,
+          inicio: h.entry_time.slice(0, 5),
+          fin: h.departure_time.slice(0, 5),
+        })),
+      }));
+    } catch {
+      this.toastService.error('Error al cargar turnos');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   openNewTurnoModal(): void {
     this.turnoForm.reset();
     this.showNewTurnoModal = true;
@@ -86,13 +90,15 @@ export class TurnosComponent {
     this.turnoForm.reset();
   }
 
-  addTurno(): void {
+  async addTurno(): Promise<void> {
     if (this.turnoForm.invalid) return;
-    this.turnos.push({
-      id: this.nextTurnoId++,
-      nombre: this.turnoForm.value.nombre,
-      horarios: [],
-    });
+    try {
+      await firstValueFrom(this.api.horarios.createShift({ name: this.turnoForm.value.nombre }));
+      await this.cargarTurnos();
+      this.toastService.success('Turno creado');
+    } catch {
+      this.toastService.error('Error al crear turno');
+    }
     this.cancelNewTurno();
   }
 
@@ -106,14 +112,26 @@ export class TurnosComponent {
     this.editTurnoForm.reset();
   }
 
-  saveEditTurno(turno: Turno): void {
+  async saveEditTurno(turno: Turno): Promise<void> {
     if (this.editTurnoForm.invalid) return;
-    turno.nombre = this.editTurnoForm.value.nombre;
+    try {
+      await firstValueFrom(this.api.horarios.patchShift(turno.id, { name: this.editTurnoForm.value.nombre }));
+      await this.cargarTurnos();
+      this.toastService.success('Turno actualizado');
+    } catch {
+      this.toastService.error('Error al actualizar turno');
+    }
     this.cancelEditTurno();
   }
 
-  deleteTurno(id: number): void {
-    this.turnos = this.turnos.filter(t => t.id !== id);
+  async deleteTurno(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.api.horarios.deleteShift(id));
+      await this.cargarTurnos();
+      this.toastService.success('Turno eliminado');
+    } catch {
+      this.toastService.error('Error al eliminar turno');
+    }
   }
 
   showAddHorario(turnoId: number): void {
@@ -126,15 +144,20 @@ export class TurnosComponent {
     this.horarioForm.reset();
   }
 
-  addHorario(turnoId: number): void {
+  async addHorario(turnoId: number): Promise<void> {
     if (this.horarioForm.invalid) return;
-    const turno = this.turnos.find(t => t.id === turnoId);
-    if (!turno) return;
-    turno.horarios.push({
-      id: this.nextHorarioId++,
-      inicio: this.horarioForm.value.inicio,
-      fin: this.horarioForm.value.fin,
-    });
+    try {
+      await firstValueFrom(this.api.horarios.createSchedule({
+        shift_id: turnoId,
+        name: `${this.horarioForm.value.inicio}-${this.horarioForm.value.fin}`,
+        entry_time: this.horarioForm.value.inicio,
+        departure_time: this.horarioForm.value.fin,
+      }));
+      await this.cargarTurnos();
+      this.toastService.success('Horario agregado');
+    } catch {
+      this.toastService.error('Error al agregar horario');
+    }
     this.cancelAddHorario();
   }
 
@@ -148,17 +171,29 @@ export class TurnosComponent {
     this.editHorarioForm.reset();
   }
 
-  saveEditHorario(turnoId: number, horario: Horario): void {
+  async saveEditHorario(turnoId: number, horario: Horario): Promise<void> {
     if (this.editHorarioForm.invalid) return;
-    horario.inicio = this.editHorarioForm.value.inicio;
-    horario.fin = this.editHorarioForm.value.fin;
+    try {
+      await firstValueFrom(this.api.horarios.patchSchedule(horario.id, {
+        entry_time: this.editHorarioForm.value.inicio,
+        departure_time: this.editHorarioForm.value.fin,
+      }));
+      await this.cargarTurnos();
+      this.toastService.success('Horario actualizado');
+    } catch {
+      this.toastService.error('Error al actualizar horario');
+    }
     this.cancelEditHorario();
   }
 
-  deleteHorario(turnoId: number, horarioId: number): void {
-    const turno = this.turnos.find(t => t.id === turnoId);
-    if (!turno) return;
-    turno.horarios = turno.horarios.filter(h => h.id !== horarioId);
+  async deleteHorario(turnoId: number, horarioId: number): Promise<void> {
+    try {
+      await firstValueFrom(this.api.horarios.deleteSchedule(horarioId));
+      await this.cargarTurnos();
+      this.toastService.success('Horario eliminado');
+    } catch {
+      this.toastService.error('Error al eliminar horario');
+    }
   }
 
   isEditingHorario(turnoId: number, horarioId: number): boolean {

@@ -1,6 +1,11 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, signal, inject, OnInit } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from '../../../api/services/api.service';
+import type { IncidentProfile } from '../../../api/types';
+import { ToastService } from '../../../services/toast.service';
 
 interface IncidenciaSolicitud {
+  id: number;
   colaborador: string;
   rol: string;
   tipo: string;
@@ -17,6 +22,25 @@ interface IncidenciaSolicitud {
 }
 
 type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
+const STATE_MAP: Record<string, 'Pendiente' | 'Aprobado' | 'Rechazado'> = {
+  PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', DENEGADO: 'Rechazado',
+};
+
+function toSolicitud(inc: IncidentProfile): IncidenciaSolicitud {
+  const e = inc.evidencias?.[0];
+  return {
+    id: inc.id,
+    colaborador: `${inc.tenant_user.nombre} ${inc.tenant_user.apellido_paterno}`,
+    rol: '',
+    tipo: inc.tipo.nombre,
+    periodo: inc.created_at?.slice(0, 10) ?? '',
+    detalle: inc.comment?.slice(0, 40) ?? '',
+    estado: STATE_MAP[inc.state] ?? 'Pendiente',
+    descripcion: inc.comment ?? '',
+    fechaCreacion: inc.created_at ? new Date(inc.created_at).toLocaleDateString('es-PE') : '',
+    archivo: e ? { nombre: e.file_name ?? 'archivo', tipo: e.mime_type ?? 'application/octet-stream', tamano: e.file_size ? `${(e.file_size / 1024).toFixed(1)} KB` : '—' } : null,
+  };
+}
 
 @Component({
   selector: 'app-incidencias',
@@ -25,7 +49,11 @@ type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
   templateUrl: './incidencias.html',
   styleUrl: './incidencias.css',
 })
-export class Incidencias {
+export class Incidencias implements OnInit {
+  private readonly api = inject(ApiService);
+  private readonly toastService = inject(ToastService);
+  readonly loading = signal(false);
+
   modalOpen = false;
   filterOpen = false;
   selectedSolicitud: IncidenciaSolicitud | null = null;
@@ -33,55 +61,9 @@ export class Incidencias {
   filterEstado = signal<EstadoFilter>('Todos');
   filterTipo = signal<string>('');
 
-  tiposDisponibles = ['Permiso Médico', 'Vacaciones', 'Falta Justificada'];
+  tiposDisponibles: string[] = [];
 
-  solicitudes = signal<IncidenciaSolicitud[]>([
-    {
-      colaborador: 'Mariana Rodríguez',
-      rol: 'Docente de Matemáticas',
-      tipo: 'Permiso Médico',
-      periodo: '12–14 Jun',
-      detalle: '3 días hábiles',
-      estado: 'Pendiente',
-      descripcion: 'Solicito permiso médico por diagnóstico de influenza. Adjunto certificado médico emitido por la Clínica San Pablo.',
-      fechaCreacion: '02/06/2026',
-      archivo: {
-        nombre: 'certificado-medico-mariana.pdf',
-        tipo: 'application/pdf',
-        tamano: '1.2 MB',
-      },
-    },
-    {
-      colaborador: 'Jorge Salazar',
-      rol: 'Servicios Generales',
-      tipo: 'Vacaciones',
-      periodo: '15–30 Jul',
-      detalle: '15 días naturales',
-      estado: 'Aprobado',
-      descripcion: 'Solicitud de vacaciones aprobadas por el área de RRHH. Periodo solicitado desde el 15 de julio al 30 de julio.',
-      fechaCreacion: '20/05/2026',
-      archivo: {
-        nombre: 'solicitud-vacaciones-jorge.pdf',
-        tipo: 'application/pdf',
-        tamano: '0.8 MB',
-      },
-    },
-    {
-      colaborador: 'Carla Méndez',
-      rol: 'Secretaria Académica',
-      tipo: 'Falta Justificada',
-      periodo: '05 Jun',
-      detalle: '1 día',
-      estado: 'Pendiente',
-      descripcion: 'Inasistencia por emergencia familiar. Adjunto documento de justificación firmado por el coordinador académico.',
-      fechaCreacion: '05/06/2026',
-      archivo: {
-        nombre: 'justificacion-carla.pdf',
-        tipo: 'application/pdf',
-        tamano: '0.5 MB',
-      },
-    },
-  ]);
+  solicitudes = signal<IncidenciaSolicitud[]>([]);
 
   filtradas = computed(() => {
     return this.solicitudes().filter(s => {
@@ -95,36 +77,43 @@ export class Incidencias {
   aprobadas = computed(() => this.filtradas().filter(s => s.estado === 'Aprobado'));
   rechazadas = computed(() => this.filtradas().filter(s => s.estado === 'Rechazado'));
 
-  get metricas(): { titulo: string; valor: number | string; subtitulo: string; icono: string; color: string; bg: string }[] {
+  get metricas() {
     const p = this.pendientes().length;
     const a = this.aprobadas().length;
     const r = this.rechazadas().length;
     return [
       {
-        titulo: 'Pendientes',
-        valor: p,
-        subtitulo: '+4 esta semana',
-        icono: 'bi-clock-history',
-        color: '#F59E0B',
-        bg: '#FFFBEB',
+        titulo: 'Pendientes', valor: p, subtitulo: '+4 esta semana',
+        icono: 'bi-clock-history', color: '#F59E0B', bg: '#FFFBEB',
       },
       {
-        titulo: 'Aprobadas',
-        valor: a,
-        subtitulo: 'Mes de Junio',
-        icono: 'bi-check-circle',
-        color: '#10B981',
-        bg: '#F0FDF4',
+        titulo: 'Aprobadas', valor: a, subtitulo: 'Mes de Junio',
+        icono: 'bi-check-circle', color: '#10B981', bg: '#F0FDF4',
       },
       {
-        titulo: 'Rechazadas',
-        valor: r < 10 ? '0' + r : r,
+        titulo: 'Rechazadas', valor: r < 10 ? '0' + r : r,
         subtitulo: r === 0 ? 'Sin incidencias críticas' : 'Requieren atención',
-        icono: 'bi-x-circle',
-        color: '#EF4444',
-        bg: '#FEF2F2',
+        icono: 'bi-x-circle', color: '#EF4444', bg: '#FEF2F2',
       },
     ];
+  }
+
+  async ngOnInit(): Promise<void> {
+    await this.cargarIncidencias();
+  }
+
+  async cargarIncidencias(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const incRes = await firstValueFrom(this.api.incidents.list({ size: 100 }));
+      this.solicitudes.set(incRes.content.map(inc => toSolicitud(inc)));
+      const tipos = [...new Set(incRes.content.map(inc => inc.tipo.nombre))];
+      this.tiposDisponibles = tipos;
+    } catch {
+      this.toastService.error('Error al cargar incidencias');
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   toggleFilter(): void {
@@ -160,17 +149,25 @@ export class Incidencias {
     document.body.style.overflow = '';
   }
 
-  aprobar(solicitud: IncidenciaSolicitud): void {
-    this.solicitudes.update(list =>
-      list.map(s => s === solicitud ? { ...s, estado: 'Aprobado' } : s)
-    );
+  async aprobar(solicitud: IncidenciaSolicitud): Promise<void> {
+    try {
+      await firstValueFrom(this.api.incidents.changeState(solicitud.id, { state: 'APROBADO' }));
+      await this.cargarIncidencias();
+      this.toastService.success('Incidencia aprobada');
+    } catch {
+      this.toastService.error('Error al aprobar');
+    }
     this.closeModal();
   }
 
-  rechazar(solicitud: IncidenciaSolicitud): void {
-    this.solicitudes.update(list =>
-      list.map(s => s === solicitud ? { ...s, estado: 'Rechazado' } : s)
-    );
+  async rechazar(solicitud: IncidenciaSolicitud): Promise<void> {
+    try {
+      await firstValueFrom(this.api.incidents.changeState(solicitud.id, { state: 'DENEGADO' }));
+      await this.cargarIncidencias();
+      this.toastService.success('Incidencia rechazada');
+    } catch {
+      this.toastService.error('Error al rechazar');
+    }
     this.closeModal();
   }
 

@@ -1,11 +1,14 @@
-import { Component, signal, WritableSignal, inject } from '@angular/core';
+import { Component, signal, WritableSignal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
+import { ApiService } from '../../../api/services/api.service';
+import { tenantUserToPersonal } from '../../../api/services/helpers';
+import { firstValueFrom } from 'rxjs';
 
-interface Personal {
+export interface Personal {
   id: number;
   nombre: string;
   idPersonal: string;
@@ -13,7 +16,7 @@ interface Personal {
   area: string;
   departamento: string;
   cargo: string;
-  estado: 'ACTIVO' | 'PRUEBA' | 'SUSPENDIDO';
+  estado: 'ACTIVO' | 'PRUEBA' | 'SUSPENDIDO' | 'LICENCIA';
   email?: string;
   telefono?: string;
   fechaIngreso?: string;
@@ -36,27 +39,18 @@ interface Metricas {
   templateUrl: './directorio-personal.html',
   styleUrl: './directorio-personal.css',
 })
-export class DirectorioPersonal {
+export class DirectorioPersonal implements OnInit {
 
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
+  private readonly api = inject(ApiService);
+  readonly loading = signal(false);
   
   // ==========================================
   // DATOS PRINCIPALES
   // ==========================================
   
-  personal: WritableSignal<Personal[]> = signal<Personal[]>([
-    { id: 1, nombre: 'Dr. Sarah Jenkins', idPersonal: '#AX-9021', sede: 'Central', area: 'Académica', departamento: 'Academic', cargo: 'Lead Faculty', estado: 'ACTIVO', email: 'sarah.jenkins@empresa.com', telefono: '+51 987 654 321', fechaIngreso: '2020-03-15', imagenUrl: 'https://randomuser.me/api/portraits/women/1.jpg' },
-    { id: 2, nombre: 'Marcus Thompson', idPersonal: '#AX-4432', sede: 'North', area: 'Administrativa', departamento: 'Admin', cargo: 'Registrar', estado: 'PRUEBA', email: 'marcus.thompson@empresa.com', telefono: '+51 987 654 322', fechaIngreso: '2021-06-20', imagenUrl: 'https://randomuser.me/api/portraits/men/2.jpg' },
-    { id: 3, nombre: 'Elena Rodriguez', idPersonal: '#AX-8812', sede: 'South', area: 'Soporte', departamento: 'Support', cargo: 'IT Support', estado: 'SUSPENDIDO', email: 'elena.rodriguez@empresa.com', telefono: '+51 987 654 323', fechaIngreso: '2019-11-10', imagenUrl: 'https://randomuser.me/api/portraits/women/3.jpg' },
-    { id: 4, nombre: 'Jameson Cooper', idPersonal: '#AX-1029', sede: 'Central', area: 'Académica', departamento: 'Academic', cargo: 'Professor', estado: 'ACTIVO', email: 'jameson.cooper@empresa.com', telefono: '+51 987 654 324', fechaIngreso: '2022-01-05', imagenUrl: 'https://randomuser.me/api/portraits/men/4.jpg' },
-    { id: 5, nombre: 'Maria Gonzales', idPersonal: '#AX-2345', sede: 'Central', area: 'Administrativa', departamento: 'Admin', cargo: 'HR Manager', estado: 'ACTIVO', email: 'maria.gonzales@empresa.com', telefono: '+51 987 654 325', fechaIngreso: '2018-08-22', imagenUrl: 'https://randomuser.me/api/portraits/women/5.jpg' },
-    { id: 6, nombre: 'Robert Chen', idPersonal: '#AX-6789', sede: 'North', area: 'Académica', departamento: 'Academic', cargo: 'Senior Lecturer', estado: 'ACTIVO', email: 'robert.chen@empresa.com', telefono: '+51 987 654 326', fechaIngreso: '2021-02-14', imagenUrl: 'https://randomuser.me/api/portraits/men/6.jpg' },
-    { id: 7, nombre: 'Lisa Wong', idPersonal: '#AX-3456', sede: 'South', area: 'Soporte', departamento: 'Support', cargo: 'Technical Lead', estado: 'PRUEBA', email: 'lisa.wong@empresa.com', telefono: '+51 987 654 327', fechaIngreso: '2022-07-19', imagenUrl: 'https://randomuser.me/api/portraits/women/7.jpg' },
-    { id: 8, nombre: 'Carlos Mendez', idPersonal: '#AX-7890', sede: 'Central', area: 'Administrativa', departamento: 'Admin', cargo: 'Financial Analyst', estado: 'ACTIVO', email: 'carlos.mendez@empresa.com', telefono: '+51 987 654 328', fechaIngreso: '2020-10-30', imagenUrl: 'https://randomuser.me/api/portraits/men/8.jpg' },
-    { id: 9, nombre: 'Anna Kowalski', idPersonal: '#AX-4567', sede: 'North', area: 'Académica', departamento: 'Academic', cargo: 'Research Assistant', estado: 'ACTIVO', email: 'anna.kowalski@empresa.com', telefono: '+51 987 654 329', fechaIngreso: '2023-01-12', imagenUrl: 'https://randomuser.me/api/portraits/women/9.jpg' },
-    { id: 10, nombre: 'David Kim', idPersonal: '#AX-8901', sede: 'South', area: 'Soporte', departamento: 'Support', cargo: 'Network Admin', estado: 'SUSPENDIDO', email: 'david.kim@empresa.com', telefono: '+51 987 654 330', fechaIngreso: '2019-05-08', imagenUrl: 'https://randomuser.me/api/portraits/men/10.jpg' }
-  ]);
+  personal: WritableSignal<Personal[]> = signal<Personal[]>([]);
   
   // ==========================================
   // ESTADO DE FILTROS Y PAGINACIÓN
@@ -98,21 +92,49 @@ export class DirectorioPersonal {
   // ==========================================
   // OPCIONES PARA FILTROS
   // ==========================================
-  sedesDisponibles: string[] = ['Central', 'North', 'South'];
-  areasDisponibles: string[] = ['Académica', 'Administrativa', 'Soporte'];
-  departamentosDisponibles: string[] = ['Academic', 'Admin', 'Support'];
+  sedesDisponibles: string[] = [];
+  areasDisponibles: string[] = [];
+  departamentosDisponibles: string[] = [];
   
   // ==========================================
   // MÉTRICAS
   // ==========================================
   metricas: Metricas = {
-    personalTotal: 1284,
-    activosHoy: 1156,
-    incorporaciones: 42,
-    deLicencia: 86,
-    crecimiento: 12,
-    porcentajeActivos: 90
+    personalTotal: 0,
+    activosHoy: 0,
+    incorporaciones: 0,
+    deLicencia: 0,
+    crecimiento: 0,
+    porcentajeActivos: 0
   };
+
+  async ngOnInit(): Promise<void> {
+    await this.cargarPersonal();
+  }
+
+  async cargarPersonal(): Promise<void> {
+    this.loading.set(true);
+    try {
+      const res = await firstValueFrom(this.api.users.list({ size: 100 }));
+      const items = res.content.map(tenantUserToPersonal) as Personal[];
+      this.personal.set(items);
+      this.sedesDisponibles = [...new Set(items.map(p => p.sede).filter(Boolean))];
+      this.areasDisponibles = [...new Set(items.map(p => p.area).filter(Boolean))];
+      this.departamentosDisponibles = [...new Set(items.map(p => p.departamento).filter(Boolean))];
+      this.metricas = {
+        personalTotal: res.totalElements,
+        activosHoy: items.filter(p => p.estado === 'ACTIVO').length,
+        incorporaciones: 0,
+        deLicencia: items.filter(p => p.estado === 'LICENCIA').length,
+        crecimiento: 0,
+        porcentajeActivos: res.totalElements > 0 ? Math.round((items.filter(p => p.estado === 'ACTIVO').length / res.totalElements) * 100) : 0,
+      };
+    } catch {
+      this.toastService.error('Error al cargar personal');
+    } finally {
+      this.loading.set(false);
+    }
+  }
   
   // ==========================================
   // GETTERS
@@ -256,25 +278,37 @@ export class DirectorioPersonal {
     this.imagenPreviewUrl = null;
   }
   
-  guardarPersonal(): void {
+  async guardarPersonal(): Promise<void> {
     if (!this.personalForm.nombre || !this.personalForm.idPersonal) {
-      this.mostrarToast('⚠️ Complete los campos obligatorios');
+      this.mostrarToast('Complete los campos obligatorios');
       return;
     }
     
-    if (this.editandoPersonal) {
-      this.personal.update(list => 
-        list.map(p => p.id === this.personalForm.id ? this.personalForm : p)
-      );
-      this.mostrarToast('✅ Personal actualizado correctamente');
-    } else {
-      const nuevoId = Math.max(...this.personal().map(p => p.id), 0) + 1;
-      const nuevoPersonal = { ...this.personalForm, id: nuevoId };
-      this.personal.update(list => [...list, nuevoPersonal]);
-      this.mostrarToast('✅ Nuevo miembro agregado correctamente');
-      
-      this.metricas.personalTotal++;
-      this.metricas.incorporaciones++;
+    try {
+      if (this.editandoPersonal) {
+        await firstValueFrom(this.api.users.patch(this.personalForm.id, {
+          name: this.personalForm.nombre.split(' ')[0] ?? '',
+          father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
+          email: this.personalForm.email ?? '',
+          phone: this.personalForm.telefono ?? null,
+        }));
+        this.mostrarToast('Personal actualizado correctamente');
+      } else {
+        await firstValueFrom(this.api.users.create({
+          document_type: 'DNI',
+          document_value: String(Date.now()).slice(-8),
+          name: this.personalForm.nombre.split(' ')[0] ?? '',
+          father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
+          mother_surname: '',
+          email: this.personalForm.email ?? `${this.personalForm.nombre.toLowerCase().replace(/\s+/g, '.')}@colegio.edu.pe`,
+          phone: this.personalForm.telefono ?? null,
+          role_id: 5,
+        }));
+        this.mostrarToast('Nuevo miembro agregado correctamente');
+      }
+      await this.cargarPersonal();
+    } catch {
+      this.mostrarToast('Error al guardar');
     }
     
     this.cerrarModalPersonal();
@@ -307,10 +341,14 @@ export class DirectorioPersonal {
   // MÉTODOS DE ACCIÓN
   // ==========================================
   
-  eliminarPersonal(id: number): void {
-    this.personal.update(list => list.filter(p => p.id !== id));
-    this.mostrarToast('Personal eliminado correctamente');
-    this.metricas.personalTotal--;
+  async eliminarPersonal(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.api.users.delete(id));
+      await this.cargarPersonal();
+      this.mostrarToast('Personal eliminado correctamente');
+    } catch {
+      this.mostrarToast('Error al eliminar');
+    }
   }
   
   // ==========================================
