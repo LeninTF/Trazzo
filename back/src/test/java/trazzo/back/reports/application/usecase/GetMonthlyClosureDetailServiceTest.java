@@ -34,9 +34,10 @@ class GetMonthlyClosureDetailServiceTest {
     @Test
     void shouldReturnDetailWhenFound() {
         UUID id = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
                 id, UUID.randomUUID(), "user-1", "Juan Perez", "12345678",
-                "TI", "Developer", 160.0, 10.0, 1, 5.0, LocalDateTime.now());
+                "TI", "Developer", 160.0, 10.0, 1, 5.0, now);
         when(detailRepository.findById(id)).thenReturn(Optional.of(detail));
 
         MonthlyClosureDetailResult result = service.execute(id);
@@ -52,6 +53,7 @@ class GetMonthlyClosureDetailServiceTest {
         assertEquals(10.0, result.totalTardinessMinutes());
         assertEquals(1, result.totalAbsences());
         assertEquals(5.0, result.totalOvertimeHours());
+        assertEquals(now, result.createdAt());
     }
 
     @Test

@@ -33,6 +33,7 @@ public class MonthlyClosureDetailController {
                 result.tenantUserFullName(), result.tenantUserDocument(),
                 result.departmentName(), result.roleName(),
                 result.totalWorkedHours(), result.totalTardinessMinutes(),
-                result.totalAbsences(), result.totalOvertimeHours());
+                result.totalAbsences(), result.totalOvertimeHours(),
+                result.createdAt());
     }
 }

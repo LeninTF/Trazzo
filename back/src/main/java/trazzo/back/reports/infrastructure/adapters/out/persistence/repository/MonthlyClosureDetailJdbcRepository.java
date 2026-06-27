@@ -14,15 +14,15 @@ import java.util.UUID;
 
 public class MonthlyClosureDetailJdbcRepository implements MonthlyClosureDetailRepositoryPort {
 
-    private static final String TABLE = "monthly_closure_details";
-    private static final String COLUMNS = "id, month_closure_id, tenant_user_id, tenant_user_full_name, "
+    private static final String TABLE = "monthly_closures_details";
+    private static final String COLUMNS = "id, monthly_closures_id, tenant_user_id, tenant_user_full_name, "
             + "tenant_user_document, department_name, role_name, total_worked_hours, "
             + "total_tardiness_minutes, total_absences, total_overtime_hours, created_at";
 
     private static final String INSERT = "INSERT INTO " + TABLE + " (" + COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             + "ON CONFLICT (id) DO NOTHING";
     private static final String SELECT_BY_ID = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE id = ?";
-    private static final String SELECT_BY_CLOSURE_ID = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE month_closure_id = ?";
+    private static final String SELECT_BY_CLOSURE_ID = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE monthly_closures_id = ?";
 
     private final JdbcTemplate jdbcTemplate;
     private final RowMapper<MonthlyClosureDetail> rowMapper;
@@ -68,7 +68,7 @@ public class MonthlyClosureDetailJdbcRepository implements MonthlyClosureDetailR
         public MonthlyClosureDetail mapRow(ResultSet rs, int rowNum) throws SQLException {
             return new MonthlyClosureDetail(
                     rs.getObject("id", UUID.class),
-                    rs.getObject("month_closure_id", UUID.class),
+                    rs.getObject("monthly_closures_id", UUID.class),
                     rs.getString("tenant_user_id"),
                     rs.getString("tenant_user_full_name"),
                     rs.getString("tenant_user_document"),

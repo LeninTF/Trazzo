@@ -17,9 +17,7 @@ public class MonthlyClosureJdbcRepository implements MonthlyClosureRepositoryPor
     private static final String TABLE = "monthly_closures";
     private static final String COLUMNS = "id, month, year, total_employees, excel_report_url, pdf_report_url, created_by_user_id, created_at";
 
-    private static final String INSERT = "INSERT INTO " + TABLE + " (" + COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
-            + "ON CONFLICT (id) DO UPDATE SET total_employees = EXCLUDED.total_employees, "
-            + "excel_report_url = EXCLUDED.excel_report_url, pdf_report_url = EXCLUDED.pdf_report_url";
+    private static final String INSERT = "INSERT INTO " + TABLE + " (" + COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SELECT_BY_ID = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE id = ?";
     private static final String SELECT_ALL = "SELECT " + COLUMNS + " FROM " + TABLE + " ORDER BY year DESC, month DESC";
     private static final String SELECT_BY_MONTH_YEAR = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE month = ? AND year = ?";

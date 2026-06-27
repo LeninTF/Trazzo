@@ -36,12 +36,12 @@ public class GetMonthlyReportService implements GetMonthlyReportUseCase {
                         d.getTenantUserDocument(), d.getDepartmentName(),
                         d.getRoleName(), d.getTotalWorkedHours(),
                         d.getTotalTardinessMinutes(), d.getTotalAbsences(),
-                        d.getTotalOvertimeHours()))
+                        d.getTotalOvertimeHours(), d.getCreatedAt()))
                 .toList();
 
         return new MonthlyClosureWithDetailsResult(
                 closure.getId(), closure.getMonth(), closure.getYear(),
                 closure.getTotalEmployees(), closure.getExcelReportUrl(),
-                closure.getPdfReportUrl(), detailResults);
+                closure.getPdfReportUrl(), closure.getCreatedAt(), detailResults);
     }
 }

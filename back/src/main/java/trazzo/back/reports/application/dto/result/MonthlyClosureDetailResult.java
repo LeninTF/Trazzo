@@ -1,5 +1,6 @@
 package trazzo.back.reports.application.dto.result;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record MonthlyClosureDetailResult(
@@ -12,6 +13,7 @@ public record MonthlyClosureDetailResult(
         Double totalWorkedHours,
         Double totalTardinessMinutes,
         int totalAbsences,
-        Double totalOvertimeHours) {
+        Double totalOvertimeHours,
+        LocalDateTime createdAt) {
 
 }

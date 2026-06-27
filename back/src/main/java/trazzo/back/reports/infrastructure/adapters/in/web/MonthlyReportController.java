@@ -37,7 +37,7 @@ public class MonthlyReportController {
         return new MonthlyClosureWithDetailsResponse(
                 result.id(), result.month(), result.year(),
                 result.totalEmployees(), result.excelReportUrl(),
-                result.pdfReportUrl(), details);
+                result.pdfReportUrl(), result.createdAt(), details);
     }
 
     private MonthlyClosureDetailResponse toDetailResponse(MonthlyClosureDetailResult detail) {
@@ -46,6 +46,7 @@ public class MonthlyReportController {
                 detail.tenantUserFullName(), detail.tenantUserDocument(),
                 detail.departmentName(), detail.roleName(),
                 detail.totalWorkedHours(), detail.totalTardinessMinutes(),
-                detail.totalAbsences(), detail.totalOvertimeHours());
+                detail.totalAbsences(), detail.totalOvertimeHours(),
+                detail.createdAt());
     }
 }

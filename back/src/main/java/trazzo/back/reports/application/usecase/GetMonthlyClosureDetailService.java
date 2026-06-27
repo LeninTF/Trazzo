@@ -25,6 +25,6 @@ public class GetMonthlyClosureDetailService implements GetMonthlyClosureDetailUs
                 detail.getTenantUserDocument(), detail.getDepartmentName(),
                 detail.getRoleName(), detail.getTotalWorkedHours(),
                 detail.getTotalTardinessMinutes(), detail.getTotalAbsences(),
-                detail.getTotalOvertimeHours());
+                detail.getTotalOvertimeHours(), detail.getCreatedAt());
     }
 }

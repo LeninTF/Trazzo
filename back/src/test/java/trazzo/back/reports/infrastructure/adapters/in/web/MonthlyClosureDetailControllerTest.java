@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import trazzo.back.reports.application.dto.result.MonthlyClosureDetailResult;
 import trazzo.back.reports.application.ports.in.GetMonthlyClosureDetailUseCase;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @WebMvcTest(controllers = MonthlyClosureDetailController.class,
@@ -33,7 +34,7 @@ class MonthlyClosureDetailControllerTest {
         UUID closureId = UUID.randomUUID();
         MonthlyClosureDetailResult result = new MonthlyClosureDetailResult(
                 id, closureId, "Juan Perez", "12345678", "TI", "Developer",
-                160.0, 10.0, 1, 5.0);
+                160.0, 10.0, 1, 5.0, LocalDateTime.now());
 
         when(detailUseCase.execute(any(UUID.class))).thenReturn(result);
 

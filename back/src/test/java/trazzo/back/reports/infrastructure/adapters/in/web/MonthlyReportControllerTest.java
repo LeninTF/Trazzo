@@ -16,6 +16,7 @@ import trazzo.back.reports.application.dto.result.MonthlyClosureDetailResult;
 import trazzo.back.reports.application.dto.result.MonthlyClosureWithDetailsResult;
 import trazzo.back.reports.application.ports.in.GetMonthlyReportUseCase;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,10 +33,11 @@ class MonthlyReportControllerTest {
     @Test
     void shouldReturnReportWithDetails() throws Exception {
         UUID id = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResult detail = new MonthlyClosureDetailResult(
-                UUID.randomUUID(), id, "Juan", "123", "TI", "Dev", 160.0, 10.0, 1, 5.0);
+                UUID.randomUUID(), id, "Juan", "123", "TI", "Dev", 160.0, 10.0, 1, 5.0, now);
         MonthlyClosureWithDetailsResult result = new MonthlyClosureWithDetailsResult(
-                id, 6, 2025, 1, "excel", "pdf", List.of(detail));
+                id, 6, 2025, 1, "excel", "pdf", now, List.of(detail));
 
         when(reportUseCase.execute(any(UUID.class))).thenReturn(result);
 
@@ -50,7 +52,7 @@ class MonthlyReportControllerTest {
     void shouldReturnReportWithEmptyDetails() throws Exception {
         UUID id = UUID.randomUUID();
         MonthlyClosureWithDetailsResult result = new MonthlyClosureWithDetailsResult(
-                id, 6, 2025, 0, null, null, List.of());
+                id, 6, 2025, 0, null, null, LocalDateTime.now(), List.of());
 
         when(reportUseCase.execute(any(UUID.class))).thenReturn(result);
 

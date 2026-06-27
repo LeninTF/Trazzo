@@ -262,7 +262,8 @@ CREATE TABLE monthly_closures (
     excel_report_url VARCHAR(255),
     pdf_report_url VARCHAR(255),
     created_by_user_id UUID,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_monthly_closures_period UNIQUE (year, month)
 );
 
 CREATE TABLE monthly_closures_details (
