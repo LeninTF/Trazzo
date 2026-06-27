@@ -14,6 +14,10 @@
 	color: #1f2937;
 }
 
+.app-shell__backdrop {
+	display: none;
+}
+
 .app-shell__sidebar {
 	position: fixed;
 	inset: 0 auto 0 0;
@@ -50,3 +54,57 @@
 	}
 }
 
+@media (max-width: 991.98px) {
+	.app-shell__sidebar {
+		transform: translateX(-100%);
+		transition: transform 0.25s ease;
+		box-shadow: none;
+	}
+
+	.app-shell--sidebar-open .app-shell__sidebar {
+		transform: translateX(0);
+		box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+	}
+
+	.app-shell__backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 1029;
+		background: rgba(15, 23, 42, 0.45);
+		backdrop-filter: blur(3px);
+		animation: fadeIn 0.2s ease;
+	}
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	.app-shell__header {
+		left: 0;
+	}
+
+	.app-shell__content {
+		padding-left: 1rem;
+		padding-right: 1rem;
+	}
+}
+
+@media (max-width: 575.98px) {
+	:host {
+		--header-height: 60px;
+		--sidebar-width: 100%;
+	}
+
+	.app-shell__sidebar {
+		width: 280px;
+	}
+
+	.app-shell__content {
+		padding-top: calc(var(--header-height) + 0.75rem);
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+		padding-bottom: 0.75rem;
+	}
+}

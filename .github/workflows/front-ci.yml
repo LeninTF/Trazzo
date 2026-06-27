@@ -22,7 +22,7 @@ jobs:
         with:
           version: 11
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Configurar Node.js
         uses: actions/setup-node@v6
@@ -40,15 +40,31 @@ jobs:
         run: npx madge --circular --extensions ts ./src
         working-directory: ./front
 
+      # Generar cobertura
+      - name: Ejecutar pruebas con cobertura
+        run: pnpm test
+        working-directory: ./front
+
+      # Verificar que se generó el archivo
+      - name: Verificar cobertura
+        run: |
+          find coverage -name "lcov.info"
+        working-directory: ./front
+
+      # Limpiar análisis anterior
+      - name: Limpiar Sonar Scanner
+        run: rm -rf .scannerwork
+        working-directory: ./front
+
       - name: Análisis Estático y Quality Gate (SonarCloud Frontend)
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: ./front
           args: >
-            -Dsonar.projectName="Trazzo Frontend (Angular)"
+            -Dsonar.projectName=Trazzo-Frontend
             -Dsonar.projectKey=methodsync-trazzo-front
             -Dsonar.organization=methodsync
             -Dsonar.sources=src,Dockerfile

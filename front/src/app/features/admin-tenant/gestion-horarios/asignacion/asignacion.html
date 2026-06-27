@@ -1,0 +1,202 @@
+<div class="asig-section">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge-custom">{{ asignaciones().length }} asignaciones</span>
+    </div>
+    <button class="btn-gh-sm-primary" (click)="openModal()">
+      <i class="bi bi-plus-lg me-1"></i>Asignar Turno
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="asig-filters">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="filter-label" for="asig-buscar">Buscar</label>
+        <input
+          type="text"
+          id="asig-buscar"
+          class="filter-input"
+          placeholder="Buscar por trabajador o turno..."
+          [ngModel]="searchTerm()"
+          (ngModelChange)="onSearch($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+      </div>
+      <div class="col-md-3">
+        <label class="filter-label" for="asig-area">Filtrar por área</label>
+        <select
+          id="asig-area"
+          class="filter-select"
+          [ngModel]="areaFilter()"
+          (ngModelChange)="onAreaFilter($event)"
+          [ngModelOptions]="{standalone: true}"
+        >
+          <option value="">Todas las áreas</option>
+          @for (area of areas; track area) {
+            <option [value]="area">{{ area }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-4">
+        @if (searchTerm() || areaFilter()) {
+          <button class="btn-clear-filters" (click)="onSearch(''); onAreaFilter('')">
+            <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="asig-table-wrapper">
+    <table class="asig-table">
+      <thead>
+        <tr>
+          <th>Trabajador</th>
+          <th>Área</th>
+          <th>Turno asignado</th>
+          <th>Horario asignado</th>
+          <th class="text-center" style="width: 80px;">Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (asignacion of filteredAsignaciones(); track asignacion.id) {
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="asig-avatar">{{ asignacion.trabajador.charAt(0) }}{{ asignacion.trabajador.split(' ')[1]?.charAt(0) || '' }}</div>
+                <span class="fw-medium">{{ asignacion.trabajador }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="area-badge">{{ asignacion.area }}</span>
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history" style="color: var(--page-blue); font-size: 14px;"></i>
+                {{ asignacion.turno }}
+              </div>
+            </td>
+            <td>
+              <span class="horario-badge">{{ asignacion.horario }}</span>
+            </td>
+            <td class="text-center">
+              <button class="btn-icon-sm btn-icon-danger" (click)="deleteAsignacion(asignacion.id)" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="5" class="text-center text-muted py-5">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+              No se encontraron asignaciones.
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal -->
+  @if (showModal) {
+    <div class="asig-overlay" (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" role="button"></div>
+    <div class="asig-modal-wrap">
+      <div class="asig-modal-dialog" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+        <div class="asig-modal-content">
+          <div class="asig-modal-header">
+            <div class="d-flex align-items-center gap-3">
+              <div class="asig-modal-icon">
+                <i class="bi bi-person-plus"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 fw-bold">Asignar Turno</h5>
+                <span class="small text-muted">Selecciona trabajador y turno a asignar</span>
+              </div>
+            </div>
+            <button type="button" class="asig-modal-close" (click)="closeModal()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <form [formGroup]="asignacionForm" (ngSubmit)="submitAsignacion()">
+            <div class="asig-modal-body">
+              <div class="form-group">
+                <label class="form-label-custom" for="asig-trabajador">Trabajador</label>
+                <input
+                  id="asig-trabajador"
+                  type="text"
+                  class="input-custom"
+                  [class.invalid]="asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched"
+                  formControlName="trabajador"
+                  placeholder="Nombre completo"
+                >
+                @if (asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched) {
+                  <div class="error-msg">Ingrese el nombre del trabajador.</div>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label-custom" for="asig-area-select">Área / Departamento</label>
+                <select
+                  id="asig-area-select"
+                  class="input-custom"
+                  [class.invalid]="asignacionForm.get('area')?.invalid && asignacionForm.get('area')?.touched"
+                  formControlName="area"
+                >
+                  <option value="">Seleccione un área</option>
+                  @for (area of areas; track area) {
+                    <option [value]="area">{{ area }}</option>
+                  }
+                </select>
+                @if (asignacionForm.get('area')?.invalid && asignacionForm.get('area')?.touched) {
+                  <div class="error-msg">Seleccione un área.</div>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label-custom" for="asig-turno">Turno</label>
+                <select
+                  id="asig-turno"
+                  class="input-custom"
+                  [class.invalid]="asignacionForm.get('turnoId')?.invalid && asignacionForm.get('turnoId')?.touched"
+                  formControlName="turnoId"
+                  (change)="onTurnoChange()"
+                >
+                  <option value="">Seleccione un turno</option>
+                  @for (turno of turnosDisponibles; track turno.id) {
+                    <option [value]="turno.id">{{ turno.nombre }}</option>
+                  }
+                </select>
+                @if (asignacionForm.get('turnoId')?.invalid && asignacionForm.get('turnoId')?.touched) {
+                  <div class="error-msg">Seleccione un turno.</div>
+                }
+              </div>
+              <div class="form-group">
+                <label class="form-label-custom" for="asig-horario">Horario</label>
+                <select
+                  id="asig-horario"
+                  class="input-custom"
+                  [class.invalid]="asignacionForm.get('horarioId')?.invalid && asignacionForm.get('horarioId')?.touched"
+                  formControlName="horarioId"
+                >
+                  <option value="">Seleccione un horario</option>
+                  @for (horario of selectedTurnoHorarios; track horario.id) {
+                    <option [value]="horario.id">{{ horario.label }}</option>
+                  }
+                </select>
+                @if (asignacionForm.get('horarioId')?.invalid && asignacionForm.get('horarioId')?.touched) {
+                  <div class="error-msg">Seleccione un horario.</div>
+                }
+              </div>
+            </div>
+            <div class="asig-modal-footer">
+              <button type="button" class="btn-ghost-sm" (click)="closeModal()">Cancelar</button>
+              <button type="submit" class="btn-primary-sm" [disabled]="asignacionForm.invalid">
+                <i class="bi bi-check-lg me-1"></i>Asignar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+</div>

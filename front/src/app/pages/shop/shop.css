@@ -122,12 +122,27 @@
 	overflow: hidden;
 }
 
-.progress-track > span {
-	display: block;
-	width: 66%;
-	height: 100%;
-	border-radius: inherit;
+.progress-track {
+	appearance: none;
+	-webkit-appearance: none;
+	border: 0;
+	width: 100%;
+	height: var(--bs-progress-height);
+	background: rgba(30, 64, 175, 0.12);
+	border-radius: 999px;
+	overflow: hidden;
+}
+.progress-track::-webkit-progress-bar {
+	background: transparent;
+}
+.progress-track::-webkit-progress-value {
 	background: linear-gradient(90deg, #1e40af, #3b82f6);
+	border-radius: 999px;
+	transition: width 220ms ease;
+}
+.progress-track::-moz-progress-bar {
+	background: linear-gradient(90deg, #1e40af, #3b82f6);
+	border-radius: 999px;
 	transition: width 220ms ease;
 }
 
@@ -551,23 +566,7 @@ input:focus {
    and microinteractions
    ----------------------- */
 
-/* progress fill shimmer and smoother transitions */
-.progress-track > span {
-	transition: width 420ms cubic-bezier(.2,.9,.3,1), background-position 900ms linear;
-	background-size: 200% 100%;
-	position: relative;
-}
 
-.progress-track > span::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
-	mix-blend-mode: overlay;
-	transform: translateX(-30%);
-	animation: shimmer 2.2s linear infinite;
-	pointer-events: none;
-}
 
 /* active step pulse */
 .progress-steps .is-active {
@@ -596,14 +595,6 @@ input:focus {
 	box-shadow: 0 10px 24px rgba(30,64,175,0.12);
 }
 
-.accordion summary {
-	border-radius: 14px;
-}
-
-.section-chevron {
-	transition: transform 320ms cubic-bezier(.2,.9,.3,1), color 180ms ease;
-}
-
 .form-card:hover {
 	transform: translateY(-6px);
 	box-shadow: 0 26px 56px rgba(15,23,42,0.08);
@@ -620,16 +611,6 @@ textarea {
 
 input:focus, textarea:focus {
 	transform: translateY(-2px);
-}
-
-/* button microinteraction */
-.checkout-actions button {
-	will-change: transform;
-}
-
-@keyframes shimmer {
-	0% { transform: translateX(-30%); }
-	100% { transform: translateX(130%); }
 }
 
 @keyframes stepPulse {

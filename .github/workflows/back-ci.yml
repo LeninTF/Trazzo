@@ -18,7 +18,7 @@ jobs:
     name: Compilar y Analizar Backend
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -38,10 +38,10 @@ jobs:
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -f back/pom.xml -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
-          -Dsonar.projectName="Trazzo Backend (Java)" \
           -Dsonar.projectKey=methodsync-trazzo-back \
           -Dsonar.organization=methodsync \
           -Dsonar.sources=src/main,pom.xml,Dockerfile \
+          -Dsonar.coverage.jacoco.xmlReportPaths="**/target/site/jacoco/jacoco.xml" \
           -Dsonar.host.url=https://sonarcloud.io \
           -Dsonar.qualitygate.wait=true
 

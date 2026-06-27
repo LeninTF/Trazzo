@@ -1,0 +1,172 @@
+<div class="roles-page">
+
+  <header class="roles-header">
+    <div>
+      <h1 class="roles-title">Gestión de Roles y Permisos del Tenant</h1>
+      <p class="roles-subtitle">Configura las facultades operativas para cada perfil institucional.</p>
+    </div>
+  </header>
+
+  <div class="roles-layout">
+    <aside class="roles-sidebar">
+      <div class="roles-sidebar__header">
+        <h3 class="roles-sidebar__title">Roles</h3>
+        <span class="roles-sidebar__count">{{ roles.length }}</span>
+      </div>
+
+      <nav class="roles-sidebar__list">
+        @for (rol of roles; track rol.id) {
+          <button
+            type="button"
+            class="roles-sidebar__item"
+            [class.is-active]="rolSeleccionado === rol.id"
+            (click)="seleccionarRol(rol.id)"
+          >
+            <span class="roles-sidebar__item-dot" [style.background]="rol.color"></span>
+            <span class="roles-sidebar__item-icon">
+              <i class="bi" [class]="rol.icono"></i>
+            </span>
+            <span class="roles-sidebar__item-text">
+              <span class="roles-sidebar__item-label">{{ rol.nombre }}</span>
+              <span class="roles-sidebar__item-desc">{{ rol.descripcion }}</span>
+            </span>
+            <span class="roles-sidebar__item-actions">
+              <button type="button" class="roles-sidebar__item-btn" (click)="$event.stopPropagation(); abrirModalEditarRol(rol)" title="Editar rol">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="roles-sidebar__item-btn roles-sidebar__item-btn--danger" (click)="$event.stopPropagation(); eliminarRol(rol.id)" title="Eliminar rol">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </span>
+          </button>
+        }
+      </nav>
+
+      <button type="button" class="roles-sidebar__add-btn" (click)="abrirModalNuevoRol()">
+        <i class="bi bi-plus-lg"></i>
+        + Nuevo Rol
+      </button>
+    </aside>
+
+    <main class="roles-main">
+      <div class="roles-main__topbar">
+        <div class="roles-main__topbar-left">
+          <h2 class="roles-main__title">
+            Matriz de Permisos:
+            <span class="roles-main__title-rol" [style.color]="rolActual.color">{{ rolActual.nombre }}</span>
+          </h2>
+          <span class="roles-main__indicator" [style.background]="rolActual.color"></span>
+        </div>
+        <div class="roles-main__topbar-actions">
+          @if (mensajeGuardado) {
+            <span class="roles-main__toast">
+              <i class="bi bi-check-circle-fill"></i> Cambios guardados correctamente
+            </span>
+          }
+          <button type="button" class="btn-roles btn-roles--outline" (click)="restablecer()">
+            <i class="bi bi-arrow-counterclockwise"></i> Restablecer
+          </button>
+          <button type="button" class="btn-roles btn-roles--primary" (click)="guardarCambios()">
+            <i class="bi bi-check-lg"></i> Guardar Cambios
+          </button>
+        </div>
+      </div>
+
+      <div class="roles-matrix">
+        @for (modulo of modulosVisibles(); track modulo.id) {
+          <div class="roles-module" [class.is-empty]="getEstadoModulo(modulo.id) === 'vacio'">
+            <div class="roles-module__header">
+              <div class="roles-module__header-left">
+                <div class="roles-module__icon">
+                  <i class="bi" [class]="modulo.icono"></i>
+                </div>
+                <div>
+                  <h3 class="roles-module__name">{{ modulo.nombre }}</h3>
+                  <span class="roles-module__summary">{{ getResumenModulo(modulo.id) }} acciones</span>
+                </div>
+              </div>
+              <div class="roles-module__toggle-all">
+                @if (getEstadoModulo(modulo.id) === 'completo') {
+                  <button type="button" class="btn-toggle-all is-on" (click)="toggleModulo(modulo.id, false)" title="Desactivar todas">
+                    <i class="bi bi-check2-square"></i>
+                  </button>
+                } @else {
+                  <button type="button" class="btn-toggle-all" (click)="toggleModulo(modulo.id, true)" title="Activar todas">
+                    <i class="bi bi-square"></i>
+                  </button>
+                }
+              </div>
+            </div>
+            <div class="roles-module__body">
+              @for (accion of modulo.acciones; track accion.id) {
+                @let key = modulo.id + '.' + accion.id;
+                @let activo = permisosActuales[key];
+                <label class="roles-action" [class.is-active]="activo">
+                  <span class="roles-action__icon">
+                    <i class="bi" [class]="accion.icono"></i>
+                  </span>
+                  <span class="roles-action__label">{{ accion.nombre }}</span>
+                  <div class="roles-action__toggle">
+                    <input
+                      type="checkbox"
+                      class="roles-action__checkbox"
+                      [checked]="activo"
+                      (change)="togglePermiso(modulo.id, accion.id)"
+                    />
+                    <span class="roles-action__slider"></span>
+                  </div>
+                </label>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="roles-footer">
+        <div class="roles-footer__icon" [style.background]="rolActual.color + '18'" [style.color]="rolActual.color">
+          <i class="bi" [class]="rolActual.icono"></i>
+        </div>
+        <div class="roles-footer__content">
+          <strong>{{ rolActual.nombre }}</strong>
+          <p>{{ rolActual.descripcion }}</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  @if (mostrarModalRol) {
+    <div class="modal-overlay" (click)="cerrarModalNuevoRol()" (keydown.escape)="cerrarModalNuevoRol()" tabindex="0" role="button">
+      <div class="modal-card" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+        <div class="modal-card__header">
+          <h3>{{ editandoRol ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
+          <button type="button" class="modal-card__close" (click)="cerrarModalNuevoRol()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div class="modal-card__body">
+          <label class="modal-card__label" for="rol-nombre">Nombre del rol</label>
+          <input
+            id="rol-nombre"
+            type="text"
+            class="modal-card__input"
+            placeholder="Ej: Supervisor de piso"
+            [(ngModel)]="nuevoRolNombre"
+            (keyup.enter)="guardarRol()"
+          />
+          <label class="modal-card__label modal-card__label--mt" for="rol-descripcion">Descripción</label>
+          <textarea
+            id="rol-descripcion"
+            class="modal-card__textarea"
+            placeholder="Describe el alcance de este rol..."
+            [(ngModel)]="nuevoRolDescripcion"
+            rows="3"
+          ></textarea>
+        </div>
+        <div class="modal-card__footer">
+          <button type="button" class="btn-roles btn-roles--outline" (click)="cerrarModalNuevoRol()">Cancelar</button>
+          <button type="button" class="btn-roles btn-roles--primary" (click)="guardarRol()" [disabled]="!nuevoRolNombre.trim()">{{ editandoRol ? 'Guardar Cambios' : 'Crear Rol' }}</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
