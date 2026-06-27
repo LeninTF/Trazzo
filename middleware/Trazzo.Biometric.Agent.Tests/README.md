@@ -2,7 +2,7 @@
 
 Suite de pruebas xUnit para el **Trazzo Biometric Agent**. Cubre toda la lógica de negocio sin necesitar hardware real ni base de datos externa.
 
-**86 pruebas** — todas unitarias o de integración in-process. No requieren el lector ZK9500, la DLL nativa ni conexión al backend.
+**218 pruebas** — todas unitarias o de integración in-process. No requieren el lector ZK9500, la DLL nativa ni conexión al backend.
 
 ---
 
@@ -53,6 +53,7 @@ Todos los tests usan implementaciones falsas definidas en `Fakes.cs`:
 
 - **xUnit** 2.9 — framework de pruebas
 - **Microsoft.Data.Sqlite** — SQLite real en memoria para `SqliteEventQueueTests`
+- **SourceGear.sqlite3** 3.50.4.5 — reemplaza `e_sqlite3.dll` de `SQLitePCLRaw.lib.e_sqlite3` con SQLite 3.50.4 parcheado (CVE-2025-6965 / GHSA-2m69-gcr7-jv3q)
 - **coverlet** — cobertura de código
 
 ---
