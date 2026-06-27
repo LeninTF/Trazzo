@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
@@ -17,11 +17,22 @@ export class Perfil extends PerfilBase implements OnInit {
 
   readonly loading = signal(true);
   readonly error = signal('');
+  private loaded = false;
 
   override usuario: DatosPersonales = {
     nombres: '', apellidos: '', email: '', telefono: '',
     dni: '', rol: '', fechaIngreso: '',
   };
+
+  constructor() {
+    super();
+    effect(() => {
+      this.roleService.role();
+      if (this.loaded) {
+        this.cargarUsuario();
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     await this.cargarUsuario();
@@ -47,6 +58,7 @@ export class Perfil extends PerfilBase implements OnInit {
       this.error.set('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
     } finally {
       this.loading.set(false);
+      this.loaded = true;
     }
   }
 }

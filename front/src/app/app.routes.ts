@@ -127,7 +127,7 @@ export const routes: Routes = [
     {
         path: 'sass',
         pathMatch: 'full',
-        redirectTo: 'sass/dashboard'
+        redirectTo: 'sass/tenants'
     },
     
     {
