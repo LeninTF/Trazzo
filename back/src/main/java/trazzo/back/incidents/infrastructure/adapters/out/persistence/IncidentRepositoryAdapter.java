@@ -7,6 +7,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
+import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.mapper.IncidentMapper;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentEvidenceSpringDataRepository;
@@ -51,10 +52,11 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
                                    int page, int size, String sort) {
         var sortObj = parseSort(sort);
         var pageable = PageRequest.of(page, size, sortObj);
+        var incidentState = parseState(state);
         Page<IncidentEntity> result;
 
         if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            result = incidentRepo.findByFilters(tenantUserId, state, tipoId, desde, hasta, search, pageable);
+            result = incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search, pageable);
         } else {
             result = incidentRepo.findAll(pageable);
         }
@@ -67,8 +69,9 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     @Override
     public long count(String tenantUserId, String state, String tipoId,
                        LocalDateTime desde, LocalDateTime hasta, String search) {
+        var incidentState = parseState(state);
         if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            return incidentRepo.findByFilters(tenantUserId, state, tipoId, desde, hasta, search,
+            return incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search,
                     PageRequest.of(0, 1)).getTotalElements();
         }
         return incidentRepo.count();
@@ -79,6 +82,15 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         evidenceRepo.deleteByIncidentId(id);
         permissionRepo.deleteByIncidentId(id);
         incidentRepo.deleteById(id);
+    }
+
+    private static IncidentState parseState(String state) {
+        if (state == null) return null;
+        try {
+            return IncidentState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Estado de incidencia inválido: " + state);
+        }
     }
 
     private boolean hasAnyFilter(String tenantUserId, String state, String tipoId,

@@ -11,7 +11,6 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 import org.mockito.ArgumentCaptor;
-import trazzo.back.saasglobal.domain.model.iam.User;
 import java.util.Optional;
 
 class DataSeederTest {
@@ -26,7 +25,7 @@ class DataSeederTest {
         userRepository = mock(UserRepositoryPort.class);
         passwordEncoder = mock(PasswordEncoder.class);
         jdbc = mock(JdbcTemplate.class);
-        seeder = new DataSeeder(userRepository, passwordEncoder, jdbc);
+        seeder = new DataSeeder(userRepository, passwordEncoder, jdbc, "admin@trazzo.pe", "admin123");
     }
 
     @Test

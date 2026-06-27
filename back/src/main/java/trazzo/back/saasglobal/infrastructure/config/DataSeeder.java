@@ -1,8 +1,10 @@
 package trazzo.back.saasglobal.infrastructure.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -11,22 +13,37 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 @Component
-@RequiredArgsConstructor
+@Profile("local")
+@ConditionalOnProperty(name = "trazzo.seed.admin.enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
-    private static final String ADMIN_EMAIL = "admin@trazzo.pe";
-    private static final String ADMIN_PASSWORD = "admin123";
     private static final String ADMIN_ROLE = "ADMIN";
 
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbc;
+    private final String adminEmail;
+    private final String adminPassword;
+
+    public DataSeeder(
+            UserRepositoryPort userRepository,
+            PasswordEncoder passwordEncoder,
+            JdbcTemplate jdbc,
+            @Value("${trazzo.seed.admin.email}") String adminEmail,
+            @Value("${trazzo.seed.admin.password}") String adminPassword
+    ) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jdbc = jdbc;
+        this.adminEmail = requireNonBlank(adminEmail, "trazzo.seed.admin.email");
+        this.adminPassword = requireNonBlank(adminPassword, "trazzo.seed.admin.password");
+    }
 
     @Override
     @Transactional
     public void run(String... args) {
-        if (userRepository.findByEmail(ADMIN_EMAIL).isPresent()) {
+        if (userRepository.findByEmail(adminEmail).isPresent()) {
             log.info("Admin user already exists, skipping seed");
             return;
         }
@@ -34,12 +51,12 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Creating admin user...");
 
         Integer personId = insertPerson();
-        String encodedPassword = passwordEncoder.encode(ADMIN_PASSWORD);
+        String encodedPassword = passwordEncoder.encode(adminPassword);
 
         User admin = User.create(
                 personId,
                 null,
-                ADMIN_EMAIL,
+                adminEmail,
                 null,
                 encodedPassword
         );
@@ -48,7 +65,16 @@ public class DataSeeder implements CommandLineRunner {
         ensureRoleExists();
         assignRoleToUser(admin.getId());
 
-        log.info("Admin user created successfully: {}", ADMIN_EMAIL);
+        log.info("Admin user created successfully: {}", adminEmail);
+    }
+
+    private static String requireNonBlank(String value, String propertyName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException(
+                    "Property '" + propertyName + "' must be set when seeding is enabled"
+            );
+        }
+        return value.trim();
     }
 
     @SuppressWarnings("java:S5145")
@@ -87,6 +113,6 @@ public class DataSeeder implements CommandLineRunner {
                 userId,
                 roleId
         );
-        log.info("Role {} assigned to user {}", ADMIN_ROLE, ADMIN_EMAIL);
+        log.info("Role {} assigned to user {}", ADMIN_ROLE, adminEmail);
     }
 }
