@@ -22,7 +22,7 @@ jobs:
   # Build + Tests + Sonar (push y pull_request)
   # ─────────────────────────────────────────────
   build-test-analyze:
-    name: Tests y Análisis (.NET 10 / win-x64)
+    name: Análisis, Tests y Build (.NET 10 / win-x64)
     runs-on: windows-latest
 
     steps:
@@ -174,7 +174,7 @@ jobs:
   # PUSH: Generar instalador .msi
   # ─────────────────────────────────────────────
   package-msi:
-    name: Build MSI (Self-Contained / win-x64)
+    name: Build MSI (WiX v4 / Self-Contained)
     if: github.event_name == 'push'
     runs-on: windows-latest
     needs: build-test-analyze
