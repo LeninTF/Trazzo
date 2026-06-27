@@ -8,6 +8,8 @@
     <AgentProject>..\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj</AgentProject>
     <AgentPublishDir>$(MSBuildThisFileDirectory)obj\publish</AgentPublishDir>
     <GeneratedWxs>$(MSBuildThisFileDirectory)obj\$(Configuration)\Product.Generated.wxs</GeneratedWxs>
+    <!-- En CI los binarios llegan como artefacto; pasar -p:SkipAgentPublish=true para omitir el publish -->
+    <SkipAgentPublish Condition="'$(SkipAgentPublish)' == ''">false</SkipAgentPublish>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,9 +32,8 @@
   </Target>
 
   <Target Name="PublishAgentForMsi" BeforeTargets="CoreCompile">
-    <!-- En CI los binarios llegan como artefacto del job anterior; solo publica si aún no existen -->
     <Exec Command="dotnet publish &quot;$(AgentProject)&quot; -c $(Configuration) -r win-x64 -p:SelfContained=true -o &quot;$(AgentPublishDir)&quot;"
-          Condition="!Exists('$(AgentPublishDir)\Trazzo.Biometric.Agent.exe')" />
+          Condition="'$(SkipAgentPublish)' != 'true'" />
     <Error
       Condition="!Exists('$(AgentPublishDir)\Native\x64\libzkfpcsharp.dll')"
       Text="libzkfpcsharp.dll no encontrada en $(AgentPublishDir)\Native\x64\. Copia la DLL oficial x64 en Trazzo.Biometric.Agent\Native\x64\ antes de compilar el MSI." />
