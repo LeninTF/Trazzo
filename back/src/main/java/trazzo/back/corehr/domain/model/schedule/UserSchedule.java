@@ -11,11 +11,11 @@ import trazzo.back.corehr.domain.specification.ScheduleTimeSpec;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Schedule {
+public class UserSchedule {
 
     private Long id;
-    private Long shiftId;
-    private String name;
+    private Long tenantUserId;
+    private Long scheduleId;
     private String description;
     private LocalTime entryTime;
     private LocalTime departureTime;
@@ -23,10 +23,10 @@ public class Schedule {
     private LocalDateTime updatedAt;
     transient Clock clock = Clock.systemDefaultZone();
 
-    private Schedule(
+    private UserSchedule(
             Long id,
-            Long shiftId,
-            String name,
+            Long tenantUserId,
+            Long scheduleId,
             String description,
             LocalTime entryTime,
             LocalTime departureTime,
@@ -34,8 +34,8 @@ public class Schedule {
             LocalDateTime updatedAt
     ) {
         this.id = id;
-        this.shiftId = shiftId;
-        this.name = requireText(name, "name");
+        this.tenantUserId = requireTenantUserId(tenantUserId);
+        this.scheduleId = scheduleId;
         this.description = normalizeOptionalText(description);
         this.entryTime = requireTime(entryTime, "entryTime");
         this.departureTime = requireValidDepartureTime(entryTime, departureTime);
@@ -43,32 +43,22 @@ public class Schedule {
         this.updatedAt = updatedAt;
     }
 
-    public static Schedule create(Long shiftId, String name, String description, LocalTime entryTime, LocalTime departureTime) {
+    public static UserSchedule create(Long tenantUserId, Long scheduleId, String description, LocalTime entryTime, LocalTime departureTime) {
         LocalDateTime now = LocalDateTime.now();
-        return new Schedule(null, shiftId, name, description, entryTime, departureTime, now, now);
+        return new UserSchedule(null, tenantUserId, scheduleId, description, entryTime, departureTime, now, now);
     }
 
-    public static Schedule restore(
+    public static UserSchedule restore(
             Long id,
-            Long shiftId,
-            String name,
+            Long tenantUserId,
+            Long scheduleId,
             String description,
             LocalTime entryTime,
             LocalTime departureTime,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        return new Schedule(id, shiftId, name, description, entryTime, departureTime, createdAt, updatedAt);
-    }
-
-    public void rename(String name) {
-        this.name = requireText(name, "name");
-        touch();
-    }
-
-    public void updateDescription(String description) {
-        this.description = normalizeOptionalText(description);
-        touch();
+        return new UserSchedule(id, tenantUserId, scheduleId, description, entryTime, departureTime, createdAt, updatedAt);
     }
 
     public void reschedule(LocalTime entryTime, LocalTime departureTime) {
@@ -77,8 +67,20 @@ public class Schedule {
         touch();
     }
 
+    public void updateDescription(String description) {
+        this.description = normalizeOptionalText(description);
+        touch();
+    }
+
     private void touch() {
         this.updatedAt = LocalDateTime.now(clock);
+    }
+
+    private static Long requireTenantUserId(Long tenantUserId) {
+        if (tenantUserId == null) {
+            throw new InvalidScheduleException("tenantUserId is required");
+        }
+        return tenantUserId;
     }
 
     private static LocalTime requireTime(LocalTime value, String fieldName) {
@@ -98,14 +100,7 @@ public class Schedule {
         return departureTime;
     }
 
-    static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new InvalidScheduleException(fieldName + " is required");
-        }
-        return value.trim();
-    }
-
-    static String normalizeOptionalText(String value) {
+    private static String normalizeOptionalText(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }

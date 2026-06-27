@@ -2,17 +2,17 @@ package trazzo.back.corehr.domain.event;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
+import trazzo.back.corehr.domain.model.AttendanceState;
 import java.time.LocalDateTime;
 
-class AttendanceRegisteredEventTest {
+class AttendanceCompletedEventTest {
 
     @Test
-    void shouldCreateAttendanceRegisteredEvent() {
+    void shouldCreateAttendanceCompletedEvent() {
         var now = LocalDateTime.now();
-        var event = new AttendanceRegisteredEvent("att-1", 1L, 1L, 1L, now);
+        var event = new AttendanceCompletedEvent("att-1", 1L, now, AttendanceState.PUNTUAL, now);
         assertEquals("att-1", event.attendanceId());
-        assertEquals(1L, event.tenantUserId());
-        assertEquals(now, event.occurredAt());
+        assertEquals(AttendanceState.PUNTUAL, event.state());
         assertTrue(event instanceof CoreHrDomainEvent);
     }
 }

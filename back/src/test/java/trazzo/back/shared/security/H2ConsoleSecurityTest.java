@@ -27,14 +27,18 @@ class H2ConsoleSecurityTest {
         @Test
         void h2ConsoleIsDisabledByDefault() throws Exception {
             mockMvc.perform(get("/h2-console/").with(user("developer")))
-                    .andExpect(status().isNotFound());
+                    .andExpect(status().isNotFound())
+                    .andExpect(header().string("X-Frame-Options", "DENY"));
         }
     }
 
     @Nested
     @SpringBootTest(
             classes = TestApplication.class,
-            properties = "spring.h2.console.enabled=true")
+            properties = {
+                    "spring.h2.console.enabled=true",
+                    "spring.session.store-type=none"
+            })
     @AutoConfigureMockMvc
     class EnabledConfiguration {
 
@@ -44,7 +48,8 @@ class H2ConsoleSecurityTest {
         @Test
         void h2ConsoleRequiresAuthenticationWhenEnabled() throws Exception {
             mockMvc.perform(get("/h2-console/"))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"));
         }
 
         @Test
@@ -53,12 +58,19 @@ class H2ConsoleSecurityTest {
                     .andExpect(status().isNotFound())
                     .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"));
         }
+
+        @Test
+        void nonH2RequestsKeepDenyFramesWhenH2ConsoleIsEnabled() throws Exception {
+            mockMvc.perform(get("/actuator/health").with(user("developer")))
+                    .andExpect(header().string("X-Frame-Options", "DENY"));
+        }
     }
 
     @SpringBootApplication(
             excludeName = {
                     "org.springframework.modulith.runtime.autoconfigure.SpringModulithRuntimeAutoConfiguration",
-                    "org.springframework.modulith.actuator.autoconfigure.ApplicationModulesEndpointConfiguration"
+                    "org.springframework.modulith.actuator.autoconfigure.ApplicationModulesEndpointConfiguration",
+                    "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration"
             })
     @Import(SecurityConfig.class)
     static class TestApplication {
