@@ -65,6 +65,14 @@ public class Plan {
         return new Plan(id, name, price, currency, billingPeriod, isActive, createdAt, updatedAt, deletedAt);
     }
 
+    public void update(String name, BigDecimal price, String currency, String billingPeriod) {
+        this.name = requireText(name, "name");
+        this.price = requirePositive(price);
+        this.currency = requireText(currency, "currency");
+        this.billingPeriod = billingPeriod;
+        this.updatedAt = LocalDateTime.now(clock);
+    }
+
     public void deactivate() {
         this.isActive = false;
         this.updatedAt = LocalDateTime.now(clock);
@@ -73,6 +81,13 @@ public class Plan {
     public void activate() {
         this.isActive = true;
         this.updatedAt = LocalDateTime.now(clock);
+    }
+
+    public void delete() {
+        this.isActive = false;
+        LocalDateTime now = LocalDateTime.now(clock);
+        this.updatedAt = now;
+        this.deletedAt = now;
     }
 
     private static String requireText(String value, String fieldName) {

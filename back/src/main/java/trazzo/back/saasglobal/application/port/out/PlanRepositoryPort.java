@@ -5,6 +5,7 @@ import java.util.Optional;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
 
 public interface PlanRepositoryPort {
+    Plan save(Plan plan);
     Optional<Plan> findById(Integer id);
     List<Plan> findAll();
     List<Plan> findAllActive();

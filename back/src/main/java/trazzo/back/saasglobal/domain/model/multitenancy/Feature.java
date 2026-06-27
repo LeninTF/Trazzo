@@ -35,6 +35,12 @@ public class Feature {
         return new Feature(id, name, description, createdAt, updatedAt);
     }
 
+    public void update(String name, String description) {
+        this.name = requireText(name, "name");
+        this.description = description;
+        this.updatedAt = LocalDateTime.now(Clock.systemDefaultZone());
+    }
+
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " is required");

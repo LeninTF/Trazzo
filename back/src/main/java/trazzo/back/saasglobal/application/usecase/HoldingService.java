@@ -4,6 +4,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.dto.command.CreateHoldingCommand;
+import trazzo.back.saasglobal.application.dto.command.UpdateHoldingCommand;
 import trazzo.back.saasglobal.application.dto.result.HoldingResult;
 import trazzo.back.saasglobal.application.port.in.HoldingUseCase;
 import trazzo.back.saasglobal.application.port.out.HoldingRepositoryPort;
@@ -41,6 +42,14 @@ public class HoldingService implements HoldingUseCase {
     }
 
     @Override
+    public HoldingResult update(UpdateHoldingCommand command) {
+        Holding holding = holdingRepository.findById(command.id())
+                .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + command.id()));
+        holding.update(command.legalName(), HoldingType.valueOf(command.type()));
+        return toResult(holdingRepository.save(holding));
+    }
+
+    @Override
     public HoldingResult activate(Integer id) {
         Holding holding = holdingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
@@ -54,6 +63,14 @@ public class HoldingService implements HoldingUseCase {
                 .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
         holding.deactivate();
         return toResult(holdingRepository.save(holding));
+    }
+
+    @Override
+    public void deleteById(Integer id) {
+        Holding holding = holdingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(NOT_FOUND_MSG + id));
+        holding.delete();
+        holdingRepository.save(holding);
     }
 
     private HoldingResult toResult(Holding h) {

@@ -18,6 +18,49 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
     private final JdbcTemplate jdbc;
 
     @Override
+    public Plan save(Plan plan) {
+        if (plan.getId() == null) {
+            Integer id = jdbc.queryForObject(
+                    """
+                    INSERT INTO plans (name, price, currency, billing_period, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    RETURNING id
+                    """,
+                    Integer.class,
+                    plan.getName(),
+                    plan.getPrice(),
+                    plan.getCurrency(),
+                    plan.getBillingPeriod(),
+                    plan.isActive(),
+                    plan.getCreatedAt(),
+                    plan.getUpdatedAt());
+            return Plan.restore(id, plan.getName(), plan.getPrice(), plan.getCurrency(),
+                    plan.getBillingPeriod(), plan.isActive(),
+                    plan.getCreatedAt(), plan.getUpdatedAt(), plan.getDeletedAt());
+        }
+        jdbc.update("""
+                UPDATE plans
+                SET name           = ?,
+                    price          = ?,
+                    currency       = ?,
+                    billing_period = ?,
+                    is_active      = ?,
+                    updated_at     = ?,
+                    deleted_at     = ?
+                WHERE id = ?
+                """,
+                plan.getName(),
+                plan.getPrice(),
+                plan.getCurrency(),
+                plan.getBillingPeriod(),
+                plan.isActive(),
+                plan.getUpdatedAt(),
+                plan.getDeletedAt(),
+                plan.getId());
+        return plan;
+    }
+
+    @Override
     public Optional<Plan> findById(Integer id) {
         List<Plan> rows = jdbc.query(
                 "SELECT * FROM plans WHERE id = ?", this::mapRow, id);

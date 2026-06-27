@@ -45,6 +45,12 @@ public class Holding {
         return new Holding(id, taxId, legalName, type, active, createdAt, updatedAt, deletedAt);
     }
 
+    public void update(String legalName, HoldingType type) {
+        this.legalName = requireText(legalName, "legalName");
+        this.type = requireNonNull(type, "type");
+        this.updatedAt = LocalDateTime.now(Clock.systemDefaultZone());
+    }
+
     public void deactivate() {
         this.active = false;
         this.updatedAt = LocalDateTime.now(Clock.systemDefaultZone());
@@ -53,6 +59,13 @@ public class Holding {
     public void activate() {
         this.active = true;
         this.updatedAt = LocalDateTime.now(Clock.systemDefaultZone());
+    }
+
+    public void delete() {
+        this.active = false;
+        LocalDateTime now = LocalDateTime.now(Clock.systemDefaultZone());
+        this.updatedAt = now;
+        this.deletedAt = now;
     }
 
     private static String requireText(String value, String fieldName) {
