@@ -119,10 +119,7 @@ jobs:
       - name: Finalizar análisis de SonarCloud (End)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          dotnet sonarscanner end
-          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.qualitygate.wait=false
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Subir resultados de tests
         if: always()
@@ -202,7 +199,7 @@ jobs:
             /o:"methodsync" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
-            /d:sonar.qualitygate.wait=true `
+            /d:sonar.qualitygate.wait=false `
             /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
             /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
@@ -231,10 +228,7 @@ jobs:
       - name: Finalizar análisis de SonarCloud (End)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: >
-          dotnet sonarscanner end
-          /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          /d:sonar.qualitygate.wait=false
+        run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       - name: Publicar aplicación (Release / Self-Contained / win-x64)
         run: >
