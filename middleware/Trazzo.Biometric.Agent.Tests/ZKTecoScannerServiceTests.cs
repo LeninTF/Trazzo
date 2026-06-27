@@ -640,8 +640,17 @@ public sealed class ZKTecoScannerServiceTests
     [Fact]
     public async Task EnrollFingerprintAsync_WhenFingerLiftRequired_WaitsBetweenSamples()
     {
+        // Múltiples -1 por lift: IsFingerAlreadyOnReaderAsync puede consumir 0 o más
+        // items por llamada (depende de si la ventana de 1 ms expira antes de iterar).
+        // Los -1 extra aseguran que siempre devuelva false sin agotar la cola y exponer
+        // el fallback CaptureResult=0, que causaría un loop infinito en CI.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
-        sdk.CaptureResultSequence = new Queue<int>([0, -1, 0, -1, 0]);
+        sdk.CaptureResultSequence = new Queue<int>([
+            0, -1, -1, -1, -1, -1,   // muestra 1 + retiro
+            0, -1, -1, -1, -1, -1,   // muestra 2 + retiro
+            0                          // muestra 3
+        ]);
         List<string> progress = [];
         await using ZKTecoScannerService service = CreateService(
             sdk,
@@ -657,7 +666,7 @@ public sealed class ZKTecoScannerServiceTests
                 progress.Add(update.Message);
                 return Task.CompletedTask;
             },
-            CancellationToken.None);
+            cts.Token);
 
         Assert.True(result.Success);
         Assert.Equal(2, progress.Count(message => message == "Retire el dedo del lector."));
