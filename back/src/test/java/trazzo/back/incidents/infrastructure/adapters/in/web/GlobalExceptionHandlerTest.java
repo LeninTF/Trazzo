@@ -1,12 +1,17 @@
 package trazzo.back.incidents.infrastructure.adapters.in.web;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import trazzo.back.incidents.domain.exception.*;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.ErrorResponse;
+
+import java.util.List;
 
 class GlobalExceptionHandlerTest {
 
@@ -68,5 +73,21 @@ class GlobalExceptionHandlerTest {
         var response = handler.handleInactiveType(ex);
 
         assertEquals(400, response.getStatusCode().value());
+    }
+
+    @Test
+    void handleMethodArgumentNotValidReturns422() {
+        var ex = mock(MethodArgumentNotValidException.class);
+        var bindingResult = mock(BindingResult.class);
+        var fieldError = new FieldError("obj", "nombre", "is required");
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
+
+        var response = handler.handleMethodArgumentNotValid(ex);
+
+        assertEquals(422, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().details().size());
+        assertEquals("nombre", response.getBody().details().getFirst().field());
     }
 }
