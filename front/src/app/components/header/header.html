@@ -48,7 +48,7 @@
 
 		<div class="user-chip dropdown">
 			<div class="user-chip__info" data-bs-toggle="dropdown" aria-expanded="false" role="button" (keydown.enter)="onUserChipEnter($event)">
-				<strong>Jose Alata</strong>
+				<strong>{{ roleService.userName() || 'Usuario' }}</strong>
 				<span>{{ roleService.roleLabel[roleService.role()] }}</span>
 			</div>
 			<button type="button" class="user-chip__toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Cambiar rol">

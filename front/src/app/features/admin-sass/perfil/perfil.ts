@@ -1,6 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
+import { ApiService } from '../../../api/services/api.service';
+import { RoleService } from '../../../services/role.service';
 
 @Component({
   selector: 'app-perfil',
@@ -8,23 +11,42 @@ import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base'
   templateUrl: './perfil.html',
   styleUrl: '../../../shared/perfil/perfil.css',
 })
-export class Perfil extends PerfilBase {
+export class Perfil extends PerfilBase implements OnInit {
+  private readonly api = inject(ApiService);
+  private readonly roleService = inject(RoleService);
+
   readonly loading = signal(true);
   readonly error = signal('');
 
   override usuario: DatosPersonales = {
-    nombres: 'Jose',
-    apellidos: 'Alata',
-    email: 'jose.alata@trazzo.com',
-    telefono: '+51 999 888 777',
-    dni: '71234567',
-    rol: 'Super Administrador',
-    rolSass: 'Super Administrador',
-    fechaIngreso: '01/03/2020',
+    nombres: '', apellidos: '', email: '', telefono: '',
+    dni: '', rol: '', fechaIngreso: '',
   };
 
-  constructor() {
-    super();
-    setTimeout(() => this.loading.set(false), 800);
+  async ngOnInit(): Promise<void> {
+    await this.cargarUsuario();
+  }
+
+  async cargarUsuario(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const u = await firstValueFrom(this.api.users.getMasterMe());
+      const p = u.persona;
+      this.usuario = {
+        nombres: p.name ?? '',
+        apellidos: `${p.father_surname ?? ''} ${p.mother_surname ?? ''}`.trim(),
+        email: u.email ?? '',
+        telefono: u.phone ?? '',
+        dni: p.document_value ?? '',
+        rol: u.roles[0]?.name ?? '',
+        fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString('es-PE') : '',
+      };
+      this.roleService.setUserInfo(`${p.name} ${p.father_surname}`.trim(), u.email ?? '');
+    } catch {
+      this.error.set('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
+    } finally {
+      this.loading.set(false);
+    }
   }
 }

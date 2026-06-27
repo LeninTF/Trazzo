@@ -16,7 +16,16 @@ export class RoleService {
     'usuario': 'Usuario',
   };
 
+  readonly userName = signal(this.loadUserName());
+  readonly userEmail = signal('');
+
   readonly sidebarOpen = signal(false);
+
+  setUserInfo(name: string, email: string): void {
+    this.userName.set(name);
+    this.userEmail.set(email);
+    localStorage.setItem('trazzo_user_name', name);
+  }
 
   switchRole(role: Role): void {
     this.role.set(role);
@@ -29,6 +38,10 @@ export class RoleService {
 
   closeSidebar(): void {
     this.sidebarOpen.set(false);
+  }
+
+  private loadUserName(): string {
+    return localStorage.getItem('trazzo_user_name') ?? '';
   }
 
   private loadRole(): Role {

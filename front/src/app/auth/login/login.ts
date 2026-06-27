@@ -100,6 +100,7 @@ export class Login {
       next: (res) => {
         this.isLoading.set(false);
         localStorage.setItem('trazzo_token', res.accessToken);
+        this.roleService.setUserInfo(res.usuario.nombre, res.usuario.email);
         const isMaster = res.usuario.rol.some(r => r.name === 'admin_trazzo');
         if (isMaster) {
           this.roleService.switchRole('admin-sass');

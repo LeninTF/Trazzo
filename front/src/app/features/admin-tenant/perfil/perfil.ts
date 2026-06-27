@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
+import { RoleService } from '../../../services/role.service';
 
 @Component({
   selector: 'app-perfil',
@@ -14,6 +15,7 @@ import { ToastService } from '../../../services/toast.service';
 export class Perfil extends PerfilBase implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
+  private readonly roleService = inject(RoleService);
 
   readonly loading = signal(true);
   readonly error = signal('');
@@ -46,6 +48,7 @@ export class Perfil extends PerfilBase implements OnInit {
         area: u.areas[0]?.nombre ?? '',
         fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString('es-PE') : '',
       };
+      this.roleService.setUserInfo(`${p.name} ${p.father_surname}`.trim(), u.email ?? '');
     } catch {
       this.error.set('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
     } finally {
