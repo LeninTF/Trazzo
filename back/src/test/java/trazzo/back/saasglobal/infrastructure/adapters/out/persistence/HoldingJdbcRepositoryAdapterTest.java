@@ -163,4 +163,26 @@ class HoldingJdbcRepositoryAdapterTest {
         assertEquals(HoldingType.PRIVADO, result.get().getType());
         assertFalse(result.get().isActive());
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findById_throwsWhenTypeIsUnknown() throws Exception {
+        var now = LocalDateTime.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getInt("id")).thenReturn(1);
+        when(rs.getString("tax_id")).thenReturn("20123456789");
+        when(rs.getString("reason_social")).thenReturn("Empresa SAC");
+        when(rs.getString("type")).thenReturn(null);
+        when(rs.getBoolean("state")).thenReturn(true);
+        when(rs.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("updated_at", LocalDateTime.class)).thenReturn(now);
+        when(rs.getObject("deleted_at", LocalDateTime.class)).thenReturn(null);
+        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+                .thenAnswer(inv -> {
+                    RowMapper<Holding> mapper = inv.getArgument(1);
+                    return List.of(mapper.mapRow(rs, 0));
+                });
+
+        assertThrows(IllegalArgumentException.class, () -> adapter.findById(1));
+    }
 }

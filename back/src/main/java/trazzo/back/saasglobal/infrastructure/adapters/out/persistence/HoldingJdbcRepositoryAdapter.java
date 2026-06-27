@@ -101,6 +101,8 @@ public class HoldingJdbcRepositoryAdapter implements HoldingRepositoryPort {
     }
 
     private static HoldingType fromSqlType(String type) {
-        return "PUBLICO".equals(type) ? HoldingType.PUBLICO : HoldingType.PRIVADO;
+        if ("PUBLICO".equals(type)) return HoldingType.PUBLICO;
+        if ("PRIVADO".equals(type)) return HoldingType.PRIVADO;
+        throw new IllegalArgumentException("Unknown holding type in database: " + type);
     }
 }
