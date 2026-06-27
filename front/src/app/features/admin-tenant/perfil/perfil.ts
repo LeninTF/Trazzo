@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
@@ -15,6 +15,9 @@ export class Perfil extends PerfilBase implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
 
+  readonly loading = signal(true);
+  readonly error = signal('');
+
   override usuario: DatosPersonales = {
     nombres: '', apellidos: '', email: '', telefono: '',
     dni: '', rol: '', sede: '', area: '', fechaIngreso: '',
@@ -25,7 +28,9 @@ export class Perfil extends PerfilBase implements OnInit {
     await this.cargarUsuario();
   }
 
-  private async cargarUsuario(): Promise<void> {
+  async cargarUsuario(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
     try {
       const u = await firstValueFrom(this.api.users.getMe());
       this.userId = u.id;
@@ -42,7 +47,9 @@ export class Perfil extends PerfilBase implements OnInit {
         fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString('es-PE') : '',
       };
     } catch {
-      this.toastService.error('Error al cargar perfil');
+      this.error.set('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
+    } finally {
+      this.loading.set(false);
     }
   }
 

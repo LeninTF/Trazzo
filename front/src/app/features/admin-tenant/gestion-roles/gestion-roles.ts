@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BaseGestionRoles, Rol, Modulo } from '../../../shared/role-management/role-management-base';
 
@@ -9,6 +9,8 @@ import { BaseGestionRoles, Rol, Modulo } from '../../../shared/role-management/r
   styleUrl: '../../../shared/role-management/gestion-roles.css',
 })
 export class GestionRoles extends BaseGestionRoles {
+  readonly loading = signal(false);
+  readonly error = signal('');
   roles: Rol[] = [
     { id: 'administrador', nombre: 'Administrador', descripcion: 'El Administrador tiene acceso total a la configuración y seguridad del sistema, incluyendo gestión de trabajadores, horarios, reportes y auditoría.', color: '#1E40AF', icono: 'bi-shield-lock' },
     { id: 'director', nombre: 'Director', descripcion: 'El Director puede supervisar la estructura organizacional, revisar reportes y aprobar incidencias, con acceso a la mayoría de módulos operativos.', color: '#7C3AED', icono: 'bi-person-badge' },

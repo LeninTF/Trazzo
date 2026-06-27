@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 
 interface Alerta {
   icono: string;
@@ -22,6 +22,9 @@ interface RolPuntualidad {
   styleUrl: './dashboard.css',
 })
 export class Dashboard {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   usuariosActivos = 882;
   capacidadPlan = 88;
 

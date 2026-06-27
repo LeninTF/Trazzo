@@ -28,6 +28,8 @@ interface TurnoOption {
 export class AsignacionComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
+  readonly loading = signal(true);
+  readonly error = signal('');
 
   searchTerm = signal('');
   areaFilter = signal('');
@@ -66,6 +68,8 @@ export class AsignacionComponent implements OnInit {
   }
 
   async cargarDatos(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
     try {
       const [shiftsRes, userSchedulesRes] = await Promise.all([
         firstValueFrom(this.api.horarios.listShifts({ size: 50 })),
@@ -96,7 +100,10 @@ export class AsignacionComponent implements OnInit {
         };
       }));
     } catch {
+      this.error.set('Error al cargar datos');
       this.toastService.error('Error al cargar datos');
+    } finally {
+      this.loading.set(false);
     }
   }
 

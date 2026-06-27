@@ -25,7 +25,8 @@ interface Turno {
 export class TurnosComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly error = signal('');
 
   turnos: Turno[] = [];
 
@@ -74,6 +75,7 @@ export class TurnosComponent implements OnInit {
         })),
       }));
     } catch {
+      this.error.set('Error al cargar turnos');
       this.toastService.error('Error al cargar turnos');
     } finally {
       this.loading.set(false);

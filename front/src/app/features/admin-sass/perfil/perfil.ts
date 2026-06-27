@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
 
@@ -9,6 +9,9 @@ import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base'
   styleUrl: '../../../shared/perfil/perfil.css',
 })
 export class Perfil extends PerfilBase {
+  readonly loading = signal(true);
+  readonly error = signal('');
+
   override usuario: DatosPersonales = {
     nombres: 'Jose',
     apellidos: 'Alata',
@@ -19,4 +22,9 @@ export class Perfil extends PerfilBase {
     rolSass: 'Super Administrador',
     fechaIngreso: '01/03/2020',
   };
+
+  constructor() {
+    super();
+    setTimeout(() => this.loading.set(false), 800);
+  }
 }

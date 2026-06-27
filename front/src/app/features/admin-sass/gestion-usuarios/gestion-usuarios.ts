@@ -21,6 +21,9 @@ interface Usuario {
 	styleUrl: './gestion-usuarios.css',
 })
 export class GestionUsuarios {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly fb = new FormBuilder();
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);

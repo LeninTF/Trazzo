@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -48,7 +48,9 @@ interface Turno {
   styleUrl: './dashboard.css',
 })
 export class Dashboard {
-  
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   // ==========================================
   // DATOS DEL USUARIO
   // ==========================================

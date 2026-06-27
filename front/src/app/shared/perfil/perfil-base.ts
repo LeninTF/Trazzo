@@ -1,6 +1,3 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-
 export interface DatosPersonales {
   nombres: string;
   apellidos: string;

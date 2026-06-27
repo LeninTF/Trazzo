@@ -1,3 +1,23 @@
+@if (loading()) {
+<div class="perfil-wrapper d-flex justify-content-center align-items-center" style="min-height: 400px;">
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3 text-muted">Cargando perfil...</p>
+    </div>
+</div>
+} @else if (error()) {
+<div class="perfil-wrapper d-flex justify-content-center align-items-center" style="min-height: 400px;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+        <button class="perfil-btn perfil-btn--primary mt-2" (click)="cargarUsuario()">
+            <i class="bi bi-arrow-clockwise"></i> Reintentar
+        </button>
+    </div>
+</div>
+} @else {
 <div class="perfil-wrapper">
     @if (mensajeExito) {
     <div class="perfil-toast perfil-toast--success">
@@ -181,3 +201,4 @@
         </div>
     </div>
 </div>
+}

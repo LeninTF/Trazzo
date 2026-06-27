@@ -1,3 +1,23 @@
+@if (loading()) {
+  <div class="turnos-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <p class="mt-2 text-muted small">Cargando turnos...</p>
+    </div>
+  </div>
+} @else if (error()) {
+  <div class="turnos-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2rem;"></i>
+      <p class="mt-2 text-muted">{{ error() }}</p>
+      <button class="btn btn-outline-primary btn-sm mt-2" (click)="cargarTurnos()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+      </button>
+    </div>
+  </div>
+} @else {
 <div class="turnos-section">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-3">
@@ -13,7 +33,7 @@
       <!-- ──────── HEADER ──────── -->
       <div class="turno-header">
         @if (editingTurnoId === turno.id) {
-          <div class="d-flex align-items-center gap-2 flex-grow-1">
+          <div class="d-flex align-items-center gap-2 flex-grow-1" [formGroup]="editTurnoForm">
           <label for="turno-edit-nombre" class="visually-hidden">Nombre del turno</label>
           <input
             id="turno-edit-nombre"
@@ -21,7 +41,6 @@
             class="gh-input-sm flex-grow-1"
             [class.is-invalid]="editTurnoForm.get('nombre')?.invalid && editTurnoForm.get('nombre')?.touched"
             formControlName="nombre"
-            [formGroup]="editTurnoForm"
             placeholder="Nombre del turno"
           >
             <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditTurno(turno)" title="Guardar">
@@ -84,7 +103,7 @@
           @for (horario of turno.horarios; track horario.id) {
             <div class="horario-card">
               @if (isEditingHorario(turno.id, horario.id)) {
-                <div class="d-flex align-items-center gap-2 flex-grow-1">
+                <div class="d-flex align-items-center gap-2 flex-grow-1" [formGroup]="editHorarioForm">
                   <label for="turno-horario-inicio" class="visually-hidden">Hora inicio</label>
                   <input
                     id="turno-horario-inicio"
@@ -92,7 +111,6 @@
                     class="gh-input-xs"
                     [class.is-invalid]="editHorarioForm.get('inicio')?.invalid && editHorarioForm.get('inicio')?.touched"
                     formControlName="inicio"
-                    [formGroup]="editHorarioForm"
                     placeholder="HH:mm"
                   >
                   <span class="text-muted fw-bold">&ndash;</span>
@@ -103,7 +121,6 @@
                     class="gh-input-xs"
                     [class.is-invalid]="editHorarioForm.get('fin')?.invalid && editHorarioForm.get('fin')?.touched"
                     formControlName="fin"
-                    [formGroup]="editHorarioForm"
                     placeholder="HH:mm"
                   >
                   <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditHorario(turno.id, horario)">
@@ -135,7 +152,7 @@
 
           <!-- ──────── ADD HORARIO ──────── -->
           @if (activeHorarioTurnoId === turno.id) {
-            <div class="horario-add">
+            <div class="horario-add" [formGroup]="horarioForm">
               <label for="turno-add-inicio" class="visually-hidden">Hora inicio</label>
               <input
                 id="turno-add-inicio"
@@ -143,7 +160,6 @@
                 class="gh-input-xs"
                 [class.is-invalid]="horarioForm.get('inicio')?.invalid && horarioForm.get('inicio')?.touched"
                 formControlName="inicio"
-                [formGroup]="horarioForm"
                 placeholder="HH:mm"
               >
               <span class="text-muted fw-bold">&ndash;</span>
@@ -154,7 +170,6 @@
                 class="gh-input-xs"
                 [class.is-invalid]="horarioForm.get('fin')?.invalid && horarioForm.get('fin')?.touched"
                 formControlName="fin"
-                [formGroup]="horarioForm"
                 placeholder="HH:mm"
               >
               <button class="gh-icon-btn gh-icon-btn-success" (click)="addHorario(turno.id)" title="Agregar">
@@ -223,3 +238,4 @@
     </div>
   }
 </div>
+}

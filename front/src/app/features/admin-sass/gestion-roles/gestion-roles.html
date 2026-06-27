@@ -1,3 +1,11 @@
+@if (error()) {
+<div class="roles-page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="roles-page">
 
   <header class="roles-header">
@@ -96,8 +104,8 @@
                   <button type="button" class="btn-toggle-all" (click)="toggleModulo(modulo.id, true)" title="Activar todas">
                     <i class="bi bi-square"></i>
                   </button>
-                }
-              </div>
+              }
+            </div>
             </div>
             <div class="roles-module__body">
               @for (accion of modulo.acciones; track accion.id) {
@@ -156,3 +164,4 @@
     </div>
   }
 </div>
+}

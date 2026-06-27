@@ -1,3 +1,11 @@
+@if (error()) {
+<div class="page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="page">
 	<header class="page__header">
 		<div>
@@ -208,3 +216,4 @@
 	</div>
 
 </div>
+}

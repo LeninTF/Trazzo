@@ -26,6 +26,9 @@ interface Transaccion {
 	styleUrl: './facturas.css',
 })
 export class Facturas {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly fb = new FormBuilder();
   private readonly toastService = inject(ToastService);
   private readonly exportService = inject(ExportService);

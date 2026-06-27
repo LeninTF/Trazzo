@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BaseGestionRoles, Rol, Modulo } from '../../../shared/role-management/role-management-base';
 
@@ -9,6 +9,9 @@ import { BaseGestionRoles, Rol, Modulo } from '../../../shared/role-management/r
   styleUrl: '../../../shared/role-management/gestion-roles.css',
 })
 export class GestionRoles extends BaseGestionRoles {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   roles: Rol[] = [
     { id: 'super-administrador', nombre: 'Super Administrador', descripcion: 'Acceso total a la plataforma SASS: gesti\u00F3n completa de tenants, billing, configuraci\u00F3n global y monitoreo del sistema.', color: '#7C3AED', icono: 'bi-shield-lock' },
     { id: 'soporte', nombre: 'Administrador de Soporte', descripcion: 'Gesti\u00F3n operativa de tenants y monitoreo del sistema. Sin acceso a billing ni configuraci\u00F3n global de planes.', color: '#0891B2', icono: 'bi-headset' },

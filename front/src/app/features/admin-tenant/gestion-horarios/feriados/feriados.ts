@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -22,6 +22,8 @@ interface Feriado {
 export class FeriadosComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
+  readonly loading = signal(true);
+  readonly error = signal('');
 
   feriados: Feriado[] = [];
 
@@ -49,6 +51,8 @@ export class FeriadosComponent implements OnInit {
   }
 
   async cargarFeriados(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
     try {
       const res = await firstValueFrom(this.api.corehr.listNonWorkingDays({ size: 100 }));
       this.feriados = res.content.map(d => ({
@@ -58,7 +62,10 @@ export class FeriadosComponent implements OnInit {
         tipo: 'nacional',
       }));
     } catch {
+      this.error.set('Error al cargar feriados');
       this.toastService.error('Error al cargar feriados');
+    } finally {
+      this.loading.set(false);
     }
   }
 

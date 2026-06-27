@@ -45,7 +45,8 @@ export class DirectorioPersonal implements OnInit {
   private readonly modalService = inject(ModalService);
   private readonly api = inject(ApiService);
   readonly loading = signal(false);
-  
+  readonly error = signal('');
+
   // ==========================================
   // DATOS PRINCIPALES
   // ==========================================
@@ -130,7 +131,7 @@ export class DirectorioPersonal implements OnInit {
         porcentajeActivos: res.totalElements > 0 ? Math.round((items.filter(p => p.estado === 'ACTIVO').length / res.totalElements) * 100) : 0,
       };
     } catch {
-      this.toastService.error('Error al cargar personal');
+      this.error.set('Error al cargar personal. Verifica tu conexión e intenta nuevamente.');
     } finally {
       this.loading.set(false);
     }
