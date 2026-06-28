@@ -261,14 +261,15 @@ CREATE TABLE monthly_closures (
     total_employees INT NOT NULL,
     excel_report_url VARCHAR(255),
     pdf_report_url VARCHAR(255),
-    created_by_user_id UUID,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_by_user_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_monthly_closures_period UNIQUE (year, month)
 );
 
 CREATE TABLE monthly_closures_details (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     monthly_closures_id UUID REFERENCES monthly_closures(id) ON DELETE CASCADE,
-    tenant_user_id INT REFERENCES tenant_user(id),
+    tenant_user_id INT NOT NULL REFERENCES tenant_user(id),
     tenant_user_full_name VARCHAR(255),
     tenant_user_document VARCHAR(50),
     department_name VARCHAR(255),
