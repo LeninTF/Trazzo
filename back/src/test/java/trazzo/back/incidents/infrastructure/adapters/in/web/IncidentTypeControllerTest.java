@@ -74,13 +74,13 @@ class IncidentTypeControllerTest {
     }
 
     @Test
-    void createWithBlankNombreReturns422() throws Exception {
+    void createWithBlankNombreReturns400() throws Exception {
         var request = new trazzo.back.incidents.infrastructure.adapters.in.web.dto.CreateIncidentTypeRequest(" ", "Desc");
         mockMvc.perform(post("/incidentes/tipos")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
