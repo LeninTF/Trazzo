@@ -100,7 +100,7 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     private static IncidentState parseState(String state) {
-        if (state == null) return null;
+        if (state == null || state.isBlank()) return null;
         try {
             return IncidentState.valueOf(state.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -110,8 +110,12 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
 
     private boolean hasAnyFilter(String tenantUserId, String state, String tipoId,
                                   LocalDateTime desde, LocalDateTime hasta, String search) {
-        return tenantUserId != null || state != null || tipoId != null
-                || desde != null || hasta != null || search != null;
+        return notBlank(tenantUserId) || notBlank(state) || notBlank(tipoId)
+                || desde != null || hasta != null || notBlank(search);
+    }
+
+    private static boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 
     private Sort parseSort(String sort) {

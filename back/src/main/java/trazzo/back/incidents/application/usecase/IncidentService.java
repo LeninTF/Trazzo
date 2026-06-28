@@ -18,7 +18,9 @@ import trazzo.back.incidents.domain.model.IncidentType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -64,6 +66,8 @@ public class IncidentService implements IncidentUseCase {
         var incidents = incidentRepository.findAll(null, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
         var total = incidentRepository.count(null, state, tipoId, desdeDt, hastaDt, search);
 
+        attachTypes(incidents);
+
         var results = incidents.stream().map(this::toResult).toList();
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
         return new PaginatedResult<>(results, page, size, total, totalPages);
@@ -106,6 +110,22 @@ public class IncidentService implements IncidentUseCase {
     private void publishEvents(Incident incident) {
         var events = incident.pullDomainEvents();
         events.forEach(eventPublisher::publish);
+    }
+
+    private void attachTypes(List<Incident> incidents) {
+        var typeIds = incidents.stream()
+                .map(Incident::getIncidentTypeId)
+                .distinct()
+                .toList();
+        Map<String, IncidentType> typeMap = typeRepository.findByIdIn(typeIds)
+                .stream()
+                .collect(Collectors.toMap(IncidentType::getId, t -> t));
+        incidents.forEach(i -> {
+            var type = typeMap.get(i.getIncidentTypeId());
+            if (type != null) {
+                i.attachType(type);
+            }
+        });
     }
 
     private IncidentResult toResult(Incident incident) {
