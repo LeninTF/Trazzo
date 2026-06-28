@@ -62,6 +62,6 @@ class TenantControllerTest {
                                   "holdingId": 10
                                 }
                                 """))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isBadRequest());
     }
 }
