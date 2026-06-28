@@ -3,7 +3,7 @@ version: '3.8'
 services:
   trazzo-backend:
     # 1. Se descarga la imagen del registro.
-    image: ghcr.io/LeninTF/trazzo/trazzo-back:main
+    image: ghcr.io/lenintf/trazzo/trazzo-back:main
     container_name: trazzo-backend
     restart: unless-stopped
     # ports:
@@ -20,7 +20,7 @@ services:
       start_period: 45s
 
   trazzo-frontend:
-    image: ghcr.io/LeninTF/trazzo/trazzo-front:main
+    image: ghcr.io/lenintf/trazzo/trazzo-front:main
     container_name: trazzo-frontend
     restart: unless-stopped
     networks:
