@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import trazzo.back.reports.domain.exception.DuplicateClosureException;
 import trazzo.back.reports.domain.model.closure.MonthlyClosure;
 
 import java.time.LocalDateTime;
@@ -48,6 +50,20 @@ class MonthlyClosureJdbcRepositoryTest {
         assertEquals(6, result.getMonth());
         verify(jdbcTemplate).update(anyString(),
                 eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq(userId), eq(now));
+    }
+
+    @Test
+    void shouldThrowDuplicateClosureExceptionWhenDuplicateKey() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", userId, now);
+
+        when(jdbcTemplate.update(anyString(),
+                eq(id), eq(6), eq(2025), eq(10), eq("excel"), eq("pdf"), eq(userId), eq(now)))
+                .thenThrow(new DuplicateKeyException("duplicate"));
+
+        assertThrows(DuplicateClosureException.class, () -> repository.save(closure));
     }
 
     @Test

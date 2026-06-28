@@ -38,43 +38,52 @@ class MonthlyClosureTest {
     @ValueSource(ints = { 0, 13 })
     void shouldThrowExceptionForInvalidMonth(int month) {
         LocalDateTime now = LocalDateTime.now();
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class,
-                () -> createClosure(UUID.randomUUID(), month, 2025, 10, "excel", "pdf", UUID.randomUUID(), now));
+                () -> createClosure(id, month, 2025, 10, "excel", "pdf", userId, now));
     }
 
     @Test
     void shouldThrowExceptionWhenYearIsInvalid() {
         LocalDateTime now = LocalDateTime.now();
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class,
-                () -> createClosure(UUID.randomUUID(), 6, 1999, 10, "excel", "pdf", UUID.randomUUID(), now));
+                () -> createClosure(id, 6, 1999, 10, "excel", "pdf", userId, now));
     }
 
     @Test
     void shouldThrowExceptionWhenTotalEmployeesIsNegative() {
         LocalDateTime now = LocalDateTime.now();
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         assertThrows(IllegalArgumentException.class,
-                () -> createClosure(UUID.randomUUID(), 6, 2025, -1, "excel", "pdf", UUID.randomUUID(), now));
+                () -> createClosure(id, 6, 2025, -1, "excel", "pdf", userId, now));
     }
 
     @Test
     void shouldThrowExceptionWhenIdIsNull() {
         LocalDateTime now = LocalDateTime.now();
+        UUID userId = UUID.randomUUID();
         assertThrows(NullPointerException.class,
-                () -> createClosure(null, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), now));
+                () -> createClosure(null, 6, 2025, 10, "excel", "pdf", userId, now));
     }
 
     @Test
     void shouldThrowExceptionWhenCreatedByUserIdIsNull() {
         LocalDateTime now = LocalDateTime.now();
+        UUID id = UUID.randomUUID();
         assertThrows(NullPointerException.class,
-                () -> createClosure(UUID.randomUUID(), 6, 2025, 10, "excel", "pdf", null, now));
+                () -> createClosure(id, 6, 2025, 10, "excel", "pdf", null, now));
     }
 
     @Test
     void shouldThrowExceptionWhenCreatedAtIsNull() {
         UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         assertThrows(NullPointerException.class,
-                () -> createClosure(id, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), null));
+                () -> createClosure(id, 6, 2025, 10, "excel", "pdf", userId, null));
     }
 
     @Test
