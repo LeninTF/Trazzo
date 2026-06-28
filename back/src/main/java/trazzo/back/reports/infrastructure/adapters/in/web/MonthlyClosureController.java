@@ -3,6 +3,7 @@ package trazzo.back.reports.infrastructure.adapters.in.web;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,7 @@ import trazzo.back.reports.application.ports.in.GetMonthlyClosureUseCase;
 import trazzo.back.reports.application.ports.in.ListMonthlyClosureUseCase;
 import trazzo.back.reports.infrastructure.adapters.in.web.dto.CreateMonthlyClosureRequest;
 import trazzo.back.reports.infrastructure.adapters.in.web.dto.MonthlyClosureResponse;
+import trazzo.back.shared.security.AuthenticatedUser;
 
 import java.util.List;
 import java.util.UUID;
@@ -40,9 +42,11 @@ public class MonthlyClosureController {
     }
 
     @PostMapping
-    public ResponseEntity<MonthlyClosureResponse> create(@Valid @RequestBody CreateMonthlyClosureRequest request) {
+    public ResponseEntity<MonthlyClosureResponse> create(
+            @Valid @RequestBody CreateMonthlyClosureRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
         CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(
-                request.month(), request.year(), request.createdByUserId());
+                request.month(), request.year(), user.id());
         MonthlyClosureResult result = createUseCase.execute(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(result));
     }

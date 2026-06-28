@@ -1,15 +1,18 @@
 package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
@@ -21,11 +24,12 @@ import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
 @RequiredArgsConstructor
 public class TenantSchemaMigrator implements ApplicationRunner {
 
-    private static final String MIGRATION_SCRIPT = "db/tenant/migration/V1__add_identity_columns.sql";
+    private static final String MIGRATION_PATH = "db/tenant/migration/";
 
     private final JdbcTemplate jdbc;
     private final EncryptionService encryptionService;
     private final ProvisioningProperties props;
+    private final ResourcePatternResolver resourceResolver;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -37,18 +41,19 @@ public class TenantSchemaMigrator implements ApplicationRunner {
                 """);
 
         for (Map<String, Object> row : tenants) {
-            String tenantId = (String) row.get("id");
-            String dbName = (String) row.get("db_name");
-            String dbHost = (String) row.get("db_host");
-            String dbPort = (String) row.get("db_port");
-            String dbUser = (String) row.get("db_user");
-            String encryptedPassword = (String) row.get("db_password");
-
             try {
+                String tenantId = row.get("id").toString();
+                String dbName = (String) row.get("db_name");
+                String dbHost = (String) row.get("db_host");
+                String dbPort = (String) row.get("db_port");
+                String dbUser = (String) row.get("db_user");
+                String encryptedPassword = (String) row.get("db_password");
                 String dbPassword = encryptionService.decrypt(encryptedPassword);
                 migrateTenant(tenantId, dbHost, dbPort, dbName, dbUser, dbPassword);
             } catch (Exception e) {
-                log.error("Failed to migrate tenant {} ({}): {}", tenantId, dbName, e.getMessage());
+                String id = row.get("id") != null ? row.get("id").toString() : "unknown";
+                String dbName = (String) row.get("db_name");
+                log.error("Failed to migrate tenant {} ({}): {}", id, dbName, e.getMessage());
             }
         }
     }
@@ -57,9 +62,19 @@ public class TenantSchemaMigrator implements ApplicationRunner {
                                 String user, String password) {
         String url = "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(MIGRATION_SCRIPT));
+            Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
+            List.of(resources).stream()
+                    .sorted(Comparator.comparing(Resource::getFilename))
+                    .forEach(script -> {
+                        try {
+                            ScriptUtils.executeSqlScript(conn, script);
+                            log.info("Executed {} on tenant {} ({})", script.getFilename(), tenantId, dbName);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Failed to execute " + script.getFilename(), e);
+                        }
+                    });
             log.info("Migrated tenant {} ({})", tenantId, dbName);
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             throw new TenantProvisioningException(
                     "Failed to migrate tenant DB: " + dbName, e);
         }
