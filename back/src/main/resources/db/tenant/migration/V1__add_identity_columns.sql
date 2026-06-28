@@ -1,0 +1,2 @@
+ALTER TABLE tenant_user ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+ALTER TABLE tenant_user ADD COLUMN IF NOT EXISTS document_value VARCHAR(50);
