@@ -263,6 +263,26 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  .perfil-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 32px;
+  }
+
+  .perfil-name {
+    font-size: 18px;
+  }
+
+  .perfil-password-section .row {
+    flex-direction: column;
+  }
+
+  .perfil-password-section .col-md-4 {
+    width: 100%;
+  }
+}
+
 @media (max-width: 575.98px) {
   .perfil-wrapper {
     padding: 16px 12px;

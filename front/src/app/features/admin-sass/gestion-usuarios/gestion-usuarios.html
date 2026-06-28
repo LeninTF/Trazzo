@@ -55,26 +55,26 @@
 						<tbody>
 							@for (u of usuariosFiltrados(); track u.id) {
 								<tr>
-									<td class="td-user">
+									<td class="td-user" data-label="Usuario">
 										<span class="td-user__avatar">{{ u.nombre.charAt(0) }}{{ u.nombre.split(' ')[1]?.charAt(0) }}</span>
 										<span class="td-user__name">{{ u.nombre }}</span>
 									</td>
-									<td class="td-mono">{{ u.correo }}</td>
-									<td>
+									<td class="td-mono" data-label="Correo">{{ u.correo }}</td>
+									<td data-label="Nivel de Acceso">
 										<span class="role-badge" [class.role-badge--superadmin]="u.rol === 'Superadmin'"
 											[class.role-badge--soporte]="u.rol === 'Soporte'"
 											[class.role-badge--facturacion]="u.rol === 'Facturacion'">
 											{{ u.rol === 'Facturacion' ? 'Facturación' : u.rol }}
 										</span>
 									</td>
-									<td>
+									<td data-label="Estado">
 										<span class="status" [class.status--active]="u.estado === 'activo'" [class.status--inactive]="u.estado === 'inactivo'">
 											<span class="status__dot"></span>
 											{{ u.estado === 'activo' ? 'Activo' : 'Inactivo' }}
 										</span>
 									</td>
-									<td class="td-muted">{{ u.ultimaConexion }}</td>
-									<td class="td-actions">
+									<td class="td-muted" data-label="Última Conexión">{{ u.ultimaConexion }}</td>
+									<td class="td-actions" data-label="Acciones">
 										<button type="button" class="btn-icon" title="Editar" (click)="abrirCrear(u)"><i class="bi bi-pencil"></i></button>
 										<button type="button" class="btn-icon" [title]="u.estado === 'activo' ? 'Desactivar' : 'Activar'" (click)="toggleEstado(u)">
 											<i class="bi" [class.bi-pause-circle]="u.estado === 'activo'" [class.bi-play-circle]="u.estado === 'inactivo'"></i>

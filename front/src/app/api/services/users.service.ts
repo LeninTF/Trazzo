@@ -72,4 +72,8 @@ export class UsersService {
   getMasterMe(): Observable<MasterUserProfile> {
     return this.http.get<MasterUserProfile>(`${API}/saas/users/me`);
   }
+
+  patchMasterMe(body: { img_url?: string | null }): Observable<MasterUserProfile> {
+    return this.http.patch<MasterUserProfile>(`${API}/saas/users/me`, body);
+  }
 }

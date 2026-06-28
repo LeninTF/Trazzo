@@ -128,12 +128,12 @@
 				<tbody>
 					@for (t of transaccionesPaginadas(); track t.id) {
 					<tr>
-						<td class="td-primary">{{ t.tenant }}</td>
-						<td>{{ t.plan }}</td>
-						<td class="td-mono">{{ t.idTransaccion }}</td>
-						<td>{{ t.fecha }}</td>
-						<td class="td-monto">S/{{ t.monto.toFixed(2) }}</td>
-						<td>
+						<td class="td-primary" data-label="Tenant">{{ t.tenant }}</td>
+						<td data-label="Plan">{{ t.plan }}</td>
+						<td class="td-mono" data-label="ID">{{ t.idTransaccion }}</td>
+						<td data-label="Fecha">{{ t.fecha }}</td>
+						<td class="td-monto" data-label="Monto">S/{{ t.monto.toFixed(2) }}</td>
+						<td data-label="Estado">
 							<span class="badge" [class.badge--green]="t.estado === 'pagado'"
 								[class.badge--yellow]="t.estado === 'pendiente'"
 								[class.badge--red]="t.estado === 'vencido'">
@@ -142,7 +142,7 @@
 								}}
 							</span>
 						</td>
-						<td class="td-actions">
+						<td class="td-actions" data-label="Acciones">
 							<button type="button" class="btn-icon" title="Ver detalle" (click)="verDetalle(t)"><i
 									class="bi bi-eye"></i></button>
 						</td>

@@ -6,6 +6,7 @@ export interface DatosPersonales {
   dni: string;
   rol: string;
   fechaIngreso: string;
+  img_url: string;
   [key: string]: string;
 }
 

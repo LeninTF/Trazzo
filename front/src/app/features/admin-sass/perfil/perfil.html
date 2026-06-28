@@ -45,9 +45,36 @@
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="perfil-card rounded-4 p-4 text-center">
-                <div class="perfil-avatar">
+                <div class="perfil-avatar" (click)="fotoInput.click()" role="button" tabindex="0">
+                    @if (fotoPreview) {
+                    <img [src]="fotoPreview" alt="Foto de perfil" class="perfil-avatar__img" />
+                    } @else {
                     <i class="bi bi-person-fill"></i>
+                    }
+                    <div class="perfil-avatar__overlay">
+                        <i class="bi bi-camera-fill"></i>
+                    </div>
                 </div>
+                <input #fotoInput type="file" accept="image/*" (change)="onFotoSeleccionada($event)" hidden />
+                @if (selectedFile && !fotoSubiendo()) {
+                <button class="perfil-btn perfil-btn--primary btn-sm mb-3" (click)="subirFoto()">
+                    <i class="bi bi-check-lg"></i> Usar esta foto
+                </button>
+                }
+                @if (fotoSubiendo()) {
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Procesando...
+                    </small>
+                </div>
+                }
+                @if (editando) {
+                <div class="mb-3">
+                    <label class="perfil-field-label" for="perfil-foto-url">URL de la foto</label>
+                    <input id="perfil-foto-url" class="perfil-input" [ngModel]="usuarioEdit.img_url"
+                        (ngModelChange)="onUrlCambio($event)" placeholder="https://ejemplo.com/foto.jpg" />
+                </div>
+                }
                 <h2 class="perfil-name">{{ usuario.nombres }} {{ usuario.apellidos }}</h2>
                 <span class="perfil-badge">{{ usuario.rol }}</span>
 
@@ -106,10 +133,14 @@
 
                 @if (editando) {
                 <div class="d-flex gap-2 mt-4">
-                    <button class="perfil-btn perfil-btn--primary" (click)="guardarCambios()">
+                    <button class="perfil-btn perfil-btn--primary" (click)="guardarCambios()" [disabled]="guardando()">
+                        @if (guardando()) {
+                        <span class="spinner-border spinner-border-sm"></span> Guardando...
+                        } @else {
                         <i class="bi bi-check-lg"></i> Guardar Cambios
+                        }
                     </button>
-                    <button class="perfil-btn perfil-btn--outline" (click)="cancelarEdicion()">
+                    <button class="perfil-btn perfil-btn--outline" (click)="cancelarEdicion()" [disabled]="guardando()">
                         <i class="bi bi-x-lg"></i> Cancelar
                     </button>
                 </div>

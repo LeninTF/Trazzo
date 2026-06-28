@@ -19,11 +19,16 @@ export class Perfil extends PerfilBase implements OnInit {
 
   readonly loading = signal(true);
   readonly error = signal('');
+  readonly guardando = signal(false);
+
+  selectedFile: File | null = null;
+  fotoPreview: string | null = null;
+  fotoSubiendo = signal(false);
   private loaded = false;
 
   override usuario: DatosPersonales = {
     nombres: '', apellidos: '', email: '', telefono: '',
-    dni: '', rol: '', sede: '', area: '', fechaIngreso: '',
+    dni: '', rol: '', sede: '', area: '', fechaIngreso: '', img_url: '',
   };
   private userId = 0;
 
@@ -58,7 +63,9 @@ export class Perfil extends PerfilBase implements OnInit {
         sede: u.sedes[0]?.nombre ?? '',
         area: u.areas[0]?.nombre ?? '',
         fechaIngreso: u.created_at ? new Date(u.created_at).toLocaleDateString('es-PE') : '',
+        img_url: p.img_url ?? '',
       };
+      this.fotoPreview = this.usuario.img_url || null;
       this.roleService.setUserInfo(`${p.name} ${p.father_surname}`.trim(), u.email ?? '');
     } catch {
       this.error.set('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
@@ -68,7 +75,58 @@ export class Perfil extends PerfilBase implements OnInit {
     }
   }
 
-  override guardarCambios(): void {
+  onUrlCambio(url: string): void {
+    this.usuarioEdit.img_url = url;
+    this.fotoPreview = url || null;
+    this.selectedFile = null;
+  }
+
+  onFotoSeleccionada(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.mensajeError = 'Selecciona un archivo de imagen válido.';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.mensajeError = 'La imagen no debe superar los 2 MB.';
+      return;
+    }
+
+    this.selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.fotoPreview = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async subirFoto(): Promise<void> {
+    if (!this.selectedFile) return;
+    this.fotoSubiendo.set(true);
+    this.limpiarMensajes();
+    try {
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject();
+        reader.readAsDataURL(this.selectedFile!);
+      });
+      const target = this.editando ? this.usuarioEdit : this.usuario;
+      target.img_url = b64;
+      this.fotoPreview = b64;
+      this.selectedFile = null;
+      this.toastService.success('Foto de perfil actualizada correctamente.');
+    } catch {
+      this.mensajeError = 'No se pudo leer la imagen. Intenta nuevamente.';
+    } finally {
+      this.fotoSubiendo.set(false);
+    }
+  }
+
+  override async guardarCambios(): Promise<void> {
     if (!this.usuarioEdit.nombres.trim() || !this.usuarioEdit.apellidos.trim()) {
       this.mensajeError = 'Nombres y apellidos son obligatorios.';
       return;
@@ -77,18 +135,28 @@ export class Perfil extends PerfilBase implements OnInit {
       this.mensajeError = 'Correo electrónico inválido.';
       return;
     }
-    const [name, ...rest] = this.usuarioEdit.nombres.trim().split(/\s+/);
-    const fatherSurname = this.usuarioEdit.apellidos.trim().split(/\s+/)[0] ?? '';
-    const motherSurname = this.usuarioEdit.apellidos.trim().split(/\s+/).slice(1).join(' ') || undefined;
-    firstValueFrom(this.api.users.patchMe({
-      phone: this.usuarioEdit.telefono || null,
-    })).then(() => {
+
+    this.guardando.set(true);
+    this.limpiarMensajes();
+    try {
+      await firstValueFrom(this.api.users.patchMe({
+        phone: this.usuarioEdit.telefono || null,
+        img_url: this.usuarioEdit.img_url || null,
+      }));
       this.usuario = { ...this.usuarioEdit };
       this.editando = false;
       this.toastService.success('Datos actualizados correctamente.');
-    }).catch(() => {
+    } catch {
       this.mensajeError = 'Error al guardar cambios.';
-    });
+    } finally {
+      this.guardando.set(false);
+    }
+  }
+
+  override cancelarEdicion(): void {
+    this.fotoPreview = this.usuario.img_url || null;
+    this.selectedFile = null;
+    super.cancelarEdicion();
   }
 
   override guardarPassword(): void {

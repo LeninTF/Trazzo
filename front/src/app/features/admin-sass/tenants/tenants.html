@@ -119,7 +119,7 @@
         <tbody>
           @for (tenant of tenantsPaginado; track tenant.id) {
             <tr>
-              <td class="tenants-table__name">
+              <td class="tenants-table__name" data-label="Empresa">
                 <div class="tenant-logo" [style.backgroundColor]="tenant.color">
                   {{ tenant.iniciales }}
                 </div>
@@ -128,30 +128,30 @@
                   <div class="small text-muted">{{ tenant.idTenant }}</div>
                 </div>
               </td>
-              <td class="tenants-table__domain">
+              <td class="tenants-table__domain" data-label="Dominio">
                 {{ tenant.dominio }}
                 <div class="small text-muted">{{ tenant.industria }}</div>
                </td>
-              <td class="tenants-table__date">
+              <td class="tenants-table__date" data-label="Fecha de Registro">
                 {{ tenant.fechaRegistro | date:'dd MMM, yyyy' }}
                 <div class="small text-muted">Hace {{ tenant.antiguedad }} meses</div>
                </td>
-              <td>
+              <td data-label="Plan">
                 <span class="plan-badge" [class.plan-enterprise]="tenant.plan === 'ENTERPRISE'" [class.plan-professional]="tenant.plan === 'PROFESSIONAL'" [class.plan-basic]="tenant.plan === 'BASIC'">
                   {{ tenant.plan }}
                 </span>
                </td>
-              <td>
+              <td data-label="Estado">
                 <span class="estado-badge" [class.estado-activo]="tenant.estado === 'Activo'" [class.estado-trial]="tenant.estado === 'Trial'" [class.estado-suspendido]="tenant.estado === 'Suspendido'">
                   <span class="estado-dot"></span>
                   {{ tenant.estado }}
                 </span>
                </td>
-              <td class="tenants-table__users">
+              <td class="tenants-table__users" data-label="Usuarios">
                 <strong>{{ tenant.usuarios | number }}</strong>
                 <div class="small text-muted">usuarios</div>
                </td>
-              <td>
+              <td data-label="Acciones">
                 <button class="btn-action" title="Configuración" (click)="abrirModalConfiguracion(tenant)">
                   <i class="bi bi-gear-wide-connected"></i>
                 </button>
