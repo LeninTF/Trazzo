@@ -1,7 +1,6 @@
 package trazzo.back.saasglobal.infrastructure.security;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,7 +25,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         var authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .collect(Collectors.toList());
+                .toList();
 
         return new AuthenticatedUser(
                 UUID.fromString(user.getId()),

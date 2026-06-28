@@ -18,11 +18,13 @@ public class MonthlyClosureJdbcRepository implements MonthlyClosureRepositoryPor
 
     private static final String TABLE = "monthly_closures";
     private static final String COLUMNS = "id, month, year, total_employees, excel_report_url, pdf_report_url, created_by_user_id, created_at";
+    private static final String FROM_TABLE = " FROM " + TABLE;
+    private static final String SELECT_COLUMNS = "SELECT " + COLUMNS;
 
     private static final String INSERT = "INSERT INTO " + TABLE + " (" + COLUMNS + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    private static final String SELECT_BY_ID = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE id = ?";
-    private static final String SELECT_ALL = "SELECT " + COLUMNS + " FROM " + TABLE + " ORDER BY year DESC, month DESC";
-    private static final String SELECT_BY_MONTH_YEAR = "SELECT " + COLUMNS + " FROM " + TABLE + " WHERE month = ? AND year = ?";
+    private static final String SELECT_BY_ID = SELECT_COLUMNS + FROM_TABLE + " WHERE id = ?";
+    private static final String SELECT_ALL = SELECT_COLUMNS + FROM_TABLE + " ORDER BY year DESC, month DESC";
+    private static final String SELECT_BY_MONTH_YEAR = SELECT_COLUMNS + FROM_TABLE + " WHERE month = ? AND year = ?";
     private static final String SELECT_LOCK_BY_MONTH_YEAR = SELECT_BY_MONTH_YEAR + " FOR UPDATE";
 
     private final JdbcTemplate jdbcTemplate;

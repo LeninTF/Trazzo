@@ -9,21 +9,20 @@ import java.util.UUID;
 
 class MonthlyClosureTest {
 
+    private static MonthlyClosure createClosure(UUID id, int month, int year,
+                                                  int totalEmployees, String excelUrl,
+                                                  String pdfUrl, UUID userId,
+                                                  LocalDateTime createdAt) {
+        return new MonthlyClosure(id, month, year, totalEmployees, excelUrl, pdfUrl, userId, createdAt);
+    }
+
     @Test
     void shouldCreateMonthlyClosureSuccessfully() {
         UUID id = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
-
         UUID userId = UUID.randomUUID();
-        MonthlyClosure closure = new MonthlyClosure(
-                id,
-                6,
-                2025,
-                100,
-                "excel-url",
-                "pdf-url",
-                userId,
-                createdAt);
+
+        MonthlyClosure closure = createClosure(id, 6, 2025, 100, "excel-url", "pdf-url", userId, createdAt);
 
         assertEquals(id, closure.getId());
         assertEquals(6, closure.getMonth());
@@ -38,99 +37,44 @@ class MonthlyClosureTest {
     @ParameterizedTest
     @ValueSource(ints = { 0, 13 })
     void shouldThrowExceptionForInvalidMonth(int month) {
-
-        UUID id = UUID.randomUUID();
-        LocalDateTime createdAt = LocalDateTime.now();
-
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> new MonthlyClosure(
-                        id,
-                        month,
-                        2025,
-                        10,
-                        "excel",
-                        "pdf",
-                        UUID.randomUUID(),
-                        createdAt));
+        LocalDateTime now = LocalDateTime.now();
+        assertThrows(IllegalArgumentException.class,
+                () -> createClosure(UUID.randomUUID(), month, 2025, 10, "excel", "pdf", UUID.randomUUID(), now));
     }
 
     @Test
     void shouldThrowExceptionWhenYearIsInvalid() {
-        UUID id = UUID.randomUUID();
-        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(IllegalArgumentException.class,
-                () -> new MonthlyClosure(
-                        id,
-                        6,
-                        1999,
-                        10,
-                        "excel",
-                        "pdf",
-                        UUID.randomUUID(),
-                        createdAt));
+                () -> createClosure(UUID.randomUUID(), 6, 1999, 10, "excel", "pdf", UUID.randomUUID(), now));
     }
 
     @Test
     void shouldThrowExceptionWhenTotalEmployeesIsNegative() {
-        UUID id = UUID.randomUUID();
-        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(IllegalArgumentException.class,
-                () -> new MonthlyClosure(
-                        id,
-                        6,
-                        2025,
-                        -1,
-                        "excel",
-                        "pdf",
-                        UUID.randomUUID(),
-                        createdAt));
+                () -> createClosure(UUID.randomUUID(), 6, 2025, -1, "excel", "pdf", UUID.randomUUID(), now));
     }
 
     @Test
     void shouldThrowExceptionWhenIdIsNull() {
-        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosure(
-                        null,
-                        6,
-                        2025,
-                        10,
-                        "excel",
-                        "pdf",
-                        UUID.randomUUID(),
-                        createdAt));
+                () -> createClosure(null, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), now));
     }
 
     @Test
     void shouldThrowExceptionWhenCreatedByUserIdIsNull() {
-        UUID id = UUID.randomUUID();
-        LocalDateTime createdAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosure(
-                        id,
-                        6,
-                        2025,
-                        10,
-                        "excel",
-                        "pdf",
-                        null,
-                        createdAt));
+                () -> createClosure(UUID.randomUUID(), 6, 2025, 10, "excel", "pdf", null, now));
     }
 
     @Test
     void shouldThrowExceptionWhenCreatedAtIsNull() {
         UUID id = UUID.randomUUID();
         assertThrows(NullPointerException.class,
-                () -> new MonthlyClosure(
-                        id,
-                        6,
-                        2025,
-                        10,
-                        "excel",
-                        "pdf",
-                        UUID.randomUUID(),
-                        null));
+                () -> createClosure(id, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), null));
     }
 
     @Test
@@ -139,9 +83,7 @@ class MonthlyClosureTest {
         UUID userId = UUID.randomUUID();
         LocalDateTime createdAt = LocalDateTime.now();
 
-        MonthlyClosure closure = new MonthlyClosure(
-                id, 6, 2025, 100, null, null, userId, createdAt);
-
+        MonthlyClosure closure = createClosure(id, 6, 2025, 100, null, null, userId, createdAt);
         MonthlyClosure updated = closure.withReportUrls("new-excel", "new-pdf");
 
         assertEquals(id, updated.getId());

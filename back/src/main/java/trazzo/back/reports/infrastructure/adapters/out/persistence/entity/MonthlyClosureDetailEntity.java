@@ -21,6 +21,7 @@ public class MonthlyClosureDetailEntity {
     public MonthlyClosureDetailEntity() {
     }
 
+    @SuppressWarnings("java:S107")
     public MonthlyClosureDetailEntity(UUID id, UUID monthClosureId, Integer tenantUserId,
                                        String tenantUserFullName, String tenantUserDocument,
                                        String departmentName, String roleName,

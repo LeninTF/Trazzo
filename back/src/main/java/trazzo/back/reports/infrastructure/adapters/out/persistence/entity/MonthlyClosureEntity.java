@@ -17,6 +17,7 @@ public class MonthlyClosureEntity {
     public MonthlyClosureEntity() {
     }
 
+    @SuppressWarnings("java:S107")
     public MonthlyClosureEntity(UUID id, int month, int year, int totalEmployees,
                                  String excelReportUrl, String pdfReportUrl,
                                  UUID createdByUserId, LocalDateTime createdAt) {
