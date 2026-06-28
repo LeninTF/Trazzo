@@ -61,8 +61,8 @@ public class GlobalExceptionHandler {
         var details = ex.getBindingResult().getFieldErrors().stream()
                 .map(fieldError -> new ValidationDetail(fieldError.getField(), fieldError.getDefaultMessage()))
                 .toList();
-        var error = new ErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY.value(), "Validation Error",
+        var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation Error",
                 "Validation failed for one or more fields", details);
-        return ResponseEntity.unprocessableEntity().body(error);
+        return ResponseEntity.badRequest().body(error);
     }
 }

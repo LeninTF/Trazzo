@@ -76,7 +76,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleMethodArgumentNotValidReturns422() {
+    void handleMethodArgumentNotValidReturns400() {
         var ex = mock(MethodArgumentNotValidException.class);
         var bindingResult = mock(BindingResult.class);
         var fieldError = new FieldError("obj", "nombre", "is required");
@@ -85,7 +85,7 @@ class GlobalExceptionHandlerTest {
 
         var response = handler.handleMethodArgumentNotValid(ex);
 
-        assertEquals(422, response.getStatusCode().value());
+        assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().details().size());
         assertEquals("nombre", response.getBody().details().getFirst().field());
