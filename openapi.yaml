@@ -3976,13 +3976,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncidentTypeProfile'
         "400":
-          description: Nombre inválido o duplicado.
+          description: Nombre duplicado.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         "403":
           description: Sin permiso `MANAGE_INCIDENT_TYPES`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "Nombre inválido (no cumple las validaciones de formato: vacío, demasiado largo, etc.)."
           content:
             application/json:
               schema:
@@ -4150,13 +4156,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/IncidentProfile'
         "400":
-          description: Datos inválidos o tipo de incidencia inactivo.
+          description: Tipo de incidencia inactivo.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         "403":
           description: Sin permiso `CREATE_INCIDENT`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "Datos inválidos (`incidencia_type_id` requerido, formato incorrecto)."
           content:
             application/json:
               schema:
@@ -4312,6 +4324,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
+        "422":
+          description: "`state` es requerido."
           content:
             application/json:
               schema:
@@ -4374,6 +4388,16 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "Datos inválidos (`file_name`, `file_url`, `mime_type` requeridos; `file_size` debe ser positivo)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
           content:
             application/json:
               schema:
@@ -4525,6 +4549,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "422":
+          description: "`tipo` es requerido."
           content:
             application/json:
               schema:
