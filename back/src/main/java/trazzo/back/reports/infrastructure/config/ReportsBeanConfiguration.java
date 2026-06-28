@@ -21,18 +21,12 @@ import trazzo.back.reports.application.usecase.GetMonthlyReportService;
 import trazzo.back.reports.application.usecase.ListMonthlyClosureService;
 import trazzo.back.reports.infrastructure.adapters.out.attendance.EmployeeAttendanceSummaryAdapter;
 import trazzo.back.reports.infrastructure.adapters.out.messaging.SpringEventPublisherAdapter;
-import trazzo.back.reports.infrastructure.adapters.out.persistence.mapper.MonthlyClosureMapper;
 import trazzo.back.reports.infrastructure.adapters.out.persistence.repository.MonthlyClosureDetailJdbcRepository;
 import trazzo.back.reports.infrastructure.adapters.out.persistence.repository.MonthlyClosureJdbcRepository;
 import trazzo.back.reports.infrastructure.adapters.out.reporting.ReportGenerationAdapter;
 
 @Configuration
 public class ReportsBeanConfiguration {
-
-    @Bean
-    public MonthlyClosureMapper monthlyClosureMapper() {
-        return new MonthlyClosureMapper();
-    }
 
     @Bean
     public MonthlyClosureRepositoryPort monthlyClosureRepositoryPort(JdbcTemplate jdbcTemplate) {

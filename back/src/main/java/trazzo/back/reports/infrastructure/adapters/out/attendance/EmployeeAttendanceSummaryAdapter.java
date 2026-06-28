@@ -12,8 +12,8 @@ public class EmployeeAttendanceSummaryAdapter implements EmployeeAttendanceSumma
     private static final String QUERY = """
         SELECT
             tu.id,
-            COALESCE(tu.full_name, '') AS tenant_user_full_name,
-            COALESCE(tu.document_value, '') AS tenant_user_document,
+            COALESCE(p.name || ' ' || p.father_surname || ' ' || p.mother_surname, '') AS tenant_user_full_name,
+            COALESCE(p.document_value, '') AS tenant_user_document,
             COALESCE(d.name, '') AS department_name,
             COALESCE(r.name, '') AS role_name,
             COALESCE(SUM(EXTRACT(EPOCH FROM (a.check_out - a.check_in)) / 3600.0), 0) AS total_worked_hours,
@@ -21,6 +21,8 @@ public class EmployeeAttendanceSummaryAdapter implements EmployeeAttendanceSumma
             COALESCE(COUNT(*) FILTER (WHERE a.state = 'FALTA'), 0) AS total_absences,
             0 AS total_overtime_hours
         FROM tenant_user tu
+        LEFT JOIN users u ON u.id = tu.master_user_id
+        LEFT JOIN persons p ON p.id = u.person_id
         LEFT JOIN attendances a ON a.tenant_user_id = tu.id
             AND EXTRACT(MONTH FROM a.attendance_date) = ?
             AND EXTRACT(YEAR FROM a.attendance_date) = ?
@@ -34,7 +36,7 @@ public class EmployeeAttendanceSummaryAdapter implements EmployeeAttendanceSumma
         LEFT JOIN department d ON d.id = tur.department_id
         LEFT JOIN role r ON r.id = tur.role_id
         WHERE tu.deleted_at IS NULL
-        GROUP BY tu.id, d.name, r.name
+        GROUP BY tu.id, p.name, p.father_surname, p.mother_surname, p.document_value, d.name, r.name
     """;
 
     public EmployeeAttendanceSummaryAdapter(JdbcTemplate jdbcTemplate) {

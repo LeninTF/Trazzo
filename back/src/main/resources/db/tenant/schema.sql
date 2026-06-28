@@ -53,8 +53,6 @@ CREATE TABLE department (
 CREATE TABLE tenant_user (
     id SERIAL PRIMARY KEY,
     master_user_id UUID NOT NULL,
-    full_name VARCHAR(255),
-    document_value VARCHAR(50),
     state tenant_user_state_enum DEFAULT 'ACTIVO',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
