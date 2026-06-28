@@ -9,6 +9,7 @@ import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentPermissionEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.mapper.IncidentMapper;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentEvidenceSpringDataRepository;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentPermissionSpringDataRepository;
@@ -16,7 +17,9 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -60,6 +63,18 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         } else {
             result = incidentRepo.findAll(pageable);
         }
+
+        var incidentIds = result.stream()
+                .map(IncidentEntity::getId)
+                .toList();
+        Map<String, IncidentPermissionEntity> permissionByIncidentId = permissionRepo.findByIncidentIdIn(incidentIds)
+                .stream()
+                .collect(Collectors.toMap(IncidentPermissionEntity::getIncidentId, p -> p));
+
+        result.forEach(entity -> {
+            var perm = permissionByIncidentId.get(entity.getId());
+            entity.setPermission(perm);
+        });
 
         return result.stream()
                 .map(IncidentMapper::toDomain)

@@ -114,6 +114,11 @@ public class IncidentService implements IncidentUseCase {
             var t = incident.getType();
             tipoResult = new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
                     t.isActivo(), t.getCreatedAt(), t.getUpdatedAt());
+        } else if (incident.getIncidentTypeId() != null) {
+            tipoResult = typeRepository.findById(incident.getIncidentTypeId())
+                    .map(t -> new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
+                            t.isActivo(), t.getCreatedAt(), t.getUpdatedAt()))
+                    .orElse(null);
         }
 
         IncidentPermissionResult permisoResult = null;

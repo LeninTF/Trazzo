@@ -49,7 +49,7 @@ class H2ConsoleSecurityTest {
 
         @Test
         void h2ConsoleUsesSameOriginFramesOnTheConsolePath() throws Exception {
-            mockMvc.perform(get("/h2-console/").with(user("developer")))
+            mockMvc.perform(get("/h2-console/").with(user("developer").roles("ADMIN")))
                     .andExpect(status().isNotFound())
                     .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"));
         }

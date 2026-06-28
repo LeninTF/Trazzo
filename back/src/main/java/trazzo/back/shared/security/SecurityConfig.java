@@ -43,7 +43,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(LOGIN_URL, "/actuator/health").permitAll();
                 if (h2ConsoleEnabled) {
-                    auth.requestMatchers(h2Console).authenticated();
+                    auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }
                 auth.anyRequest().authenticated();
             })
