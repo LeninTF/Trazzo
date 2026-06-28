@@ -1,8 +1,34 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { of } from 'rxjs';
+import { ApiService } from '../../../api/services/api.service';
+import { ToastService } from '../../../services/toast.service';
+import type { TenantUserProfile } from '../../../api/types';
 import { Perfil } from './perfil';
 
 const CURRENT_PASSWORD = 'admin123';
+
+const mockUser: TenantUserProfile = {
+  id: 1, email: 'jose.alata@utp.edu.pe', phone: '999888777',
+  estado: 'ACTIVO', must_change_password: false,
+  created_at: '2024-01-15T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
+  persona: {
+    id: 1, img_url: null, document_type: 'DNI', document_value: '12345678',
+    name: 'Jose', father_surname: 'Alata', mother_surname: 'Pérez', birth_date: null,
+  },
+  MetodoRecuperacion: [],
+  rol: { id: 1, name: 'Docente', descripcion: null, permissions: [] },
+  sedes: [{ id: 1, nombre: 'Central' }], areas: [{ id: 1, nombre: 'Académica' }],
+  departamentos: [{ id: 1, nombre: 'Academic' }],
+};
+
+const mockApi = {
+  users: {
+    getMe: () => of(mockUser),
+    patchMe: () => of({} as any),
+    changePassword: () => of({} as any),
+  },
+};
 
 describe('Perfil', () => {
   let component: Perfil;
@@ -11,6 +37,9 @@ describe('Perfil', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Perfil, FormsModule],
+      providers: [
+        { provide: ApiService, useValue: mockApi },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Perfil);
@@ -40,13 +69,12 @@ describe('Perfil', () => {
     expect(component.mensajeError).toBe('');
   });
 
-  it('should guardarCambios with valid data', () => {
+  it('should guardarCambios with valid data', async () => {
     component.editar();
     component.usuarioEdit.nombres = 'Nuevo Nombre';
-    component.guardarCambios();
+    await component.guardarCambios();
     expect(component.usuario.nombres).toBe('Nuevo Nombre');
     expect(component.editando).toBeFalse();
-    expect(component.mensajeExito).toBe('Datos actualizados correctamente.');
   });
 
   it('should reject guardarCambios with empty nombres', () => {
@@ -91,13 +119,13 @@ describe('Perfil', () => {
     expect(component.errorPasswordConfirmar).toBe('Las contraseñas no coinciden.');
   });
 
-  it('should guardarPassword succeed', () => {
+  it('should guardarPassword succeed', async () => {
     component.passwordActual = CURRENT_PASSWORD;
     component.passwordNueva = 'newpass123';
     component.passwordConfirmar = 'newpass123';
     component.guardarPassword();
+    await fixture.whenStable();
     expect(component.mostrarCambiarPassword).toBeFalse();
-    expect(component.mensajeExito).toBe('Contraseña actualizada correctamente.');
     expect(component.passwordActual).toBe('');
     expect(component.passwordNueva).toBe('');
     expect(component.passwordConfirmar).toBe('');

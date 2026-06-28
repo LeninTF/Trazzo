@@ -24,7 +24,7 @@ export interface PersonalItem {
 export function tenantUserToPersonal(u: TenantUserProfile): PersonalItem {
   return {
     id: u.id,
-    nombre: `${u.persona.name} ${u.persona.father_surname} ${u.persona.mother_surname}`,
+    nombre: `${u.persona.name} ${u.persona.father_surname} ${u.persona.mother_surname}`.trim(),
     idPersonal: `#TU-${String(u.id).padStart(4, '0')}`,
     sede: u.sedes[0]?.nombre ?? '',
     area: u.areas[0]?.nombre ?? '',

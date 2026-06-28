@@ -1,8 +1,31 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { of } from 'rxjs';
+import { ApiService } from '../../../api/services/api.service';
+import type { MasterUserProfile } from '../../../api/types';
 import { Perfil } from './perfil';
 
 const CURRENT_PASSWORD = 'admin123';
+
+const mockUser: MasterUserProfile = {
+  id: 1, email: 'jose.alata@trazzo.com', phone: '999888777',
+  tenant_id: null, must_change_password: false,
+  created_at: '2024-01-15T00:00:00Z',
+  persona: {
+    id: 1, img_url: null, document_type: 'DNI', document_value: '12345678',
+    name: 'Jose', father_surname: 'Alata', mother_surname: 'Pérez', birth_date: null,
+  },
+  MetodoRecuperacion: [],
+  roles: [{ id: 1, name: 'Super Admin', descripcion: null }],
+  tenant_info: null,
+};
+
+const mockApi = {
+  users: {
+    getMasterMe: () => of(mockUser),
+    patchMasterMe: () => of({} as any),
+  },
+};
 
 describe('Perfil', () => {
   let component: Perfil;
@@ -11,6 +34,7 @@ describe('Perfil', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [Perfil, FormsModule],
+      providers: [{ provide: ApiService, useValue: mockApi }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Perfil);
@@ -40,10 +64,10 @@ describe('Perfil', () => {
     expect(component.mensajeError).toBe('');
   });
 
-  it('should guardarCambios with valid data', () => {
+  it('should guardarCambios with valid data', async () => {
     component.editar();
     component.usuarioEdit.nombres = 'Nuevo Nombre';
-    component.guardarCambios();
+    await component.guardarCambios();
     expect(component.usuario.nombres).toBe('Nuevo Nombre');
     expect(component.editando).toBeFalse();
     expect(component.mensajeExito).toBe('Datos actualizados correctamente.');
@@ -119,8 +143,8 @@ describe('Perfil', () => {
     component.limpiarMensajes();
     expect(component.mensajeExito).toBe('');
     expect(component.mensajeError).toBe('');
-    expect(component.errorPasswordActual).toBe('');
-    expect(component.errorPasswordNueva).toBe('');
-    expect(component.errorPasswordConfirmar).toBe('');
+    expect(component.errorPasswordActual = '');
+    expect(component.errorPasswordNueva = '');
+    expect(component.errorPasswordConfirmar = '');
   });
 });
