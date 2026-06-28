@@ -12,8 +12,8 @@ public class EmployeeAttendanceSummaryAdapter implements EmployeeAttendanceSumma
     private static final String QUERY = """
         SELECT
             tu.id,
-            '' AS tenant_user_full_name,
-            '' AS tenant_user_document,
+            COALESCE(tu.full_name, '') AS tenant_user_full_name,
+            COALESCE(tu.document_value, '') AS tenant_user_document,
             COALESCE(d.name, '') AS department_name,
             COALESCE(r.name, '') AS role_name,
             COALESCE(SUM(EXTRACT(EPOCH FROM (a.check_out - a.check_in)) / 3600.0), 0) AS total_worked_hours,
@@ -24,7 +24,13 @@ public class EmployeeAttendanceSummaryAdapter implements EmployeeAttendanceSumma
         LEFT JOIN attendances a ON a.tenant_user_id = tu.id
             AND EXTRACT(MONTH FROM a.attendance_date) = ?
             AND EXTRACT(YEAR FROM a.attendance_date) = ?
-        LEFT JOIN tenant_user_role tur ON tur.tenant_user_id = tu.id
+        LEFT JOIN LATERAL (
+            SELECT tur.department_id, tur.role_id
+            FROM tenant_user_role tur
+            WHERE tur.tenant_user_id = tu.id
+            ORDER BY tur.created_at DESC
+            LIMIT 1
+        ) tur ON true
         LEFT JOIN department d ON d.id = tur.department_id
         LEFT JOIN role r ON r.id = tur.role_id
         WHERE tu.deleted_at IS NULL
