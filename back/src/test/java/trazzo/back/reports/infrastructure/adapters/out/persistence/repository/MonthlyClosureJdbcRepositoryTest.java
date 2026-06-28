@@ -15,6 +15,8 @@ import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.reports.domain.exception.DuplicateClosureException;
 import trazzo.back.reports.domain.model.closure.MonthlyClosure;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,9 @@ class MonthlyClosureJdbcRepositoryTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
+
+    @Mock
+    private ResultSet resultSet;
 
     private MonthlyClosureJdbcRepository repository;
 
@@ -64,6 +69,36 @@ class MonthlyClosureJdbcRepositoryTest {
                 .thenThrow(new DuplicateKeyException("duplicate"));
 
         assertThrows(DuplicateClosureException.class, () -> repository.save(closure));
+    }
+
+    @Test
+    void shouldMapRowCorrectly() throws SQLException {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        when(resultSet.getObject("id", UUID.class)).thenReturn(id);
+        when(resultSet.getInt("month")).thenReturn(6);
+        when(resultSet.getInt("year")).thenReturn(2025);
+        when(resultSet.getInt("total_employees")).thenReturn(10);
+        when(resultSet.getString("excel_report_url")).thenReturn("excel");
+        when(resultSet.getString("pdf_report_url")).thenReturn("pdf");
+        when(resultSet.getObject("created_by_user_id", UUID.class)).thenReturn(userId);
+        when(resultSet.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(id)))
+                .thenAnswer(invocation -> {
+                    RowMapper<MonthlyClosure> mapper = invocation.getArgument(1);
+                    return List.of(mapper.mapRow(resultSet, 1));
+                });
+
+        Optional<MonthlyClosure> result = repository.findById(id);
+
+        assertTrue(result.isPresent());
+        assertEquals(id, result.get().getId());
+        assertEquals(6, result.get().getMonth());
+        assertEquals(2025, result.get().getYear());
+        assertEquals(10, result.get().getTotalEmployees());
     }
 
     @Test

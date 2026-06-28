@@ -13,6 +13,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.reports.domain.model.closure.MonthlyClosureDetail;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +25,9 @@ class MonthlyClosureDetailJdbcRepositoryTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
+
+    @Mock
+    private ResultSet resultSet;
 
     private MonthlyClosureDetailJdbcRepository repository;
 
@@ -70,6 +75,39 @@ class MonthlyClosureDetailJdbcRepositoryTest {
 
         assertEquals(2, results.size());
         verify(jdbcTemplate, times(2)).update(anyString(), any(Object[].class));
+    }
+
+    @Test
+    void shouldMapRowCorrectly() throws SQLException {
+        UUID id = UUID.randomUUID();
+        UUID closureId = UUID.randomUUID();
+        LocalDateTime now = LocalDateTime.now();
+
+        when(resultSet.getObject("id", UUID.class)).thenReturn(id);
+        when(resultSet.getObject("monthly_closures_id", UUID.class)).thenReturn(closureId);
+        when(resultSet.getObject("tenant_user_id", Integer.class)).thenReturn(1);
+        when(resultSet.getString("tenant_user_full_name")).thenReturn("Juan");
+        when(resultSet.getString("tenant_user_document")).thenReturn("123");
+        when(resultSet.getString("department_name")).thenReturn("TI");
+        when(resultSet.getString("role_name")).thenReturn("Dev");
+        when(resultSet.getObject("total_worked_hours", Double.class)).thenReturn(160.0);
+        when(resultSet.getObject("total_tardiness_minutes", Integer.class)).thenReturn(10);
+        when(resultSet.getInt("total_absences")).thenReturn(1);
+        when(resultSet.getObject("total_overtime_hours", Double.class)).thenReturn(5.0);
+        when(resultSet.getObject("created_at", LocalDateTime.class)).thenReturn(now);
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(id)))
+                .thenAnswer(invocation -> {
+                    RowMapper<MonthlyClosureDetail> mapper = invocation.getArgument(1);
+                    return List.of(mapper.mapRow(resultSet, 1));
+                });
+
+        Optional<MonthlyClosureDetail> result = repository.findById(id);
+
+        assertTrue(result.isPresent());
+        assertEquals(id, result.get().getId());
+        assertEquals(closureId, result.get().getMonthClosureId());
+        assertEquals("Juan", result.get().getTenantUserFullName());
     }
 
     @Test

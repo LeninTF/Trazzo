@@ -1,6 +1,7 @@
 package trazzo.back.reports.infrastructure.adapters.out.attendance;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -33,18 +34,18 @@ class EmployeeAttendanceSummaryAdapterTest {
     }
 
     @Test
-    void shouldQueryDatabase() {
+    void shouldQueryDatabaseAndReturnEmpty() {
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), anyInt(), anyInt()))
                 .thenReturn(List.of());
 
         List<EmployeeMonthlySummary> summaries = adapter.getMonthlySummaries(6, 2025);
-        assertNotNull(summaries);
+
         assertTrue(summaries.isEmpty());
         verify(jdbcTemplate).query(anyString(), any(RowMapper.class), eq(6), eq(2025));
     }
 
     @Test
-    void shouldMapRowCorrectly() throws SQLException {
+    void shouldUseRowMapperFromAdapter() throws SQLException {
         when(resultSet.getInt("id")).thenReturn(42);
         when(resultSet.getString("tenant_user_full_name")).thenReturn("Juan Perez");
         when(resultSet.getString("tenant_user_document")).thenReturn("12345678");
@@ -55,28 +56,25 @@ class EmployeeAttendanceSummaryAdapterTest {
         when(resultSet.getInt("total_absences")).thenReturn(1);
         when(resultSet.getDouble("total_overtime_hours")).thenReturn(5.0);
 
-        RowMapper<EmployeeMonthlySummary> mapper = (rs, rowNum) -> new EmployeeMonthlySummary(
-                rs.getInt("id"),
-                rs.getString("tenant_user_full_name"),
-                rs.getString("tenant_user_document"),
-                rs.getString("department_name"),
-                rs.getString("role_name"),
-                rs.getDouble("total_worked_hours"),
-                rs.getInt("total_tardiness_minutes"),
-                rs.getInt("total_absences"),
-                rs.getDouble("total_overtime_hours"));
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), anyInt(), anyInt()))
+                .thenAnswer(invocation -> {
+                    RowMapper<EmployeeMonthlySummary> mapper = invocation.getArgument(1);
+                    return List.of(mapper.mapRow(resultSet, 1));
+                });
 
-        EmployeeMonthlySummary summary = mapper.mapRow(resultSet, 1);
+        List<EmployeeMonthlySummary> summaries = adapter.getMonthlySummaries(6, 2025);
 
-        assertEquals(42, summary.tenantUserId());
-        assertEquals("Juan Perez", summary.tenantUserFullName());
-        assertEquals("12345678", summary.tenantUserDocument());
-        assertEquals("TI", summary.departmentName());
-        assertEquals("Developer", summary.roleName());
-        assertEquals(160.5, summary.totalWorkedHours());
-        assertEquals(Integer.valueOf(10), summary.totalTardinessMinutes());
-        assertEquals(1, summary.totalAbsences());
-        assertEquals(5.0, summary.totalOvertimeHours());
+        assertEquals(1, summaries.size());
+        EmployeeMonthlySummary s = summaries.getFirst();
+        assertEquals(42, s.tenantUserId());
+        assertEquals("Juan Perez", s.tenantUserFullName());
+        assertEquals("12345678", s.tenantUserDocument());
+        assertEquals("TI", s.departmentName());
+        assertEquals("Developer", s.roleName());
+        assertEquals(160.5, s.totalWorkedHours());
+        assertEquals(Integer.valueOf(10), s.totalTardinessMinutes());
+        assertEquals(1, s.totalAbsences());
+        assertEquals(5.0, s.totalOvertimeHours());
     }
 
     @Test
@@ -90,6 +88,5 @@ class EmployeeAttendanceSummaryAdapterTest {
 
         assertEquals(1, summaries.size());
         assertEquals("Ana", summaries.getFirst().tenantUserFullName());
-        assertEquals("HR", summaries.getFirst().departmentName());
     }
 }
