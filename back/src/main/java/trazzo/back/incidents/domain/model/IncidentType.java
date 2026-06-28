@@ -2,6 +2,7 @@ package trazzo.back.incidents.domain.model;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,7 +38,7 @@ public class IncidentType {
 
     public static IncidentType create(String nombre, String descripcion) {
         LocalDateTime now = LocalDateTime.now();
-        return new IncidentType(null, nombre, descripcion, true, now, now);
+        return new IncidentType(UUID.randomUUID().toString(), nombre, descripcion, true, now, now);
     }
 
     public static IncidentType restore(

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,10 +24,13 @@ class UserDetailsServiceImplTest {
     @Mock UserRepositoryPort userRepository;
     @InjectMocks UserDetailsServiceImpl service;
 
+    private static final UUID USER_ID = UUID.randomUUID();
+    private static final UUID DELETED_USER_ID = UUID.randomUUID();
+
     @Test
     void loadUserByUsername_returnsUserDetails_whenUserExists() {
         LocalDateTime now = LocalDateTime.now();
-        User user = User.restore("id-1", 1, null, "admin@test.com", null,
+        User user = User.restore(USER_ID.toString(), 1, null, "admin@test.com", null,
                 "hashed_pass", List.of("ADMIN"), now, now, null);
         when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
 
@@ -52,7 +56,7 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsername_setsDisabledWhenUserDeleted() {
         LocalDateTime now = LocalDateTime.now();
-        User deletedUser = User.restore("id-2", 1, null, "deleted@test.com", null,
+        User deletedUser = User.restore(DELETED_USER_ID.toString(), 1, null, "deleted@test.com", null,
                 "pass", List.of(), now, now, now);
         when(userRepository.findByEmail("deleted@test.com")).thenReturn(Optional.of(deletedUser));
 
