@@ -9,7 +9,7 @@ on:
       - 'back/**'
 
 permissions:
-  contents: read
+  contents: write # required by setup-java to submit dependency snapshot
   packages: write
 
 jobs:
