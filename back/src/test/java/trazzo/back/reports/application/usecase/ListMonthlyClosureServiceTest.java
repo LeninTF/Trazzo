@@ -33,8 +33,8 @@ class ListMonthlyClosureServiceTest {
 
     @Test
     void shouldReturnAllClosuresWhenNoFilter() {
-        MonthlyClosure c1 = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e1", "p1", "u1", LocalDateTime.now());
-        MonthlyClosure c2 = new MonthlyClosure(UUID.randomUUID(), 7, 2025, 5, "e2", "p2", "u2", LocalDateTime.now());
+        MonthlyClosure c1 = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e1", "p1", UUID.randomUUID(), LocalDateTime.now());
+        MonthlyClosure c2 = new MonthlyClosure(UUID.randomUUID(), 7, 2025, 5, "e2", "p2", UUID.randomUUID(), LocalDateTime.now());
         when(closureRepository.findAll()).thenReturn(List.of(c1, c2));
 
         List<MonthlyClosureResult> results = service.execute(new ListMonthlyClosuresCommand(null, null));
@@ -55,7 +55,7 @@ class ListMonthlyClosureServiceTest {
     void shouldMapAllFieldsCorrectly() {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", "user-1", now);
+        MonthlyClosure closure = new MonthlyClosure(id, 6, 2025, 10, "excel", "pdf", UUID.randomUUID(), now);
         when(closureRepository.findAll()).thenReturn(List.of(closure));
 
         List<MonthlyClosureResult> results = service.execute(new ListMonthlyClosuresCommand(null, null));
@@ -72,7 +72,7 @@ class ListMonthlyClosureServiceTest {
 
     @Test
     void shouldFilterByMonthAndYear() {
-        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", "u", LocalDateTime.now());
+        MonthlyClosure closure = new MonthlyClosure(UUID.randomUUID(), 6, 2025, 10, "e", "p", UUID.randomUUID(), LocalDateTime.now());
         when(closureRepository.findByMonthAndYear(6, 2025)).thenReturn(List.of(closure));
 
         List<MonthlyClosureResult> results = service.execute(new ListMonthlyClosuresCommand(2025, 6));

@@ -40,14 +40,14 @@ class GetMonthlyReportServiceTest {
     void shouldReturnClosureWithDetails() {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
-        MonthlyClosure closure = new MonthlyClosure(closureId, 6, 2025, 2, "excel", "pdf", "user-1", now);
+        MonthlyClosure closure = new MonthlyClosure(closureId, 6, 2025, 2, "excel", "pdf", UUID.randomUUID(), now);
 
         MonthlyClosureDetail detail1 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, "u1", "Juan", "111", "TI", "Dev",
-                160.0, 10.0, 1, 5.0, now);
+                UUID.randomUUID(), closureId, 1, "Juan", "111", "TI", "Dev",
+                160.0, 10, 1, 5.0, now);
         MonthlyClosureDetail detail2 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, "u2", "Ana", "222", "HR", "Mgr",
-                80.0, 15.0, 2, 0.0, now);
+                UUID.randomUUID(), closureId, 2, "Ana", "222", "HR", "Mgr",
+                80.0, 15, 2, 0.0, now);
 
         when(closureRepository.findById(closureId)).thenReturn(Optional.of(closure));
         when(detailRepository.findByMonthlyClosureId(closureId)).thenReturn(List.of(detail1, detail2));
@@ -58,21 +58,26 @@ class GetMonthlyReportServiceTest {
         assertEquals(6, result.month());
         assertEquals(2025, result.year());
         assertEquals(2, result.totalEmployees());
+        assertEquals(now, result.createdAt());
         assertEquals(2, result.details().size());
         assertEquals(closureId, result.details().getFirst().monthClosureId());
         assertEquals(closureId, result.details().get(1).monthClosureId());
+        assertEquals(now, result.details().getFirst().createdAt());
+        assertEquals(now, result.details().get(1).createdAt());
     }
 
     @Test
     void shouldReturnClosureWithEmptyDetails() {
         UUID closureId = UUID.randomUUID();
-        MonthlyClosure closure = new MonthlyClosure(closureId, 6, 2025, 0, null, null, "user-1", LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        MonthlyClosure closure = new MonthlyClosure(closureId, 6, 2025, 0, null, null, UUID.randomUUID(), now);
 
         when(closureRepository.findById(closureId)).thenReturn(Optional.of(closure));
         when(detailRepository.findByMonthlyClosureId(closureId)).thenReturn(List.of());
 
         MonthlyClosureWithDetailsResult result = service.execute(closureId);
 
+        assertEquals(now, result.createdAt());
         assertTrue(result.details().isEmpty());
     }
 

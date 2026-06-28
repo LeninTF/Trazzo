@@ -6,13 +6,13 @@ public interface EmployeeAttendanceSummaryPort {
     List<EmployeeMonthlySummary> getMonthlySummaries(int month, int year);
 
     record EmployeeMonthlySummary(
-            String tenantUserId,
+            Integer tenantUserId,
             String tenantUserFullName,
             String tenantUserDocument,
             String departmentName,
             String roleName,
             Double totalWorkedHours,
-            Double totalTardinessMinutes,
+            Integer totalTardinessMinutes,
             int totalAbsences,
             Double totalOvertimeHours) {
     }

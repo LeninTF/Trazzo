@@ -33,16 +33,16 @@ class EmployeeAttendanceSummaryPortTest {
     @Test
     void shouldCreateEmployeeMonthlySummarySuccessfully() {
         EmployeeMonthlySummary summary = new EmployeeMonthlySummary(
-                "user-1", "Juan Perez", "12345678",
-                "TI", "Developer", 160.0, 10.0, 1, 5.0);
+                1, "Juan Perez", "12345678",
+                "TI", "Developer", 160.0, 10, 1, 5.0);
 
-        assertEquals("user-1", summary.tenantUserId());
+        assertEquals(Integer.valueOf(1), summary.tenantUserId());
         assertEquals("Juan Perez", summary.tenantUserFullName());
         assertEquals("12345678", summary.tenantUserDocument());
         assertEquals("TI", summary.departmentName());
         assertEquals("Developer", summary.roleName());
         assertEquals(160.0, summary.totalWorkedHours());
-        assertEquals(10.0, summary.totalTardinessMinutes());
+        assertEquals(Integer.valueOf(10), summary.totalTardinessMinutes());
         assertEquals(1, summary.totalAbsences());
         assertEquals(5.0, summary.totalOvertimeHours());
     }
