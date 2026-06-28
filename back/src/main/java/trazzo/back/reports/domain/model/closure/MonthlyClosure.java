@@ -14,7 +14,7 @@ public class MonthlyClosure {
     private final int totalEmployees;
     private final String excelReportUrl;
     private final String pdfReportUrl;
-    private final String createdByUserId;
+    private final UUID createdByUserId;
     private final LocalDateTime createdAt;
 
     public MonthlyClosure(
@@ -24,7 +24,7 @@ public class MonthlyClosure {
             int totalEmployees,
             String excelReportUrl,
             String pdfReportUrl,
-            String createdByUserId,
+            UUID createdByUserId,
             LocalDateTime createdAt) {
 
         if (month < 1 || month > 12)

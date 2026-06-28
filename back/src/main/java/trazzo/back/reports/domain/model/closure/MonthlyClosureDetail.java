@@ -10,13 +10,13 @@ public class MonthlyClosureDetail {
 
     private final UUID id;
     private final UUID monthClosureId;
-    private final String tenantUserId;
+    private final Integer tenantUserId;
     private final String tenantUserFullName;
     private final String tenantUserDocument;
     private final String departmentName;
     private final String roleName;
     private final Double totalWorkedHours;
-    private final Double totalTardinessMinutes;
+    private final Integer totalTardinessMinutes;
     private final int totalAbsences;
     private final Double totalOvertimeHours;
     private final LocalDateTime createdAt;
@@ -24,13 +24,13 @@ public class MonthlyClosureDetail {
     public MonthlyClosureDetail(
             UUID id,
             UUID monthClosureId,
-            String tenantUserId,
+            Integer tenantUserId,
             String tenantUserFullName,
             String tenantUserDocument,
             String departmentName,
             String roleName,
             Double totalWorkedHours,
-            Double totalTardinessMinutes,
+            Integer totalTardinessMinutes,
             int totalAbsences,
             Double totalOvertimeHours,
             LocalDateTime createdAt) {
