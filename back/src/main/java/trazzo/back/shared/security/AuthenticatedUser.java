@@ -48,4 +48,9 @@ public record AuthenticatedUser(
     public boolean isEnabled() {
         return enabled;
     }
+
+    @Override
+    public String toString() {
+        return "AuthenticatedUser[id=" + id + ", email=" + email + ", authorities=" + authorities + ", enabled=" + enabled + "]";
+    }
 }
