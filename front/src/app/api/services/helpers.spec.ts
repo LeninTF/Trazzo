@@ -114,7 +114,7 @@ describe('helpers', () => {
       const item = tenantUserToPersonal(minimal);
       expect(item.nombre).toBe('Ana');
       expect(item.sede).toBe('');
-      expect.item.area;
+      expect(item.area).toBe('');
       expect(item.email).toBeNull();
       expect(item.telefono).toBeNull();
       expect(item.imagenUrl).toBeNull();

@@ -22,10 +22,12 @@ describe('AuthService', () => {
 
   it('should login and return AuthResponse', () => {
     const credentials = { email: 'test@test.com', password: '123456' };
-    const mockResponse = { accessToken: 'token123', usuario: { id: 1, email: 'test@test.com', nombre: 'Test', rol: [] } };
+    const mockResponse = { accessToken: 'token123', tokenType: 'Bearer', usuario: { id: 1, email: 'test@test.com', nombre: 'Test', apellido_paterno: '', apellido_materno: '', status: 'ACTIVO' as const, ultimo_acceso: '', rol: [] } };
 
     service.login(credentials).subscribe(res => {
-      expect(res).toEqual(mockResponse);
+      expect(res.accessToken).toBe('token123');
+      expect(res.tokenType).toBe('Bearer');
+      expect(res.usuario.email).toBe('test@test.com');
     });
 
     const req = httpMock.expectOne(`${API}/auth/login`);
@@ -35,10 +37,11 @@ describe('AuthService', () => {
   });
 
   it('should getPublicKey and return key', () => {
-    const mockResponse = { publicKey: 'pub-key-abc' };
+    const mockResponse = { publicKey: 'pub-key-abc', kid: 'key-id-1' };
 
     service.getPublicKey().subscribe(res => {
-      expect(res).toEqual(mockResponse);
+      expect(res.publicKey).toBe('pub-key-abc');
+      expect(res.kid).toBe('key-id-1');
     });
 
     const req = httpMock.expectOne(`${API}/security/public-key`);
