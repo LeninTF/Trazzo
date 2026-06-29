@@ -43,7 +43,7 @@ jobs:
           dotnet-version: '10.x'
 
       - name: Caché de paquetes NuGet
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('middleware/**/*.csproj', 'middleware/**/*.wixproj') }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Caché de herramientas dotnet globales
         id: cache-dotnet-tools
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.dotnet/tools
           key: ${{ runner.os }}-dotnet-tools-sonarscanner-${{ hashFiles('.github/workflows/middleware-ci.yml') }}
@@ -156,7 +156,7 @@ jobs:
 
       - name: Subir binarios publicados para el MSI
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: agent-publish-output
           path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
@@ -191,7 +191,7 @@ jobs:
 
       - name: Caché de paquetes NuGet
         if: github.event_name == 'push'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('middleware/**/*.csproj', 'middleware/**/*.wixproj') }}
@@ -200,7 +200,7 @@ jobs:
 
       - name: Descargar binarios publicados (build-test-analyze)
         if: github.event_name == 'push'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: agent-publish-output
           path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
