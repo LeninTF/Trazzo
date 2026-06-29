@@ -2,6 +2,8 @@ package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -10,126 +12,122 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import trazzo.back.corehr.domain.model.schedule.Shift;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.ShiftEntity;
-import trazzo.back.corehr.infrastructure.adapters.out.persistence.mapper.ShiftMapper;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.ShiftJpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ShiftRepositoryAdapterTest {
 
-    @Mock
-    private ShiftJpaRepository shiftRepo;
+    @Mock ShiftJpaRepository shiftRepo;
+    @InjectMocks ShiftRepositoryAdapter adapter;
 
-    @InjectMocks
-    private ShiftRepositoryAdapter adapter;
+    @Captor ArgumentCaptor<ShiftEntity> entityCaptor;
+
+    private static final LocalDateTime NOW = LocalDateTime.now();
+
+    private Shift domain() {
+        return Shift.restore(1L, "Morning", "desc", NOW, NOW);
+    }
+
+    private ShiftEntity entity() {
+        var e = new ShiftEntity();
+        e.setId(1L);
+        e.setName("Morning");
+        e.setDescription("desc");
+        e.setCreatedAt(NOW);
+        e.setUpdatedAt(NOW);
+        return e;
+    }
 
     @Test
-    void shouldSave() {
-        var now = LocalDateTime.now();
-        var domain = Shift.restore(1L, "Morning", "desc", now, now);
-
-        var entity = ShiftMapper.toEntity(domain);
-        when(shiftRepo.save(any())).thenReturn(entity);
+    void save_shouldPersistAndReturnDomain() {
+        var domain = domain();
+        when(shiftRepo.save(any(ShiftEntity.class))).thenReturn(entity());
 
         var result = adapter.save(domain);
 
-        assertEquals(domain.getId(), result.getId());
-        verify(shiftRepo).save(any());
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getName()).isEqualTo("Morning");
+        verify(shiftRepo).save(entityCaptor.capture());
+        assertThat(entityCaptor.getValue().getName()).isEqualTo("Morning");
     }
 
     @Test
-    void shouldFindById() {
-        var now = LocalDateTime.now();
-        var entity = new ShiftEntity();
-        entity.setId(1L);
-        entity.setName("Morning");
-        entity.setDescription("desc");
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-
-        when(shiftRepo.findById(1L)).thenReturn(Optional.of(entity));
+    void findById_shouldReturnDomainWhenFound() {
+        when(shiftRepo.findById(1L)).thenReturn(Optional.of(entity()));
 
         var result = adapter.findById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals(1L, result.get().getId());
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("Morning");
     }
 
     @Test
-    void shouldReturnEmptyWhenNotFound() {
+    void findById_shouldReturnEmptyWhenNotFound() {
         when(shiftRepo.findById(99L)).thenReturn(Optional.empty());
 
-        assertTrue(adapter.findById(99L).isEmpty());
+        assertThat(adapter.findById(99L)).isEmpty();
     }
 
     @Test
-    void shouldFindAll() {
-        var now = LocalDateTime.now();
-        var entity = new ShiftEntity();
-        entity.setId(1L);
-        entity.setName("Morning");
-        entity.setDescription("desc");
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
+    void findAll_withoutSearch_returnsAll() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity())));
 
-        var pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        when(shiftRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(entity)));
+        var result = adapter.findAll(null, 0, 20, null);
 
-        var result = adapter.findAll(null, 0, 10, null);
-
-        assertEquals(1, result.size());
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Morning");
     }
 
     @Test
-    void shouldFindAllWithSearch() {
-        var now = LocalDateTime.now();
-        var entity = new ShiftEntity();
-        entity.setId(1L);
-        entity.setName("Morning");
-        entity.setDescription("desc");
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
+    void findAll_withSearch_filtersByName() {
+        when(shiftRepo.findByNameContainingIgnoreCase(eq("Morning"), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(entity())));
 
-        var pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
-        when(shiftRepo.findByNameContainingIgnoreCase("Morn", pageable)).thenReturn(new PageImpl<>(List.of(entity)));
+        var result = adapter.findAll("Morning", 0, 20, "name,asc");
 
-        var result = adapter.findAll("Morn", 0, 10, null);
-
-        assertEquals(1, result.size());
+        assertThat(result).hasSize(1);
     }
 
     @Test
-    void shouldCount() {
-        when(shiftRepo.count()).thenReturn(5L);
+    void findAll_withSort_appliesSort() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
 
-        assertEquals(5L, adapter.count(null));
+        adapter.findAll(null, 0, 20, "name,desc");
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("name").getDirection())
+                .isEqualTo(Sort.Direction.DESC);
     }
 
     @Test
-    void shouldCountWithSearch() {
-        when(shiftRepo.countByNameContainingIgnoreCase("Morn")).thenReturn(2L);
-
-        assertEquals(2L, adapter.count("Morn"));
+    void count_withoutSearch_returnsAll() {
+        when(shiftRepo.count()).thenReturn(10L);
+        assertThat(adapter.count(null)).isEqualTo(10L);
     }
 
     @Test
-    void shouldCheckExistsByName() {
+    void count_withSearch_filters() {
+        when(shiftRepo.countByNameContainingIgnoreCase("Morning")).thenReturn(3L);
+        assertThat(adapter.count("Morning")).isEqualTo(3L);
+    }
+
+    @Test
+    void existsByName_delegates() {
         when(shiftRepo.existsByName("Morning")).thenReturn(true);
-
-        assertTrue(adapter.existsByName("Morning"));
+        assertThat(adapter.existsByName("Morning")).isTrue();
     }
 
     @Test
-    void shouldDeleteById() {
+    void deleteById_delegates() {
         adapter.deleteById(1L);
-
         verify(shiftRepo).deleteById(1L);
     }
 }
