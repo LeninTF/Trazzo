@@ -10,7 +10,7 @@ public class MonthlyClosureDetail {
 
     private final UUID id;
     private final UUID monthClosureId;
-    private final Integer tenantUserId;
+    private final Long tenantUserId;
     private final String tenantUserFullName;
     private final String tenantUserDocument;
     private final String departmentName;
@@ -24,7 +24,7 @@ public class MonthlyClosureDetail {
     public MonthlyClosureDetail(
             UUID id,
             UUID monthClosureId,
-            Integer tenantUserId,
+            Long tenantUserId,
             String tenantUserFullName,
             String tenantUserDocument,
             String departmentName,

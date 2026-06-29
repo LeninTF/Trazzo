@@ -55,7 +55,7 @@ class CreateMonthlyClosureServiceTest {
         when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
 
         EmployeeMonthlySummary summary = new EmployeeMonthlySummary(
-                1, "Juan Perez", "12345678",
+                1L, "Juan Perez", "12345678",
                 "TI", "Developer", 160.0, 10, 1, 5.0);
         when(attendanceSummaryPort.getMonthlySummaries(6, 2025))
                 .thenReturn(List.of(summary));
@@ -90,9 +90,9 @@ class CreateMonthlyClosureServiceTest {
     void shouldCreateWithMultipleEmployees() {
         when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
         EmployeeMonthlySummary emp1 = new EmployeeMonthlySummary(
-                1, "Juan", "111", "TI", "Dev", 160.0, 5, 0, 10.0);
+                1L, "Juan", "111", "TI", "Dev", 160.0, 5, 0, 10.0);
         EmployeeMonthlySummary emp2 = new EmployeeMonthlySummary(
-                2, "Ana", "222", "HR", "Mgr", 80.0, 15, 2, 0.0);
+                2L, "Ana", "222", "HR", "Mgr", 80.0, 15, 2, 0.0);
         when(attendanceSummaryPort.getMonthlySummaries(6, 2025))
                 .thenReturn(List.of(emp1, emp2));
         when(reportGenerationPort.generateExcelReport(any(MonthlyClosure.class), anyList()))

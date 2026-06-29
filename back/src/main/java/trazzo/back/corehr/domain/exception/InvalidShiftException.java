@@ -1,6 +1,6 @@
 package trazzo.back.corehr.domain.exception;
 
-public class InvalidShiftException extends RuntimeException {
+public class InvalidShiftException extends IllegalArgumentException {
     public InvalidShiftException(String message) {
         super(message);
     }

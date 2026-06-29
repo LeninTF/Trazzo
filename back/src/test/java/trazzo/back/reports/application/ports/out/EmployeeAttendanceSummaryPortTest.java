@@ -33,10 +33,10 @@ class EmployeeAttendanceSummaryPortTest {
     @Test
     void shouldCreateEmployeeMonthlySummarySuccessfully() {
         EmployeeMonthlySummary summary = new EmployeeMonthlySummary(
-                1, "Juan Perez", "12345678",
+                1L, "Juan Perez", "12345678",
                 "TI", "Developer", 160.0, 10, 1, 5.0);
 
-        assertEquals(Integer.valueOf(1), summary.tenantUserId());
+        assertEquals(1L, summary.tenantUserId());
         assertEquals("Juan Perez", summary.tenantUserFullName());
         assertEquals("12345678", summary.tenantUserDocument());
         assertEquals("TI", summary.departmentName());

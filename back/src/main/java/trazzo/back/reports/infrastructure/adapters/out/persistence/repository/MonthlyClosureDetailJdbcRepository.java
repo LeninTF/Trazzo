@@ -69,7 +69,7 @@ public class MonthlyClosureDetailJdbcRepository implements MonthlyClosureDetailR
             return new MonthlyClosureDetail(
                     rs.getObject("id", UUID.class),
                     rs.getObject("monthly_closures_id", UUID.class),
-                    rs.getObject("tenant_user_id", Integer.class),
+                    rs.getLong("tenant_user_id"),
                     rs.getString("tenant_user_full_name"),
                     rs.getString("tenant_user_document"),
                     rs.getString("department_name"),

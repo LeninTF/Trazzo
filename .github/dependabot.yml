@@ -64,7 +64,7 @@ updates:
       interval: "weekly"
       day: "monday"
     commit-message:
-      prefix: "ci(actions)"
+      prefix: "chore(actions)"
     groups:
       actions-updates:
         patterns:
