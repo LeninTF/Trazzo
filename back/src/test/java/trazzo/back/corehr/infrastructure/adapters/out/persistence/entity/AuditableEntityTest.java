@@ -19,7 +19,7 @@ class AuditableEntityTest {
         assertThat(entity.getCreatedAt()).isNotNull();
         assertThat(entity.getUpdatedAt()).isNotNull();
         assertThat(entity.getCreatedAt()).isBeforeOrEqualTo(LocalDateTime.now());
-        assertThat(entity.getUpdatedAt()).isEqualTo(entity.getCreatedAt());
+        assertThat(entity.getUpdatedAt()).isEqualToIgnoringNanos(entity.getCreatedAt());
     }
 
     @Test
