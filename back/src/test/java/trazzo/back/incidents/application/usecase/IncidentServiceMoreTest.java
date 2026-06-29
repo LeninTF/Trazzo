@@ -10,7 +10,7 @@ import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
-import trazzo.back.incidents.application.port.out.TenantUserPort;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 
@@ -93,7 +93,7 @@ class IncidentServiceMoreTest {
         var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
                 "comment", null, type, permission, List.of(evidence), now, now);
         when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
-        var userInfo = new trazzo.back.incidents.application.port.out.TenantUserPort.TenantUserBasicInfo(
+        var userInfo = new trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserBasicInfo(
                 "u-1", "Juan", "Perez", "Lopez", "juan@mail.com");
         when(tenantUserPort.findBasicInfoById("u-1")).thenReturn(Optional.of(userInfo));
 

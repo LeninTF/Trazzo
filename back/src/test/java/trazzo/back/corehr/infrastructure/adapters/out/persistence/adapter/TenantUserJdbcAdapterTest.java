@@ -1,4 +1,4 @@
-package trazzo.back.incidents.infrastructure.adapters.out.persistence;
+package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import trazzo.back.incidents.application.port.out.TenantUserPort;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 
 import java.util.List;
 
@@ -41,5 +41,25 @@ class TenantUserJdbcAdapterTest {
         var result = adapter.findBasicInfoById("not-found");
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void existsByIdReturnsTrueWhenUserFound() {
+        var user = new TenantUserPort.TenantUserBasicInfo("u-1", "Juan", "Perez", "Lopez", "juan@mail.com");
+        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of(user));
+
+        assertTrue(adapter.existsById("u-1"));
+    }
+
+    @Test
+    void existsByIdReturnsFalseWhenUserNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of());
+
+        assertFalse(adapter.existsById("not-found"));
+    }
+
+    @Test
+    void findStateByIdReturnsEmpty() {
+        assertTrue(adapter.findStateById("u-1").isEmpty());
     }
 }

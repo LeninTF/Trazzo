@@ -31,7 +31,7 @@ class TenantContactServiceTest {
 
     @Test
     void createWithValidData() {
-        when(tenantUserPort.existsById(1L)).thenReturn(true);
+        when(tenantUserPort.existsById("1")).thenReturn(true);
         when(repository.save(any())).thenAnswer(invocation -> {
             var contact = invocation.<TenantContact>getArgument(0);
             return TenantContact.restore(1L, contact.getTenantUserId(), contact.getType(), contact.getCreatedAt(), contact.getUpdatedAt(), null);
@@ -48,7 +48,7 @@ class TenantContactServiceTest {
 
     @Test
     void createWithUserNotFoundThrowsException() {
-        when(tenantUserPort.existsById(99L)).thenReturn(false);
+        when(tenantUserPort.existsById("99")).thenReturn(false);
 
         var command = new CreateTenantContactCommand(99L, "EMAIL");
         assertThrows(IllegalArgumentException.class, () -> service.create(command));

@@ -1,11 +1,12 @@
-package trazzo.back.incidents.infrastructure.adapters.out.persistence;
+package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import trazzo.back.incidents.application.port.out.TenantUserPort;
-//TODO: cambiar a el modulo de corehr
+import trazzo.back.corehr.application.port.out.TenantUserPort;
+import trazzo.back.corehr.domain.model.TenantUserState;
+
 @Repository
 @RequiredArgsConstructor
 public class TenantUserJdbcAdapter implements TenantUserPort {
@@ -28,5 +29,15 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
                         rs.getString("mother_surname"),
                         rs.getString("email")
                 ), tenantUserId).stream().findFirst();
+    }
+
+    @Override
+    public Optional<TenantUserState> findStateById(String tenantUserId) {
+        return Optional.empty();
+    }
+
+    @Override
+    public boolean existsById(String tenantUserId) {
+        return findBasicInfoById(tenantUserId).isPresent();
     }
 }

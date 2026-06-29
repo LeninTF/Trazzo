@@ -38,7 +38,7 @@ public record AttendanceResponse(
     }
 
     public record TenantUserBasicInfoResponse(
-            Long id, String nombre,
+            String id, String nombre,
             @JsonProperty("apellido_paterno") String apellidoPaterno
     ) {
     }

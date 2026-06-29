@@ -10,6 +10,7 @@ import trazzo.back.corehr.application.dto.command.PatchTenantUserDepartmentComma
 import trazzo.back.corehr.application.port.out.TenantUserDepartmentRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.domain.model.employee.TenantUserDepartment;
+import trazzo.back.corehr.domain.model.employee.TenantUserDepartment;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,7 +32,7 @@ class TenantUserDepartmentServiceTest {
 
     @Test
     void createWithValidData() {
-        when(tenantUserPort.existsById(1L)).thenReturn(true);
+        when(tenantUserPort.existsById("1")).thenReturn(true);
         when(departmentRepository.save(any())).thenAnswer(invocation -> {
             var dept = invocation.<TenantUserDepartment>getArgument(0);
             return TenantUserDepartment.restore(1L, dept.getTenantUserId(), dept.getDepartmentId(),
@@ -51,7 +52,7 @@ class TenantUserDepartmentServiceTest {
 
     @Test
     void createWithUserNotFoundThrowsException() {
-        when(tenantUserPort.existsById(99L)).thenReturn(false);
+        when(tenantUserPort.existsById("99")).thenReturn(false);
 
         var command = new CreateTenantUserDepartmentCommand(10L, true, LocalDate.of(2025, 1, 1), null);
         assertThrows(IllegalArgumentException.class, () -> service.create(99L, command));
@@ -62,7 +63,7 @@ class TenantUserDepartmentServiceTest {
     void createClosesExistingPrimary() {
         var now = LocalDateTime.now();
         var existingPrimary = TenantUserDepartment.restore(5L, 1L, 10L, true, LocalDate.of(2024, 1, 1), null, now, now);
-        when(tenantUserPort.existsById(1L)).thenReturn(true);
+        when(tenantUserPort.existsById("1")).thenReturn(true);
         when(departmentRepository.findPrimaryByTenantUserId(1L)).thenReturn(Optional.of(existingPrimary));
         when(departmentRepository.save(any())).thenAnswer(invocation -> invocation.<TenantUserDepartment>getArgument(0));
 
@@ -77,7 +78,7 @@ class TenantUserDepartmentServiceTest {
     void findAllByTenantUserIdReturnsDepartments() {
         var now = LocalDateTime.now();
         var dept = TenantUserDepartment.restore(1L, 1L, 10L, true, LocalDate.of(2025, 1, 1), null, now, now);
-        when(tenantUserPort.existsById(1L)).thenReturn(true);
+        when(tenantUserPort.existsById("1")).thenReturn(true);
         when(departmentRepository.findAllByTenantUserId(1L)).thenReturn(List.of(dept));
 
         var result = service.findAllByTenantUserId(1L);
@@ -88,7 +89,7 @@ class TenantUserDepartmentServiceTest {
 
     @Test
     void findAllByTenantUserIdWithUserNotFoundThrowsException() {
-        when(tenantUserPort.existsById(99L)).thenReturn(false);
+        when(tenantUserPort.existsById("99")).thenReturn(false);
         assertThrows(IllegalArgumentException.class, () -> service.findAllByTenantUserId(99L));
         verify(departmentRepository, never()).findAllByTenantUserId(any());
     }

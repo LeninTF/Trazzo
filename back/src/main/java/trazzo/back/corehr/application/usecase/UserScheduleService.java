@@ -21,10 +21,11 @@ public class UserScheduleService implements UserScheduleUseCase {
 
     @Override
     public UserScheduleResult create(CreateUserScheduleCommand command) {
-        if (!tenantUserPort.existsById(command.tenantUserId())) {
+        var tenantUserIdStr = String.valueOf(command.tenantUserId());
+        if (!tenantUserPort.existsById(tenantUserIdStr)) {
             throw new IllegalArgumentException("TenantUser no encontrado: " + command.tenantUserId());
         }
-        var state = tenantUserPort.findStateById(command.tenantUserId());
+        var state = tenantUserPort.findStateById(tenantUserIdStr);
         if (state.isPresent() && state.get() != TenantUserState.ACTIVO) {
             throw new IllegalStateException("El trabajador no está ACTIVO");
         }

@@ -1,7 +1,6 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
@@ -10,7 +9,7 @@ import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
-import trazzo.back.incidents.application.port.out.TenantUserPort;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.domain.model.IncidentType;
@@ -23,7 +22,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-@Service
 public class IncidentService implements IncidentUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

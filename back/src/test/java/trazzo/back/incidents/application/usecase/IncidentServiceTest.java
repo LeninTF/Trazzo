@@ -11,7 +11,7 @@ import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
-import trazzo.back.incidents.application.port.out.TenantUserPort;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.domain.model.IncidentType;

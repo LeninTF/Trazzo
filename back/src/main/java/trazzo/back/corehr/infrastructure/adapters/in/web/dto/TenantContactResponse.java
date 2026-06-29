@@ -26,7 +26,7 @@ public record TenantContactResponse(
     }
 
     public record TenantUserBasicInfoResponse(
-            Long id, String nombre,
+            String id, String nombre,
             @JsonProperty("apellido_paterno") String apellidoPaterno,
             @JsonProperty("apellido_materno") String apellidoMaterno,
             String email, String phone

@@ -21,6 +21,6 @@ public record AttendanceResult(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public record TenantUserBasicInfo(Long id, String nombre, String apellidoPaterno) {
+    public record TenantUserBasicInfo(String id, String nombre, String apellidoPaterno) {
     }
 }
