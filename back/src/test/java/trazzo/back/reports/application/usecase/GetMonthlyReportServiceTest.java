@@ -43,10 +43,10 @@ class GetMonthlyReportServiceTest {
         MonthlyClosure closure = new MonthlyClosure(closureId, 6, 2025, 2, "excel", "pdf", UUID.randomUUID(), now);
 
         MonthlyClosureDetail detail1 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, 1, "Juan", "111", "TI", "Dev",
+                UUID.randomUUID(), closureId, 1L, "Juan", "111", "TI", "Dev",
                 160.0, 10, 1, 5.0, now);
         MonthlyClosureDetail detail2 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, 2, "Ana", "222", "HR", "Mgr",
+                UUID.randomUUID(), closureId, 2L, "Ana", "222", "HR", "Mgr",
                 80.0, 15, 2, 0.0, now);
 
         when(closureRepository.findById(closureId)).thenReturn(Optional.of(closure));

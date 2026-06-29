@@ -13,7 +13,7 @@ class MonthlyClosureWithDetailsResponseTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResponse detail = new MonthlyClosureDetailResponse(
-                UUID.randomUUID(), UUID.randomUUID(), 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
+                UUID.randomUUID(), UUID.randomUUID(), 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
         MonthlyClosureWithDetailsResponse response = new MonthlyClosureWithDetailsResponse(
                 id, 6, 2025, 1, "excel", "pdf", now, List.of(detail));
         assertEquals(id, response.id());

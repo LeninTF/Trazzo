@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.domain.event.IncidentDomainEvent;
 
-@Component
+@Component("incidentsEventPublisherAdapter")
 @RequiredArgsConstructor
 public class SpringEventPublisherAdapter implements EventPublisherPort {
 

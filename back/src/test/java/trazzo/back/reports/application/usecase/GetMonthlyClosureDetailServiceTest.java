@@ -36,7 +36,7 @@ class GetMonthlyClosureDetailServiceTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
-                id, UUID.randomUUID(), 1, "Juan Perez", "12345678",
+                id, UUID.randomUUID(), 1L, "Juan Perez", "12345678",
                 "TI", "Developer", 160.0, 10, 1, 5.0, now);
         when(detailRepository.findById(id)).thenReturn(Optional.of(detail));
 

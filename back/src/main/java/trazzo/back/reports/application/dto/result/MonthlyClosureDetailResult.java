@@ -6,7 +6,7 @@ import java.util.UUID;
 public record MonthlyClosureDetailResult(
         UUID id,
         UUID monthClosureId,
-        Integer tenantUserId,
+        Long tenantUserId,
         String tenantUserFullName,
         String tenantUserDocument,
         String departmentName,

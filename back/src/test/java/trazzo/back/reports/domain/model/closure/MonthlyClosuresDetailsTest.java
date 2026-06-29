@@ -12,7 +12,7 @@ class MonthlyClosureDetailTest {
 
         UUID id = UUID.randomUUID();
         UUID closureId = UUID.randomUUID();
-        Integer userId = 1;
+        Long userId = 1L;
         LocalDateTime createdAt = LocalDateTime.now();
 
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
@@ -94,7 +94,7 @@ class MonthlyClosureDetailTest {
                 () -> new MonthlyClosureDetail(
                         null,
                         monthClosureId,
-                        1,
+                        1L,
                         "Juan",
                         "123",
                         "TI",
@@ -115,7 +115,7 @@ class MonthlyClosureDetailTest {
         return new MonthlyClosureDetail(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                2,
+                2L,
                 "Juan Perez",
                 "12345678",
                 "TI",

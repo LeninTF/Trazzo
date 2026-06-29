@@ -33,7 +33,7 @@ class MonthlyClosureDetailControllerTest {
         UUID id = UUID.randomUUID();
         UUID closureId = UUID.randomUUID();
         MonthlyClosureDetailResult result = new MonthlyClosureDetailResult(
-                id, closureId, 1, "Juan Perez", "12345678", "TI", "Developer",
+                id, closureId, 1L, "Juan Perez", "12345678", "TI", "Developer",
                 160.0, 10, 1, 5.0, LocalDateTime.now());
 
         when(detailUseCase.execute(any(UUID.class))).thenReturn(result);

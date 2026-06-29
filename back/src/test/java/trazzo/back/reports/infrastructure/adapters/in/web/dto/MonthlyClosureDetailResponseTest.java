@@ -13,11 +13,11 @@ class MonthlyClosureDetailResponseTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResponse response = new MonthlyClosureDetailResponse(
-                id, closureId, 1, "Juan Perez", "12345678", "TI", "Developer",
+                id, closureId, 1L, "Juan Perez", "12345678", "TI", "Developer",
                 160.0, 10, 1, 5.0, now);
         assertEquals(id, response.id());
         assertEquals(closureId, response.monthClosureId());
-        assertEquals(Integer.valueOf(1), response.tenantUserId());
+        assertEquals(1L, response.tenantUserId());
         assertEquals("Juan Perez", response.tenantUserFullName());
         assertEquals("12345678", response.tenantUserDocument());
         assertEquals("TI", response.departmentName());
@@ -35,25 +35,25 @@ class MonthlyClosureDetailResponseTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResponse r1 = new MonthlyClosureDetailResponse(
-                id, closureId, 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
+                id, closureId, 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
         MonthlyClosureDetailResponse r2 = new MonthlyClosureDetailResponse(
-                id, closureId, 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
+                id, closureId, 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
         assertEquals(r1, r2);
     }
 
     @Test
     void shouldNotBeEqualForDifferentValues() {
         MonthlyClosureDetailResponse r1 = new MonthlyClosureDetailResponse(
-                UUID.randomUUID(), UUID.randomUUID(), 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, LocalDateTime.now());
+                UUID.randomUUID(), UUID.randomUUID(), 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, LocalDateTime.now());
         MonthlyClosureDetailResponse r2 = new MonthlyClosureDetailResponse(
-                UUID.randomUUID(), UUID.randomUUID(), 2, "Ana", "456", "HR", "Mgr", 80.0, 5, 0, 2.0, LocalDateTime.now());
+                UUID.randomUUID(), UUID.randomUUID(), 2L, "Ana", "456", "HR", "Mgr", 80.0, 5, 0, 2.0, LocalDateTime.now());
         assertNotEquals(r1, r2);
     }
 
     @Test
     void shouldReturnToString() {
         MonthlyClosureDetailResponse response = new MonthlyClosureDetailResponse(
-                UUID.randomUUID(), UUID.randomUUID(), 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, LocalDateTime.now());
+                UUID.randomUUID(), UUID.randomUUID(), 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, LocalDateTime.now());
         assertNotNull(response.toString());
     }
 }

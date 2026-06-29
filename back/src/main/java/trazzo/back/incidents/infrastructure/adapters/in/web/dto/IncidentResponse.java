@@ -41,7 +41,7 @@ public record IncidentResponse(
     }
 
     public record TenantUserBasicInfoResponse(
-            String id, String nombre,
+            Long id, String nombre,
             @JsonProperty("apellido_paterno") String apellidoPaterno,
             @JsonProperty("apellido_materno") String apellidoMaterno,
             String email
