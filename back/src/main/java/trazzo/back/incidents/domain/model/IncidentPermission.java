@@ -3,6 +3,7 @@ package trazzo.back.incidents.domain.model;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,7 +48,7 @@ public class IncidentPermission {
             int daysGranted
     ) {
         LocalDateTime now = LocalDateTime.now();
-        return new IncidentPermission(null, incidentId, startDate, endDate, daysGranted, now, now);
+        return new IncidentPermission(UUID.randomUUID().toString(), incidentId, startDate, endDate, daysGranted, now, now);
     }
 
     public static IncidentPermission restore(

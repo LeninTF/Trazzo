@@ -6,13 +6,17 @@ on:
   push:
     branches: [ "master" ]
 
+permissions:
+  contents: read         # Leer código e historial git
+  security-events: write # Subir resultados SARIF a GitHub Code Scanning
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
     name: Buscar credenciales expuestas
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Crítico para que escanee todo el árbol de git
 

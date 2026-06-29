@@ -30,6 +30,14 @@ public class IncidentTypeRepositoryAdapter implements IncidentTypeRepositoryPort
     }
 
     @Override
+    public List<IncidentType> findByIdIn(List<String> ids) {
+        return repository.findByIdIn(ids)
+                .stream()
+                .map(IncidentTypeMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<IncidentType> findAll(Boolean activo, int page, int size) {
         var pageable = PageRequest.of(page, size);
         if (activo != null) {

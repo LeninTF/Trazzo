@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ public interface IncidentSpringDataRepository extends JpaRepository<IncidentEnti
            "(:search IS NULL OR LOWER(i.comment) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<IncidentEntity> findByFilters(
             @Param("tenantUserId") String tenantUserId,
-            @Param("state") String state,
+            @Param("state") IncidentState state,
             @Param("tipoId") String tipoId,
             @Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta,

@@ -23,7 +23,7 @@ class IncidentPermissionTest {
         var permission = IncidentPermission.create("inc-1", startDate, endDate, 3);
         var after = LocalDateTime.now();
 
-        assertNull(permission.getId());
+        assertNotNull(permission.getId());
         assertEquals("inc-1", permission.getIncidentId());
         assertEquals(startDate, permission.getStartDate());
         assertEquals(endDate, permission.getEndDate());

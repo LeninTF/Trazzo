@@ -1,7 +1,7 @@
 package trazzo.back.incidents.application.port.out;
 
 import java.util.Optional;
-
+//TODO: tenantUser mover a corehr
 public interface TenantUserPort {
     Optional<TenantUserBasicInfo> findBasicInfoById(String tenantUserId);
 

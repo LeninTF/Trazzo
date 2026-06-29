@@ -1,6 +1,7 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import trazzo.back.incidents.application.dto.command.CreateEvidenceCommand;
 import trazzo.back.incidents.application.dto.result.IncidentEvidenceResult;
 import trazzo.back.incidents.application.port.in.EvidenceUseCase;
@@ -11,6 +12,7 @@ import trazzo.back.incidents.domain.model.IncidentEvidence;
 import java.util.List;
 
 @RequiredArgsConstructor
+@Service
 public class EvidenceService implements EvidenceUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

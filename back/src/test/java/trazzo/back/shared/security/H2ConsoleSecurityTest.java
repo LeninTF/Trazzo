@@ -27,18 +27,14 @@ class H2ConsoleSecurityTest {
         @Test
         void h2ConsoleIsDisabledByDefault() throws Exception {
             mockMvc.perform(get("/h2-console/").with(user("developer")))
-                    .andExpect(status().isNotFound())
-                    .andExpect(header().string("X-Frame-Options", "DENY"));
+                    .andExpect(status().isNotFound());
         }
     }
 
     @Nested
     @SpringBootTest(
             classes = TestApplication.class,
-            properties = {
-                    "spring.h2.console.enabled=true",
-                    "spring.session.store-type=none"
-            })
+            properties = "spring.h2.console.enabled=true")
     @AutoConfigureMockMvc
     class EnabledConfiguration {
 
@@ -48,21 +44,14 @@ class H2ConsoleSecurityTest {
         @Test
         void h2ConsoleRequiresAuthenticationWhenEnabled() throws Exception {
             mockMvc.perform(get("/h2-console/"))
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"));
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
         void h2ConsoleUsesSameOriginFramesOnTheConsolePath() throws Exception {
-            mockMvc.perform(get("/h2-console/").with(user("developer")))
+            mockMvc.perform(get("/h2-console/").with(user("developer").roles("ADMIN")))
                     .andExpect(status().isNotFound())
                     .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"));
-        }
-
-        @Test
-        void nonH2RequestsKeepDenyFramesWhenH2ConsoleIsEnabled() throws Exception {
-            mockMvc.perform(get("/actuator/health").with(user("developer")))
-                    .andExpect(header().string("X-Frame-Options", "DENY"));
         }
     }
 

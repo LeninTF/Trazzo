@@ -21,7 +21,7 @@ jobs:
     name: Validate Nginx Config & Docker Build
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validar sintaxis de nginx.conf
         run: |

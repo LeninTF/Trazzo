@@ -1,6 +1,7 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
@@ -17,9 +18,12 @@ import trazzo.back.incidents.domain.model.IncidentType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
+@Service
 public class IncidentService implements IncidentUseCase {
 
     private final IncidentRepositoryPort incidentRepository;
@@ -61,6 +65,8 @@ public class IncidentService implements IncidentUseCase {
 
         var incidents = incidentRepository.findAll(null, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
         var total = incidentRepository.count(null, state, tipoId, desdeDt, hastaDt, search);
+
+        attachTypes(incidents);
 
         var results = incidents.stream().map(this::toResult).toList();
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
@@ -106,12 +112,33 @@ public class IncidentService implements IncidentUseCase {
         events.forEach(eventPublisher::publish);
     }
 
+    private void attachTypes(List<Incident> incidents) {
+        var typeIds = incidents.stream()
+                .map(Incident::getIncidentTypeId)
+                .distinct()
+                .toList();
+        Map<String, IncidentType> typeMap = typeRepository.findByIdIn(typeIds)
+                .stream()
+                .collect(Collectors.toMap(IncidentType::getId, t -> t));
+        incidents.forEach(i -> {
+            var type = typeMap.get(i.getIncidentTypeId());
+            if (type != null) {
+                i.attachType(type);
+            }
+        });
+    }
+
     private IncidentResult toResult(Incident incident) {
         IncidentTypeResult tipoResult = null;
         if (incident.getType() != null) {
             var t = incident.getType();
             tipoResult = new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
                     t.isActivo(), t.getCreatedAt(), t.getUpdatedAt());
+        } else if (incident.getIncidentTypeId() != null) {
+            tipoResult = typeRepository.findById(incident.getIncidentTypeId())
+                    .map(t -> new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
+                            t.isActivo(), t.getCreatedAt(), t.getUpdatedAt()))
+                    .orElse(null);
         }
 
         IncidentPermissionResult permisoResult = null;

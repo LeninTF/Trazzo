@@ -9,7 +9,7 @@ on:
       - 'back/**'
 
 permissions:
-  contents: read
+  contents: write # required by setup-java to submit dependency snapshot
   packages: write
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     name: Compilar y Analizar Backend
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
