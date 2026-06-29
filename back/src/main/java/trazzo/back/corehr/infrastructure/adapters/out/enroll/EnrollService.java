@@ -21,7 +21,7 @@ public class EnrollService {
     private final EnrollSessionStore enrollSessionStore;
 
     public EnrollSessionResponse initEnroll(Long tenantUserId, Long deviceId, Integer fingerIndex) {
-        if (!tenantUserPort.existsById(String.valueOf(tenantUserId))) {
+        if (!tenantUserPort.existsById(tenantUserId)) {
             throw new IllegalArgumentException("TenantUser no encontrado: " + tenantUserId);
         }
 
@@ -76,6 +76,8 @@ public class EnrollService {
                 session.tenantUserId(),
                 session.deviceId(),
                 fingerIndex,
+                templateCifrado,
+                llaveCifrado,
                 capturadoEn
         );
 

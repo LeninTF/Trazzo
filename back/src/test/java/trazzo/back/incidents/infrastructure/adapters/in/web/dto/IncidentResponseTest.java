@@ -20,7 +20,7 @@ class IncidentResponseTest {
                 "http://url", "pdf", 100, now, now);
         var permissionResult = new IncidentPermissionResult("perm-1", "inc-1",
                 LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now);
-        var userResult = new IncidentResult.TenantUserBasicInfoResult("u-1", "Juan",
+        var userResult = new IncidentResult.TenantUserBasicInfoResult(1L, "Juan",
                 "Perez", "Lopez", "juan@mail.com");
 
         var result = new IncidentResult("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,

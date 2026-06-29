@@ -156,7 +156,10 @@ public class IncidentService implements IncidentUseCase {
 
         IncidentResult.TenantUserBasicInfoResult tenantUserResult = null;
         if (incident.getTenantUserId() != null) {
-            var optInfo = tenantUserPort.findBasicInfoById(incident.getTenantUserId());
+            Long tenantUserId = tryParseTenantUserId(incident.getTenantUserId());
+            var optInfo = tenantUserId != null
+                    ? Optional.ofNullable(tenantUserPort.findBasicInfoById(tenantUserId)).orElse(Optional.empty())
+                    : Optional.<trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserBasicInfo>empty();
             if (optInfo.isPresent()) {
                 var info = optInfo.get();
                 tenantUserResult = new IncidentResult.TenantUserBasicInfoResult(
@@ -179,5 +182,13 @@ public class IncidentService implements IncidentUseCase {
                 incident.getCreatedAt(),
                 incident.getUpdatedAt()
         );
+    }
+
+    private Long tryParseTenantUserId(String tenantUserId) {
+        try {
+            return Long.valueOf(tenantUserId);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 }

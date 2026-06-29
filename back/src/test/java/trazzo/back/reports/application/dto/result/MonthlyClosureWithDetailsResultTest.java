@@ -13,7 +13,7 @@ class MonthlyClosureWithDetailsResultTest {
         UUID id = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetailResult detail = new MonthlyClosureDetailResult(
-                UUID.randomUUID(), UUID.randomUUID(), 1, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
+                UUID.randomUUID(), UUID.randomUUID(), 1L, "Juan", "123", "TI", "Dev", 160.0, 10, 1, 5.0, now);
         List<MonthlyClosureDetailResult> details = List.of(detail);
 
         MonthlyClosureWithDetailsResult result = new MonthlyClosureWithDetailsResult(

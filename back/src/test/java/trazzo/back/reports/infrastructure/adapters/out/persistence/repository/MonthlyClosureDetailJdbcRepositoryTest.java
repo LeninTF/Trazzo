@@ -42,11 +42,11 @@ class MonthlyClosureDetailJdbcRepositoryTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
-                id, closureId, 1, "Juan Perez", "12345678",
+                id, closureId, 1L, "Juan Perez", "12345678",
                 "TI", "Developer", 160.0, 10, 1, 5.0, now);
 
         when(jdbcTemplate.update(anyString(),
-                eq(id), eq(closureId), eq(1), eq("Juan Perez"),
+                eq(id), eq(closureId), eq(1L), eq("Juan Perez"),
                 eq("12345678"), eq("TI"), eq("Developer"),
                 eq(160.0), eq(10), eq(1), eq(5.0), eq(now)))
                 .thenReturn(1);
@@ -55,7 +55,7 @@ class MonthlyClosureDetailJdbcRepositoryTest {
 
         assertEquals(id, result.getId());
         verify(jdbcTemplate).update(anyString(),
-                eq(id), eq(closureId), eq(1), eq("Juan Perez"),
+                eq(id), eq(closureId), eq(1L), eq("Juan Perez"),
                 eq("12345678"), eq("TI"), eq("Developer"),
                 eq(160.0), eq(10), eq(1), eq(5.0), eq(now));
     }
@@ -65,10 +65,10 @@ class MonthlyClosureDetailJdbcRepositoryTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail d1 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, 1, "Juan", "111", "TI", "Dev",
+                UUID.randomUUID(), closureId, 1L, "Juan", "111", "TI", "Dev",
                 160.0, 10, 1, 5.0, now);
         MonthlyClosureDetail d2 = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, 2, "Ana", "222", "HR", "Mgr",
+                UUID.randomUUID(), closureId, 2L, "Ana", "222", "HR", "Mgr",
                 80.0, 15, 2, 0.0, now);
 
         List<MonthlyClosureDetail> results = repository.saveAll(List.of(d1, d2));
@@ -85,7 +85,7 @@ class MonthlyClosureDetailJdbcRepositoryTest {
 
         when(resultSet.getObject("id", UUID.class)).thenReturn(id);
         when(resultSet.getObject("monthly_closures_id", UUID.class)).thenReturn(closureId);
-        when(resultSet.getObject("tenant_user_id", Integer.class)).thenReturn(1);
+        when(resultSet.getLong("tenant_user_id")).thenReturn(1L);
         when(resultSet.getString("tenant_user_full_name")).thenReturn("Juan");
         when(resultSet.getString("tenant_user_document")).thenReturn("123");
         when(resultSet.getString("department_name")).thenReturn("TI");
@@ -116,7 +116,7 @@ class MonthlyClosureDetailJdbcRepositoryTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
-                id, closureId, 1, "Juan", "123", "TI", "Dev",
+                id, closureId, 1L, "Juan", "123", "TI", "Dev",
                 160.0, 10, 1, 5.0, now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(id)))
@@ -145,7 +145,7 @@ class MonthlyClosureDetailJdbcRepositoryTest {
         UUID closureId = UUID.randomUUID();
         LocalDateTime now = LocalDateTime.now();
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
-                UUID.randomUUID(), closureId, 1, "Juan", "123", "TI", "Dev",
+                UUID.randomUUID(), closureId, 1L, "Juan", "123", "TI", "Dev",
                 160.0, 10, 1, 5.0, now);
 
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq(closureId)))

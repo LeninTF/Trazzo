@@ -90,12 +90,12 @@ class IncidentServiceMoreTest {
         var permission = trazzo.back.incidents.domain.model.IncidentPermission.create("inc-1",
                 java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(1), 1);
         var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore("inc-1", "1", "t-1", IncidentState.PENDIENTE,
                 "comment", null, type, permission, List.of(evidence), now, now);
         when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
         var userInfo = new trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserBasicInfo(
-                "u-1", "Juan", "Perez", "Lopez", "juan@mail.com");
-        when(tenantUserPort.findBasicInfoById("u-1")).thenReturn(Optional.of(userInfo));
+                1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777");
+        when(tenantUserPort.findBasicInfoById(1L)).thenReturn(Optional.of(userInfo));
 
         var result = service.findById("inc-1");
 

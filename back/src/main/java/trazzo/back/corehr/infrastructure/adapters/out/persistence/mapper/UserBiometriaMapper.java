@@ -14,6 +14,8 @@ public final class UserBiometriaMapper {
         entity.setTenantUserId(domain.getTenantUserId());
         entity.setDeviceId(domain.getDeviceId());
         entity.setFingerIndex(domain.getFingerIndex());
+        entity.setTemplateCifrado(domain.getTemplateCifrado());
+        entity.setLlaveCifrado(domain.getLlaveCifrado());
         entity.setCapturadoEn(domain.getCapturadoEn());
         entity.setActivo(domain.isActivo());
         entity.setCreatedAt(domain.getCreatedAt());
@@ -27,6 +29,8 @@ public final class UserBiometriaMapper {
                 entity.getTenantUserId(),
                 entity.getDeviceId(),
                 entity.getFingerIndex(),
+                entity.getTemplateCifrado(),
+                entity.getLlaveCifrado(),
                 entity.getCapturadoEn(),
                 entity.isActivo(),
                 entity.getCreatedAt(),

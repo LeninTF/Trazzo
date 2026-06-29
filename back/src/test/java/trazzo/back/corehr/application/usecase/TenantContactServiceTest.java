@@ -31,7 +31,7 @@ class TenantContactServiceTest {
 
     @Test
     void createWithValidData() {
-        when(tenantUserPort.existsById("1")).thenReturn(true);
+        when(tenantUserPort.existsById(1L)).thenReturn(true);
         when(repository.save(any())).thenAnswer(invocation -> {
             var contact = invocation.<TenantContact>getArgument(0);
             return TenantContact.restore(1L, contact.getTenantUserId(), contact.getType(), contact.getCreatedAt(), contact.getUpdatedAt(), null);
@@ -48,7 +48,7 @@ class TenantContactServiceTest {
 
     @Test
     void createWithUserNotFoundThrowsException() {
-        when(tenantUserPort.existsById("99")).thenReturn(false);
+        when(tenantUserPort.existsById(99L)).thenReturn(false);
 
         var command = new CreateTenantContactCommand(99L, "EMAIL");
         assertThrows(IllegalArgumentException.class, () -> service.create(command));
@@ -61,12 +61,31 @@ class TenantContactServiceTest {
         var contact = TenantContact.restore(1L, 1L, "EMAIL", now, now, null);
         when(repository.findAll(0, 10)).thenReturn(List.of(contact));
         when(repository.count()).thenReturn(1L);
+        when(tenantUserPort.findBasicInfoById(1L)).thenReturn(Optional.of(
+                new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777")));
 
         PaginatedResult<?> result = service.findAll(0, 10);
 
         assertEquals(1, result.content().size());
         assertEquals(0, result.page());
         assertEquals(1, result.totalElements());
+    }
+
+    @Test
+    void findAllIncludesPhoneAndLongIdInTenantUserInfo() {
+        var now = LocalDateTime.now();
+        var contact = TenantContact.restore(1L, 1L, "EMAIL", now, now, null);
+        when(repository.findAll(0, 10)).thenReturn(List.of(contact));
+        when(repository.count()).thenReturn(1L);
+        when(tenantUserPort.findBasicInfoById(1L)).thenReturn(Optional.of(
+                new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777")));
+
+        var result = service.findAll(0, 10);
+        var item = (trazzo.back.corehr.application.dto.result.TenantContactResult) result.content().getFirst();
+
+        assertNotNull(item.tenantUser());
+        assertEquals(1L, item.tenantUser().id());
+        assertEquals("999888777", item.tenantUser().phone());
     }
 
     @Test

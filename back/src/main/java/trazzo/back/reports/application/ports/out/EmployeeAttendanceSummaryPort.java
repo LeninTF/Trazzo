@@ -6,7 +6,7 @@ public interface EmployeeAttendanceSummaryPort {
     List<EmployeeMonthlySummary> getMonthlySummaries(int month, int year);
 
     record EmployeeMonthlySummary(
-            Integer tenantUserId,
+            Long tenantUserId,
             String tenantUserFullName,
             String tenantUserDocument,
             String departmentName,

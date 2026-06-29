@@ -15,6 +15,8 @@ public class UserBiometria {
     private Long tenantUserId;
     private Long deviceId;
     private Integer fingerIndex;
+    private String templateCifrado;
+    private String llaveCifrado;
     private LocalDateTime capturadoEn;
     private boolean activo;
     private LocalDateTime createdAt;
@@ -26,6 +28,8 @@ public class UserBiometria {
             Long tenantUserId,
             Long deviceId,
             Integer fingerIndex,
+            String templateCifrado,
+            String llaveCifrado,
             LocalDateTime capturadoEn,
             boolean activo,
             LocalDateTime createdAt,
@@ -35,15 +39,19 @@ public class UserBiometria {
         this.tenantUserId = requireTenantUserId(tenantUserId);
         this.deviceId = deviceId;
         this.fingerIndex = fingerIndex;
+        this.templateCifrado = requireText(templateCifrado, "templateCifrado");
+        this.llaveCifrado = requireText(llaveCifrado, "llaveCifrado");
         this.capturadoEn = capturadoEn;
         this.activo = activo;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public static UserBiometria create(Long tenantUserId, Long deviceId, Integer fingerIndex, LocalDateTime capturadoEn) {
+    public static UserBiometria create(Long tenantUserId, Long deviceId, Integer fingerIndex,
+                                       String templateCifrado, String llaveCifrado, LocalDateTime capturadoEn) {
         LocalDateTime now = LocalDateTime.now();
-        return new UserBiometria(null, tenantUserId, deviceId, fingerIndex, capturadoEn, true, now, now);
+        return new UserBiometria(null, tenantUserId, deviceId, fingerIndex, templateCifrado,
+                llaveCifrado, capturadoEn, true, now, now);
     }
 
     public static UserBiometria restore(
@@ -51,12 +59,15 @@ public class UserBiometria {
             Long tenantUserId,
             Long deviceId,
             Integer fingerIndex,
+            String templateCifrado,
+            String llaveCifrado,
             LocalDateTime capturadoEn,
             boolean activo,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        return new UserBiometria(id, tenantUserId, deviceId, fingerIndex, capturadoEn, activo, createdAt, updatedAt);
+        return new UserBiometria(id, tenantUserId, deviceId, fingerIndex, templateCifrado,
+                llaveCifrado, capturadoEn, activo, createdAt, updatedAt);
     }
 
     public void activate() {
@@ -78,5 +89,12 @@ public class UserBiometria {
             throw new CoreHrValidationException("tenantUserId is required");
         }
         return tenantUserId;
+    }
+
+    private static String requireText(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new CoreHrValidationException(fieldName + " is required");
+        }
+        return value.trim();
     }
 }

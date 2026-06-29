@@ -14,6 +14,7 @@ import trazzo.back.corehr.domain.model.attendance.Attendance;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -91,6 +92,7 @@ class AttendanceServiceTest {
         var result = service.correct("id-1", command);
 
         assertEquals(newCheckIn, result.checkIn());
+        assertTrue(result.updatedAt().isAfter(now) || result.updatedAt().isEqual(now.truncatedTo(ChronoUnit.SECONDS)));
         verify(repository).save(any());
     }
 
@@ -107,6 +109,19 @@ class AttendanceServiceTest {
 
         assertEquals(checkOut, result.checkOut());
         verify(repository).save(any());
+    }
+
+    @Test
+    void correctRejectsCheckOutBeforeCheckIn() {
+        var now = LocalDateTime.now();
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
+
+        var command = new PatchAttendanceCommand(null, now.minusHours(1), null, null);
+
+        assertThrows(trazzo.back.corehr.domain.exception.InvalidAttendanceException.class,
+                () -> service.correct("id-1", command));
+        verify(repository, never()).save(any());
     }
 
     @Test

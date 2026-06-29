@@ -9,24 +9,26 @@ class UserBiometriaTest {
 
     @Test
     void shouldCreateUserBiometria() {
-        var ub = UserBiometria.create(1L, 1L, 1, LocalDateTime.now());
+        var ub = UserBiometria.create(1L, 1L, 1, "template", "llave", LocalDateTime.now());
         assertNull(ub.getId());
         assertEquals(1L, ub.getTenantUserId());
         assertEquals(1, ub.getFingerIndex());
         assertTrue(ub.isActivo());
+        assertEquals("template", ub.getTemplateCifrado());
+        assertEquals("llave", ub.getLlaveCifrado());
     }
 
     @Test
     void shouldRestoreUserBiometria() {
         var now = java.time.LocalDateTime.now();
-        var ub = UserBiometria.restore(1L, 1L, 1L, 1, now, true, now, now);
+        var ub = UserBiometria.restore(1L, 1L, 1L, 1, "template", "llave", now, true, now, now);
         assertEquals(1L, ub.getId());
         assertTrue(ub.isActivo());
     }
 
     @Test
     void shouldActivateAndDeactivate() {
-        var ub = UserBiometria.create(1L, 1L, 1, LocalDateTime.now());
+        var ub = UserBiometria.create(1L, 1L, 1, "template", "llave", LocalDateTime.now());
         ub.deactivate();
         assertFalse(ub.isActivo());
         ub.activate();
@@ -36,7 +38,7 @@ class UserBiometriaTest {
     @Test
     void shouldThrowWhenTenantUserIdIsNull() {
         assertThrows(CoreHrValidationException.class, () ->
-            UserBiometria.create(null, 1L, 1, LocalDateTime.now())
+            UserBiometria.create(null, 1L, 1, "template", "llave", LocalDateTime.now())
         );
     }
 }

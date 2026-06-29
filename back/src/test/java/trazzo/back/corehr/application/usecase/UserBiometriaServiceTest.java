@@ -27,7 +27,7 @@ class UserBiometriaServiceTest {
     @Test
     void findAllWithFilters() {
         var now = LocalDateTime.now();
-        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, now, true, now, now);
+        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, "template", "llave", now, true, now, now);
         when(repository.findAll(10L, 100L, true, 0, 10)).thenReturn(List.of(biometria));
         when(repository.count(10L, 100L, true)).thenReturn(1L);
 
@@ -43,7 +43,7 @@ class UserBiometriaServiceTest {
     @Test
     void findAllWithNullFilters() {
         var now = LocalDateTime.now();
-        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, now, true, now, now);
+        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, "template", "llave", now, true, now, now);
         when(repository.findAll(null, null, null, 0, 10)).thenReturn(List.of(biometria));
         when(repository.count(null, null, null)).thenReturn(1L);
 
@@ -56,7 +56,7 @@ class UserBiometriaServiceTest {
     @Test
     void patchActivoActivates() {
         var now = LocalDateTime.now();
-        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, now, false, now, now);
+        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, "template", "llave", now, false, now, now);
         when(repository.findById(1L)).thenReturn(Optional.of(biometria));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<UserBiometria>getArgument(0));
 
@@ -70,7 +70,7 @@ class UserBiometriaServiceTest {
     @Test
     void patchActivoDeactivates() {
         var now = LocalDateTime.now();
-        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, now, true, now, now);
+        var biometria = UserBiometria.restore(1L, 10L, 100L, 1, "template", "llave", now, true, now, now);
         when(repository.findById(1L)).thenReturn(Optional.of(biometria));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<UserBiometria>getArgument(0));
 

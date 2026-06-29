@@ -25,41 +25,47 @@ class TenantUserJdbcAdapterTest {
 
     @Test
     void findBasicInfoByIdReturnsUser() {
-        var user = new TenantUserPort.TenantUserBasicInfo("u-1", "Juan", "Perez", "Lopez", "juan@mail.com");
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of(user));
+        var user = new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777");
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(user));
 
-        var result = adapter.findBasicInfoById("u-1");
+        var result = adapter.findBasicInfoById(1L);
 
         assertTrue(result.isPresent());
         assertEquals("Juan", result.get().nombre());
+        assertEquals("999888777", result.get().phone());
     }
 
     @Test
     void findBasicInfoByIdReturnsEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of());
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
 
-        var result = adapter.findBasicInfoById("not-found");
+        var result = adapter.findBasicInfoById(99L);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
     void existsByIdReturnsTrueWhenUserFound() {
-        var user = new TenantUserPort.TenantUserBasicInfo("u-1", "Juan", "Perez", "Lopez", "juan@mail.com");
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of(user));
+        var user = new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777");
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(user));
 
-        assertTrue(adapter.existsById("u-1"));
+        assertTrue(adapter.existsById(1L));
     }
 
     @Test
     void existsByIdReturnsFalseWhenUserNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString())).thenReturn(List.of());
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
 
-        assertFalse(adapter.existsById("not-found"));
+        assertFalse(adapter.existsById(99L));
     }
 
     @Test
-    void findStateByIdReturnsEmpty() {
-        assertTrue(adapter.findStateById("u-1").isEmpty());
+    void findStateByIdReturnsState() {
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(trazzo.back.corehr.domain.model.TenantUserState.ACTIVO));
+
+        var state = adapter.findStateById(1L);
+
+        assertTrue(state.isPresent());
+        assertEquals(trazzo.back.corehr.domain.model.TenantUserState.ACTIVO, state.get());
     }
 }

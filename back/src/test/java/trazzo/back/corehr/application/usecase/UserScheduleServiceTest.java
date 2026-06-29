@@ -39,8 +39,8 @@ class UserScheduleServiceTest {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
                 LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
-        when(tenantUserPort.existsById("10")).thenReturn(true);
-        when(tenantUserPort.findStateById("10")).thenReturn(Optional.of(TenantUserState.ACTIVO));
+        when(tenantUserPort.existsById(10L)).thenReturn(true);
+        when(tenantUserPort.findStateById(10L)).thenReturn(Optional.of(TenantUserState.ACTIVO));
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(userScheduleRepository.save(any())).thenAnswer(invocation -> invocation.<UserSchedule>getArgument(0));
 
@@ -54,7 +54,7 @@ class UserScheduleServiceTest {
 
     @Test
     void createWithTenantUserNotFoundThrowsException() {
-        when(tenantUserPort.existsById("99")).thenReturn(false);
+        when(tenantUserPort.existsById(99L)).thenReturn(false);
 
         var command = new CreateUserScheduleCommand(99L, 1L, "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));
 
@@ -64,8 +64,8 @@ class UserScheduleServiceTest {
 
     @Test
     void createWithInactiveUserThrowsException() {
-        when(tenantUserPort.existsById("10")).thenReturn(true);
-        when(tenantUserPort.findStateById("10")).thenReturn(Optional.of(TenantUserState.INACTIVO));
+        when(tenantUserPort.existsById(10L)).thenReturn(true);
+        when(tenantUserPort.findStateById(10L)).thenReturn(Optional.of(TenantUserState.INACTIVO));
 
         var command = new CreateUserScheduleCommand(10L, 1L, "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));
 
@@ -75,8 +75,8 @@ class UserScheduleServiceTest {
 
     @Test
     void createWithScheduleNotFoundThrowsException() {
-        when(tenantUserPort.existsById("10")).thenReturn(true);
-        when(tenantUserPort.findStateById("10")).thenReturn(Optional.of(TenantUserState.ACTIVO));
+        when(tenantUserPort.existsById(10L)).thenReturn(true);
+        when(tenantUserPort.findStateById(10L)).thenReturn(Optional.of(TenantUserState.ACTIVO));
         when(scheduleRepository.findById(99L)).thenReturn(Optional.empty());
 
         var command = new CreateUserScheduleCommand(10L, 99L, "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));

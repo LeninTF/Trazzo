@@ -150,6 +150,28 @@ public class Attendance {
         recordEvent(new AttendanceCompletedEvent(id, tenantUserId, checkOut, state, updatedAt));
     }
 
+    public void updateCheckIn(LocalDateTime checkIn) {
+        if (checkIn == null) {
+            throw new InvalidAttendanceException("checkIn is required");
+        }
+        if (checkOut != null && checkOut.isBefore(checkIn)) {
+            throw new InvalidAttendanceException("checkIn cannot be after checkOut");
+        }
+        this.checkIn = checkIn;
+        touch();
+    }
+
+    public void updateCheckOut(LocalDateTime checkOut) {
+        if (checkOut == null) {
+            throw new InvalidAttendanceException("checkOut is required");
+        }
+        if (checkIn != null && checkOut.isBefore(checkIn)) {
+            throw new InvalidAttendanceException("checkOut cannot be before checkIn");
+        }
+        this.checkOut = checkOut;
+        touch();
+    }
+
     public void correct(int minutesLate, AttendanceState newState) {
         if (minutesLate < 0) {
             throw new InvalidAttendanceException("minutesLate must be non-negative");

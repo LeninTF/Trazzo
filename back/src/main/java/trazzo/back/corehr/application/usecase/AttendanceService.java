@@ -42,20 +42,10 @@ public class AttendanceService implements AttendanceUseCase {
         var attendance = attendanceRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Registro de asistencia no encontrado: " + id));
         if (command.checkIn() != null) {
-            attendance = Attendance.restore(
-                    attendance.getId(), attendance.getTenantUserId(), attendance.getScheduleId(),
-                    attendance.getDeviceId(), command.checkIn(), attendance.getCheckOut(),
-                    attendance.getAttendanceDate(), attendance.getMinutesLate(),
-                    attendance.getState(), attendance.getCreatedAt(), attendance.getUpdatedAt()
-            );
+            attendance.updateCheckIn(command.checkIn());
         }
         if (command.checkOut() != null) {
-            attendance = Attendance.restore(
-                    attendance.getId(), attendance.getTenantUserId(), attendance.getScheduleId(),
-                    attendance.getDeviceId(), attendance.getCheckIn(), command.checkOut(),
-                    attendance.getAttendanceDate(), attendance.getMinutesLate(),
-                    attendance.getState(), attendance.getCreatedAt(), attendance.getUpdatedAt()
-            );
+            attendance.updateCheckOut(command.checkOut());
         }
         if (command.state() != null || command.minutesLate() != null) {
             var newState = command.state() != null ? command.state() : attendance.getState();

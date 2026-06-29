@@ -19,7 +19,7 @@ public record IncidentResult(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public record TenantUserBasicInfoResult(String id, String nombre, String apellidoPaterno,
+    public record TenantUserBasicInfoResult(Long id, String nombre, String apellidoPaterno,
                                              String apellidoMaterno, String email) {
     }
 }

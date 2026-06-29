@@ -18,7 +18,7 @@ public class TenantContactService implements TenantContactUseCase {
 
     @Override
     public TenantContactResult create(CreateTenantContactCommand command) {
-        if (!tenantUserPort.existsById(String.valueOf(command.tenantUserId()))) {
+        if (!tenantUserPort.existsById(command.tenantUserId())) {
             throw new IllegalArgumentException("TenantUser no encontrado: " + command.tenantUserId());
         }
         var contact = TenantContact.create(command.tenantUserId(), command.type());
@@ -53,10 +53,10 @@ public class TenantContactService implements TenantContactUseCase {
     }
 
     private TenantContactResult toResult(TenantContact contact) {
-        var tenantUserInfo = tenantUserPort.findBasicInfoById(String.valueOf(contact.getTenantUserId()))
+        var tenantUserInfo = tenantUserPort.findBasicInfoById(contact.getTenantUserId())
                 .map(info -> new TenantContactResult.TenantUserBasicInfo(
                         info.id(), info.nombre(), info.apellidoPaterno(),
-                        info.apellidoMaterno(), info.email(), null))
+                        info.apellidoMaterno(), info.email(), info.phone()))
                 .orElse(null);
         return new TenantContactResult(
                 contact.getId(),

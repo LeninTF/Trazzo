@@ -46,7 +46,7 @@ public class CoreHrAttendanceSummaryJdbcAdapter implements CoreHrAttendanceSumma
     public List<EmployeeMonthlySummary> getMonthlySummaries(int month, int year) {
         return jdbcTemplate.query(QUERY,
                 (rs, rowNum) -> new EmployeeMonthlySummary(
-                        rs.getInt("id"),
+                        rs.getLong("id"),
                         rs.getString("tenant_user_full_name"),
                         rs.getString("tenant_user_document"),
                         rs.getString("department_name"),

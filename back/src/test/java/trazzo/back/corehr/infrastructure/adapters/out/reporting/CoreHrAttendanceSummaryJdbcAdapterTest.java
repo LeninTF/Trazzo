@@ -42,7 +42,7 @@ class CoreHrAttendanceSummaryJdbcAdapterTest {
     @Test
     void getMonthlySummariesMapsSqlRow() throws SQLException {
         ResultSet resultSet = mock(ResultSet.class);
-        when(resultSet.getInt("id")).thenReturn(7);
+        when(resultSet.getLong("id")).thenReturn(7L);
         when(resultSet.getString("tenant_user_full_name")).thenReturn("Ana Torres");
         when(resultSet.getString("tenant_user_document")).thenReturn("12345678");
         when(resultSet.getString("department_name")).thenReturn("Operaciones");
@@ -61,7 +61,7 @@ class CoreHrAttendanceSummaryJdbcAdapterTest {
 
         assertEquals(1, summaries.size());
         var summary = summaries.getFirst();
-        assertEquals(7, summary.tenantUserId());
+        assertEquals(7L, summary.tenantUserId());
         assertEquals("Ana Torres", summary.tenantUserFullName());
         assertEquals("12345678", summary.tenantUserDocument());
         assertEquals("Operaciones", summary.departmentName());

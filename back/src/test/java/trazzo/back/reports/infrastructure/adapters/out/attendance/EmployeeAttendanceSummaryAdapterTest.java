@@ -40,14 +40,14 @@ class EmployeeAttendanceSummaryAdapterTest {
     @Test
     void shouldMapCoreHrSummaryToReportsSummary() {
         var coreHrSummary = new CoreHrAttendanceSummaryPort.EmployeeMonthlySummary(
-                42, "Juan Perez", "12345678", "TI", "Developer", 160.5, 10, 1, 5.0);
+                42L, "Juan Perez", "12345678", "TI", "Developer", 160.5, 10, 1, 5.0);
         when(coreHrAttendanceSummaryPort.getMonthlySummaries(6, 2025)).thenReturn(List.of(coreHrSummary));
 
         List<EmployeeMonthlySummary> summaries = adapter.getMonthlySummaries(6, 2025);
 
         assertEquals(1, summaries.size());
         EmployeeMonthlySummary s = summaries.getFirst();
-        assertEquals(42, s.tenantUserId());
+        assertEquals(42L, s.tenantUserId());
         assertEquals("Juan Perez", s.tenantUserFullName());
         assertEquals("12345678", s.tenantUserDocument());
         assertEquals("TI", s.departmentName());
@@ -61,7 +61,7 @@ class EmployeeAttendanceSummaryAdapterTest {
     @Test
     void shouldReturnSummariesWithData() {
         var summary = new CoreHrAttendanceSummaryPort.EmployeeMonthlySummary(
-                1, "Ana", "87654321", "HR", "Manager", 80.0, 5, 0, 2.0);
+                1L, "Ana", "87654321", "HR", "Manager", 80.0, 5, 0, 2.0);
         when(coreHrAttendanceSummaryPort.getMonthlySummaries(6, 2025)).thenReturn(List.of(summary));
 
         List<EmployeeMonthlySummary> summaries = adapter.getMonthlySummaries(6, 2025);

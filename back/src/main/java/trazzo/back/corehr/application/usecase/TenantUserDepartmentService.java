@@ -20,8 +20,7 @@ public class TenantUserDepartmentService implements TenantUserDepartmentUseCase 
 
     @Override
     public TenantUserDepartmentResult create(Long tenantUserId, CreateTenantUserDepartmentCommand command) {
-        var tenantUserIdStr = String.valueOf(tenantUserId);
-        if (!tenantUserPort.existsById(tenantUserIdStr)) {
+        if (!tenantUserPort.existsById(tenantUserId)) {
             throw new IllegalArgumentException("TenantUser no encontrado: " + tenantUserId);
         }
         if (command.isPrimary()) {
@@ -41,7 +40,7 @@ public class TenantUserDepartmentService implements TenantUserDepartmentUseCase 
 
     @Override
     public List<TenantUserDepartmentResult> findAllByTenantUserId(Long tenantUserId) {
-        if (!tenantUserPort.existsById(String.valueOf(tenantUserId))) {
+        if (!tenantUserPort.existsById(tenantUserId)) {
             throw new IllegalArgumentException("TenantUser no encontrado: " + tenantUserId);
         }
         return departmentRepository.findAllByTenantUserId(tenantUserId)

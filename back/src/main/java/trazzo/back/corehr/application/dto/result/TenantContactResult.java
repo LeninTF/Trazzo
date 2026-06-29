@@ -11,7 +11,7 @@ public record TenantContactResult(
         LocalDateTime updatedAt,
         LocalDateTime deletedAt
 ) {
-    public record TenantUserBasicInfo(String id, String nombre, String apellidoPaterno,
+    public record TenantUserBasicInfo(Long id, String nombre, String apellidoPaterno,
                                       String apellidoMaterno, String email, String phone) {
     }
 }
