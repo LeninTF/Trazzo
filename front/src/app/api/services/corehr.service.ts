@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import type {
   DeviceProfile, DeviceListResponse,
   UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
-  AttendanceProfile, AttendanceListResponse,
+  AttendanceProfile, AttendanceListResponse, PatchAttendanceRequest,
   NonWorkingDayProfile, NonWorkingDayListResponse,
   TenantContactProfile, TenantContactListResponse,
   TenantUserDepartmentProfile, TenantUserDepartmentListResponse,
@@ -64,7 +64,7 @@ export class CorehrService {
     return this.http.get<AttendanceProfile>(`${this.apiBase}/corehr/attendance/${id}`);
   }
 
-  patchAttendance(id: string, body: AttendanceProfile): Observable<AttendanceProfile> {
+  patchAttendance(id: string, body: PatchAttendanceRequest): Observable<AttendanceProfile> {
     return this.http.patch<AttendanceProfile>(`${this.apiBase}/corehr/attendance/${id}`, body);
   }
 
