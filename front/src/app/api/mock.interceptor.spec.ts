@@ -1,7 +1,9 @@
 import { HttpRequest, HttpResponse } from '@angular/common/http';
 import { of } from 'rxjs';
-import { mockInterceptor } from './mock.interceptor';
+import { mockInterceptor, _setTestApiBase } from './mock.interceptor';
 import { mockAttendance } from './mock-data';
+
+_setTestApiBase('https://api.trazzo.pe/api/v1');
 
 describe('mockInterceptor', () => {
   function next() {

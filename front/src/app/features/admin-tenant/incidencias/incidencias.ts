@@ -1,4 +1,5 @@
 import { Component, computed, signal, inject, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
@@ -18,6 +19,7 @@ interface IncidenciaSolicitud {
     nombre: string;
     tipo: string;
     tamano: string;
+    url: string;
   } | null;
 }
 
@@ -38,7 +40,7 @@ function toSolicitud(inc: IncidentProfile): IncidenciaSolicitud {
     estado: STATE_MAP[inc.state] ?? 'Pendiente',
     descripcion: inc.comment ?? '',
     fechaCreacion: inc.created_at ? new Date(inc.created_at).toLocaleDateString('es-PE') : '',
-    archivo: e ? { nombre: e.file_name ?? 'archivo', tipo: e.mime_type ?? 'application/octet-stream', tamano: e.file_size ? `${(e.file_size / 1024).toFixed(1)} KB` : '—' } : null,
+    archivo: e ? { nombre: e.file_name ?? 'archivo', tipo: e.mime_type ?? 'application/octet-stream', tamano: e.file_size ? `${(e.file_size / 1024).toFixed(1)} KB` : '—', url: e.file_url } : null,
   };
 }
 
@@ -50,6 +52,7 @@ function toSolicitud(inc: IncidentProfile): IncidenciaSolicitud {
   styleUrl: './incidencias.css',
 })
 export class Incidencias implements OnInit {
+  private readonly http = inject(HttpClient);
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
   readonly loading = signal(false);
@@ -171,12 +174,20 @@ export class Incidencias implements OnInit {
     this.closeModal();
   }
 
-  descargarArchivo(solicitud: IncidenciaSolicitud): void {
+  async descargarArchivo(solicitud: IncidenciaSolicitud): Promise<void> {
     if (!solicitud.archivo) return;
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = solicitud.archivo.nombre;
-    link.click();
+    try {
+      const blob = await firstValueFrom(
+        this.http.get(solicitud.archivo.url, { responseType: 'blob' })
+      );
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = solicitud.archivo.nombre;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      this.toastService.error('Error al descargar el archivo');
+    }
   }
 
   exportarCSV(): void {

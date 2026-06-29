@@ -4,9 +4,11 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../api/services/api.service';
 import { ToastService } from '../../../../services/toast.service';
+import type { TenantUserProfile } from '../../../../api/types';
 
 interface Asignacion {
   id: number;
+  tenant_user_id: number;
   trabajador: string;
   area: string;
   turno: string;
@@ -39,6 +41,7 @@ export class AsignacionComponent implements OnInit {
   readonly areas = ['Administración', 'Ventas', 'Producción', 'Logística', 'Sistemas', 'RRHH'];
 
   turnosDisponibles: TurnoOption[] = [];
+  workers: TenantUserProfile[] = [];
 
   readonly asignaciones = signal<Asignacion[]>([]);
 
@@ -56,7 +59,7 @@ export class AsignacionComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.asignacionForm = this.fb.group({
-      trabajador: ['', [Validators.required, Validators.minLength(3)]],
+      trabajadorId: ['', [Validators.required]],
       area: ['', [Validators.required]],
       turnoId: ['', [Validators.required]],
       horarioId: ['', [Validators.required]],
@@ -71,10 +74,13 @@ export class AsignacionComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     try {
-      const [shiftsRes, userSchedulesRes] = await Promise.all([
+      const [shiftsRes, userSchedulesRes, usersRes] = await Promise.all([
         firstValueFrom(this.api.horarios.listShifts({ size: 50 })),
         firstValueFrom(this.api.horarios.listUserSchedules({ size: 100 })),
+        firstValueFrom(this.api.users.list({ size: 100 })),
       ]);
+
+      this.workers = usersRes.content;
 
       this.turnosDisponibles = shiftsRes.content.map(s => ({
         id: s.id,
@@ -91,9 +97,13 @@ export class AsignacionComponent implements OnInit {
 
       this.asignaciones.set(userSchedulesRes.content.map(us => {
         const sched = allSchedules.find(s => s.id === us.schedule_id);
+        const worker = this.workers.find(w => w.id === us.tenant_user_id);
         return {
           id: us.id,
-          trabajador: `Usuario #${us.tenant_user_id}`,
+          tenant_user_id: us.tenant_user_id,
+          trabajador: worker
+            ? `${worker.persona.name} ${worker.persona.father_surname} ${worker.persona.mother_surname}`.trim()
+            : `Usuario #${us.tenant_user_id}`,
           area: '',
           turno: sched?.shiftName ?? '',
           horario: sched ? `${sched.entry_time.slice(0, 5)} – ${sched.departure_time.slice(0, 5)}` : '',
@@ -135,7 +145,7 @@ export class AsignacionComponent implements OnInit {
 
   async submitAsignacion(): Promise<void> {
     if (this.asignacionForm.invalid) return;
-    const { turnoId, horarioId } = this.asignacionForm.value;
+    const { trabajadorId, turnoId, horarioId } = this.asignacionForm.value;
     const turno = this.turnosDisponibles.find(t => t.id === Number(turnoId));
     const horario = turno?.horarios.find(h => h.id === Number(horarioId));
     if (!turno || !horario) return;
@@ -143,7 +153,7 @@ export class AsignacionComponent implements OnInit {
     try {
       const [labelStart, labelEnd] = horario.label.split(' – ');
       await firstValueFrom(this.api.horarios.createUserSchedule({
-        tenant_user_id: 0,
+        tenant_user_id: Number(trabajadorId),
         schedule_id: Number(horarioId),
         entry_time: labelStart,
         departure_time: labelEnd,

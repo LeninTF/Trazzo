@@ -143,16 +143,21 @@
             <div class="asig-modal-body">
               <div class="form-group">
                 <label class="form-label-custom" for="asig-trabajador">Trabajador</label>
-                <input
+                <select
                   id="asig-trabajador"
-                  type="text"
                   class="input-custom"
-                  [class.invalid]="asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched"
-                  formControlName="trabajador"
-                  placeholder="Nombre completo"
+                  [class.invalid]="asignacionForm.get('trabajadorId')?.invalid && asignacionForm.get('trabajadorId')?.touched"
+                  formControlName="trabajadorId"
                 >
-                @if (asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched) {
-                  <div class="error-msg">Ingrese el nombre del trabajador.</div>
+                  <option value="">Seleccione un trabajador</option>
+                  @for (worker of workers; track worker.id) {
+                    <option [value]="worker.id">
+                      {{ worker.persona.name }} {{ worker.persona.father_surname }} {{ worker.persona.mother_surname }}
+                    </option>
+                  }
+                </select>
+                @if (asignacionForm.get('trabajadorId')?.invalid && asignacionForm.get('trabajadorId')?.touched) {
+                  <div class="error-msg">Seleccione un trabajador.</div>
                 }
               </div>
               <div class="form-group">

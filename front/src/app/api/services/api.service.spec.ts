@@ -7,6 +7,7 @@ import { UsersService } from './users.service';
 import { IncidentsService } from './incidents.service';
 import { HorariosService } from './horarios.service';
 import { CorehrService } from './corehr.service';
+import { API_BASE_URL } from './helpers';
 
 describe('ApiService', () => {
   let service: ApiService;
@@ -14,7 +15,12 @@ describe('ApiService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [ApiService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        ApiService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.trazzo.pe/api/v1' },
+      ],
     });
     service = TestBed.inject(ApiService);
     httpMock = TestBed.inject(HttpTestingController);

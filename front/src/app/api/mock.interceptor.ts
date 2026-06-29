@@ -1,5 +1,6 @@
 import type { HttpEvent, HttpHandlerFn, HttpRequest } from '@angular/common/http';
 import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { isDevMode, inject } from '@angular/core';
 import { Observable, of, delay, throwError } from 'rxjs';
 import {
   mockTenantUsers, mockMasterUsers, mockUsuarioProfile, mockAuthResponse,
@@ -9,9 +10,15 @@ import {
   mockPublicKey, paginate,
 } from './mock-data';
 import type { AuthResponse, MessageResponse, SoftDeleteResponse } from './types';
+import { API_BASE_URL } from './services/helpers';
 
-const BASE = 'https://api.trazzo.pe/api/v1';
 const MOCK_DELAY = 200;
+
+/** @internal used in tests to provide apiBase without injection context */
+let _testApiBase: string | undefined;
+export function _setTestApiBase(base: string | undefined): void {
+  _testApiBase = base;
+}
 
 function idFromUrl(url: string, pattern: RegExp): number | null {
   const m = pattern.exec(url);
@@ -63,20 +70,22 @@ function _error(status: number, message: string, details: unknown = null): Obser
 }
 
 export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
+  if (!isDevMode()) {
+    return next(req);
+  }
+
+  const apiBase = _testApiBase ?? inject(API_BASE_URL);
   const { method } = req;
   let url = req.url;
 
   // Strip base URL if present
-  if (url.startsWith(BASE)) {
-    url = url.slice(BASE.length);
+  if (url.startsWith(apiBase)) {
+    url = url.slice(apiBase.length);
   }
 
-  // Only handle /api/v1 paths
-  if (!url.startsWith('/api/v1/') && !url.startsWith('/') || url.startsWith('/api/v1/')) {
-    // Normalize
-    if (url.startsWith('/api/v1')) {
-      url = url.replace('/api/v1', '');
-    }
+  // Strip /api/v1 prefix if base URL didn't include it
+  if (url.startsWith('/api/v1')) {
+    url = url.slice('/api/v1'.length);
   }
 
   // Skip non-API requests

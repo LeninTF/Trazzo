@@ -51,8 +51,8 @@ describe('AsignacionComponent', () => {
 
   it('should filter asignaciones by search term', () => {
     component.asignaciones.set([
-      { id: 1, trabajador: 'Usuario #1', area: 'Admin', turno: 'Mañana', horario: '08:00 – 12:00' },
-      { id: 2, trabajador: 'Usuario #2', area: 'Ventas', turno: 'Tarde', horario: '14:00 – 18:00' },
+      { id: 1, tenant_user_id: 1, trabajador: 'Usuario #1', area: 'Admin', turno: 'Mañana', horario: '08:00 – 12:00' },
+      { id: 2, tenant_user_id: 2, trabajador: 'Usuario #2', area: 'Ventas', turno: 'Tarde', horario: '14:00 – 18:00' },
     ]);
     component.searchTerm.set('Usuario #1');
     expect(component.filteredAsignaciones().length).toBe(1);
@@ -62,8 +62,8 @@ describe('AsignacionComponent', () => {
 
   it('should filter asignaciones by area', () => {
     component.asignaciones.set([
-      { id: 1, trabajador: 'Usuario #1', area: 'Admin', turno: 'Mañana', horario: '08:00 – 12:00' },
-      { id: 2, trabajador: 'Usuario #2', area: 'Ventas', turno: 'Tarde', horario: '14:00 – 18:00' },
+      { id: 1, tenant_user_id: 1, trabajador: 'Usuario #1', area: 'Admin', turno: 'Mañana', horario: '08:00 – 12:00' },
+      { id: 2, tenant_user_id: 2, trabajador: 'Usuario #2', area: 'Ventas', turno: 'Tarde', horario: '14:00 – 18:00' },
     ]);
     component.areaFilter.set('Admin');
     expect(component.filteredAsignaciones().length).toBe(1);
@@ -90,7 +90,7 @@ describe('AsignacionComponent', () => {
     component.turnosDisponibles = [
       { id: 1, nombre: 'Mañana', horarios: [{ id: 1, label: '08:00 – 12:00' }] },
     ];
-    component.asignacionForm.setValue({ trabajador: 'Test', area: 'Admin', turnoId: '1', horarioId: '1' });
+    component.asignacionForm.setValue({ trabajadorId: '1', area: 'Admin', turnoId: '1', horarioId: '1' });
     await component.submitAsignacion();
     expect(mockApi.horarios.createUserSchedule).toHaveBeenCalled();
     expect(component.showModal).toBeFalse();
@@ -98,7 +98,7 @@ describe('AsignacionComponent', () => {
 
   it('should not submit if form is invalid', () => {
     component.openModal();
-    component.asignacionForm.setValue({ trabajador: '', area: '', turnoId: '', horarioId: '' });
+    component.asignacionForm.setValue({ trabajadorId: '', area: '', turnoId: '', horarioId: '' });
     expect(component.asignacionForm.invalid).toBeTrue();
   });
 

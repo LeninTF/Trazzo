@@ -2,18 +2,25 @@ import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { AuthService } from './auth.service';
-import { API } from './helpers';
+import { API_BASE_URL } from './helpers';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
+  let apiBase: string;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [AuthService, provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        AuthService,
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.trazzo.pe/api/v1' },
+      ],
     });
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
+    apiBase = TestBed.inject(API_BASE_URL);
   });
 
   afterEach(() => {
@@ -30,7 +37,7 @@ describe('AuthService', () => {
       expect(res.usuario.email).toBe('test@test.com');
     });
 
-    const req = httpMock.expectOne(`${API}/auth/login`);
+    const req = httpMock.expectOne(`${apiBase}/auth/login`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(credentials);
     req.flush(mockResponse);
@@ -44,7 +51,7 @@ describe('AuthService', () => {
       expect(res.kid).toBe('key-id-1');
     });
 
-    const req = httpMock.expectOne(`${API}/security/public-key`);
+    const req = httpMock.expectOne(`${apiBase}/security/public-key`);
     expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
   });
@@ -58,7 +65,7 @@ describe('AuthService', () => {
       },
     });
 
-    const req = httpMock.expectOne(`${API}/auth/login`);
+    const req = httpMock.expectOne(`${apiBase}/auth/login`);
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
   });
 });

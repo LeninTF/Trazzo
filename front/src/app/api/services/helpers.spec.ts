@@ -1,14 +1,8 @@
 import { HttpParams } from '@angular/common/http';
-import { params, tenantUserToPersonal, API } from './helpers';
+import { params, tenantUserToPersonal } from './helpers';
 import type { TenantUserProfile } from '../types';
 
 describe('helpers', () => {
-  describe('API constant', () => {
-    it('should have correct base URL', () => {
-      expect(API).toBe('https://api.trazzo.pe/api/v1');
-    });
-  });
-
   describe('params()', () => {
     it('should return empty HttpParams for undefined input', () => {
       const p = params(undefined);

@@ -290,7 +290,7 @@ export class DirectorioPersonal implements OnInit {
         await firstValueFrom(this.api.users.patch(this.personalForm.id, {
           name: this.personalForm.nombre.split(' ')[0] ?? '',
           father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
-          email: this.personalForm.email ?? '',
+          email: this.personalForm.email?.trim() || '',
           phone: this.personalForm.telefono ?? null,
         }));
         this.mostrarToast('Personal actualizado correctamente');
@@ -301,7 +301,7 @@ export class DirectorioPersonal implements OnInit {
           name: this.personalForm.nombre.split(' ')[0] ?? '',
           father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
           mother_surname: '',
-          email: this.personalForm.email ?? `${this.personalForm.nombre.toLowerCase().replace(/\s+/g, '.')}@colegio.edu.pe`,
+          email: this.personalForm.email?.trim() || `${this.personalForm.nombre.toLowerCase().replace(/\s+/g, '.')}@colegio.edu.pe`,
           phone: this.personalForm.telefono ?? null,
           role_id: 5,
         }));

@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
+import { provideHttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
@@ -43,7 +45,10 @@ describe('Incidencias (admin-tenant)', () => {
 
     await TestBed.configureTestingModule({
       imports: [Incidencias],
-      providers: [{ provide: ApiService, useValue: mockApi }],
+      providers: [
+        provideHttpClient(),
+        { provide: ApiService, useValue: mockApi },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Incidencias);
@@ -147,10 +152,11 @@ describe('Incidencias (admin-tenant)', () => {
     expect(component.modalOpen).toBeFalse();
   });
 
-  it('should descargarArchivo', () => {
-    spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
-    component.descargarArchivo(component.solicitudes()[0]);
-    expect(document.createElement).toHaveBeenCalledWith('a');
+  it('should descargarArchivo', async () => {
+    spyOn(HttpClient.prototype, 'get').and.returnValue(of(new Blob(['test'])));
+    const createSpy = spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
+    await component.descargarArchivo(component.solicitudes()[0]);
+    expect(createSpy).toHaveBeenCalledWith('a');
   });
 
   it('should exportarCSV', () => {

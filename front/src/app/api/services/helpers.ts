@@ -1,5 +1,8 @@
 import { HttpParams } from '@angular/common/http';
+import { InjectionToken } from '@angular/core';
 import type { TenantUserProfile } from '../types';
+
+export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
 
 export function params(opts?: Record<string, string | number | boolean | undefined | null>): HttpParams {
   let p = new HttpParams();
@@ -12,8 +15,6 @@ export function params(opts?: Record<string, string | number | boolean | undefin
   }
   return p;
 }
-
-export const API = 'https://api.trazzo.pe/api/v1';
 
 export interface PersonalItem {
   id: number; nombre: string; idPersonal: string; sede: string;

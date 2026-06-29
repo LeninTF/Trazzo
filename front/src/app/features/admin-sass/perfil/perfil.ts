@@ -70,10 +70,20 @@ export class Perfil extends PerfilBase implements OnInit {
       return;
     }
 
+    const apellidos = this.usuarioEdit.apellidos.split(' ');
     this.guardando.set(true);
     this.limpiarMensajes();
     firstValueFrom(
-      this.api.users.patchMasterMe({ img_url: this.usuarioEdit.img_url || null })
+      this.api.users.patchMasterMe({
+        img_url: this.usuarioEdit.img_url || null,
+        email: this.usuarioEdit.email,
+        phone: this.usuarioEdit.telefono || null,
+        persona: {
+          name: this.usuarioEdit.nombres,
+          father_surname: apellidos[0] ?? '',
+          mother_surname: apellidos.slice(1).join(' ') || undefined,
+        },
+      })
     ).then(() => {
       this.usuario = { ...this.usuarioEdit };
       this.editando = false;
