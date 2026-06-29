@@ -109,8 +109,8 @@ export class DirectorioPersonal implements OnInit {
     porcentajeActivos: 0
   };
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarPersonal();
+  ngOnInit(): void {
+    this.cargarPersonal();
   }
 
   async cargarPersonal(): Promise<void> {

@@ -57,8 +57,8 @@ export class TurnosComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarTurnos();
+  ngOnInit(): void {
+    this.cargarTurnos();
   }
 
   async cargarTurnos(): Promise<void> {

@@ -3,14 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   DeviceProfile, DeviceListResponse,
-  UserBiometriaProfile, UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
+  UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
   AttendanceProfile, AttendanceListResponse,
   NonWorkingDayProfile, NonWorkingDayListResponse,
   TenantContactProfile, TenantContactListResponse,
   TenantUserDepartmentProfile, TenantUserDepartmentListResponse,
   CreateDeviceRequest, PatchDeviceRequest,
   CreateNonWorkingDayRequest, PatchNonWorkingDayRequest,
-  CreateTenantContactRequest, PatchTenantContactRequest,
+  CreateTenantContactRequest,
   CreateTenantUserDepartmentRequest, PatchTenantUserDepartmentRequest,
   MarcacionRequest, MessageResponse,
 } from '../types';

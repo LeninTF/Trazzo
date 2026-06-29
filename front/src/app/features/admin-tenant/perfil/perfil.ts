@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, effect, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { PerfilBase, DatosPersonales } from '../../../shared/perfil/perfil-base';
@@ -9,22 +9,13 @@ import { RoleService } from '../../../services/role.service';
 @Component({
   selector: 'app-perfil',
   imports: [FormsModule],
-  templateUrl: './perfil.html',
+  templateUrl: '../../../shared/perfil/perfil.html',
   styleUrl: '../../../shared/perfil/perfil.css',
 })
 export class Perfil extends PerfilBase implements OnInit {
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
   private readonly roleService = inject(RoleService);
-
-  readonly loading = signal(true);
-  readonly error = signal('');
-  readonly guardando = signal(false);
-
-  selectedFile: File | null = null;
-  fotoPreview: string | null = null;
-  fotoSubiendo = signal(false);
-  private loaded = false;
 
   override usuario: DatosPersonales = {
     nombres: '', apellidos: '', email: '', telefono: '',
@@ -42,8 +33,8 @@ export class Perfil extends PerfilBase implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarUsuario();
+  ngOnInit(): void {
+    this.cargarUsuario();
   }
 
   async cargarUsuario(): Promise<void> {
@@ -75,35 +66,7 @@ export class Perfil extends PerfilBase implements OnInit {
     }
   }
 
-  onUrlCambio(url: string): void {
-    this.usuarioEdit.img_url = url;
-    this.fotoPreview = url || null;
-    this.selectedFile = null;
-  }
-
-  onFotoSeleccionada(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      this.mensajeError = 'Selecciona un archivo de imagen válido.';
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      this.mensajeError = 'La imagen no debe superar los 2 MB.';
-      return;
-    }
-
-    this.selectedFile = file;
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.fotoPreview = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async subirFoto(): Promise<void> {
+  override async subirFoto(): Promise<void> {
     if (!this.selectedFile) return;
     this.fotoSubiendo.set(true);
     this.limpiarMensajes();
@@ -126,7 +89,7 @@ export class Perfil extends PerfilBase implements OnInit {
     }
   }
 
-  override async guardarCambios(): Promise<void> {
+  override guardarCambios(): void {
     if (!this.usuarioEdit.nombres.trim() || !this.usuarioEdit.apellidos.trim()) {
       this.mensajeError = 'Nombres y apellidos son obligatorios.';
       return;
@@ -138,25 +101,18 @@ export class Perfil extends PerfilBase implements OnInit {
 
     this.guardando.set(true);
     this.limpiarMensajes();
-    try {
-      await firstValueFrom(this.api.users.patchMe({
-        phone: this.usuarioEdit.telefono || null,
-        img_url: this.usuarioEdit.img_url || null,
-      }));
+    firstValueFrom(this.api.users.patchMe({
+      phone: this.usuarioEdit.telefono || null,
+      img_url: this.usuarioEdit.img_url || null,
+    })).then(() => {
       this.usuario = { ...this.usuarioEdit };
       this.editando = false;
       this.toastService.success('Datos actualizados correctamente.');
-    } catch {
+    }).catch(() => {
       this.mensajeError = 'Error al guardar cambios.';
-    } finally {
+    }).finally(() => {
       this.guardando.set(false);
-    }
-  }
-
-  override cancelarEdicion(): void {
-    this.fotoPreview = this.usuario.img_url || null;
-    this.selectedFile = null;
-    super.cancelarEdicion();
+    });
   }
 
   override guardarPassword(): void {

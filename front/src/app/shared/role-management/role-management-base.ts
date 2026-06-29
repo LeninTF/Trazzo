@@ -1,5 +1,4 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { signal } from '@angular/core';
 
 export interface Accion {
   id: string;
@@ -23,10 +22,12 @@ export interface Rol {
 }
 
 export abstract class BaseGestionRoles {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   abstract roles: Rol[];
   abstract modulos: Modulo[];
   protected abstract readonly PERMISOS_DEFAULT: Record<string, Record<string, boolean>>;
-  protected abstract readonly defaultRolId: string;
 
   permisos: Record<string, Record<string, boolean>> = {};
   respaldoPermisos: Record<string, Record<string, boolean>> = {};

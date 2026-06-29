@@ -5,7 +5,6 @@ import { IncidentsService } from './incidents.service';
 import { HorariosService } from './horarios.service';
 import { CorehrService } from './corehr.service';
 import { tenantUserToPersonal } from './helpers';
-import type { TenantUserProfile } from '../types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -147,5 +146,5 @@ export class ApiService {
   getPublicKey = this.auth.getPublicKey.bind(this.auth);
 
   /** @deprecated Use imported `tenantUserToPersonal()` from helpers */
-  static tenantUserToPersonal = tenantUserToPersonal;
+  static readonly tenantUserToPersonal = tenantUserToPersonal;
 }

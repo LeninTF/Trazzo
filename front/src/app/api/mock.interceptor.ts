@@ -14,16 +14,18 @@ const BASE = 'https://api.trazzo.pe/api/v1';
 const MOCK_DELAY = 200;
 
 function idFromUrl(url: string, pattern: RegExp): number | null {
-  const m = url.match(pattern);
-  return m ? parseInt(m[1], 10) : null;
+  const m = pattern.exec(url);
+  return m ? Number.parseInt(m[1], 10) : null;
 }
 
 function queryParams(req: HttpRequest<unknown>): Record<string, string> {
   const params: Record<string, string> = {};
-  req.urlWithParams.replace(/[?&]+([^=&]+)=([^&]*)/gi, (_, k, v) => {
-    params[k] = v;
-    return '';
-  });
+  const idx = req.urlWithParams.indexOf('?');
+  if (idx >= 0) {
+    new URLSearchParams(req.urlWithParams.slice(idx)).forEach((value, key) => {
+      params[key] = value;
+    });
+  }
   return params;
 }
 
@@ -44,12 +46,16 @@ function noContent(): Observable<HttpResponse<object>> {
 }
 
 function _error(status: number, message: string, details: unknown = null): Observable<never> {
+  let errorLabel: string;
+  if (status === 403) errorLabel = 'Forbidden';
+  else if (status === 404) errorLabel = 'Not Found';
+  else errorLabel = 'Bad Request';
   return throwError(() => new HttpErrorResponse({
     status,
     error: {
       timestamp: new Date().toISOString(),
       status,
-      error: status === 403 ? 'Forbidden' : status === 404 ? 'Not Found' : 'Bad Request',
+      error: errorLabel,
       message,
       details,
     },
@@ -82,8 +88,8 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
   }
 
   const qp = queryParams(req);
-  const page = parseInt(qp['page'] ?? '0', 10);
-  const size = parseInt(qp['size'] ?? '20', 10);
+  const page = Number.parseInt(qp['page'] ?? '0', 10);
+  const size = Number.parseInt(qp['size'] ?? '20', 10);
 
   try {
     return handleRoute(method, url, req, page, size, qp) ?? next(req);
@@ -134,7 +140,7 @@ function handleRoute(
         (u.email ?? '').toLowerCase().includes(s)
       );
     }
-    if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === parseInt(qp['role_id'], 10));
+    if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
     // scope
     return ok(paginate(filtered, page, size));
   }
@@ -170,9 +176,9 @@ function handleRoute(
   }
 
   // /usuarios/{id}
-  const uidMatch = u.match(/^\/usuarios\/(\d+)$/);
+  const uidMatch = /^\/usuarios\/(\d+)$/.exec(u);
   if (uidMatch) {
-    const id = parseInt(uidMatch[1], 10);
+    const id = Number.parseInt(uidMatch[1], 10);
     const user = mockTenantUsers.find(u => u.id === id);
     if (!user) return _error(404, 'Usuario no encontrado');
 
@@ -201,9 +207,9 @@ function handleRoute(
   }
 
   // /usuarios/{id}/rol
-  const rolMatch = u.match(/^\/usuarios\/(\d+)\/rol$/);
+  const rolMatch = /^\/usuarios\/(\d+)\/rol$/.exec(u);
   if (rolMatch && method === 'PUT') {
-    const id = parseInt(rolMatch[1], 10);
+    const id = Number.parseInt(rolMatch[1], 10);
     const user = mockTenantUsers.find(u => u.id === id);
     if (!user) return _error(404, 'Usuario no encontrado');
     const body = req.body as { role_id?: number };
@@ -213,7 +219,7 @@ function handleRoute(
   }
 
   // /usuarios/{id}/password
-  const passMatch = u.match(/^\/usuarios\/(\d+)\/password$/);
+  const passMatch = /^\/usuarios\/(\d+)\/password$/.exec(u);
   if (passMatch && method === 'PATCH') {
     return noContent();
   }
@@ -250,9 +256,9 @@ function handleRoute(
   if (u === '/saas/users/me' && method === 'GET') return ok(mockMasterUsers[0]);
 
   // /saas/users/{id}
-  const mUidMatch = u.match(/^\/saas\/users\/(\d+)$/);
+  const mUidMatch = /^\/saas\/users\/(\d+)$/.exec(u);
   if (mUidMatch) {
-    const id = parseInt(mUidMatch[1], 10);
+    const id = Number.parseInt(mUidMatch[1], 10);
     const user = mockMasterUsers.find(u => u.id === id);
     if (!user) return _error(404, 'Usuario no encontrado');
     if (method === 'GET') return ok(user);
@@ -307,9 +313,9 @@ function handleRoute(
   }
 
   // /incidentes/tipos/{id}
-  const itMatch = u.match(/^\/incidentes\/tipos\/(\d+)$/);
+  const itMatch = /^\/incidentes\/tipos\/(\d+)$/.exec(u);
   if (itMatch) {
-    const id = parseInt(itMatch[1], 10);
+    const id = Number.parseInt(itMatch[1], 10);
     const tipo = mockIncidentTypes.find(t => t.id === id);
     if (!tipo) return _error(404, 'Tipo de incidencia no encontrado');
     if (method === 'GET') return ok(tipo);
@@ -322,7 +328,7 @@ function handleRoute(
   if (u === '/incidentes' && method === 'GET') {
     let filtered = [...mockIncidencias];
     if (qp['state']) filtered = filtered.filter(i => i.state === qp['state']);
-    if (qp['tipo_id']) filtered = filtered.filter(i => i.incidencia_type_id === parseInt(qp['tipo_id'], 10));
+    if (qp['tipo_id']) filtered = filtered.filter(i => i.incidencia_type_id === Number.parseInt(qp['tipo_id'], 10));
     if (qp['desde']) filtered = filtered.filter(i => i.created_at >= qp['desde']);
     if (qp['hasta']) filtered = filtered.filter(i => i.created_at <= qp['hasta'] + 'T23:59:59Z');
     if (qp['search']) {
@@ -361,9 +367,9 @@ function handleRoute(
   }
 
   // /incidentes/{id}
-  const incMatch = u.match(/^\/incidentes\/(\d+)$/);
+  const incMatch = /^\/incidentes\/(\d+)$/.exec(u);
   if (incMatch) {
-    const id = parseInt(incMatch[1], 10);
+    const id = Number.parseInt(incMatch[1], 10);
     const incident = mockIncidencias.find(i => i.id === id);
     if (!incident) return _error(404, 'Incidencia no encontrada');
 
@@ -374,9 +380,9 @@ function handleRoute(
   }
 
   // /incidentes/{id}/estado
-  const incStateMatch = u.match(/^\/incidentes\/(\d+)\/estado$/);
+  const incStateMatch = /^\/incidentes\/(\d+)\/estado$/.exec(u);
   if (incStateMatch && method === 'PATCH') {
-    const id = parseInt(incStateMatch[1], 10);
+    const id = Number.parseInt(incStateMatch[1], 10);
     const incident = mockIncidencias.find(i => i.id === id);
     if (!incident) return _error(404, 'Incidencia no encontrada');
     const body = req.body as { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string };
@@ -398,9 +404,9 @@ function handleRoute(
   }
 
   // /incidentes/{id}/evidencias
-  const evMatch = u.match(/^\/incidentes\/(\d+)\/evidencias$/);
+  const evMatch = /^\/incidentes\/(\d+)\/evidencias$/.exec(u);
   if (evMatch) {
-    const id = parseInt(evMatch[1], 10);
+    const id = Number.parseInt(evMatch[1], 10);
     const incident = mockIncidencias.find(i => i.id === id);
     if (!incident) return _error(404, 'Incidencia no encontrada');
 
@@ -420,16 +426,16 @@ function handleRoute(
   }
 
   // /incidentes/{id}/evidencias/{evidenceId}
-  const evDelMatch = u.match(/^\/incidentes\/(\d+)\/evidencias\/(\d+)$/);
+  const evDelMatch = /^\/incidentes\/(\d+)\/evidencias\/(\d+)$/.exec(u);
   if (evDelMatch && method === 'DELETE') return noContent();
 
   // /incidentes/{id}/notificar
-  if (u.match(/^\/incidentes\/(\d+)\/notificar$/) && method === 'POST') {
+  if (/^\/incidentes\/(\d+)\/notificar$/.test(u) && method === 'POST') {
     return accepted<MessageResponse>({ message: 'Notificación encolada para envío.', status: 'queued' });
   }
 
   // /incidentes/{id}/justificar
-  if (u.match(/^\/incidentes\/(\d+)\/justificar$/) && method === 'POST') {
+  if (/^\/incidentes\/(\d+)\/justificar$/.test(u) && method === 'POST') {
     return accepted<MessageResponse>({ message: 'Proceso de justificación encolado.', status: 'queued' });
   }
 
@@ -458,9 +464,9 @@ function handleRoute(
   }
 
   // /corehr/shifts/{id}
-  const shiftMatch = u.match(/^\/corehr\/shifts\/(\d+)$/);
+  const shiftMatch = /^\/corehr\/shifts\/(\d+)$/.exec(u);
   if (shiftMatch) {
-    const id = parseInt(shiftMatch[1], 10);
+    const id = Number.parseInt(shiftMatch[1], 10);
     const shift = mockShifts.find(s => s.id === id);
     if (!shift) return _error(404, 'Turno no encontrado');
     if (method === 'GET') return ok(shift);
@@ -473,7 +479,7 @@ function handleRoute(
   // ==========================================
   if (u === '/corehr/schedules' && method === 'GET') {
     let filtered = [...mockSchedules];
-    if (qp['shift_id']) filtered = filtered.filter(s => s.shift_id === parseInt(qp['shift_id'], 10));
+    if (qp['shift_id']) filtered = filtered.filter(s => s.shift_id === Number.parseInt(qp['shift_id'], 10));
     return ok(paginate(filtered, page, size));
   }
   if (u === '/corehr/schedules' && method === 'POST') {
@@ -495,9 +501,9 @@ function handleRoute(
   }
 
   // /corehr/schedules/{id}
-  const schedMatch = u.match(/^\/corehr\/schedules\/(\d+)$/);
+  const schedMatch = /^\/corehr\/schedules\/(\d+)$/.exec(u);
   if (schedMatch) {
-    const id = parseInt(schedMatch[1], 10);
+    const id = Number.parseInt(schedMatch[1], 10);
     const schedule = mockSchedules.find(s => s.id === id);
     if (!schedule) return _error(404, 'Schedule no encontrado');
     if (method === 'GET') return ok(schedule);
@@ -508,9 +514,9 @@ function handleRoute(
   // ==========================================
   // COREHR - TOLERANCIAS
   // ==========================================
-  const tolMatch = u.match(/^\/corehr\/schedules\/(\d+)\/tolerancias$/);
+  const tolMatch = /^\/corehr\/schedules\/(\d+)\/tolerancias$/.exec(u);
   if (tolMatch) {
-    const schedId = parseInt(tolMatch[1], 10);
+    const schedId = Number.parseInt(tolMatch[1], 10);
     const tolerancias = mockSchedules.find(s => s.id === schedId)?.tolerancias ?? [];
     if (method === 'GET') return ok(paginate(tolerancias, page, size));
     if (method === 'POST') {
@@ -530,12 +536,12 @@ function handleRoute(
     }
   }
 
-  const tolItemMatch = u.match(/^\/corehr\/schedules\/(\d+)\/tolerancias\/(\d+)$/);
+  const tolItemMatch = /^\/corehr\/schedules\/(\d+)\/tolerancias\/(\d+)$/.exec(u);
   if (tolItemMatch) {
     if (method === 'PATCH') {
       return ok({
-        id: parseInt(tolItemMatch[2], 10),
-        schedule_id: parseInt(tolItemMatch[1], 10),
+        id: Number.parseInt(tolItemMatch[2], 10),
+        schedule_id: Number.parseInt(tolItemMatch[1], 10),
         ...(req.body as object),
       });
     }
@@ -547,8 +553,8 @@ function handleRoute(
   // ==========================================
   if (u === '/corehr/user-schedules' && method === 'GET') {
     let filtered = [...mockUserSchedules];
-    if (qp['tenant_user_id']) filtered = filtered.filter(us => us.tenant_user_id === parseInt(qp['tenant_user_id'], 10));
-    if (qp['schedule_id']) filtered = filtered.filter(us => us.schedule_id === parseInt(qp['schedule_id'], 10));
+    if (qp['tenant_user_id']) filtered = filtered.filter(us => us.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
+    if (qp['schedule_id']) filtered = filtered.filter(us => us.schedule_id === Number.parseInt(qp['schedule_id'], 10));
     return ok(paginate(filtered, page, size));
   }
   if (u === '/corehr/user-schedules' && method === 'POST') {
@@ -568,14 +574,14 @@ function handleRoute(
     return created(newUs);
   }
 
-  if (u.match(/^\/corehr\/user-schedules\/(\d+)$/) && method === 'DELETE') return noContent();
+  if (/^\/corehr\/user-schedules\/(\d+)$/.test(u) && method === 'DELETE') return noContent();
 
   // ==========================================
   // COREHR - DEVICES
   // ==========================================
   if (u === '/corehr/devices' && method === 'GET') {
     let filtered = [...mockDevices];
-    if (qp['branch_id']) filtered = filtered.filter(d => d.branch_id === parseInt(qp['branch_id'], 10));
+    if (qp['branch_id']) filtered = filtered.filter(d => d.branch_id === Number.parseInt(qp['branch_id'], 10));
     if (qp['state'] === 'true') filtered = filtered.filter(d => d.state);
     if (qp['state'] === 'false') filtered = filtered.filter(d => !d.state);
     return ok(paginate(filtered, page, size));
@@ -597,9 +603,9 @@ function handleRoute(
     });
   }
 
-  const devMatch = u.match(/^\/corehr\/devices\/(\d+)$/);
+  const devMatch = /^\/corehr\/devices\/(\d+)$/.exec(u);
   if (devMatch) {
-    const id = parseInt(devMatch[1], 10);
+    const id = Number.parseInt(devMatch[1], 10);
     const device = mockDevices.find(d => d.id === id);
     if (!device) return _error(404, 'Dispositivo no encontrado');
     if (method === 'GET') return ok(device);
@@ -612,8 +618,8 @@ function handleRoute(
   // ==========================================
   if (u === '/corehr/biometria' && method === 'GET') {
     let filtered = [...mockBiometria];
-    if (qp['tenant_user_id']) filtered = filtered.filter(b => b.tenant_user_id === parseInt(qp['tenant_user_id'], 10));
-    if (qp['device_id']) filtered = filtered.filter(b => b.device_id === parseInt(qp['device_id'], 10));
+    if (qp['tenant_user_id']) filtered = filtered.filter(b => b.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
+    if (qp['device_id']) filtered = filtered.filter(b => b.device_id === Number.parseInt(qp['device_id'], 10));
     if (qp['activo'] === 'true') filtered = filtered.filter(b => b.activo);
     if (qp['activo'] === 'false') filtered = filtered.filter(b => !b.activo);
     return ok(paginate(filtered, page, size));
@@ -621,7 +627,7 @@ function handleRoute(
 
   if (u === '/corehr/biometria/enroll/iniciar' && method === 'POST') {
     return created({
-      enroll_token: `enroll_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`,
+      enroll_token: `enroll_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
       device_id: (req.body as { device_id: number }).device_id,
       tenant_user_id: (req.body as { tenant_user_id: number }).tenant_user_id,
       finger_index: (req.body as { finger_index: number }).finger_index,
@@ -643,9 +649,9 @@ function handleRoute(
     });
   }
 
-  const bioMatch = u.match(/^\/corehr\/biometria\/(\d+)$/);
+  const bioMatch = /^\/corehr\/biometria\/(\d+)$/.exec(u);
   if (bioMatch && method === 'PATCH') {
-    const id = parseInt(bioMatch[1], 10);
+    const id = Number.parseInt(bioMatch[1], 10);
     const bio = mockBiometria.find(b => b.id === id);
     if (!bio) return _error(404, 'Registro biométrico no encontrado');
     return ok({ ...bio, ...(req.body as object), id });
@@ -656,7 +662,7 @@ function handleRoute(
   // ==========================================
   if (u === '/corehr/attendance' && method === 'GET') {
     let filtered = [...mockAttendance];
-    if (qp['tenant_user_id']) filtered = filtered.filter(a => a.tenant_user_id === parseInt(qp['tenant_user_id'], 10));
+    if (qp['tenant_user_id']) filtered = filtered.filter(a => a.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
     if (qp['state']) filtered = filtered.filter(a => a.state === qp['state']);
     if (qp['date_from']) filtered = filtered.filter(a => a.attendance_date >= qp['date_from']);
     if (qp['date_to']) filtered = filtered.filter(a => a.attendance_date <= qp['date_to']);
@@ -664,7 +670,7 @@ function handleRoute(
     return ok(paginate(filtered, page, size));
   }
 
-  const attMatch = u.match(/^\/corehr\/attendance\/(.+)$/);
+  const attMatch = /^\/corehr\/attendance\/(.+)$/.exec(u);
   if (attMatch) {
     const id = attMatch[1];
     const record = mockAttendance.find(a => a.id === id);
@@ -694,9 +700,9 @@ function handleRoute(
     });
   }
 
-  const nwdMatch = u.match(/^\/corehr\/non-working-days\/(\d+)$/);
+  const nwdMatch = /^\/corehr\/non-working-days\/(\d+)$/.exec(u);
   if (nwdMatch) {
-    const id = parseInt(nwdMatch[1], 10);
+    const id = Number.parseInt(nwdMatch[1], 10);
     const day = mockNonWorkingDays.find(d => d.id === id);
     if (!day) return _error(404, 'Día no laborable no encontrado');
     if (method === 'PATCH') return ok({ ...day, ...(req.body as object), id });
@@ -731,9 +737,9 @@ function handleRoute(
     });
   }
 
-  const tcMatch = u.match(/^\/corehr\/tenant-contacts\/(\d+)$/);
+  const tcMatch = /^\/corehr\/tenant-contacts\/(\d+)$/.exec(u);
   if (tcMatch) {
-    const id = parseInt(tcMatch[1], 10);
+    const id = Number.parseInt(tcMatch[1], 10);
     const contact = mockTenantContacts.find(c => c.id === id);
     if (!contact) return _error(404, 'Contacto no encontrado');
     if (method === 'PATCH') return ok({ ...contact, ...(req.body as object), id });
@@ -743,9 +749,9 @@ function handleRoute(
   // ==========================================
   // COREHR - USUARIOS/{id}/DEPARTAMENTOS
   // ==========================================
-  const deptMatch = u.match(/^\/corehr\/usuarios\/(\d+)\/departamentos$/);
+  const deptMatch = /^\/corehr\/usuarios\/(\d+)\/departamentos$/.exec(u);
   if (deptMatch) {
-    const userId = parseInt(deptMatch[1], 10);
+    const userId = Number.parseInt(deptMatch[1], 10);
     const userDepts = mockUserDepartments.filter(d => d.tenant_user_id === userId);
     if (method === 'GET') {
       let filtered = [...userDepts];
@@ -768,11 +774,11 @@ function handleRoute(
     }
   }
 
-  const deptItemMatch = u.match(/^\/corehr\/usuarios\/(\d+)\/departamentos\/(\d+)$/);
+  const deptItemMatch = /^\/corehr\/usuarios\/(\d+)\/departamentos\/(\d+)$/.exec(u);
   if (deptItemMatch && method === 'PATCH') {
     return ok({
-      id: parseInt(deptItemMatch[2], 10),
-      tenant_user_id: parseInt(deptItemMatch[1], 10),
+      id: Number.parseInt(deptItemMatch[2], 10),
+      tenant_user_id: Number.parseInt(deptItemMatch[1], 10),
       ...(req.body as object),
     });
   }

@@ -1,7 +1,7 @@
 import type {
   TenantUserProfile, MasterUserProfile, PermissionProfile, TenantRoleProfile,
-  UsuarioProfile, RoleProfile, AuthResponse, IncidentTypeProfile, IncidentProfile,
-  IncidentEvidenceProfile, IncidentPermissionProfile, ShiftProfile, ShiftSummary,
+  UsuarioProfile, AuthResponse, IncidentTypeProfile, IncidentProfile,
+  ShiftProfile, ShiftSummary,
   ScheduleProfile, ScheduleSummary, ToleranciaProfile, DeviceProfile,
   UserBiometriaProfile, AttendanceProfile, NonWorkingDayProfile,
   TenantContactProfile, TenantUserDepartmentProfile, UserScheduleProfile,
@@ -29,6 +29,33 @@ function paginate<T>(items: T[], page: number, size: number): PageResponse<T> {
     totalPages: Math.ceil(items.length / size),
   };
 }
+
+function getEstado(i: number): 'ACTIVO' | 'LICENCIA' | 'INACTIVO' {
+  if (i < 8) return 'ACTIVO';
+  if (i === 8) return 'LICENCIA';
+  return 'INACTIVO';
+}
+
+function getRolIndex(i: number): number {
+  if (i < 2) return 0;
+  if (i < 4) return 2;
+  if (i < 6) return 3;
+  return 4;
+}
+
+function getAttendanceState(isAbsent: boolean, isLate: boolean): 'PUNTUAL' | 'TARDANZA' | 'FALTA' {
+  if (isAbsent) return 'FALTA';
+  if (isLate) return 'TARDANZA';
+  return 'PUNTUAL';
+}
+
+const MOCK_DEVICE_IPS = [
+  '192.168.1.105',
+  '192.168.1.106',
+  '192.168.2.105',
+  '192.168.3.105',
+  '192.168.3.106',
+];
 
 // ==========================================
 // PERSONAS
@@ -142,7 +169,7 @@ export const mockTenantUsers: TenantUserProfile[] = personas.slice(0, 10).map((p
   id: i + 1,
   email: `${p.name.toLowerCase().replace(/\s+/g, '.')}.${p.father_surname.toLowerCase()}@colegio.edu.pe`,
   phone: `+519${String(87000000 + i * 1000).slice(0, 8)}`,
-  estado: i < 8 ? 'ACTIVO' : i === 8 ? 'LICENCIA' : 'INACTIVO',
+  estado: getEstado(i),
   must_change_password: i === 0,
   created_at: daysAgo(90 + i * 10),
   updated_at: i < 3 ? daysAgo(2) : daysAgo(15 + i * 3),
@@ -150,7 +177,7 @@ export const mockTenantUsers: TenantUserProfile[] = personas.slice(0, 10).map((p
   MetodoRecuperacion: [
     { method_type: 'EMAIL', method_value: `${p.name.toLowerCase()}.${p.father_surname.toLowerCase()}+backup@colegio.edu.pe` },
   ],
-  rol: tenantRoles[i < 2 ? 0 : i < 4 ? 2 : i < 6 ? 3 : 4],
+  rol: tenantRoles[getRolIndex(i)],
   sedes: [sedes[i % 3]],
   areas: [areas[i % 7]],
   departamentos: [departamentosList[i % 7]],
@@ -436,11 +463,11 @@ export const mockUserSchedules: UserScheduleProfile[] = [
 // ==========================================
 
 export const mockDevices: DeviceProfile[] = [
-  { id: 1, code: 'ZK-C2PRO-00123', name: 'Lector Principal - Entrada Sur', branch_id: 1, branch_name: 'Sede San Isidro', ip: '192.168.1.105', puerto: 4370, ubicacion: 'Puerta principal, primer piso', state: true, created_at: daysAgo(365) },
-  { id: 2, code: 'ZK-C2PRO-00124', name: 'Lector Entrada Docentes', branch_id: 1, branch_name: 'Sede San Isidro', ip: '192.168.1.106', puerto: 4370, ubicacion: 'Entrada bloque B', state: true, created_at: daysAgo(300) },
-  { id: 3, code: 'ZK-C2PRO-00125', name: 'Lector Principal - Miraflores', branch_id: 2, branch_name: 'Sede Miraflores', ip: '192.168.2.105', puerto: 4370, ubicacion: 'Hall principal', state: true, created_at: daysAgo(250) },
-  { id: 4, code: 'ZK-C2PRO-00126', name: 'Lector Surco - Administrativos', branch_id: 3, branch_name: 'Sede Surco', ip: '192.168.3.105', puerto: 4370, ubicacion: 'Oficina de administración', state: false, created_at: daysAgo(180) },
-  { id: 5, code: 'ZK-C2PRO-00127', name: 'Lector Surco - Docentes', branch_id: 3, branch_name: 'Sede Surco', ip: '192.168.3.106', puerto: 4370, ubicacion: 'Sala de profesores', state: true, created_at: daysAgo(150) },
+  { id: 1, code: 'ZK-C2PRO-00123', name: 'Lector Principal - Entrada Sur', branch_id: 1, branch_name: 'Sede San Isidro', ip: MOCK_DEVICE_IPS[0], puerto: 4370, ubicacion: 'Puerta principal, primer piso', state: true, created_at: daysAgo(365) },
+  { id: 2, code: 'ZK-C2PRO-00124', name: 'Lector Entrada Docentes', branch_id: 1, branch_name: 'Sede San Isidro', ip: MOCK_DEVICE_IPS[1], puerto: 4370, ubicacion: 'Entrada bloque B', state: true, created_at: daysAgo(300) },
+  { id: 3, code: 'ZK-C2PRO-00125', name: 'Lector Principal - Miraflores', branch_id: 2, branch_name: 'Sede Miraflores', ip: MOCK_DEVICE_IPS[2], puerto: 4370, ubicacion: 'Hall principal', state: true, created_at: daysAgo(250) },
+  { id: 4, code: 'ZK-C2PRO-00126', name: 'Lector Surco - Administrativos', branch_id: 3, branch_name: 'Sede Surco', ip: MOCK_DEVICE_IPS[3], puerto: 4370, ubicacion: 'Oficina de administración', state: false, created_at: daysAgo(180) },
+  { id: 5, code: 'ZK-C2PRO-00127', name: 'Lector Surco - Docentes', branch_id: 3, branch_name: 'Sede Surco', ip: MOCK_DEVICE_IPS[4], puerto: 4370, ubicacion: 'Sala de profesores', state: true, created_at: daysAgo(150) },
 ];
 
 // ==========================================
@@ -459,37 +486,44 @@ export const mockBiometria: UserBiometriaProfile[] = [
 // ASISTENCIA
 // ==========================================
 
+function generateAttendanceRecord(uid: number, dayOffset: number): AttendanceProfile | null {
+  const date = new Date();
+  date.setDate(date.getDate() - dayOffset);
+  if (date.getDay() === 0 || date.getDay() === 6) return null;
+  const dateStr = date.toISOString().slice(0, 10);
+  const isLate = dayOffset === 3 || dayOffset === 7;
+  const isAbsent = dayOffset === 5 || dayOffset === 12;
+  const checkInTime = isLate ? '07:25:00' : '06:55:00';
+  const checkOutTime = isLate ? '13:05:00' : '13:00:00';
+  return {
+    id: `att-${uid}-${dateStr}`,
+    tenant_user_id: uid,
+    tenant_user: {
+      id: uid,
+      nombre: mockTenantUsers.find(u => u.id === uid)?.persona.name ?? '',
+      apellido_paterno: mockTenantUsers.find(u => u.id === uid)?.persona.father_surname ?? '',
+    },
+    schedule_id: 1,
+    schedule: mockScheduleSummaries[0],
+    device_id: 1,
+    device_code: 'ZK-C2PRO-00123',
+    check_in: isAbsent ? null : `${dateStr}T${checkInTime}Z`,
+    check_out: isAbsent ? null : `${dateStr}T${checkOutTime}Z`,
+    attendance_date: dateStr,
+    minutes_late: isLate ? 15 : 0,
+    state: getAttendanceState(isAbsent, isLate),
+    created_at: `${dateStr}T06:30:00Z`,
+    updated_at: `${dateStr}T13:10:00Z`,
+  };
+}
+
 function generateAttendance(): AttendanceProfile[] {
   const result: AttendanceProfile[] = [];
   const users = [1, 2, 3, 4, 5, 6, 7];
   for (const uid of users) {
     for (let d = 0; d < 15; d++) {
-      const date = new Date();
-      date.setDate(date.getDate() - d);
-      if (date.getDay() === 0 || date.getDay() === 6) continue;
-      const dateStr = date.toISOString().slice(0, 10);
-      const isLate = d === 3 || d === 7;
-      const isAbsent = d === 5 || d === 12;
-      result.push({
-        id: `att-${uid}-${dateStr}`,
-        tenant_user_id: uid,
-        tenant_user: {
-          id: uid,
-          nombre: mockTenantUsers.find(u => u.id === uid)?.persona.name ?? '',
-          apellido_paterno: mockTenantUsers.find(u => u.id === uid)?.persona.father_surname ?? '',
-        },
-        schedule_id: 1,
-        schedule: mockScheduleSummaries[0],
-        device_id: 1,
-        device_code: 'ZK-C2PRO-00123',
-        check_in: isAbsent ? null : `${dateStr}T${isLate ? '07:25:00' : '06:55:00'}Z`,
-        check_out: isAbsent ? null : `${dateStr}T${isLate ? '13:05:00' : '13:00:00'}Z`,
-        attendance_date: dateStr,
-        minutes_late: isLate ? 15 : 0,
-        state: isAbsent ? 'FALTA' : isLate ? 'TARDANZA' : 'PUNTUAL',
-        created_at: `${dateStr}T06:30:00Z`,
-        updated_at: `${dateStr}T13:10:00Z`,
-      });
+      const record = generateAttendanceRecord(uid, d);
+      if (record) result.push(record);
     }
   }
   return result;

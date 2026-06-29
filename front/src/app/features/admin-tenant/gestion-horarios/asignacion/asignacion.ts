@@ -63,8 +63,8 @@ export class AsignacionComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarDatos();
+  ngOnInit(): void {
+    this.cargarDatos();
   }
 
   async cargarDatos(): Promise<void> {
@@ -135,7 +135,7 @@ export class AsignacionComponent implements OnInit {
 
   async submitAsignacion(): Promise<void> {
     if (this.asignacionForm.invalid) return;
-    const { trabajador, area, turnoId, horarioId } = this.asignacionForm.value;
+    const { turnoId, horarioId } = this.asignacionForm.value;
     const turno = this.turnosDisponibles.find(t => t.id === Number(turnoId));
     const horario = turno?.horarios.find(h => h.id === Number(horarioId));
     if (!turno || !horario) return;

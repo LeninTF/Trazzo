@@ -98,8 +98,8 @@ export class Incidencias implements OnInit {
     ];
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarIncidencias();
+  ngOnInit(): void {
+    this.cargarIncidencias();
   }
 
   async cargarIncidencias(): Promise<void> {

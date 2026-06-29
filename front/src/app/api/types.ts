@@ -27,10 +27,12 @@ export interface MasterRoleProfile {
 // SECCIÓN: PERSONAS Y USUARIOS
 // ==========================================
 
+export type DocumentType = 'DNI' | 'CARNET_EXTRANJERIA' | 'PASAPORTE' | 'OTRO';
+
 export interface PersonaBase {
   id: number;
   img_url: string | null;
-  document_type: 'DNI' | 'CARNET_EXTRANJERIA' | 'PASAPORTE' | 'OTRO';
+  document_type: DocumentType;
   document_value: string;
   name: string;
   father_surname: string;
@@ -86,8 +88,10 @@ export interface PageResponse<T> {
   totalPages: number;
 }
 
+export type ScopeAplicado = 'ALL_TENANT' | 'MY_ASSIGNMENTS' | 'SEDE' | 'AREA' | 'DEPARTAMENTO' | 'SELF';
+
 export interface TenantUserListResponse extends PageResponse<TenantUserProfile> {
-  scope_aplicado?: 'ALL_TENANT' | 'MY_ASSIGNMENTS' | 'SEDE' | 'AREA' | 'DEPARTAMENTO' | 'SELF';
+  scope_aplicado?: ScopeAplicado;
 }
 
 export interface MasterUserListResponse extends PageResponse<MasterUserProfile> {}
@@ -95,7 +99,7 @@ export interface MasterUserListResponse extends PageResponse<MasterUserProfile> 
 // ── Request bodies ──
 
 export interface CrearTenantUsuarioRequest {
-  document_type: 'DNI' | 'CARNET_EXTRANJERIA' | 'PASAPORTE' | 'OTRO';
+  document_type: DocumentType;
   document_value: string;
   name: string;
   father_surname: string;
@@ -133,7 +137,7 @@ export interface PatchTenantUsuarioRequest {
 }
 
 export interface CrearMasterUsuarioRequest {
-  document_type: 'DNI' | 'CARNET_EXTRANJERIA' | 'PASAPORTE' | 'OTRO';
+  document_type: DocumentType;
   document_value: string;
   name: string;
   father_surname: string;
@@ -192,7 +196,7 @@ export interface AuthResponse {
 }
 
 export interface RegistroUsuarioRequest {
-  document_type: 'DNI' | 'CARNET_EXTRANJERIA' | 'PASAPORTE' | 'OTRO';
+  document_type: DocumentType;
   document_value: string;
   name: string;
   father_surname: string;
@@ -273,7 +277,7 @@ export interface IncidentProfile {
 }
 
 export interface IncidentListResponse extends PageResponse<IncidentProfile> {
-  scope_aplicado?: 'ALL_TENANT' | 'MY_ASSIGNMENTS' | 'SEDE' | 'AREA' | 'DEPARTAMENTO' | 'SELF';
+  scope_aplicado?: ScopeAplicado;
 }
 
 export interface CreateIncidentRequest {
@@ -520,7 +524,7 @@ export interface AttendanceProfile {
 }
 
 export interface AttendanceListResponse extends PageResponse<AttendanceProfile> {
-  scope_aplicado?: 'ALL_TENANT' | 'MY_ASSIGNMENTS' | 'SEDE' | 'AREA' | 'DEPARTAMENTO' | 'SELF';
+  scope_aplicado?: ScopeAplicado;
 }
 
 export interface PatchAttendanceRequest {

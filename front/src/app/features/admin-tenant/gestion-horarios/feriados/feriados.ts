@@ -46,8 +46,8 @@ export class FeriadosComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.cargarFeriados();
+  ngOnInit(): void {
+    this.cargarFeriados();
   }
 
   async cargarFeriados(): Promise<void> {
