@@ -4,7 +4,7 @@ import { DirectorioPersonal } from './directorio-personal';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { fakeAsync, tick } from '@angular/core/testing';
 
 describe('DirectorioPersonal', () => {
@@ -183,5 +183,82 @@ describe('DirectorioPersonal', () => {
     expect(component.modoImagenUrl).toBeFalse();
     component.cambiarModoImagen(true);
     expect(component.modoImagenUrl).toBeTrue();
+  });
+
+  it('should guardarPersonal create new user', async () => {
+    component.editandoPersonal = false;
+    component.personalForm.nombre = 'Nuevo Usuario';
+    component.personalForm.idPersonal = '12345';
+    component.personalForm.email = 'nuevo@colegio.edu.pe';
+    await component.guardarPersonal();
+    expect(mockApi.users.create).toHaveBeenCalled();
+    expect(component.modalPersonalOpen).toBeFalse();
+  });
+
+  it('should guardarPersonal edit existing user', async () => {
+    component.editandoPersonal = true;
+    component.personalForm.id = 1;
+    component.personalForm.nombre = 'Editado Nombre';
+    component.personalForm.idPersonal = '12345';
+    await component.guardarPersonal();
+    expect(mockApi.users.patch).toHaveBeenCalled();
+    expect(component.modalPersonalOpen).toBeFalse();
+  });
+
+  it('should not guardarPersonal with empty name', async () => {
+    component.editandoPersonal = false;
+    component.personalForm.nombre = '';
+    component.personalForm.idPersonal = '';
+    await component.guardarPersonal();
+    expect(mockApi.users.create).not.toHaveBeenCalled();
+    expect(mockToast.info).toHaveBeenCalled();
+  });
+
+  it('should eliminarPersonal', async () => {
+    await component.eliminarPersonal(1);
+    expect(mockApi.users.delete).toHaveBeenCalledWith(1);
+    expect(mockToast.info).toHaveBeenCalled();
+  });
+
+  it('should handle guardarPersonal error', async () => {
+    mockApi.users.create.and.returnValue(throwError(() => new Error('fail')));
+    component.editandoPersonal = false;
+    component.personalForm.nombre = 'Test User';
+    component.personalForm.idPersonal = '99999';
+    await component.guardarPersonal();
+    expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
+    mockApi.users.create.and.returnValue(of(mockUsersResponse.content[0]));
+  });
+
+  it('should handle eliminarPersonal error', async () => {
+    mockApi.users.delete.and.returnValue(throwError(() => new Error('fail')));
+    await component.eliminarPersonal(1);
+    expect(mockToast.info).toHaveBeenCalledWith('Error al eliminar');
+    mockApi.users.delete.and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 }));
+  });
+
+  it('should abrirSelectorArchivo trigger file input click', () => {
+    const clickSpy = jasmine.createSpy('click');
+    const mockInput = { click: clickSpy } as any;
+    spyOn(document, 'getElementById').and.returnValue(mockInput);
+    component.abrirSelectorArchivo();
+    expect(document.getElementById).toHaveBeenCalledWith('fileInput');
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it('should update preview URL on url change', () => {
+    component.personalForm.imagenUrl = 'http://example.com/img.jpg';
+    component.actualizarPreviewUrl();
+    expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
+  });
+
+  it('should handle guardarPersonal error in edit mode', async () => {
+    mockApi.users.patch.and.returnValue(throwError(() => new Error('fail')));
+    component.editandoPersonal = true;
+    component.personalForm.nombre = 'Test';
+    component.personalForm.idPersonal = '99999';
+    await component.guardarPersonal();
+    expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
+    mockApi.users.patch.and.returnValue(of(mockUsersResponse.content[0]));
   });
 });
