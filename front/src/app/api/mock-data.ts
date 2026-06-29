@@ -248,7 +248,7 @@ export const mockUsuarioProfile: UsuarioProfile = {
 };
 
 export const mockAuthResponse: AuthResponse = {
-  accessToken: 'eyJhbGciOiJSUzI1NiIsImtpZCI6InB1YmtleS1hYmMxMjMifQ.mock-token',
+  accessToken: 'mock-token-001',
   tokenType: 'Bearer',
   usuario: mockUsuarioProfile,
 };

@@ -114,14 +114,7 @@ function handleRoute(
   if (u === '/auth/login' && method === 'POST') {
     return ok<AuthResponse>({
       ...mockAuthResponse,
-      accessToken: `eyJhbGciOiJSUzI1NiIsImtpZCI6InB1YmtleS1hYmMxMjMifQ.${btoa(JSON.stringify({
-        sub: '1',
-        tenant_id: 'a1b2c3d4-0000-0000-0000-000000000001',
-        context: 'TENANT',
-        must_change_password: false,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 86400,
-      }))}.mock-signature`,
+      accessToken: 'mock-token-002',
       usuario: { ...mockUsuarioProfile, ultimo_acceso: new Date().toISOString() },
     });
   }
@@ -627,7 +620,7 @@ function handleRoute(
 
   if (u === '/corehr/biometria/enroll/iniciar' && method === 'POST') {
     return created({
-      enroll_token: `enroll_${crypto.randomUUID().replaceAll('-', '').slice(0, 12)}`,
+      enroll_token: 'mock-enroll-token-001',
       device_id: (req.body as { device_id: number }).device_id,
       tenant_user_id: (req.body as { tenant_user_id: number }).tenant_user_id,
       finger_index: (req.body as { finger_index: number }).finger_index,
