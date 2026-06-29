@@ -6,22 +6,18 @@ import java.time.LocalTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import trazzo.back.corehr.domain.exception.InvalidScheduleException;
-import trazzo.back.corehr.domain.specification.ScheduleTimeSpec;
+import trazzo.back.corehr.domain.model.BaseDomainModel;
+import trazzo.back.corehr.domain.model.DomainModelValidator;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Schedule {
+public class Schedule extends BaseDomainModel {
 
-    private Long id;
     private Long shiftId;
     private String name;
     private String description;
     private LocalTime entryTime;
     private LocalTime departureTime;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    transient Clock clock = Clock.systemDefaultZone();
 
     private Schedule(
             Long id,
@@ -33,14 +29,12 @@ public class Schedule {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = id;
+        super(id, createdAt, updatedAt);
         this.shiftId = shiftId;
-        this.name = requireText(name, "name");
-        this.description = normalizeOptionalText(description);
-        this.entryTime = requireTime(entryTime, "entryTime");
-        this.departureTime = requireValidDepartureTime(entryTime, departureTime);
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        this.name = DomainModelValidator.requireScheduleText(name, "name");
+        this.description = DomainModelValidator.normalizeOptionalText(description);
+        this.entryTime = DomainModelValidator.requireTime(entryTime, "entryTime");
+        this.departureTime = DomainModelValidator.requireValidDepartureTime(entryTime, departureTime);
     }
 
     public static Schedule create(Long shiftId, String name, String description, LocalTime entryTime, LocalTime departureTime) {
@@ -62,53 +56,18 @@ public class Schedule {
     }
 
     public void rename(String name) {
-        this.name = requireText(name, "name");
+        this.name = DomainModelValidator.requireScheduleText(name, "name");
         touch();
     }
 
     public void updateDescription(String description) {
-        this.description = normalizeOptionalText(description);
+        this.description = DomainModelValidator.normalizeOptionalText(description);
         touch();
     }
 
     public void reschedule(LocalTime entryTime, LocalTime departureTime) {
-        this.entryTime = requireTime(entryTime, "entryTime");
-        this.departureTime = requireValidDepartureTime(entryTime, departureTime);
+        this.entryTime = DomainModelValidator.requireTime(entryTime, "entryTime");
+        this.departureTime = DomainModelValidator.requireValidDepartureTime(entryTime, departureTime);
         touch();
-    }
-
-    private void touch() {
-        this.updatedAt = LocalDateTime.now(clock);
-    }
-
-    private static LocalTime requireTime(LocalTime value, String fieldName) {
-        if (value == null) {
-            throw new InvalidScheduleException(fieldName + " is required");
-        }
-        return value;
-    }
-
-    private static LocalTime requireValidDepartureTime(LocalTime entryTime, LocalTime departureTime) {
-        if (departureTime == null) {
-            throw new InvalidScheduleException("departureTime is required");
-        }
-        if (!new ScheduleTimeSpec().isValidScheduleTime(entryTime, departureTime)) {
-            throw new InvalidScheduleException("departureTime must be after entryTime");
-        }
-        return departureTime;
-    }
-
-    static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new InvalidScheduleException(fieldName + " is required");
-        }
-        return value.trim();
-    }
-
-    static String normalizeOptionalText(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
     }
 }

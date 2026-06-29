@@ -14,7 +14,6 @@ import trazzo.back.corehr.domain.model.attendance.Attendance;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -92,7 +91,7 @@ class AttendanceServiceTest {
         var result = service.correct("id-1", command);
 
         assertEquals(newCheckIn, result.checkIn());
-        assertTrue(result.updatedAt().isAfter(now) || result.updatedAt().isEqual(now.truncatedTo(ChronoUnit.SECONDS)));
+        assertFalse(result.updatedAt().isBefore(now));
         verify(repository).save(any());
     }
 

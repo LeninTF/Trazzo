@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.domain.event.CoreHrDomainEvent;
 
-@Component
+@Component("corehrEventPublisherAdapter")
 @RequiredArgsConstructor
 public class SpringEventPublisherAdapter implements EventPublisherPort {
 

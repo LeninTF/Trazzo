@@ -5,13 +5,13 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import trazzo.back.corehr.domain.exception.CoreHrValidationException;
+import trazzo.back.corehr.domain.model.BaseDomainModel;
+import trazzo.back.corehr.domain.model.DomainModelValidator;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserBiometria {
+public class UserBiometria extends BaseDomainModel {
 
-    private Long id;
     private Long tenantUserId;
     private Long deviceId;
     private Integer fingerIndex;
@@ -19,9 +19,6 @@ public class UserBiometria {
     private String llaveCifrado;
     private LocalDateTime capturadoEn;
     private boolean activo;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    transient Clock clock = Clock.systemDefaultZone();
 
     private UserBiometria(
             Long id,
@@ -35,16 +32,14 @@ public class UserBiometria {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = id;
-        this.tenantUserId = requireTenantUserId(tenantUserId);
+        super(id, createdAt, updatedAt);
+        this.tenantUserId = DomainModelValidator.requireTenantUserId(tenantUserId);
         this.deviceId = deviceId;
         this.fingerIndex = fingerIndex;
-        this.templateCifrado = requireText(templateCifrado, "templateCifrado");
-        this.llaveCifrado = requireText(llaveCifrado, "llaveCifrado");
+        this.templateCifrado = DomainModelValidator.requireText(templateCifrado, "templateCifrado");
+        this.llaveCifrado = DomainModelValidator.requireText(llaveCifrado, "llaveCifrado");
         this.capturadoEn = capturadoEn;
         this.activo = activo;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     public static UserBiometria create(Long tenantUserId, Long deviceId, Integer fingerIndex,
@@ -78,23 +73,5 @@ public class UserBiometria {
     public void deactivate() {
         this.activo = false;
         touch();
-    }
-
-    private void touch() {
-        this.updatedAt = LocalDateTime.now(clock);
-    }
-
-    private static Long requireTenantUserId(Long tenantUserId) {
-        if (tenantUserId == null) {
-            throw new CoreHrValidationException("tenantUserId is required");
-        }
-        return tenantUserId;
-    }
-
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new CoreHrValidationException(fieldName + " is required");
-        }
-        return value.trim();
     }
 }

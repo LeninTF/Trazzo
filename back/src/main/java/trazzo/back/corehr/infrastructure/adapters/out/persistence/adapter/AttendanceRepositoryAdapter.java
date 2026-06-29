@@ -70,7 +70,16 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
             var params = buildParams(branchId, areaId, departamentoId, dateFrom, dateTo, state, tenantUserId, page, size);
             return namedParameterJdbcTemplate.query(buildSelectSql(sort), params, ATTENDANCE_ROW_MAPPER);
         }
-        var sortObj = parseSort(sort);
+        var sortObj = SortUtils.parseSort(sort, f -> switch (f) {
+            case "attendance_date", "attendanceDate" -> "attendanceDate";
+            case "check_in", "checkIn" -> "checkIn";
+            case "check_out", "checkOut" -> "checkOut";
+            case "minutes_late", "minutesLate" -> "minutesLate";
+            case "state" -> "state";
+            case "created_at", "createdAt" -> "createdAt";
+            case "updated_at", "updatedAt" -> "updatedAt";
+            default -> "createdAt";
+        });
         var pageable = PageRequest.of(page, size, sortObj);
         Page<AttendanceEntity> result;
 
@@ -128,7 +137,7 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
     }
 
     private String buildSelectSql(String sort) {
-        var nativeSort = parseNativeSort(sort);
+        var nativeSort = SortUtils.parseNativeSort(sort);
         return """
                 SELECT DISTINCT a.*
                 FROM attendances a
@@ -164,52 +173,6 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
                   AND (:branchId IS NULL OR ar.branch_id = :branchId)
                   AND (tud.id IS NULL OR tud.end_date IS NULL OR tud.end_date >= :currentDate)
                 """;
-    }
-
-    private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) {
-            return Sort.by(Sort.Direction.DESC, "createdAt");
-        }
-        var parts = sort.split(",");
-        var field = mapSortField(parts[0].trim());
-        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(direction, field);
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "attendance_date", "attendanceDate" -> "attendanceDate";
-            case "check_in", "checkIn" -> "checkIn";
-            case "check_out", "checkOut" -> "checkOut";
-            case "minutes_late", "minutesLate" -> "minutesLate";
-            case "state" -> "state";
-            case "created_at", "createdAt" -> "createdAt";
-            case "updated_at", "updatedAt" -> "updatedAt";
-            default -> "createdAt";
-        };
-    }
-
-    private NativeSort parseNativeSort(String sort) {
-        if (sort == null || sort.isBlank()) {
-            return new NativeSort("a.created_at", "DESC");
-        }
-        var parts = sort.split(",");
-        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
-                ? "DESC" : "ASC";
-        var field = switch (parts[0].trim()) {
-            case "attendance_date", "attendanceDate" -> "a.attendance_date";
-            case "check_in", "checkIn" -> "a.check_in";
-            case "check_out", "checkOut" -> "a.check_out";
-            case "minutes_late", "minutesLate" -> "a.minutes_late";
-            case "state" -> "a.state";
-            case "updated_at", "updatedAt" -> "a.updated_at";
-            default -> "a.created_at";
-        };
-        return new NativeSort(field, direction);
-    }
-
-    private record NativeSort(String field, String direction) {
     }
 
     private static Long getNullableLong(ResultSet rs, String column) throws SQLException {

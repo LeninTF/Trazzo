@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import trazzo.back.saasglobal.application.port.out.EventPublisherPort;
 import trazzo.back.saasglobal.domain.event.SaasGlobalDomainEvent;
 
-@Component
+@Component("saasglobalEventPublisherAdapter")
 @RequiredArgsConstructor
 public class SpringEventPublisherAdapter implements EventPublisherPort {
 

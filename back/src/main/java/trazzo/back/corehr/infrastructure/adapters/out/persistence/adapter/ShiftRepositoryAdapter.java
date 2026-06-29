@@ -2,7 +2,6 @@ package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.corehr.application.port.out.ShiftRepositoryPort;
@@ -35,7 +34,12 @@ public class ShiftRepositoryAdapter implements ShiftRepositoryPort {
 
     @Override
     public List<Shift> findAll(String search, int page, int size, String sort) {
-        var sortObj = parseSort(sort);
+        var sortObj = SortUtils.parseSort(sort, f -> switch (f) {
+            case "name" -> "name";
+            case "created_at", "createdAt" -> "createdAt";
+            case "updated_at", "updatedAt" -> "updatedAt";
+            default -> "createdAt";
+        });
         var pageable = PageRequest.of(page, size, sortObj);
         return (search == null || search.isBlank()
                 ? shiftRepo.findAll(pageable)
@@ -64,23 +68,4 @@ public class ShiftRepositoryAdapter implements ShiftRepositoryPort {
         shiftRepo.deleteById(id);
     }
 
-    private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) {
-            return Sort.by(Sort.Direction.DESC, "createdAt");
-        }
-        var parts = sort.split(",");
-        var field = mapSortField(parts[0].trim());
-        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(direction, field);
-    }
-
-    private String mapSortField(String field) {
-        return switch (field) {
-            case "name" -> "name";
-            case "created_at", "createdAt" -> "createdAt";
-            case "updated_at", "updatedAt" -> "updatedAt";
-            default -> "createdAt";
-        };
-    }
 }

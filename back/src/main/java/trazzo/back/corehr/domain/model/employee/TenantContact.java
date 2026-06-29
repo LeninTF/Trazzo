@@ -5,19 +5,16 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import trazzo.back.corehr.domain.exception.CoreHrValidationException;
+import trazzo.back.corehr.domain.model.BaseDomainModel;
+import trazzo.back.corehr.domain.model.DomainModelValidator;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TenantContact {
+public class TenantContact extends BaseDomainModel {
 
-    private Long id;
     private Long tenantUserId;
     private String type;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
-    transient Clock clock = Clock.systemDefaultZone();
 
     private TenantContact(
             Long id,
@@ -27,11 +24,9 @@ public class TenantContact {
             LocalDateTime updatedAt,
             LocalDateTime deletedAt
     ) {
-        this.id = id;
-        this.tenantUserId = requireTenantUserId(tenantUserId);
-        this.type = requireText(type, "type");
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+        super(id, createdAt, updatedAt);
+        this.tenantUserId = DomainModelValidator.requireTenantUserId(tenantUserId);
+        this.type = DomainModelValidator.requireText(type, "type");
         this.deletedAt = deletedAt;
     }
 
@@ -52,30 +47,12 @@ public class TenantContact {
     }
 
     public void updateType(String type) {
-        this.type = requireText(type, "type");
+        this.type = DomainModelValidator.requireText(type, "type");
         touch();
     }
 
     public void markAsDeleted() {
         this.deletedAt = LocalDateTime.now(clock);
         touch();
-    }
-
-    private void touch() {
-        this.updatedAt = LocalDateTime.now(clock);
-    }
-
-    private static Long requireTenantUserId(Long tenantUserId) {
-        if (tenantUserId == null) {
-            throw new CoreHrValidationException("tenantUserId is required");
-        }
-        return tenantUserId;
-    }
-
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new CoreHrValidationException(fieldName + " is required");
-        }
-        return value.trim();
     }
 }

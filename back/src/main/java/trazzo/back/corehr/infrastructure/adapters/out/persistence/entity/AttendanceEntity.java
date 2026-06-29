@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class AttendanceEntity {
+public class AttendanceEntity extends AuditableEntity {
 
     @Id
     @Column(length = 36)
@@ -46,21 +46,4 @@ public class AttendanceEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AttendanceState state;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }
