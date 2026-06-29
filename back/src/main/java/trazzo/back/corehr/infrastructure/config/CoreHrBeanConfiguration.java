@@ -2,6 +2,8 @@ package trazzo.back.corehr.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
@@ -26,6 +28,7 @@ import trazzo.back.corehr.application.usecase.UserBiometriaService;
 import trazzo.back.corehr.application.usecase.UserScheduleService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionStore;
+import trazzo.back.corehr.infrastructure.adapters.out.reporting.CoreHrAttendanceSummaryJdbcAdapter;
 
 @Configuration
 public class CoreHrBeanConfiguration {
@@ -86,5 +89,10 @@ public class CoreHrBeanConfiguration {
     public EnrollService enrollService(TenantUserPort tenantUserPort, DeviceRepositoryPort deviceRepo,
                                        UserBiometriaRepositoryPort userBiometriaRepo, EnrollSessionStore enrollSessionStore) {
         return new EnrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore);
+    }
+
+    @Bean
+    public CoreHrAttendanceSummaryPort coreHrAttendanceSummaryPort(JdbcTemplate jdbcTemplate) {
+        return new CoreHrAttendanceSummaryJdbcAdapter(jdbcTemplate);
     }
 }

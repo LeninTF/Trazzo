@@ -4,6 +4,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
 import trazzo.back.reports.application.ports.in.CreateMonthlyClosureUseCase;
 import trazzo.back.reports.application.ports.in.GetMonthlyClosureDetailUseCase;
 import trazzo.back.reports.application.ports.in.GetMonthlyClosureUseCase;
@@ -49,8 +50,8 @@ public class ReportsBeanConfiguration {
     }
 
     @Bean
-    public EmployeeAttendanceSummaryPort employeeAttendanceSummaryPort(JdbcTemplate jdbcTemplate) {
-        return new EmployeeAttendanceSummaryAdapter(jdbcTemplate);
+    public EmployeeAttendanceSummaryPort employeeAttendanceSummaryPort(CoreHrAttendanceSummaryPort coreHrAttendanceSummaryPort) {
+        return new EmployeeAttendanceSummaryAdapter(coreHrAttendanceSummaryPort);
     }
 
     @Bean
