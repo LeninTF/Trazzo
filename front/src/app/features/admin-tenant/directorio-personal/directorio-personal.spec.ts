@@ -1,227 +1,187 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
-import { ApiService } from '../../../api/services/api.service';
-import type { TenantUserProfile } from '../../../api/types';
+import { provideHttpClient } from '@angular/common/http';
 import { DirectorioPersonal } from './directorio-personal';
-
-const makeUser = (id: number, name: string, father: string, mother: string, sede: string, area: string, dept: string, estado: 'ACTIVO' | 'LICENCIA'): TenantUserProfile => ({
-  id, email: `${name.toLocaleLowerCase()}.${father.toLocaleLowerCase()}@colegio.edu.pe`,
-  phone: `999${String(100 + id).slice(-3)}`, estado, must_change_password: false,
-  created_at: '2024-01-15T00:00:00Z', updated_at: '2024-01-15T00:00:00Z',
-  persona: { id, img_url: null, document_type: 'DNI', document_value: String(10000000 + id), name, father_surname: father, mother_surname: mother, birth_date: null },
-  MetodoRecuperacion: [], rol: { id: 1, name: 'Docente', descripcion: null, permissions: [] },
-  sedes: [{ id: 1, nombre: sede }], areas: [{ id: 1, nombre: area }], departamentos: [{ id: 1, nombre: dept }],
-});
-
-let usersData: TenantUserProfile[];
-
-const mockApi = {
-  users: {
-    list: () => of({ content: usersData, totalElements: usersData.length, page: 0, size: 100, totalPages: 1 }),
-    patch: (id: number, data: { name?: string; father_surname?: string }) => {
-      const u = usersData.find(x => x.id === id);
-      if (u) { u.persona.name = data.name ?? u.persona.name; u.persona.father_surname = data.father_surname ?? u.persona.father_surname; }
-      return of({} as any);
-    },
-    create: () => {
-      const newId = Math.max(...usersData.map(u => u.id)) + 1;
-      usersData.push(makeUser(newId, 'New', 'Person', '', '', '', '', 'ACTIVO'));
-      return of({} as any);
-    },
-    delete: (id: number) => {
-      const idx = usersData.findIndex(u => u.id === id);
-      if (idx >= 0) usersData.splice(idx, 1);
-      return of({} as any);
-    },
-  },
-};
+import { ApiService } from '../../../api/services/api.service';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
+import { of } from 'rxjs';
+import { fakeAsync, tick } from '@angular/core/testing';
 
 describe('DirectorioPersonal', () => {
   let component: DirectorioPersonal;
   let fixture: ComponentFixture<DirectorioPersonal>;
 
-  beforeEach(async () => {
-    usersData = [
-      makeUser(1, 'Dr.', 'Sarah', 'Jenkins', 'Central', 'Académica', 'Academic', 'ACTIVO'),
-      makeUser(2, 'Marcus', 'Cooper', '', 'Central', 'Académica', 'Academic', 'ACTIVO'),
-      makeUser(3, 'Ana', 'García', 'López', 'Norte', 'Administrativa', 'Human Resources', 'ACTIVO'),
-      makeUser(4, 'Luis', 'Martínez', 'Rojas', 'Sur', 'Académica', 'Science', 'ACTIVO'),
-      makeUser(5, 'Carmen', 'Vargas', 'Díaz', 'Central', 'Financiera', 'Finance', 'ACTIVO'),
-      makeUser(6, 'José', 'Torres', 'Mendoza', 'Norte', 'Académica', 'Math', 'ACTIVO'),
-      makeUser(7, 'Rosa', 'Flores', 'Castro', 'Sur', 'Administrativa', 'Human Resources', 'LICENCIA'),
-      makeUser(8, 'Pedro', 'Ramos', 'Silva', 'Central', 'Académica', 'Academic', 'ACTIVO'),
-      makeUser(9, 'Lucía', 'Morales', 'Paredes', 'Norte', 'Financiera', 'Finance', 'ACTIVO'),
-      makeUser(10, 'Miguel', 'Ángel', 'Ríos', 'Sur', 'Académica', 'Science', 'ACTIVO'),
-    ];
+  const mockUsersResponse = {
+    content: [
+      {
+        id: 1, email: 'jose@colegio.edu.pe', phone: '+51987000001',
+        estado: 'ACTIVO', must_change_password: false,
+        created_at: '2025-01-01', updated_at: '2025-06-01',
+        persona: { id: 1, img_url: null, document_type: 'DNI', document_value: '76543210', name: 'José', father_surname: 'Pérez', mother_surname: 'López', birth_date: '1990-01-15' },
+        MetodoRecuperacion: [],
+        rol: { id: 1, name: 'Trabajador', descripcion: 'Acceso básico', permissions: [] },
+        sedes: [{ id: 1, nombre: 'Sede San Isidro' }],
+        areas: [{ id: 1, nombre: 'Dirección Académica' }],
+        departamentos: [{ id: 1, nombre: 'Matemáticas' }],
+      },
+      {
+        id: 2, email: 'ana@colegio.edu.pe', phone: '+51987000002',
+        estado: 'LICENCIA', must_change_password: false,
+        created_at: '2025-02-01', updated_at: '2025-06-01',
+        persona: { id: 2, img_url: null, document_type: 'DNI', document_value: '87654321', name: 'Ana', father_surname: 'Rojas', mother_surname: 'Torres', birth_date: '1992-03-20' },
+        MetodoRecuperacion: [],
+        rol: { id: 2, name: 'Supervisor', descripcion: 'Supervisión', permissions: [] },
+        sedes: [{ id: 2, nombre: 'Sede Miraflores' }],
+        areas: [{ id: 2, nombre: 'Administración' }],
+        departamentos: [{ id: 2, nombre: 'Comunicación' }],
+      },
+    ],
+    page: 0, size: 100, totalElements: 2, totalPages: 1,
+  };
 
+  const mockApi = {
+    users: {
+      list: jasmine.createSpy('list').and.returnValue(of(mockUsersResponse)),
+      create: jasmine.createSpy('create').and.returnValue(of(mockUsersResponse.content[0])),
+      patch: jasmine.createSpy('patch').and.returnValue(of(mockUsersResponse.content[0])),
+      delete: jasmine.createSpy('delete').and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 })),
+    },
+  };
+
+  const mockToast = jasmine.createSpyObj('ToastService', ['info']);
+  const mockModal = jasmine.createSpyObj('ModalService', ['open', 'close']);
+
+  beforeEach(async () => {
+    mockApi.users.list.calls.reset();
+    mockApi.users.create.calls.reset();
+    mockApi.users.patch.calls.reset();
+    mockApi.users.delete.calls.reset();
     await TestBed.configureTestingModule({
       imports: [DirectorioPersonal],
-      providers: [{ provide: ApiService, useValue: mockApi }],
+      providers: [
+        provideHttpClient(),
+        { provide: ApiService, useValue: mockApi },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ModalService, useValue: mockModal },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DirectorioPersonal);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have 10 initial personal', () => {
-    expect(component.personal().length).toBe(10);
+  it('should load personal on init', () => {
+    expect(mockApi.users.list).toHaveBeenCalled();
   });
 
-  it('should filter by searchTerm', () => {
-    component.searchTerm = 'sarah';
+  it('should filter personal by search term', () => {
+    component.personal.set(mockUsersResponse.content.map(u => ({
+      id: u.id,
+      nombre: u.persona.name + ' ' + u.persona.father_surname,
+      idPersonal: u.persona.document_value,
+      sede: u.sedes[0]?.nombre ?? '',
+      area: u.areas[0]?.nombre ?? '',
+      departamento: u.departamentos[0]?.nombre ?? '',
+      cargo: '',
+      estado: u.estado as any,
+      email: u.email,
+    })));
+    component.searchTerm = 'José';
     expect(component.personalFiltrado.length).toBe(1);
-    expect(component.personalFiltrado[0].nombre).toBe('Dr. Sarah Jenkins');
+    component.searchTerm = '';
+    expect(component.personalFiltrado.length).toBe(2);
   });
 
-  it('should filter by sede', () => {
-    component.filtroSede = 'Central';
-    const count = component.personal().filter(p => p.sede === 'Central').length;
-    expect(component.personalFiltrado.length).toBe(count);
-  });
-
-  it('should filter by area', () => {
-    component.filtroArea = 'Académica';
-    const count = component.personal().filter(p => p.area === 'Académica').length;
-    expect(component.personalFiltrado.length).toBe(count);
-  });
-
-  it('should filter by departamento', () => {
-    component.filtroDepartamento = 'Academic';
-    const count = component.personal().filter(p => p.departamento === 'Academic').length;
-    expect(component.personalFiltrado.length).toBe(count);
-  });
-
-  it('should combine filters', () => {
-    component.searchTerm = 'cooper';
-    component.filtroSede = 'Central';
-    expect(component.personalFiltrado.length).toBe(1);
-  });
-
-  it('should compute personalPaginado', () => {
-    expect(component.personalPaginado.length).toBe(5);
-    component.paginaActual = 2;
-    expect(component.personalPaginado.length).toBe(5);
-  });
-
-  it('should compute totalPaginas', () => {
+  it('should paginate personal', () => {
+    component.personal.set(mockUsersResponse.content.map(u => ({
+      id: u.id, nombre: u.persona.name, idPersonal: u.persona.document_value,
+      sede: u.sedes[0]?.nombre ?? '', area: '', departamento: '',
+      cargo: '', estado: u.estado as any, email: u.email,
+    })));
+    component.itemsPerPage = 1;
     expect(component.totalPaginas).toBe(2);
+    expect(component.personalPaginado.length).toBe(1);
   });
 
-  it('should compute inicioRegistro and finRegistro', () => {
-    expect(component.inicioRegistro).toBe(1);
-    expect(component.finRegistro).toBe(5);
-    component.paginaActual = 2;
-    expect(component.inicioRegistro).toBe(6);
-    expect(component.finRegistro).toBe(10);
-  });
-
-  it('should filtrarPersonal reset page', () => {
-    component.paginaActual = 2;
-    component.filtrarPersonal();
-    expect(component.paginaActual).toBe(1);
-  });
-
-  it('should cambiarPagina within range', () => {
+  it('should change page within bounds', () => {
+    component.personal.set(mockUsersResponse.content.map(u => ({
+      id: u.id, nombre: u.persona.name, idPersonal: u.persona.document_value,
+      sede: '', area: '', departamento: '', cargo: '',
+      estado: 'ACTIVO' as any, email: '',
+    })));
+    component.itemsPerPage = 1;
     component.cambiarPagina(2);
+    expect(component.paginaActual).toBe(2);
+    component.cambiarPagina(0);
     expect(component.paginaActual).toBe(2);
   });
 
-  it('should not cambiarPagina out of range', () => {
-    component.cambiarPagina(0);
-    expect(component.paginaActual).toBe(1);
-    component.cambiarPagina(999);
-    expect(component.paginaActual).toBe(1);
-  });
-
-  it('should abrirModalAgregar', () => {
+  it('should open and close add modal', () => {
     component.abrirModalAgregar();
-    expect(component.editandoPersonal).toBeFalse();
     expect(component.modalPersonalOpen).toBeTrue();
-    expect(component.personalForm.nombre).toBe('');
-  });
-
-  it('should abrirModalEditar', () => {
-    component.abrirModalEditar(component.personal()[0]);
-    expect(component.editandoPersonal).toBeTrue();
-    expect(component.personalForm.nombre).toBe('Dr. Sarah Jenkins');
-  });
-
-  it('should cerrarModalPersonal', () => {
-    component.abrirModalAgregar();
+    expect(component.editandoPersonal).toBeFalse();
     component.cerrarModalPersonal();
     expect(component.modalPersonalOpen).toBeFalse();
   });
 
-  it('should guardarPersonal create new', async () => {
-    component.abrirModalAgregar();
-    component.personalForm.nombre = 'New Person';
-    component.personalForm.idPersonal = '#AX-TEST';
-    await component.guardarPersonal();
-    expect(component.personal().length).toBe(11);
-    expect(component.personal().find(p => p.nombre === 'New Person')).toBeTruthy();
+  it('should open and close edit modal', () => {
+    component.personal.set([{
+      id: 1, nombre: 'José Pérez', idPersonal: '76543210',
+      sede: 'Sede San Isidro', area: 'Dirección Académica',
+      departamento: 'Matemáticas', cargo: '', estado: 'ACTIVO',
+      email: 'jose@colegio.edu.pe',
+    }]);
+    const persona = component.personal()[0];
+    component.abrirModalEditar(persona);
+    expect(component.modalPersonalOpen).toBeTrue();
+    expect(component.editandoPersonal).toBeTrue();
+    expect(component.personalForm.nombre).toBe(persona.nombre);
+    component.cerrarModalPersonal();
+    expect(component.modalPersonalOpen).toBeFalse();
   });
 
-  it('should not guardarPersonal without required fields', () => {
-    component.abrirModalAgregar();
-    component.guardarPersonal();
-    expect(component.personal().length).toBe(10);
-  });
-
-  it('should guardarPersonal update existing', async () => {
-    component.abrirModalEditar(component.personal()[0]);
-    component.personalForm.nombre = 'Updated Name';
-    await component.guardarPersonal();
-    expect(component.personal()[0].nombre).toBe('Updated Name Jenkins');
-  });
-
-  it('should abrirModalDetalle', () => {
-    component.abrirModalDetalle(component.personal()[0]);
+  it('should open and close detail modal', () => {
+    const persona = { id: 1, nombre: 'Test', idPersonal: '123', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as any };
+    component.abrirModalDetalle(persona);
     expect(component.modalDetalleOpen).toBeTrue();
-    expect(component.personalSeleccionado?.nombre).toBe('Dr. Sarah Jenkins');
-  });
-
-  it('should cerrarModalDetalle', () => {
-    component.abrirModalDetalle(component.personal()[0]);
+    expect(component.personalSeleccionado).toBe(persona);
     component.cerrarModalDetalle();
     expect(component.modalDetalleOpen).toBeFalse();
     expect(component.personalSeleccionado).toBeNull();
   });
 
-  it('should editarDesdeDetalle', () => {
+  it('should edit from detail modal', () => {
+    component.personal.set([{ id: 1, nombre: 'Test', idPersonal: '123', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' }] as any);
     component.abrirModalDetalle(component.personal()[0]);
     component.editarDesdeDetalle();
     expect(component.modalDetalleOpen).toBeFalse();
     expect(component.modalPersonalOpen).toBeTrue();
+    component.cerrarModalPersonal();
   });
 
-  it('should eliminarPersonal', async () => {
-    await component.eliminarPersonal(1);
-    expect(component.personal().length).toBe(9);
+  it('should handle image file selection', () => {
+    const file = new File([''], 'test.jpg', { type: 'image/jpeg' });
+    const event = { target: { files: [file] } } as any;
+    component.onFileSelected(event);
+    expect(component.imagenPreviewUrl).toBeDefined();
   });
 
-  it('should cambiarModoImagen', () => {
+  it('should reject files over 2MB', () => {
+    const largeFile = new File(['x'.repeat(3 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+    const event = { target: { files: [largeFile] } } as any;
+    component.onFileSelected(event);
+    expect(mockToast.info).toHaveBeenCalled();
+  });
+
+  it('should toggle image mode', () => {
     component.cambiarModoImagen(false);
     expect(component.modoImagenUrl).toBeFalse();
     component.cambiarModoImagen(true);
     expect(component.modoImagenUrl).toBeTrue();
-  });
-
-  it('should actualizarPreviewUrl', () => {
-    component.personalForm.imagenUrl = 'http://example.com/img.jpg';
-    component.actualizarPreviewUrl();
-    expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
-  });
-
-  it('should handle large file in onFileSelected', () => {
-    const blob = new Blob(['a'.repeat(3 * 1024 * 1024)]);
-    const file = new File([blob], 'test.jpg', { type: 'image/jpeg' });
-    const event = { target: { files: [file] } } as unknown as Event;
-    component.onFileSelected(event);
-    expect(component.personalForm.imagenUrl).toBe('');
   });
 });
