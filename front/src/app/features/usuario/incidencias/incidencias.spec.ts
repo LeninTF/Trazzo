@@ -15,11 +15,11 @@ describe('Incidencias', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the incidencias component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize signals with default values', () => {
+  it('defaults incidencia signals', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
     expect(component.filterEstado()).toBe('Todos');

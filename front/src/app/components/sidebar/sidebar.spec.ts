@@ -27,7 +27,7 @@ describe('Sidebar', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the sidebar component', () => {
     expect(component).toBeTruthy();
   });
 

@@ -30,11 +30,11 @@ describe('Facturas', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the facturas component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize signals with default values', () => {
+  it('initializes signals to defaults', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
     expect(component.pagina()).toBe(1);

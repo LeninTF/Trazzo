@@ -10,7 +10,7 @@ describe('RoleService', () => {
     service = TestBed.inject(RoleService);
   });
 
-  it('should be created', () => {
+  it('creates the role service', () => {
     expect(service).toBeTruthy();
   });
 

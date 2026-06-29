@@ -15,11 +15,11 @@ describe('HistorialAsistencia', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the historial-asistencia component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize signals with default values', () => {
+  it('has default historial signal state', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
   });

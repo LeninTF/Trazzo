@@ -1,7 +1,8 @@
 import { fakeAsync, tick } from '@angular/core/testing';
-import { BaseGestionRoles, type Rol, type Modulo } from './role-management-base';
+import { BaseGestionRoles } from './role-management-base';
+import type { Rol, Modulo } from './role-management-base';
 
-class TestGestionRoles extends BaseGestionRoles {
+class InstanciaRoles extends BaseGestionRoles {
   roles: Rol[] = [
     { id: 'admin', nombre: 'Admin', descripcion: 'Full access', color: '#ff0000', icono: 'bi-shield' },
     { id: 'user', nombre: 'User', descripcion: 'Basic access', color: '#00ff00', icono: 'bi-person' },
@@ -51,22 +52,22 @@ class TestGestionRoles extends BaseGestionRoles {
 }
 
 describe('BaseGestionRoles', () => {
-  let component: TestGestionRoles;
+  let component: InstanciaRoles;
 
   beforeEach(() => {
-    component = new TestGestionRoles();
+    component = new InstanciaRoles();
   });
 
-  it('should initialize signals with default values', () => {
+  it('sets default signal values on construction', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
   });
 
-  it('should have 2 roles defined', () => {
+  it('provides 2 test roles', () => {
     expect(component.roles.length).toBe(2);
   });
 
-  it('should have 2 modulos defined', () => {
+  it('provides 2 test modules', () => {
     expect(component.modulos.length).toBe(2);
   });
 

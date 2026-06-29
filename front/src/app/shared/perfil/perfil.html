@@ -55,7 +55,7 @@
                         <i class="bi bi-camera-fill"></i>
                     </div>
                 </button>
-                <input #fotoInput id="foto-input" type="file" accept="image/*" (change)="onFotoSeleccionada($event)" hidden />
+                <input #fotoInput id="foto-input" type="file" accept="image/*" (change)="onFotoSeleccionada($event)" hidden aria-label="Seleccionar foto de perfil" />
                 @if (selectedFile && !fotoSubiendo()) {
                 <button class="perfil-btn perfil-btn--primary btn-sm mb-3" (click)="subirFoto()">
                     <i class="bi bi-check-lg"></i> Usar esta foto

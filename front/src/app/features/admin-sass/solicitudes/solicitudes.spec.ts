@@ -28,11 +28,11 @@ describe('Solicitudes', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the solicitudes component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize signals with default values', () => {
+  it('has default signal state for solicitudes', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
     expect(component.activeTab()).toBe('pendiente');

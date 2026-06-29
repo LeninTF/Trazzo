@@ -56,11 +56,11 @@ describe('Perfil', () => {
     await fixture.whenStable();
   });
 
-  it('should be created', () => {
+  it('creates the perfil component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load user data on init', async () => {
+  it('loads user data on init', async () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(component.usuario.nombres).toBe('Juan');

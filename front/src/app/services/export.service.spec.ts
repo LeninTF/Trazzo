@@ -9,7 +9,7 @@ describe('ExportService', () => {
     service = TestBed.inject(ExportService);
   });
 
-  it('should be created', () => {
+  it('creates the export service', () => {
     expect(service).toBeTruthy();
   });
 

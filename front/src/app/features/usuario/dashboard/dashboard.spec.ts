@@ -15,11 +15,11 @@ describe('Dashboard', () => {
     fixture.detectChanges();
   });
 
-  it('should be created', () => {
+  it('creates the dashboard component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize signals with default values', () => {
+  it('has default dashboard signal state', () => {
     expect(component.loading()).toBeFalse();
     expect(component.error()).toBe('');
   });

@@ -1,7 +1,7 @@
 import { fakeAsync, tick } from '@angular/core/testing';
 import { PerfilBase, type DatosPersonales } from './perfil-base';
 
-class TestPerfil extends PerfilBase {
+class PerfilParaTests extends PerfilBase {
   usuario: DatosPersonales = {
     nombres: 'Juan',
     apellidos: 'Pérez',
@@ -15,13 +15,13 @@ class TestPerfil extends PerfilBase {
 }
 
 describe('PerfilBase', () => {
-  let component: TestPerfil;
+  let component: PerfilParaTests;
 
   beforeEach(() => {
-    component = new TestPerfil();
+    component = new PerfilParaTests();
   });
 
-  it('should initialize signals with default values', () => {
+  it('starts loading with default empty state', () => {
     expect(component.loading()).toBeTrue();
     expect(component.error()).toBe('');
     expect(component.guardando()).toBeFalse();
