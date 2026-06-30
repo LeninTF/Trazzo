@@ -19,7 +19,7 @@ public class IncidentEvidence {
     private String id;
     private String incidentId;
     private String fileName;
-    private String fileUrl;
+    private String fileKey;
     private String mimeType;
     private int fileSize;
     private boolean deleted;
@@ -33,7 +33,7 @@ public class IncidentEvidence {
             String id,
             String incidentId,
             String fileName,
-            String fileUrl,
+            String fileKey,
             String mimeType,
             int fileSize,
             boolean deleted,
@@ -45,7 +45,7 @@ public class IncidentEvidence {
         this.id = normalizeOptionalId(id);
         this.incidentId = requireText(incidentId, "incidentId");
         this.fileName = requireText(fileName, "fileName");
-        this.fileUrl = requireText(fileUrl, "fileUrl");
+        this.fileKey = requireText(fileKey, "fileKey");
         this.mimeType = requireText(mimeType, "mimeType");
         this.fileSize = requireValidFileSize(fileSize);
         this.deleted = deleted;
@@ -58,7 +58,7 @@ public class IncidentEvidence {
     public static IncidentEvidence create(
             String incidentId,
             String fileName,
-            String fileUrl,
+            String fileKey,
             String mimeType,
             int fileSize
     ) {
@@ -67,7 +67,7 @@ public class IncidentEvidence {
                 UUID.randomUUID().toString(),
                 incidentId,
                 fileName,
-                fileUrl,
+                fileKey,
                 mimeType,
                 fileSize,
                 false,
@@ -82,7 +82,7 @@ public class IncidentEvidence {
             String id,
             String incidentId,
             String fileName,
-            String fileUrl,
+            String fileKey,
             String mimeType,
             int fileSize,
             boolean deleted,
@@ -94,7 +94,7 @@ public class IncidentEvidence {
                 id,
                 incidentId,
                 fileName,
-                fileUrl,
+                fileKey,
                 mimeType,
                 fileSize,
                 deleted,
@@ -109,7 +109,7 @@ public class IncidentEvidence {
             String id,
             String incidentId,
             String fileName,
-            String fileUrl,
+            String fileKey,
             String mimeType,
             int fileSize,
             boolean deleted,
@@ -122,7 +122,7 @@ public class IncidentEvidence {
                 id,
                 incidentId,
                 fileName,
-                fileUrl,
+                fileKey,
                 mimeType,
                 fileSize,
                 deleted,

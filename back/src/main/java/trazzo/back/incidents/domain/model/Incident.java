@@ -185,7 +185,7 @@ public class Incident {
         }
         this.evidences.add(evidence);
         touch();
-        recordEvent(new IncidentEvidenceRegisteredEvent(id, evidence.getId(), evidence.getFileName(), evidence.getFileUrl(), updatedAt));
+        recordEvent(new IncidentEvidenceRegisteredEvent(id, evidence.getId(), evidence.getFileName(), evidence.getFileKey(), updatedAt));
     }
 
     public void deleteEvidence(String evidenceId) {

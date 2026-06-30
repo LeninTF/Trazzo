@@ -103,7 +103,7 @@ class IncidentsDataJpaTest {
         evidence.setId("ev-10");
         evidence.setIncidentId("inc-ev-1");
         evidence.setFileName("documento.pdf");
-        evidence.setFileUrl("http://example.com/doc.pdf");
+        evidence.setFileKey("http://example.com/doc.pdf");
         evidence.setMimeType("application/pdf");
         evidence.setFileSize(2048);
         evidence.setDeleted(false);
@@ -128,7 +128,7 @@ class IncidentsDataJpaTest {
         evidence.setId("ev-20");
         evidence.setIncidentId("inc-ev-2");
         evidence.setFileName("borrar.txt");
-        evidence.setFileUrl("http://example.com/borrar.txt");
+        evidence.setFileKey("http://example.com/borrar.txt");
         evidence.setMimeType("text/plain");
         evidence.setFileSize(512);
         evidence.setDeleted(false);

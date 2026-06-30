@@ -1,18 +1,33 @@
 package trazzo.back.reports.infrastructure.adapters.out.reporting;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import trazzo.back.reports.domain.model.closure.MonthlyClosure;
 import trazzo.back.reports.domain.model.closure.MonthlyClosureDetail;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 class ReportGenerationAdapterTest {
 
-    private final ReportGenerationAdapter adapter = new ReportGenerationAdapter();
+    private FileStoragePort fileStoragePort;
+    private ReportGenerationAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        fileStoragePort = mock(FileStoragePort.class);
+        doNothing().when(fileStoragePort).uploadFile(anyString(), any(), anyLong(), anyString());
+        when(fileStoragePort.buildPublicUrl(anyString())).thenAnswer(inv ->
+                "http://r2.example.com/" + inv.getArgument(0));
+        adapter = new ReportGenerationAdapter(fileStoragePort);
+    }
 
     @Test
     void shouldGenerateExcelReportUrl() {
@@ -22,8 +37,8 @@ class ReportGenerationAdapterTest {
 
         String url = adapter.generateExcelReport(closure, details);
 
-        assertTrue(url.startsWith("/reports/excel/"));
-        assertTrue(url.endsWith(".xlsx"));
+        assertTrue(url.startsWith("http://r2.example.com/"));
+        assertTrue(url.contains("excel.xlsx"));
         assertTrue(url.contains(closure.getId().toString()));
     }
 
@@ -35,8 +50,8 @@ class ReportGenerationAdapterTest {
 
         String url = adapter.generatePdfReport(closure, details);
 
-        assertTrue(url.startsWith("/reports/pdf/"));
-        assertTrue(url.endsWith(".pdf"));
+        assertTrue(url.startsWith("http://r2.example.com/"));
+        assertTrue(url.contains("report.pdf"));
         assertTrue(url.contains(closure.getId().toString()));
     }
 

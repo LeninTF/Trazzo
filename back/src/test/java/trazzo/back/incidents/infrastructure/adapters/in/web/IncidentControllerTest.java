@@ -24,6 +24,7 @@ import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,6 +48,9 @@ class IncidentControllerTest {
     @MockitoBean
     private NotificationUseCase notificationUseCase;
 
+    @MockitoBean
+    private FileStoragePort fileStoragePort;
+
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private IncidentResult sampleResult;
@@ -58,7 +62,7 @@ class IncidentControllerTest {
         sampleResult = new IncidentResult("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), null, now, now);
         sampleEvidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
-                "http://url", "pdf", 100, now, now);
+                "file-key", "http://url", "pdf", 100, now, now);
     }
 
     @Test
@@ -134,7 +138,7 @@ class IncidentControllerTest {
     void createEvidenceReturns201() throws Exception {
         when(evidenceUseCase.create(anyString(), any())).thenReturn(sampleEvidenceResult);
 
-        var request = new CreateEvidenceRequest("doc.pdf", "http://url", "pdf", 100);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", 100);
         mockMvc.perform(post("/incidentes/inc-1/evidencias")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
