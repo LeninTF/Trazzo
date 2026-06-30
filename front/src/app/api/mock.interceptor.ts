@@ -166,57 +166,77 @@ function handleAuth(
   return null;
 }
 
+function handleTenantUserList(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!(u === '/usuarios' && method === 'GET')) return null;
+
+  let filtered = [...mockTenantUsers];
+  if (qp['status']) filtered = filtered.filter(u => u.estado === qp['status']);
+  if (qp['search']) {
+    const s = qp['search'].toLowerCase();
+    filtered = filtered.filter(u =>
+      u.persona.name.toLowerCase().includes(s) ||
+      u.persona.father_surname.toLowerCase().includes(s) ||
+      (u.email ?? '').toLowerCase().includes(s)
+    );
+  }
+  if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
+  return ok(paginate(filtered, page, size));
+}
+
+function handleTenantUserCreate(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!(u === '/usuarios' && method === 'POST')) return null;
+
+  const body = req.body as Record<string, unknown>;
+  const newUser = {
+    ...mockTenantUsers[0],
+    id: mockTenantUsers.length + 1,
+    persona: {
+      ...mockTenantUsers[0].persona,
+      name: body['name'] as string ?? '',
+      father_surname: body['father_surname'] as string ?? '',
+      mother_surname: body['mother_surname'] as string ?? '',
+      document_type: body['document_type'] as 'DNI' ?? 'DNI',
+      document_value: body['document_value'] as string ?? '',
+      email: body['email'] as string ?? '',
+    },
+    email: body['email'] as string ?? '',
+    must_change_password: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  return created(newUser);
+}
+
+function handleTenantUserMe(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u !== '/usuarios/me') return null;
+
+  if (method === 'GET') return ok(mockTenantUsers[0]);
+  if (method === 'PATCH') {
+    return ok({ ...mockTenantUsers[0], ...(req.body as object) });
+  }
+  return null;
+}
+
 function handleTenantUserCollection(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   if (!u.startsWith('/usuarios')) return null;
-
-  if (u === '/usuarios' && method === 'GET') {
-    let filtered = [...mockTenantUsers];
-    if (qp['status']) filtered = filtered.filter(u => u.estado === qp['status']);
-    if (qp['search']) {
-      const s = qp['search'].toLowerCase();
-      filtered = filtered.filter(u =>
-        u.persona.name.toLowerCase().includes(s) ||
-        u.persona.father_surname.toLowerCase().includes(s) ||
-        (u.email ?? '').toLowerCase().includes(s)
-      );
-    }
-    if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
-    return ok(paginate(filtered, page, size));
-  }
-
-  if (u === '/usuarios' && method === 'POST') {
-    const body = req.body as Record<string, unknown>;
-    const newUser = {
-      ...mockTenantUsers[0],
-      id: mockTenantUsers.length + 1,
-      persona: {
-        ...mockTenantUsers[0].persona,
-        name: body['name'] as string ?? '',
-        father_surname: body['father_surname'] as string ?? '',
-        mother_surname: body['mother_surname'] as string ?? '',
-        document_type: body['document_type'] as 'DNI' ?? 'DNI',
-        document_value: body['document_value'] as string ?? '',
-        email: body['email'] as string ?? '',
-      },
-      email: body['email'] as string ?? '',
-      must_change_password: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    return created(newUser);
-  }
-
-  if (u === '/usuarios/me') {
-    if (method === 'GET') return ok(mockTenantUsers[0]);
-    if (method === 'PATCH') {
-      return ok({ ...mockTenantUsers[0], ...(req.body as object) });
-    }
-  }
-
-  return null;
+  return (
+    handleTenantUserList(method, u, req, page, size, qp) ??
+    handleTenantUserCreate(method, u, req, page, size, qp) ??
+    handleTenantUserMe(method, u, req, page, size, qp) ??
+    null
+  );
 }
 
 function handleTenantUserItem(
