@@ -2,10 +2,10 @@ package trazzo.back.organization.infrastructure.adapters.out.persistence.adapter
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import trazzo.back.organization.application.port.out.PermissionRepositoryPort;
 import trazzo.back.organization.domain.model.roles.Permissions;
+import trazzo.back.organization.infrastructure.adapters.out.persistence.OrgPersistenceUtils;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.mapper.OrgMapper;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.repository.PermissionJpaRepository;
 
@@ -30,14 +30,14 @@ public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
 
     @Override
     public List<Permissions> findAll(String search, int page, int size, String sort) {
-        var pageable = PageRequest.of(page, size, parseSort(sort));
-        return permissionRepo.findByFilters(blankToNull(search), pageable)
+        var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
+        return permissionRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(String search) {
-        return permissionRepo.findByFilters(blankToNull(search), PageRequest.of(0, 1)).getTotalElements();
+        return permissionRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1)).getTotalElements();
     }
 
     @Override
@@ -53,25 +53,5 @@ public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
     @Override
     public void deleteById(String id) {
         permissionRepo.deleteById(id);
-    }
-
-    private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) return Sort.by(Sort.Direction.ASC, "name");
-        var parts = sort.split(",");
-        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(direction, mapField(parts[0].trim()));
-    }
-
-    private String mapField(String field) {
-        return switch (field) {
-            case "created_at", "createdAt" -> "createdAt";
-            case "updated_at", "updatedAt" -> "updatedAt";
-            default -> "name";
-        };
-    }
-
-    private String blankToNull(String value) {
-        return (value == null || value.isBlank()) ? null : value;
     }
 }

@@ -2,10 +2,10 @@ package trazzo.back.organization.infrastructure.adapters.out.persistence.adapter
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import trazzo.back.organization.application.port.out.DepartmentRepositoryPort;
 import trazzo.back.organization.domain.model.business.Department;
+import trazzo.back.organization.infrastructure.adapters.out.persistence.OrgPersistenceUtils;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.mapper.OrgMapper;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.repository.DepartmentJpaRepository;
 
@@ -30,14 +30,14 @@ public class DepartmentRepositoryAdapter implements DepartmentRepositoryPort {
 
     @Override
     public List<Department> findAll(Long areaId, Boolean state, String search, int page, int size, String sort) {
-        var pageable = PageRequest.of(page, size, parseSort(sort));
-        return departmentRepo.findByFilters(areaId, state, blankToNull(search), pageable)
+        var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
+        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.blankToNull(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(Long areaId, Boolean state, String search) {
-        return departmentRepo.findByFilters(areaId, state, blankToNull(search), PageRequest.of(0, 1))
+        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1))
                 .getTotalElements();
     }
 
@@ -49,25 +49,5 @@ public class DepartmentRepositoryAdapter implements DepartmentRepositoryPort {
     @Override
     public boolean existsByAreaIdAndNameAndIdNot(Long areaId, String name, Long id) {
         return departmentRepo.existsByAreaIdAndNameAndIdNot(areaId, name, id);
-    }
-
-    private Sort parseSort(String sort) {
-        if (sort == null || sort.isBlank()) return Sort.by(Sort.Direction.ASC, "name");
-        var parts = sort.split(",");
-        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-        return Sort.by(direction, mapField(parts[0].trim()));
-    }
-
-    private String mapField(String field) {
-        return switch (field) {
-            case "created_at", "createdAt" -> "createdAt";
-            case "updated_at", "updatedAt" -> "updatedAt";
-            default -> "name";
-        };
-    }
-
-    private String blankToNull(String value) {
-        return (value == null || value.isBlank()) ? null : value;
     }
 }
