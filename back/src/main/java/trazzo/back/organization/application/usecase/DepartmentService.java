@@ -22,8 +22,11 @@ public class DepartmentService implements DepartmentUseCase {
 
     @Override
     public DepartmentResult create(CreateDepartmentCommand command) {
-        areaRepository.findById(command.areaId())
+        var area = areaRepository.findById(command.areaId())
                 .orElseThrow(() -> new OrgNotFoundException("Area not found: " + command.areaId()));
+        if (!area.isState()) {
+            throw new OrgNotFoundException("Area not found: " + command.areaId());
+        }
         if (departmentRepository.existsByAreaIdAndName(command.areaId(), command.name())) {
             throw new DuplicateOrgNameException("Department '" + command.name() + "' already exists in this area");
         }

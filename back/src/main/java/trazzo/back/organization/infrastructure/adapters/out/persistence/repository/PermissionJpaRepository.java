@@ -8,12 +8,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.PermissionEntity;
 
+import java.util.UUID;
+
 @Repository
-public interface PermissionJpaRepository extends JpaRepository<PermissionEntity, String> {
+public interface PermissionJpaRepository extends JpaRepository<PermissionEntity, UUID> {
 
     boolean existsByName(String name);
 
-    boolean existsByNameAndIdNot(String name, String id);
+    boolean existsByNameAndIdNot(String name, UUID id);
 
     @Query("SELECT p FROM PermissionEntity p WHERE " +
            "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')))")

@@ -1,6 +1,7 @@
 package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import trazzo.back.organization.domain.exception.DuplicateOrgNameException;
 import trazzo.back.organization.domain.exception.OrgNotFoundException;
 import trazzo.back.organization.domain.exception.OrgValidationException;
@@ -47,6 +48,15 @@ class OrgGlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().error()).isEqualTo("Bad Request");
         assertThat(response.getBody().message()).isEqualTo("bad value");
+    }
+
+    @Test
+    void handleDataIntegrity_returns409WithBody() {
+        var response = handler.handleDataIntegrity(new DataIntegrityViolationException("Duplicate entry"));
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().status()).isEqualTo(409);
+        assertThat(response.getBody().error()).isEqualTo("Conflict");
     }
 
     @Test

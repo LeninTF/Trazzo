@@ -11,6 +11,7 @@ import trazzo.back.organization.infrastructure.adapters.out.persistence.reposito
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class RoleRepositoryAdapter implements RoleRepositoryPort {
 
     @Override
     public Optional<Role> findById(String id) {
-        return roleRepo.findById(id).map(OrgMapper::toDomain);
+        return roleRepo.findById(UUID.fromString(id)).map(OrgMapper::toDomain);
     }
 
     @Override
@@ -47,11 +48,11 @@ public class RoleRepositoryAdapter implements RoleRepositoryPort {
 
     @Override
     public boolean existsByNameAndIdNot(String name, String id) {
-        return roleRepo.existsByNameAndIdNot(name, id);
+        return roleRepo.existsByNameAndIdNot(name, UUID.fromString(id));
     }
 
     @Override
     public void deleteById(String id) {
-        roleRepo.deleteById(id);
+        roleRepo.deleteById(UUID.fromString(id));
     }
 }

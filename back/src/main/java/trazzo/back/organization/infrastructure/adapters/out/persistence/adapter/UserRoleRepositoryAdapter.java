@@ -9,6 +9,7 @@ import trazzo.back.organization.infrastructure.adapters.out.persistence.reposito
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -34,13 +35,14 @@ public class UserRoleRepositoryAdapter implements UserRoleRepositoryPort {
 
     @Override
     public List<TenantUserRole> findByRoleId(String roleId) {
-        return tenantUserRoleRepo.findByRoleId(roleId)
+        return tenantUserRoleRepo.findByRoleId(UUID.fromString(roleId))
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public boolean existsByTenantUserIdAndRoleIdAndDepartmentId(Long tenantUserId, String roleId, Long departmentId) {
-        return tenantUserRoleRepo.existsByTenantUserIdAndRoleIdAndDepartmentId(tenantUserId, roleId, departmentId);
+        return tenantUserRoleRepo.existsByTenantUserIdAndRoleIdAndDepartmentId(
+                tenantUserId, UUID.fromString(roleId), departmentId);
     }
 
     @Override

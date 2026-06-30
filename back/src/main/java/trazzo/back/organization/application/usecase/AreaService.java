@@ -22,8 +22,11 @@ public class AreaService implements AreaUseCase {
 
     @Override
     public AreaResult create(CreateAreaCommand command) {
-        branchRepository.findById(command.branchId())
+        var branch = branchRepository.findById(command.branchId())
                 .orElseThrow(() -> new OrgNotFoundException("Branch not found: " + command.branchId()));
+        if (!branch.isState()) {
+            throw new OrgNotFoundException("Branch not found: " + command.branchId());
+        }
         if (areaRepository.existsByBranchIdAndName(command.branchId(), command.name())) {
             throw new DuplicateOrgNameException("Area '" + command.name() + "' already exists in this branch");
         }

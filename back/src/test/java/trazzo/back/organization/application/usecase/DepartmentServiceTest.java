@@ -59,6 +59,15 @@ class DepartmentServiceTest {
     }
 
     @Test
+    void create_areaSoftDeleted_throwsOrgNotFoundException() {
+        var deleted = Area.restore(2L, 1L, "Area", "desc", false, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        when(areaRepository.findById(2L)).thenReturn(Optional.of(deleted));
+
+        assertThatThrownBy(() -> service.create(new CreateDepartmentCommand(2L, "HR", "d")))
+                .isInstanceOf(OrgNotFoundException.class);
+    }
+
+    @Test
     void create_duplicateName_throwsDuplicateOrgNameException() {
         when(areaRepository.findById(2L)).thenReturn(Optional.of(stubArea(2L)));
         when(departmentRepository.existsByAreaIdAndName(2L, "HR")).thenReturn(true);

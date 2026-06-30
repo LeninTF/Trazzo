@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.util.UUID;
 
 @Embeddable
 @Getter
@@ -16,9 +17,9 @@ import java.io.Serializable;
 @EqualsAndHashCode
 public class RolePermissionsId implements Serializable {
 
-    @Column(name = "role_id", length = 36)
-    private String roleId;
+    @Column(name = "role_id", columnDefinition = "uuid")
+    private UUID roleId;
 
-    @Column(name = "permission_id", length = 36)
-    private String permissionId;
+    @Column(name = "permission_id", columnDefinition = "uuid")
+    private UUID permissionId;
 }

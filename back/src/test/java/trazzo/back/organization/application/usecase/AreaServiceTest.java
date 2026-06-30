@@ -58,6 +58,15 @@ class AreaServiceTest {
     }
 
     @Test
+    void create_branchSoftDeleted_throwsOrgNotFoundException() {
+        var deleted = Branch.restore(1L, "Branch", "desc", false, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        when(branchRepository.findById(1L)).thenReturn(Optional.of(deleted));
+
+        assertThatThrownBy(() -> service.create(new CreateAreaCommand(1L, "Sales", "d")))
+                .isInstanceOf(OrgNotFoundException.class);
+    }
+
+    @Test
     void create_duplicateName_throwsDuplicateOrgNameException() {
         when(branchRepository.findById(1L)).thenReturn(Optional.of(stubBranch(1L)));
         when(areaRepository.existsByBranchIdAndName(1L, "Sales")).thenReturn(true);

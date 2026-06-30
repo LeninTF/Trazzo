@@ -11,12 +11,18 @@ import trazzo.back.organization.domain.model.roles.TenantUserRole;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class OrgMapperTest {
 
     private final LocalDateTime now = LocalDateTime.of(2024, 1, 15, 10, 0);
+
+    private static final String ROLE_UUID = "00000000-0000-0000-0000-000000000001";
+    private static final String PERM_UUID = "00000000-0000-0000-0000-000000000002";
+    private static final UUID ROLE_UUID_OBJ = UUID.fromString(ROLE_UUID);
+    private static final UUID PERM_UUID_OBJ = UUID.fromString(PERM_UUID);
 
     // ── Branch ──────────────────────────────────────────────────────────────
 
@@ -140,10 +146,10 @@ class OrgMapperTest {
 
     @Test
     void toEntity_role_mapsAllFields() {
-        var domain = Role.restore("r-1", "Admin", "admin role", now, now);
+        var domain = Role.restore(ROLE_UUID, "Admin", "admin role", now, now);
         var entity = OrgMapper.toEntity(domain);
 
-        assertThat(entity.getId()).isEqualTo("r-1");
+        assertThat(entity.getId()).isEqualTo(ROLE_UUID_OBJ);
         assertThat(entity.getName()).isEqualTo("Admin");
         assertThat(entity.getDescription()).isEqualTo("admin role");
         assertThat(entity.getCreatedAt()).isEqualTo(now);
@@ -153,7 +159,7 @@ class OrgMapperTest {
     @Test
     void toDomain_role_mapsAllFields() {
         var entity = new RoleEntity();
-        entity.setId("r-2");
+        entity.setId(ROLE_UUID_OBJ);
         entity.setName("Viewer");
         entity.setDescription("read only");
         entity.setCreatedAt(now);
@@ -161,7 +167,7 @@ class OrgMapperTest {
 
         var domain = OrgMapper.toDomain(entity);
 
-        assertThat(domain.getId()).isEqualTo("r-2");
+        assertThat(domain.getId()).isEqualTo(ROLE_UUID);
         assertThat(domain.getName()).isEqualTo("Viewer");
         assertThat(domain.getDescription()).isEqualTo("read only");
     }
@@ -170,10 +176,10 @@ class OrgMapperTest {
 
     @Test
     void toEntity_permissions_mapsAllFields() {
-        var domain = Permissions.restore("p-1", "READ", "read perm", "CODE_READ", now, now);
+        var domain = Permissions.restore(PERM_UUID, "READ", "read perm", "CODE_READ", now, now);
         var entity = OrgMapper.toEntity(domain);
 
-        assertThat(entity.getId()).isEqualTo("p-1");
+        assertThat(entity.getId()).isEqualTo(PERM_UUID_OBJ);
         assertThat(entity.getName()).isEqualTo("READ");
         assertThat(entity.getDescription()).isEqualTo("read perm");
         assertThat(entity.getMasterFeaturesCode()).isEqualTo("CODE_READ");
@@ -183,7 +189,7 @@ class OrgMapperTest {
     @Test
     void toDomain_permissions_mapsAllFields() {
         var entity = new PermissionEntity();
-        entity.setId("p-2");
+        entity.setId(PERM_UUID_OBJ);
         entity.setName("WRITE");
         entity.setDescription("write access");
         entity.setMasterFeaturesCode("CODE_WRITE");
@@ -192,7 +198,7 @@ class OrgMapperTest {
 
         var domain = OrgMapper.toDomain(entity);
 
-        assertThat(domain.getId()).isEqualTo("p-2");
+        assertThat(domain.getId()).isEqualTo(PERM_UUID);
         assertThat(domain.getName()).isEqualTo("WRITE");
         assertThat(domain.getMasterFeaturesCode()).isEqualTo("CODE_WRITE");
     }
@@ -201,23 +207,23 @@ class OrgMapperTest {
 
     @Test
     void toEntity_rolePermissions_mapsCompositeKey() {
-        var domain = RolePermissions.restore("r-1", "p-1", now);
+        var domain = RolePermissions.restore(ROLE_UUID, PERM_UUID, now);
         var entity = OrgMapper.toEntity(domain);
 
-        assertThat(entity.getId().getRoleId()).isEqualTo("r-1");
-        assertThat(entity.getId().getPermissionId()).isEqualTo("p-1");
+        assertThat(entity.getId().getRoleId()).isEqualTo(ROLE_UUID_OBJ);
+        assertThat(entity.getId().getPermissionId()).isEqualTo(PERM_UUID_OBJ);
         assertThat(entity.getCreatedAt()).isEqualTo(now);
     }
 
     @Test
     void toDomain_rolePermissions_mapsCompositeKey() {
-        var id = new RolePermissionsId("r-2", "p-2");
+        var id = new RolePermissionsId(ROLE_UUID_OBJ, PERM_UUID_OBJ);
         var entity = new RolePermissionsEntity(id, now);
 
         var domain = OrgMapper.toDomain(entity);
 
-        assertThat(domain.getRoleId()).isEqualTo("r-2");
-        assertThat(domain.getPermissionId()).isEqualTo("p-2");
+        assertThat(domain.getRoleId()).isEqualTo(ROLE_UUID);
+        assertThat(domain.getPermissionId()).isEqualTo(PERM_UUID);
         assertThat(domain.getCreatedAt()).isEqualTo(now);
     }
 
@@ -225,19 +231,19 @@ class OrgMapperTest {
 
     @Test
     void toEntity_tenantUserRole_mapsAllFields() {
-        var domain = TenantUserRole.restore(10L, 20L, "r-1", 30L, now);
+        var domain = TenantUserRole.restore(10L, 20L, ROLE_UUID, 30L, now);
         var entity = OrgMapper.toEntity(domain);
 
         assertThat(entity.getId()).isEqualTo(10L);
         assertThat(entity.getTenantUserId()).isEqualTo(20L);
-        assertThat(entity.getRoleId()).isEqualTo("r-1");
+        assertThat(entity.getRoleId()).isEqualTo(ROLE_UUID_OBJ);
         assertThat(entity.getDepartmentId()).isEqualTo(30L);
         assertThat(entity.getCreatedAt()).isEqualTo(now);
     }
 
     @Test
     void toEntity_tenantUserRole_nullDepartmentId_mapsNull() {
-        var domain = TenantUserRole.restore(11L, 21L, "r-2", null, now);
+        var domain = TenantUserRole.restore(11L, 21L, ROLE_UUID, null, now);
         var entity = OrgMapper.toEntity(domain);
 
         assertThat(entity.getDepartmentId()).isNull();
@@ -248,7 +254,7 @@ class OrgMapperTest {
         var entity = new TenantUserRoleEntity();
         entity.setId(12L);
         entity.setTenantUserId(22L);
-        entity.setRoleId("r-3");
+        entity.setRoleId(ROLE_UUID_OBJ);
         entity.setDepartmentId(32L);
         entity.setCreatedAt(now);
 
@@ -256,7 +262,7 @@ class OrgMapperTest {
 
         assertThat(domain.getId()).isEqualTo(12L);
         assertThat(domain.getTenantUserId()).isEqualTo(22L);
-        assertThat(domain.getRoleId()).isEqualTo("r-3");
+        assertThat(domain.getRoleId()).isEqualTo(ROLE_UUID);
         assertThat(domain.getDepartmentId()).isEqualTo(32L);
     }
 }

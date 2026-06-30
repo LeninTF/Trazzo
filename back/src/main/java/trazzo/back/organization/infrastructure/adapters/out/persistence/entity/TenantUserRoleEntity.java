@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tenant_user_role")
@@ -23,8 +24,8 @@ public class TenantUserRoleEntity {
     @Column(name = "tenant_user_id", nullable = false)
     private Long tenantUserId;
 
-    @Column(name = "role_id", nullable = false, length = 36)
-    private String roleId;
+    @Column(name = "role_id", nullable = false, columnDefinition = "uuid")
+    private UUID roleId;
 
     @Column(name = "department_id")
     private Long departmentId;

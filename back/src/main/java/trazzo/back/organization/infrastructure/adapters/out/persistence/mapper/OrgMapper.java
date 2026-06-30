@@ -9,6 +9,8 @@ import trazzo.back.organization.domain.model.roles.RolePermissions;
 import trazzo.back.organization.domain.model.roles.TenantUserRole;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.*;
 
+import java.util.UUID;
+
 public final class OrgMapper {
 
     private OrgMapper() {}
@@ -85,7 +87,7 @@ public final class OrgMapper {
 
     public static RoleEntity toEntity(Role domain) {
         var entity = new RoleEntity();
-        entity.setId(domain.getId());
+        entity.setId(domain.getId() != null ? UUID.fromString(domain.getId()) : null);
         entity.setName(domain.getName());
         entity.setDescription(domain.getDescription());
         entity.setCreatedAt(domain.getCreatedAt());
@@ -94,7 +96,9 @@ public final class OrgMapper {
     }
 
     public static Role toDomain(RoleEntity entity) {
-        return Role.restore(entity.getId(), entity.getName(), entity.getDescription(),
+        return Role.restore(
+                entity.getId() != null ? entity.getId().toString() : null,
+                entity.getName(), entity.getDescription(),
                 entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
@@ -102,7 +106,7 @@ public final class OrgMapper {
 
     public static PermissionEntity toEntity(Permissions domain) {
         var entity = new PermissionEntity();
-        entity.setId(domain.getId());
+        entity.setId(domain.getId() != null ? UUID.fromString(domain.getId()) : null);
         entity.setName(domain.getName());
         entity.setDescription(domain.getDescription());
         entity.setMasterFeaturesCode(domain.getMasterFeaturesCode());
@@ -112,20 +116,26 @@ public final class OrgMapper {
     }
 
     public static Permissions toDomain(PermissionEntity entity) {
-        return Permissions.restore(entity.getId(), entity.getName(), entity.getDescription(),
+        return Permissions.restore(
+                entity.getId() != null ? entity.getId().toString() : null,
+                entity.getName(), entity.getDescription(),
                 entity.getMasterFeaturesCode(), entity.getCreatedAt(), entity.getUpdatedAt());
     }
 
     // ── RolePermissions ─────────────────────────────────────────────────────
 
     public static RolePermissionsEntity toEntity(RolePermissions domain) {
-        var id = new RolePermissionsId(domain.getRoleId(), domain.getPermissionId());
+        var id = new RolePermissionsId(
+                UUID.fromString(domain.getRoleId()),
+                UUID.fromString(domain.getPermissionId()));
         return new RolePermissionsEntity(id, domain.getCreatedAt());
     }
 
     public static RolePermissions toDomain(RolePermissionsEntity entity) {
         return RolePermissions.restore(
-                entity.getId().getRoleId(), entity.getId().getPermissionId(), entity.getCreatedAt()
+                entity.getId().getRoleId().toString(),
+                entity.getId().getPermissionId().toString(),
+                entity.getCreatedAt()
         );
     }
 
@@ -135,7 +145,7 @@ public final class OrgMapper {
         var entity = new TenantUserRoleEntity();
         entity.setId(domain.getId());
         entity.setTenantUserId(domain.getTenantUserId());
-        entity.setRoleId(domain.getRoleId());
+        entity.setRoleId(UUID.fromString(domain.getRoleId()));
         entity.setDepartmentId(domain.getDepartmentId());
         entity.setCreatedAt(domain.getCreatedAt());
         return entity;
@@ -143,7 +153,7 @@ public final class OrgMapper {
 
     public static TenantUserRole toDomain(TenantUserRoleEntity entity) {
         return TenantUserRole.restore(
-                entity.getId(), entity.getTenantUserId(), entity.getRoleId(),
+                entity.getId(), entity.getTenantUserId(), entity.getRoleId().toString(),
                 entity.getDepartmentId(), entity.getCreatedAt()
         );
     }

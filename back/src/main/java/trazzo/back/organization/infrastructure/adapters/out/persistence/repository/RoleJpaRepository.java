@@ -8,12 +8,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.RoleEntity;
 
+import java.util.UUID;
+
 @Repository
-public interface RoleJpaRepository extends JpaRepository<RoleEntity, String> {
+public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
 
     boolean existsByName(String name);
 
-    boolean existsByNameAndIdNot(String name, String id);
+    boolean existsByNameAndIdNot(String name, UUID id);
 
     @Query("SELECT r FROM RoleEntity r WHERE " +
            "(:search IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%')))")

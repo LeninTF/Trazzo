@@ -11,6 +11,7 @@ import trazzo.back.organization.infrastructure.adapters.out.persistence.reposito
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
 
     @Override
     public Optional<Permissions> findById(String id) {
-        return permissionRepo.findById(id).map(OrgMapper::toDomain);
+        return permissionRepo.findById(UUID.fromString(id)).map(OrgMapper::toDomain);
     }
 
     @Override
@@ -47,11 +48,11 @@ public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
 
     @Override
     public boolean existsByNameAndIdNot(String name, String id) {
-        return permissionRepo.existsByNameAndIdNot(name, id);
+        return permissionRepo.existsByNameAndIdNot(name, UUID.fromString(id));
     }
 
     @Override
     public void deleteById(String id) {
-        permissionRepo.deleteById(id);
+        permissionRepo.deleteById(UUID.fromString(id));
     }
 }

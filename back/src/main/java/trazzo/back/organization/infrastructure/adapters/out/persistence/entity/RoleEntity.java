@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "role")
 @Getter
@@ -15,8 +17,8 @@ import lombok.Setter;
 public class RoleEntity extends OrgAuditableEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @Column(columnDefinition = "uuid")
+    private UUID id;
 
     @Column(nullable = false, length = 100)
     private String name;

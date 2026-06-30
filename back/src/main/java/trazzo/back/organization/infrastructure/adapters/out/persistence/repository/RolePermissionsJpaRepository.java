@@ -6,13 +6,14 @@ import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.R
 import trazzo.back.organization.infrastructure.adapters.out.persistence.entity.RolePermissionsId;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface RolePermissionsJpaRepository extends JpaRepository<RolePermissionsEntity, RolePermissionsId> {
 
-    List<RolePermissionsEntity> findByIdRoleId(String roleId);
+    List<RolePermissionsEntity> findByIdRoleId(UUID roleId);
 
-    boolean existsByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
+    boolean existsByIdRoleIdAndIdPermissionId(UUID roleId, UUID permissionId);
 
-    void deleteByIdRoleIdAndIdPermissionId(String roleId, String permissionId);
+    void deleteByIdRoleIdAndIdPermissionId(UUID roleId, UUID permissionId);
 }
