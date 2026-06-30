@@ -12,6 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 class H2ConsoleSecurityTest {
@@ -23,6 +25,9 @@ class H2ConsoleSecurityTest {
 
         @Autowired
         private MockMvc mockMvc;
+
+        @MockitoBean
+        UserDetailsService userDetailsService;
 
         @Test
         void h2ConsoleIsDisabledByDefault() throws Exception {
@@ -40,6 +45,9 @@ class H2ConsoleSecurityTest {
 
         @Autowired
         private MockMvc mockMvc;
+
+        @MockitoBean
+        UserDetailsService userDetailsService;
 
         @Test
         void h2ConsoleRequiresAuthenticationWhenEnabled() throws Exception {
