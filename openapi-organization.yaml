@@ -22,6 +22,7 @@ info:
     | `/org/departments`    | Gestión de departamentos            | `tenant_db`   |
     | `/org/roles`          | Catálogo de roles RBAC              | `tenant_db`   |
     | `/org/permissions`    | Catálogo de permisos RBAC           | `tenant_db`   |
+    | `/org/users`          | Asignaciones usuario-org y usuario-rol | `tenant_db` |
 
     ## Jerarquía
     ```
@@ -118,6 +119,33 @@ components:
         type: string
         format: uuid
         example: "d2e3f4a5-0000-0000-0000-000000000002"
+
+    TenantUserId:
+      name: tenantUserId
+      in: path
+      required: true
+      description: ID del usuario del tenant.
+      schema:
+        type: integer
+        example: 10
+
+    DepartmentAssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      description: ID de la asignación usuario-departamento (`tenant_user_department.id`).
+      schema:
+        type: integer
+        example: 5
+
+    UserRoleAssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      description: ID de la asignación usuario-rol (`tenant_user_role.id`).
+      schema:
+        type: integer
+        example: 3
 
   schemas:
     # ── Requests ──────────────────────────────────────────────────────────────
@@ -423,6 +451,113 @@ components:
           type: string
           format: date-time
           example: "2026-05-20T09:00:00"
+
+    AssignUserToDepartmentRequest:
+      type: object
+      required: [departmentId, startDate]
+      properties:
+        departmentId:
+          type: integer
+          description: ID del departamento al que se asigna el usuario.
+          example: 3
+        isPrimary:
+          type: boolean
+          description: Indica si este es el departamento principal del usuario.
+          default: false
+          example: true
+        startDate:
+          type: string
+          format: date
+          description: Fecha de inicio de la asignación.
+          example: "2026-01-15"
+        endDate:
+          type: ["string", "null"]
+          format: date
+          description: Fecha de fin. Null si la asignación no tiene término previsto.
+          example: null
+
+    UpdateUserDepartmentRequest:
+      type: object
+      properties:
+        isPrimary:
+          type: boolean
+          description: Nuevo valor para indicar si es el departamento principal.
+          example: false
+        endDate:
+          type: ["string", "null"]
+          format: date
+          description: Nueva fecha de fin de la asignación.
+          example: "2026-12-31"
+
+    AssignRoleToUserRequest:
+      type: object
+      required: [roleId]
+      properties:
+        roleId:
+          type: string
+          format: uuid
+          description: UUID del rol a asignar al usuario.
+          example: "c1d2e3f4-0000-0000-0000-000000000001"
+        departmentId:
+          type: ["integer", "null"]
+          description: |
+            ID del departamento que limita el scope del rol.
+            Si es null, el rol aplica a todo el tenant.
+          example: 3
+
+    UserDepartmentAssignmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        tenantUserId:
+          type: integer
+          example: 10
+        departmentId:
+          type: integer
+          example: 3
+        isPrimary:
+          type: boolean
+          example: true
+        startDate:
+          type: string
+          format: date
+          example: "2026-01-15"
+        endDate:
+          type: ["string", "null"]
+          format: date
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-01T10:00:00"
+
+    UserRoleAssignmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        tenantUserId:
+          type: integer
+          example: 10
+        roleId:
+          type: string
+          format: uuid
+          example: "c1d2e3f4-0000-0000-0000-000000000001"
+        departmentId:
+          type: ["integer", "null"]
+          description: Scope del rol. Null si aplica a todo el tenant.
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00"
 
     # ── Errores ───────────────────────────────────────────────────────────────
 
@@ -1501,6 +1636,278 @@ paths:
         "404":
           $ref: '#/components/responses/NotFound'
 
+  # ============================================================================
+  # USER ASSIGNMENTS (Asignaciones de usuarios)
+  # ============================================================================
+
+  /org/users/{tenantUserId}/departments:
+    get:
+      summary: Listar departamentos de un usuario
+      description: |
+        Retorna todas las asignaciones usuario-departamento de un `tenant_user`.
+        Incluye departamentos activos e históricos (con `endDate` pasado).
+      operationId: listUserDepartments
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-departamento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+              example:
+                - id: 5
+                  tenantUserId: 10
+                  departmentId: 3
+                  isPrimary: true
+                  startDate: "2026-01-15"
+                  endDate: null
+                  createdAt: "2026-01-15T08:00:00"
+                  updatedAt: "2026-01-15T08:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Asignar usuario a departamento
+      description: |
+        Crea una fila en `tenant_user_department`. Un usuario puede pertenecer a
+        varios departamentos; usar `isPrimary: true` para marcar el principal.
+      operationId: assignUserToDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUserToDepartmentRequest'
+            example:
+              departmentId: 3
+              isPrimary: true
+              startDate: "2026-01-15"
+              endDate: null
+      responses:
+        "201":
+          description: Asignación creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El usuario o departamento no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: El usuario ya está asignado a ese departamento.
+          $ref: '#/components/responses/Conflict'
+
+  /org/users/{tenantUserId}/departments/{assignmentId}:
+    put:
+      summary: Actualizar asignación usuario-departamento
+      description: |
+        Modifica `isPrimary` o `endDate` de una asignación existente.
+        Útil para cerrar una asignación (`endDate`) o cambiar el departamento
+        principal del usuario.
+      operationId: updateUserDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/DepartmentAssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDepartmentRequest'
+            example:
+              isPrimary: false
+              endDate: "2026-12-31"
+      responses:
+        "200":
+          description: Asignación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Remover usuario de departamento
+      description: Elimina la asignación `tenant_user_department` de forma permanente.
+      operationId: removeUserFromDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/DepartmentAssignmentId'
+      responses:
+        "204":
+          description: Asignación eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/departments/{id}/users:
+    get:
+      summary: Listar usuarios de un departamento
+      description: Retorna todas las asignaciones activas de usuarios en el departamento.
+      operationId: listDepartmentUsers
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-departamento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/users/{tenantUserId}/roles:
+    get:
+      summary: Listar roles de un usuario
+      description: |
+        Retorna todas las asignaciones usuario-rol de un `tenant_user`.
+        Cada asignación puede tener un `departmentId` que limita el scope del rol.
+      operationId: listUserRoles
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-rol.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRoleAssignmentResponse'
+              example:
+                - id: 3
+                  tenantUserId: 10
+                  roleId: "c1d2e3f4-0000-0000-0000-000000000001"
+                  departmentId: 3
+                  createdAt: "2026-01-15T08:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Asignar rol a usuario
+      description: |
+        Crea una fila en `tenant_user_role`. El campo `departmentId` es opcional
+        y limita el scope del rol a un departamento específico. Si se omite,
+        el rol aplica a todo el tenant.
+      operationId: assignRoleToUser
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleToUserRequest'
+            example:
+              roleId: "c1d2e3f4-0000-0000-0000-000000000001"
+              departmentId: 3
+      responses:
+        "201":
+          description: Rol asignado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRoleAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El usuario, rol o departamento no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: El usuario ya tiene ese rol asignado (con el mismo scope).
+          $ref: '#/components/responses/Conflict'
+
+  /org/users/{tenantUserId}/roles/{assignmentId}:
+    delete:
+      summary: Remover rol de usuario
+      description: Elimina la asignación `tenant_user_role` de forma permanente.
+      operationId: removeRoleFromUser
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/UserRoleAssignmentId'
+      responses:
+        "204":
+          description: Asignación de rol eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/roles/{roleId}/users:
+    get:
+      summary: Listar usuarios con un rol
+      description: Retorna todas las asignaciones de usuarios que tienen el rol especificado.
+      operationId: listRoleUsers
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-rol para este rol.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRoleAssignmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
 tags:
   - name: Branches
     description: |
@@ -1525,3 +1932,10 @@ tags:
       Catálogo de permisos RBAC (`permissions`). Cada permiso representa una
       acción sobre un recurso (ej. `employees:read`). Los permisos pueden estar
       condicionados a una feature de la suscripción via `masterFeaturesCode`.
+  - name: UserAssignments
+    description: |
+      Asignaciones de usuarios a la estructura organizacional y a roles.
+      Gestiona las tablas `tenant_user_department` y `tenant_user_role`.
+      Un usuario puede pertenecer a múltiples departamentos (`isPrimary` marca
+      el principal) y recibir múltiples roles, cada uno opcionalmente con scope
+      a un departamento específico.
