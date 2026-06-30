@@ -1,12 +1,14 @@
 # Perfil para desarrollo local ÚNICAMENTE.
+# Copiar este archivo como application-local.properties y completar los valores.
 # Activar con: -Dspring.profiles.active=local  (o SPRING_PROFILES_ACTIVE=local)
 # NO usar en producción ni en staging.
+# application-local.properties está en .gitignore — NUNCA commitear ese archivo.
 
-# Clave AES-256 de desarrollo (32 bytes de 0x01, base64). Solo para entorno local.
-app.encryption.key=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=
+# Clave AES-256 de desarrollo (32 bytes en Base64). Generar con:
+#   openssl rand -base64 32
+app.encryption.key=REPLACE_WITH_LOCAL_AES256_KEY_BASE64
 
 # PostgreSQL local (usar con docker-compose.dev.yml)
-# Las variables de entorno (DB_URL, DB_USER, DB_PASSWORD) las setea docker-compose.local.yml
 spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/trazzo_dev_db}
 spring.datasource.username=${DB_USER:trazzo_dev}
 spring.datasource.password=${DB_PASSWORD:trazzo_dev_pass}
@@ -22,7 +24,8 @@ trazzo.provisioning.db-port=${PROVISIONING_DB_PORT:5432}
 # Admin seeder: only active with local profile + explicit opt-in
 trazzo.seed.admin.enabled=true
 trazzo.seed.admin.email=admin@trazzo.pe
-trazzo.seed.admin.password=admin123
+trazzo.seed.admin.password=REPLACE_WITH_LOCAL_ADMIN_PASSWORD
 
-# JWT: Base64 of "trazzo-jwt-local-development-key" (32 bytes = 256 bits). Local only.
-app.jwt.secret=dHJhenpvLWp3dC1sb2NhbC1kZXZlbG9wbWVudC1rZXk=
+# JWT: clave HMAC-256 en Base64 (mínimo 32 bytes). Generar con:
+#   openssl rand -base64 32
+app.jwt.secret=REPLACE_WITH_LOCAL_JWT_SECRET_BASE64

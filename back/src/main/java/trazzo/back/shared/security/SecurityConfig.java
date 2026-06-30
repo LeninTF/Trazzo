@@ -29,6 +29,9 @@ public class SecurityConfig {
 
     private static final String LOGIN_URL = "/api/v1/auth/login";
 
+    // CSRF is intentionally disabled: this is a stateless REST API authenticated via
+    // JWT Bearer tokens (no cookies/sessions), so CSRF attacks do not apply.
+    @SuppressWarnings("codeql[java/spring-disabled-csrf-protection]")
     @Bean
     SecurityFilterChain filterChain(
             HttpSecurity http,

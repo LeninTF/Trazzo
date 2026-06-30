@@ -1,0 +1,5 @@
+version: 2
+# Test fixtures contain intentionally fake, low-entropy keys for JUnit tests only.
+# These values are never used in production (production secrets are injected via env vars).
+ignore-paths:
+  - back/src/test/resources/
