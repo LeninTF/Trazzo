@@ -15,12 +15,12 @@ class AuditLogResultTest {
         var oldValue = Map.<String, Object>of("name", "old");
         var newValue = Map.<String, Object>of("name", "new");
         var result = new AuditLogResult(
-                1L, "evt-1", now, "tenant-1", "t-1",
+                "1", "evt-1", now, "tenant-1", "t-1",
                 "jdoe", "jdoe@test.com", "UPDATE", "AUDIT",
                 "User", "42", "192.168.1.1", "Mozilla/5.0",
                 oldValue, newValue
         );
-        assertEquals(1L, result.id());
+        assertEquals("1", result.id());
         assertEquals("evt-1", result.eventId());
         assertEquals(now, result.fecha());
         assertEquals("tenant-1", result.tenant());
@@ -64,15 +64,15 @@ class AuditLogResultTest {
     @Test
     void shouldTestEquality() {
         var now = LocalDateTime.now();
-        var r1 = new AuditLogResult(1L, "e1", now, "t", "tid", "u", "m", "a", "tp", "en", "eid", "ip", "ua", null, null);
-        var r2 = new AuditLogResult(1L, "e1", now, "t", "tid", "u", "m", "a", "tp", "en", "eid", "ip", "ua", null, null);
+        var r1 = new AuditLogResult("1", "e1", now, "t", "tid", "u", "m", "a", "tp", "en", "eid", "ip", "ua", null, null);
+        var r2 = new AuditLogResult("1", "e1", now, "t", "tid", "u", "m", "a", "tp", "en", "eid", "ip", "ua", null, null);
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
     }
 
     @Test
     void shouldTestToString() {
-        var result = new AuditLogResult(1L, "e1", null, "t", null, null, null, null, null, null, null, null, null, null, null);
+        var result = new AuditLogResult("1", "e1", null, "t", null, null, null, null, null, null, null, null, null, null, null);
         assertTrue(result.toString().contains("e1"));
     }
 }

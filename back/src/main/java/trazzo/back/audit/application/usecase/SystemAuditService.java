@@ -24,7 +24,7 @@ public class SystemAuditService implements SystemAuditUseCase {
             String entity, String fechaDesde, String fechaHasta, int page, int size, String sort) {
         LocalDateTime desde = fechaDesde != null ? LocalDate.parse(fechaDesde).atStartOfDay() : null;
         LocalDateTime hasta = fechaHasta != null ? LocalDate.parse(fechaHasta).atTime(LocalTime.MAX) : null;
-        var pageable = PageRequest.of(page, size, SortUtils.parseSort(sort, f -> f));
+        var pageable = PageRequest.of(page, size, SortUtils.parseSort(sort, f -> f, "date"));
         var audits = systemAuditRepository.findAll(searchTerm, module, entity, desde, hasta, pageable);
         var total = systemAuditRepository.count(searchTerm, module, entity, desde, hasta);
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;

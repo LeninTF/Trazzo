@@ -21,7 +21,7 @@ public final class SessionMapper {
         entity.setLastActivityAt(domain.getLasActivityAt());
         entity.setLogoutAt(domain.getLogoutAt());
         entity.setExpiresAt(domain.getExpiresAt());
-        entity.setState(domain.getState() == SessionState.ACTIVE);
+        entity.setState(domain.getState());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         return entity;
@@ -39,7 +39,7 @@ public final class SessionMapper {
                 entity.getLastActivityAt(),
                 entity.getLogoutAt(),
                 entity.getExpiresAt(),
-                entity.isState() ? SessionState.ACTIVE : SessionState.LOGGED_OUT,
+                entity.getState(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

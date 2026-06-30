@@ -6,7 +6,7 @@ import trazzo.back.audit.domain.model.master.StatusLogin;
 import java.time.LocalDateTime;
 
 public record LogInHistoryResponse(
-    Long id,
+    String id,
     @JsonProperty("user_id") String userId,
     @JsonProperty("attempted_email") String attemptedEmail,
     StatusLogin status,

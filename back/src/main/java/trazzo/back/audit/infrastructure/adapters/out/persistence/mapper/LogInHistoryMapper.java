@@ -12,7 +12,11 @@ public final class LogInHistoryMapper {
 
     public static LogInHistoryEntity toEntity(LogInHistory domain) {
         var entity = new LogInHistoryEntity();
-        entity.setId(UUID.randomUUID());
+        if (domain.getId() != null) {
+            entity.setId(UUID.fromString(domain.getId()));
+        } else {
+            entity.setId(UUID.randomUUID());
+        }
         entity.setUserId(domain.getUserId() != null ? UUID.fromString(domain.getUserId()) : null);
         entity.setAttemptedEmail(domain.getAttemptedEmail());
         entity.setStatus(domain.getStatus());
@@ -24,7 +28,7 @@ public final class LogInHistoryMapper {
 
     public static LogInHistory toDomain(LogInHistoryEntity entity) {
         return new LogInHistory(
-                0L,
+                entity.getId() != null ? entity.getId().toString() : null,
                 entity.getUserId() != null ? entity.getUserId().toString() : null,
                 entity.getAttemptedEmail(),
                 entity.getStatus(),

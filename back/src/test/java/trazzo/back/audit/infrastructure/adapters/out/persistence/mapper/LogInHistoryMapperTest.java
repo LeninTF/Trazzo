@@ -15,7 +15,7 @@ class LogInHistoryMapperTest {
     @Test
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
-        var domain = new LogInHistory(1L, "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        var domain = new LogInHistory("00000000-0000-0000-0000-000000000001", "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "test@example.com", StatusLogin.SUCCES,
                 "192.168.1.1", "Mozilla/5.0", now);
 
@@ -54,7 +54,7 @@ class LogInHistoryMapperTest {
     @Test
     void shouldMapRoundTrip() {
         var now = LocalDateTime.now();
-        var original = new LogInHistory(1L, "c9d8e7f6-a5b4-3210-fedc-ba9876543210", "roundtrip@test.com",
+        var original = new LogInHistory("00000000-0000-0000-0000-000000000002", "c9d8e7f6-a5b4-3210-fedc-ba9876543210", "roundtrip@test.com",
                 StatusLogin.LOCKED_OUT, "192.168.1.2", "PostmanRuntime/7.28", now);
 
         var entity = LogInHistoryMapper.toEntity(original);

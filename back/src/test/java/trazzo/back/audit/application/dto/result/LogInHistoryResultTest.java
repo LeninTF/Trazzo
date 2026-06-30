@@ -13,10 +13,10 @@ class LogInHistoryResultTest {
     void shouldCreateWithSuccessStatus() {
         var now = LocalDateTime.now();
         var result = new LogInHistoryResult(
-                1L, "user-1", "jdoe@test.com", StatusLogin.SUCCES,
+                "1", "user-1", "jdoe@test.com", StatusLogin.SUCCES,
                 "192.168.1.1", "Mozilla/5.0", now
         );
-        assertEquals(1L, result.id());
+        assertEquals("1", result.id());
         assertEquals("user-1", result.userId());
         assertEquals("jdoe@test.com", result.attemptedEmail());
         assertEquals(StatusLogin.SUCCES, result.status());
@@ -29,7 +29,7 @@ class LogInHistoryResultTest {
     void shouldCreateWithFailedStatus() {
         var now = LocalDateTime.now();
         var result = new LogInHistoryResult(
-                2L, "user-2", "bad@test.com", StatusLogin.FAILED_WRONG_PASSWORD,
+                "2", "user-2", "bad@test.com", StatusLogin.FAILED_WRONG_PASSWORD,
                 "10.0.0.1", "curl/7.68", now
         );
         assertEquals(StatusLogin.FAILED_WRONG_PASSWORD, result.status());
@@ -39,7 +39,7 @@ class LogInHistoryResultTest {
     void shouldCreateWithLockedOutStatus() {
         var now = LocalDateTime.now();
         var result = new LogInHistoryResult(
-                3L, "user-3", "locked@test.com", StatusLogin.LOCKED_OUT,
+                "3", "user-3", "locked@test.com", StatusLogin.LOCKED_OUT,
                 "10.0.0.1", null, now
         );
         assertEquals(StatusLogin.LOCKED_OUT, result.status());
@@ -59,8 +59,8 @@ class LogInHistoryResultTest {
     @Test
     void shouldTestEquality() {
         var now = LocalDateTime.now();
-        var r1 = new LogInHistoryResult(1L, "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
-        var r2 = new LogInHistoryResult(1L, "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
+        var r1 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
+        var r2 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
     }

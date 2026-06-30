@@ -10,8 +10,12 @@ public final class SortUtils {
     }
 
     public static Sort parseSort(String sort, Function<String, String> fieldMapper) {
+        return parseSort(sort, fieldMapper, "createdAt");
+    }
+
+    public static Sort parseSort(String sort, Function<String, String> fieldMapper, String defaultField) {
         if (sort == null || sort.isBlank()) {
-            return Sort.by(Sort.Direction.DESC, "createdAt");
+            return Sort.by(Sort.Direction.DESC, defaultField);
         }
         var parts = sort.split(",");
         var field = fieldMapper.apply(parts[0].trim());

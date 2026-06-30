@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record AuditLogDetailResult(
-    Long id,
+    String id,
     String entity,
     String entityId,
     Action action,

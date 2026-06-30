@@ -50,6 +50,9 @@ public class Session {
         if (loginAt == null) {
             throw new IllegalArgumentException("Login date is required.");
         }
+        if (expiresAt == null) {
+            throw new IllegalArgumentException("Expiration date is required.");
+        }
         if (expiresAt.isBefore(loginAt)) {
             throw new IllegalArgumentException("Expiration date cannot be before login date.");
         }

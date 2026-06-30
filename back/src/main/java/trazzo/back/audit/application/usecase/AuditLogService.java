@@ -41,7 +41,7 @@ public class AuditLogService implements AuditLogUseCase {
     }
 
     @Override
-    public AuditLogDetailResult findById(Long id) {
+    public AuditLogDetailResult findById(String id) {
         return auditRepository.findById(id)
                 .map(this::toDetailResult)
                 .orElseThrow(() -> new AuditNotFoundException("Audit not found: " + id));
@@ -51,7 +51,7 @@ public class AuditLogService implements AuditLogUseCase {
         String userId = audit.getUserId();
         Optional<TenantInfoPort.TenantInfo> tenantInfo = tenantInfoPort.findByTenantId(userId);
         Optional<UserInfoPort.UserInfo> userInfo = userId != null ? userInfoPort.findByUserId(userId) : Optional.empty();
-        String eventId = "EVT-" + String.format("%05d", audit.getId() != null ? audit.getId() : 0) + "-X";
+        String eventId = "EVT-" + (audit.getId() != null ? audit.getId() : "0") + "-X";
         String tipo = switch (audit.getAction()) {
             case DELETE -> "advertencia";
             default -> "exito";

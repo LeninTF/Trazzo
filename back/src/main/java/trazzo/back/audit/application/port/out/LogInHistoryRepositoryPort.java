@@ -12,5 +12,5 @@ public interface LogInHistoryRepositoryPort {
         LocalDateTime fechaDesde, LocalDateTime fechaHasta, Pageable pageable);
     long count(String userId, String attemptedEmail, StatusLogin status,
         LocalDateTime fechaDesde, LocalDateTime fechaHasta);
-    Optional<LogInHistory> findById(Long id);
+    Optional<LogInHistory> findById(String id);
 }

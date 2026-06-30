@@ -39,13 +39,13 @@ class AuditLogServiceTest {
     @Test
     void findByIdReturnsAuditLogDetail() {
         var now = LocalDateTime.now();
-        var audit = Audit.restore(1L, "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
+        var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", Map.of(), Map.of(), now);
-        when(auditRepository.findById(1L)).thenReturn(Optional.of(audit));
+        when(auditRepository.findById("1")).thenReturn(Optional.of(audit));
 
-        var result = service.findById(1L);
+        var result = service.findById("1");
 
-        assertEquals(1L, result.id());
+        assertEquals("1", result.id());
         assertEquals("entity", result.entity());
         assertEquals("entity-1", result.entityId());
         assertEquals(Action.CREATE, result.action());
@@ -60,15 +60,15 @@ class AuditLogServiceTest {
 
     @Test
     void findByIdThrowsWhenNotFound() {
-        when(auditRepository.findById(99L)).thenReturn(Optional.empty());
+        when(auditRepository.findById("99")).thenReturn(Optional.empty());
 
-        assertThrows(AuditNotFoundException.class, () -> service.findById(99L));
+        assertThrows(AuditNotFoundException.class, () -> service.findById("99"));
     }
 
     @Test
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
-        var audit = Audit.restore(1L, "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
+        var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", Map.of("old", "val"), Map.of("new", "val"), now);
         when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
         when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
@@ -84,8 +84,8 @@ class AuditLogServiceTest {
         assertEquals(1, result.totalPages());
 
         var logResult = result.content().get(0);
-        assertEquals(1L, logResult.id());
-        assertEquals("EVT-00001-X", logResult.eventId());
+        assertEquals("1", logResult.id());
+        assertEquals("EVT-1-X", logResult.eventId());
         assertEquals(now, logResult.fecha());
         assertEquals("Test Corp", logResult.tenant());
         assertEquals("tenant-1", logResult.tenantId());
@@ -107,7 +107,7 @@ class AuditLogServiceTest {
     @Test
     void findAllMapsDeleteActionToAdvertencia() {
         var now = LocalDateTime.now();
-        var audit = Audit.restore(1L, "entity", "entity-1", Action.DELETE, "user-1", "/api/test",
+        var audit = Audit.restore("1", "entity", "entity-1", Action.DELETE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
         when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
         when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
@@ -123,7 +123,7 @@ class AuditLogServiceTest {
     @Test
     void findAllMapsCreateActionToExito() {
         var now = LocalDateTime.now();
-        var audit = Audit.restore(1L, "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
+        var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
         when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
         when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
@@ -139,7 +139,7 @@ class AuditLogServiceTest {
     @Test
     void findAllHandlesNullUserId() {
         var now = LocalDateTime.now();
-        var audit = Audit.restore(1L, "entity", "entity-1", Action.UPDATE, null, "/api/test",
+        var audit = Audit.restore("1", "entity", "entity-1", Action.UPDATE, null, "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
         when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
         when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);

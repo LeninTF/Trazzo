@@ -42,7 +42,7 @@ class SessionRepositoryAdapterTest {
         e.setLoginAt(now);
         e.setLastActivityAt(now.plusHours(1));
         e.setExpiresAt(now.plusDays(7));
-        e.setState(true);
+        e.setState(SessionState.ACTIVE);
         e.setCreatedAt(now);
         e.setUpdatedAt(now);
         return e;
@@ -72,7 +72,7 @@ class SessionRepositoryAdapterTest {
     @Test
     void findAll_shouldReturnMappedDomains() {
         var entity = createEntity();
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
+        when(jpaRepository.findByFilters(any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, null, null, PageRequest.of(0, 10));
@@ -83,12 +83,9 @@ class SessionRepositoryAdapterTest {
 
     @Test
     void findAll_shouldFilterByTenantUserId() {
-        var entity1 = createEntity();
-        var entity2 = createEntity();
-        entity2.setId(2L);
-        entity2.setTenantUserId("user-2");
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
-                .thenReturn(new PageImpl<>(List.of(entity1, entity2)));
+        var entity = createEntity();
+        when(jpaRepository.findByFilters(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll("user-1", null, null, PageRequest.of(0, 10));
 
@@ -98,14 +95,9 @@ class SessionRepositoryAdapterTest {
 
     @Test
     void findAll_shouldFilterByState() {
-        var entity1 = createEntity();
-        var entity2 = createEntity();
-        entity2.setId(2L);
-        entity2.setTenantUserId("user-2");
-        entity2.setLogoutAt(now);
-        entity2.setState(false);
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
-                .thenReturn(new PageImpl<>(List.of(entity1, entity2)));
+        var entity = createEntity();
+        when(jpaRepository.findByFilters(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, SessionState.ACTIVE, null, PageRequest.of(0, 10));
 
@@ -114,23 +106,20 @@ class SessionRepositoryAdapterTest {
 
     @Test
     void findAll_shouldFilterByIpAddress() {
-        var entity1 = createEntity();
-        var entity2 = createEntity();
-        entity2.setId(2L);
-        entity2.setIpAddress("10.0.0.1");
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
-                .thenReturn(new PageImpl<>(List.of(entity1, entity2)));
+        var entity = createEntity();
+        when(jpaRepository.findByFilters(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, null, "10.0.0.1", PageRequest.of(0, 10));
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getIpAddress()).isEqualTo("10.0.0.1");
+        assertThat(result.get(0).getIpAddress()).isEqualTo("192.168.1.1");
     }
 
     @Test
     void count_shouldReturnFilteredCount() {
-        var entity = createEntity();
-        when(jpaRepository.findAll()).thenReturn(List.of(entity));
+        when(jpaRepository.countByFilters(any(), any(), any()))
+                .thenReturn(1L);
 
         var result = adapter.count(null, null, null);
 
@@ -143,8 +132,9 @@ class SessionRepositoryAdapterTest {
         var entity2 = createEntity();
         entity2.setId(2L);
         entity2.setLogoutAt(now);
-        entity2.setState(false);
-        when(jpaRepository.findAll()).thenReturn(List.of(entity1, entity2));
+        entity2.setState(SessionState.LOGGED_OUT);
+        when(jpaRepository.countByFilters(any(), any(), any()))
+                .thenReturn(1L);
 
         var result = adapter.count(null, SessionState.ACTIVE, null);
 

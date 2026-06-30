@@ -30,7 +30,7 @@ class SessionMapperTest {
         assertEquals(now.plusHours(1), entity.getLastActivityAt());
         assertNull(entity.getLogoutAt());
         assertEquals(now.plusDays(7), entity.getExpiresAt());
-        assertTrue(entity.isState());
+        assertEquals(SessionState.ACTIVE, entity.getState());
         assertEquals(now, entity.getCreatedAt());
         assertEquals(now, entity.getUpdatedAt());
     }
@@ -49,7 +49,7 @@ class SessionMapperTest {
         entity.setLastActivityAt(now.plusHours(2));
         entity.setLogoutAt(null);
         entity.setExpiresAt(now.plusDays(30));
-        entity.setState(true);
+        entity.setState(SessionState.ACTIVE);
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
 
@@ -109,7 +109,7 @@ class SessionMapperTest {
         entity.setLastActivityAt(now.minusHours(1));
         entity.setLogoutAt(now);
         entity.setExpiresAt(now.minusDays(1).plusDays(7));
-        entity.setState(false);
+        entity.setState(SessionState.LOGGED_OUT);
         entity.setCreatedAt(now.minusDays(1));
         entity.setUpdatedAt(now);
 

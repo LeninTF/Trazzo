@@ -4,7 +4,7 @@ import trazzo.back.audit.domain.model.master.StatusLogin;
 import java.time.LocalDateTime;
 
 public record LogInHistoryResult(
-    Long id,
+    String id,
     String userId,
     String attemptedEmail,
     StatusLogin status,

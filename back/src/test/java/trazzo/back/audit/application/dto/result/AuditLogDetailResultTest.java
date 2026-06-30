@@ -16,11 +16,11 @@ class AuditLogDetailResultTest {
         var previousValue = Map.<String, Object>of("field", "old");
         var newValue = Map.<String, Object>of("field", "new");
         var result = new AuditLogDetailResult(
-                1L, "User", "42", Action.UPDATE, "user-1",
+                "1", "User", "42", Action.UPDATE, "user-1",
                 "/api/users/42", "192.168.1.1", "curl/7.68",
                 previousValue, newValue, now
         );
-        assertEquals(1L, result.id());
+        assertEquals("1", result.id());
         assertEquals("User", result.entity());
         assertEquals("42", result.entityId());
         assertEquals(Action.UPDATE, result.action());
@@ -37,7 +37,7 @@ class AuditLogDetailResultTest {
     void shouldHandleNullMaps() {
         var now = LocalDateTime.now();
         var result = new AuditLogDetailResult(
-                1L, "User", "42", Action.CREATE, "user-1",
+                "1", "User", "42", Action.CREATE, "user-1",
                 "/api/users", "10.0.0.1", null, null, null, now
         );
         assertNull(result.userAgent());
@@ -48,8 +48,8 @@ class AuditLogDetailResultTest {
     @Test
     void shouldTestEquality() {
         var now = LocalDateTime.now();
-        var r1 = new AuditLogDetailResult(1L, "E", "1", Action.DELETE, "u", "/e", "ip", "ua", null, null, now);
-        var r2 = new AuditLogDetailResult(1L, "E", "1", Action.DELETE, "u", "/e", "ip", "ua", null, null, now);
+        var r1 = new AuditLogDetailResult("1", "E", "1", Action.DELETE, "u", "/e", "ip", "ua", null, null, now);
+        var r2 = new AuditLogDetailResult("1", "E", "1", Action.DELETE, "u", "/e", "ip", "ua", null, null, now);
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
     }

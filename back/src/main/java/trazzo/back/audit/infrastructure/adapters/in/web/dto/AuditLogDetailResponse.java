@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record AuditLogDetailResponse(
-    Long id,
+    String id,
     String entity,
     @JsonProperty("entity_id") String entityId,
     Action action,

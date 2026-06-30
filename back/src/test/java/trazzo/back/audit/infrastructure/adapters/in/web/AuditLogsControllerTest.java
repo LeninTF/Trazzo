@@ -33,14 +33,14 @@ class AuditLogsControllerTest {
     AuditLogUseCase auditLogUseCase;
 
     private static AuditLogResult aResult() {
-        return new AuditLogResult(1L, "evt-1", LocalDateTime.now(), "tenant", "t-1",
+        return new AuditLogResult("1", "evt-1", LocalDateTime.now(), "tenant", "t-1",
                 "user", "user@test.com", "CREATE", "INFO", "Entity",
                 "e-1", "127.0.0.1", "Mozilla/5.0",
                 Map.of("old", "value"), Map.of("new", "value"));
     }
 
     private static AuditLogDetailResult aDetailResult() {
-        return new AuditLogDetailResult(1L, "Entity", "e-1", Action.CREATE,
+        return new AuditLogDetailResult("1", "Entity", "e-1", Action.CREATE,
                 "u-1", "/api/test", "127.0.0.1", "Mozilla/5.0",
                 Map.of("old", "value"), Map.of("new", "value"), LocalDateTime.now());
     }
@@ -53,7 +53,7 @@ class AuditLogsControllerTest {
 
         mockMvc.perform(get("/audit/logs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].id").value("1"))
                 .andExpect(jsonPath("$.content[0].event_id").value("evt-1"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.totalElements").value(1));
@@ -61,17 +61,17 @@ class AuditLogsControllerTest {
 
     @Test
     void getById_shouldReturn200WhenFound() throws Exception {
-        when(auditLogUseCase.findById(1L)).thenReturn(aDetailResult());
+        when(auditLogUseCase.findById("1")).thenReturn(aDetailResult());
 
         mockMvc.perform(get("/audit/logs/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.action").value("CREATE"));
     }
 
     @Test
     void getById_shouldReturn404WhenNotFound() throws Exception {
-        when(auditLogUseCase.findById(anyLong())).thenThrow(new AuditNotFoundException("Audit not found: 999"));
+        when(auditLogUseCase.findById(anyString())).thenThrow(new AuditNotFoundException("Audit not found: 999"));
 
         mockMvc.perform(get("/audit/logs/999"))
                 .andExpect(status().isNotFound())

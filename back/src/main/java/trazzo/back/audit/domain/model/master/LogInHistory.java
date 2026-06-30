@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 public class LogInHistory {
-    private Long id;
+    private String id;
     private String userId;
     private String attemptedEmail;
     private StatusLogin status;
@@ -14,7 +14,7 @@ public class LogInHistory {
     private LocalDateTime createdAt;
 
     public LogInHistory(
-            Long id,
+            String id,
             String userId,
             String attemptedEmail,
             StatusLogin status,

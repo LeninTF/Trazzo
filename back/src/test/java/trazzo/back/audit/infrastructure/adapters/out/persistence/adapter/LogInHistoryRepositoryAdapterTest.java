@@ -46,7 +46,7 @@ class LogInHistoryRepositoryAdapterTest {
 
     @Test
     void findById_whenNotExists_shouldReturnEmpty() {
-        var result = adapter.findById(1L);
+        var result = adapter.findById("00000000-0000-0000-0000-000000000001");
 
         assertThat(result).isEmpty();
     }
@@ -55,24 +55,21 @@ class LogInHistoryRepositoryAdapterTest {
     void findAll_shouldReturnMappedDomains() {
         var entity = createEntity();
         var page = new PageImpl<>(List.of(entity));
-        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any(), any()))
                 .thenReturn(page);
 
         var result = adapter.findAll(null, null, null, null, null, PageRequest.of(0, 10));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getAttemptedEmail()).isEqualTo("test@example.com");
-        verify(jpaRepository).findByFilters(any(), any(), any(), any(), any());
+        verify(jpaRepository).findByFilters(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void findAll_shouldFilterByAttemptedEmail() {
-        var entity1 = createEntity();
-        var entity2 = createEntity();
-        entity2.setAttemptedEmail("other@example.com");
-        entity2.setUserId(UUID.randomUUID());
-        var page = new PageImpl<>(List.of(entity1, entity2));
-        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
+        var entity = createEntity();
+        var page = new PageImpl<>(List.of(entity));
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any(), any()))
                 .thenReturn(page);
 
         var result = adapter.findAll(null, "test@example.com", null, null, null, PageRequest.of(0, 10));
@@ -83,10 +80,8 @@ class LogInHistoryRepositoryAdapterTest {
 
     @Test
     void count_shouldReturnFilteredCount() {
-        var entity = createEntity();
-        var page = new PageImpl<>(List.of(entity));
-        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
-                .thenReturn(page);
+        when(jpaRepository.countByFilters(any(), any(), any(), any(), any()))
+                .thenReturn(1L);
 
         var result = adapter.count(null, "test@example.com", null, null, null);
 

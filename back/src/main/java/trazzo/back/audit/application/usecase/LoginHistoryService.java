@@ -34,7 +34,7 @@ public class LoginHistoryService implements LoginHistoryUseCase {
     }
 
     @Override
-    public LogInHistoryResult findById(Long id) {
+    public LogInHistoryResult findById(String id) {
         return loginHistoryRepository.findById(id)
                 .map(this::toResult)
                 .orElseThrow(() -> new AuditNotFoundException("Login history not found: " + id));

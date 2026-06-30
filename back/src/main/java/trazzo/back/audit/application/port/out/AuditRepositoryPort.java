@@ -12,5 +12,5 @@ public interface AuditRepositoryPort {
         LocalDateTime fechaDesde, LocalDateTime fechaHasta, Pageable pageable);
     long count(String searchTerm, Action action, String entity,
         LocalDateTime fechaDesde, LocalDateTime fechaHasta);
-    Optional<Audit> findById(Long id);
+    Optional<Audit> findById(String id);
 }

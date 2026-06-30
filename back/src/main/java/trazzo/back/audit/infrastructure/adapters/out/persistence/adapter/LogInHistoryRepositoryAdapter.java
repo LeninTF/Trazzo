@@ -26,10 +26,9 @@ public class LogInHistoryRepositoryAdapter implements LogInHistoryRepositoryPort
     public List<LogInHistory> findAll(String userId, String attemptedEmail, StatusLogin status,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta, Pageable pageable) {
         UUID userIdUuid = userId != null ? UUID.fromString(userId) : null;
-        var entities = jpaRepository.findByFilters(userIdUuid, status, fechaDesde, fechaHasta, pageable);
-        return entities.stream()
+        return jpaRepository.findByFilters(userIdUuid, attemptedEmail, status, fechaDesde, fechaHasta, pageable)
+                .stream()
                 .map(LogInHistoryMapper::toDomain)
-                .filter(log -> attemptedEmail == null || attemptedEmail.equals(log.getAttemptedEmail()))
                 .toList();
     }
 
@@ -37,15 +36,12 @@ public class LogInHistoryRepositoryAdapter implements LogInHistoryRepositoryPort
     public long count(String userId, String attemptedEmail, StatusLogin status,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         UUID userIdUuid = userId != null ? UUID.fromString(userId) : null;
-        return jpaRepository.findByFilters(userIdUuid, status, fechaDesde, fechaHasta, Pageable.unpaged())
-                .getContent().stream()
-                .map(LogInHistoryMapper::toDomain)
-                .filter(log -> attemptedEmail == null || attemptedEmail.equals(log.getAttemptedEmail()))
-                .count();
+        return jpaRepository.countByFilters(userIdUuid, attemptedEmail, status, fechaDesde, fechaHasta);
     }
 
     @Override
-    public Optional<LogInHistory> findById(Long id) {
-        return Optional.empty();
+    public Optional<LogInHistory> findById(String id) {
+        return jpaRepository.findById(UUID.fromString(id))
+                .map(LogInHistoryMapper::toDomain);
     }
 }

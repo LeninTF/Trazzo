@@ -17,13 +17,28 @@ public interface LogInHistoryJpaRepository extends JpaRepository<LogInHistoryEnt
 
     @Query("SELECT l FROM LogInHistoryEntity l WHERE " +
            "(:userId IS NULL OR l.userId = :userId) AND " +
+           "(:attemptedEmail IS NULL OR l.attemptedEmail LIKE LOWER(CONCAT('%', :attemptedEmail, '%'))) AND " +
            "(:status IS NULL OR l.status = :status) AND " +
            "(:fechaDesde IS NULL OR l.createdAt >= :fechaDesde) AND " +
            "(:fechaHasta IS NULL OR l.createdAt <= :fechaHasta)")
     Page<LogInHistoryEntity> findByFilters(
             @Param("userId") UUID userId,
+            @Param("attemptedEmail") String attemptedEmail,
             @Param("status") StatusLogin status,
             @Param("fechaDesde") LocalDateTime fechaDesde,
             @Param("fechaHasta") LocalDateTime fechaHasta,
             Pageable pageable);
+
+    @Query("SELECT COUNT(l) FROM LogInHistoryEntity l WHERE " +
+           "(:userId IS NULL OR l.userId = :userId) AND " +
+           "(:attemptedEmail IS NULL OR l.attemptedEmail LIKE LOWER(CONCAT('%', :attemptedEmail, '%'))) AND " +
+           "(:status IS NULL OR l.status = :status) AND " +
+           "(:fechaDesde IS NULL OR l.createdAt >= :fechaDesde) AND " +
+           "(:fechaHasta IS NULL OR l.createdAt <= :fechaHasta)")
+    long countByFilters(
+            @Param("userId") UUID userId,
+            @Param("attemptedEmail") String attemptedEmail,
+            @Param("status") StatusLogin status,
+            @Param("fechaDesde") LocalDateTime fechaDesde,
+            @Param("fechaHasta") LocalDateTime fechaHasta);
 }

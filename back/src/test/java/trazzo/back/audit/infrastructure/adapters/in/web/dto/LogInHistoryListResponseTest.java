@@ -15,16 +15,16 @@ class LogInHistoryListResponseTest {
     @Test
     void shouldCreateFromPaginatedResult() {
         var now = LocalDateTime.now();
-        var entry1 = new LogInHistoryResult(1L, "u1", "a@b.com", StatusLogin.SUCCES,
+        var entry1 = new LogInHistoryResult("1", "u1", "a@b.com", StatusLogin.SUCCES,
                 "ip1", "ua1", now);
-        var entry2 = new LogInHistoryResult(2L, "u2", "c@d.com", StatusLogin.FAILED_WRONG_PASSWORD,
+        var entry2 = new LogInHistoryResult("2", "u2", "c@d.com", StatusLogin.FAILED_WRONG_PASSWORD,
                 "ip2", "ua2", now);
         var paginated = new PaginatedResult<LogInHistoryResult>(List.of(entry1, entry2), 1, 10, 2, 1);
 
         var response = LogInHistoryListResponse.from(paginated);
 
         assertThat(response.content()).hasSize(2);
-        assertThat(response.content().get(0).id()).isEqualTo(1L);
+        assertThat(response.content().get(0).id()).isEqualTo("1");
         assertThat(response.content().get(1).attemptedEmail()).isEqualTo("c@d.com");
         assertThat(response.page()).isEqualTo(1);
         assertThat(response.size()).isEqualTo(10);

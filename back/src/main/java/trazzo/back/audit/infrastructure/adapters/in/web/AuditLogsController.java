@@ -35,7 +35,7 @@ public class AuditLogsController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AuditLogDetailResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<AuditLogDetailResponse> findById(@PathVariable String id) {
         var result = auditLogUseCase.findById(id);
         return ResponseEntity.ok(AuditLogDetailResponse.from(result));
     }

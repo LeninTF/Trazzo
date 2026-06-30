@@ -13,6 +13,7 @@ import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.Audi
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -38,7 +39,8 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     }
 
     @Override
-    public Optional<Audit> findById(Long id) {
-        return Optional.empty();
+    public Optional<Audit> findById(String id) {
+        return jpaRepository.findById(UUID.fromString(id))
+                .map(AuditMapper::toDomain);
     }
 }

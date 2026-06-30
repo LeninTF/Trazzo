@@ -16,12 +16,12 @@ class AuditLogDetailResponseTest {
         var now = LocalDateTime.now();
         var previous = Map.<String, Object>of("name", "old");
         var updated = Map.<String, Object>of("name", "new");
-        var result = new AuditLogDetailResult(1L, "User", "usr-1", Action.CREATE,
+        var result = new AuditLogDetailResult("1", "User", "usr-1", Action.CREATE,
                 "uid-1", "/api/users", "10.0.0.1", "curl/7.0", previous, updated, now);
 
         var response = AuditLogDetailResponse.from(result);
 
-        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.id()).isEqualTo("1");
         assertThat(response.entity()).isEqualTo("User");
         assertThat(response.entityId()).isEqualTo("usr-1");
         assertThat(response.action()).isEqualTo(Action.CREATE);

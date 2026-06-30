@@ -48,7 +48,7 @@ class AuditRepositoryAdapterTest {
 
     @Test
     void findById_shouldReturnEmpty() {
-        var result = adapter.findById(1L);
+        var result = adapter.findById("00000000-0000-0000-0000-000000000001");
 
         assertThat(result).isEmpty();
     }

@@ -22,24 +22,17 @@ public class SessionRepositoryAdapter implements SessionRepositoryPort {
 
     @Override
     public List<Session> findAll(String tenantUserId, SessionState state, String ipAddress, Pageable pageable) {
-        var allEntities = jpaRepository.findAll(pageable);
-        return allEntities.stream()
+        Boolean stateBool = state != null ? state == SessionState.ACTIVE : null;
+        return jpaRepository.findByFilters(tenantUserId, stateBool, ipAddress, pageable)
+                .stream()
                 .map(SessionMapper::toDomain)
-                .filter(s -> tenantUserId == null || tenantUserId.equals(s.getTenantUserId()))
-                .filter(s -> state == null || state == s.getState())
-                .filter(s -> ipAddress == null || ipAddress.equals(s.getIpAddress()))
                 .toList();
     }
 
     @Override
     public long count(String tenantUserId, SessionState state, String ipAddress) {
-        var allEntities = jpaRepository.findAll();
-        return allEntities.stream()
-                .map(SessionMapper::toDomain)
-                .filter(s -> tenantUserId == null || tenantUserId.equals(s.getTenantUserId()))
-                .filter(s -> state == null || state == s.getState())
-                .filter(s -> ipAddress == null || ipAddress.equals(s.getIpAddress()))
-                .count();
+        Boolean stateBool = state != null ? state == SessionState.ACTIVE : null;
+        return jpaRepository.countByFilters(tenantUserId, stateBool, ipAddress);
     }
 
     @Override

@@ -13,12 +13,12 @@ class LogInHistoryResponseTest {
     @Test
     void shouldCreateFromResult() {
         var now = LocalDateTime.now();
-        var result = new LogInHistoryResult(1L, "usr-1", "test@test.com",
+        var result = new LogInHistoryResult("1", "usr-1", "test@test.com",
                 StatusLogin.SUCCES, "192.168.1.1", "Chrome/120", now);
 
         var response = LogInHistoryResponse.from(result);
 
-        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.id()).isEqualTo("1");
         assertThat(response.userId()).isEqualTo("usr-1");
         assertThat(response.attemptedEmail()).isEqualTo("test@test.com");
         assertThat(response.status()).isEqualTo(StatusLogin.SUCCES);

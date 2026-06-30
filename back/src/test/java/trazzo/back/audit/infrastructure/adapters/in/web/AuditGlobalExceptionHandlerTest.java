@@ -81,7 +81,7 @@ class AuditGlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500))
                 .andExpect(jsonPath("$.error").value("Internal Server Error"))
-                .andExpect(jsonPath("$.message").value("Unexpected error"));
+                .andExpect(jsonPath("$.message").value("Unexpected error occurred"));
     }
 
     @Test

@@ -31,13 +31,13 @@ class LoginHistoryServiceTest {
     @Test
     void findByIdReturnsLogInHistory() {
         var now = LocalDateTime.now();
-        var log = new LogInHistory(1L, "user-1", "email@test.com", StatusLogin.SUCCES,
+        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCES,
                 "192.168.1.1", "Mozilla/5.0", now);
-        when(loginHistoryRepository.findById(1L)).thenReturn(Optional.of(log));
+        when(loginHistoryRepository.findById("1")).thenReturn(Optional.of(log));
 
-        var result = service.findById(1L);
+        var result = service.findById("1");
 
-        assertEquals(1L, result.id());
+        assertEquals("1", result.id());
         assertEquals("user-1", result.userId());
         assertEquals("email@test.com", result.attemptedEmail());
         assertEquals(StatusLogin.SUCCES, result.status());
@@ -48,15 +48,15 @@ class LoginHistoryServiceTest {
 
     @Test
     void findByIdThrowsWhenNotFound() {
-        when(loginHistoryRepository.findById(99L)).thenReturn(Optional.empty());
+        when(loginHistoryRepository.findById("99")).thenReturn(Optional.empty());
 
-        assertThrows(AuditNotFoundException.class, () -> service.findById(99L));
+        assertThrows(AuditNotFoundException.class, () -> service.findById("99"));
     }
 
     @Test
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
-        var log = new LogInHistory(1L, "user-1", "email@test.com", StatusLogin.SUCCES,
+        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCES,
                 "192.168.1.1", "Mozilla/5.0", now);
         when(loginHistoryRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(log));
         when(loginHistoryRepository.count(null, null, null, null, null)).thenReturn(1L);

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import trazzo.back.audit.domain.model.tenant.SessionState;
 
 import java.time.LocalDateTime;
 
@@ -47,8 +48,9 @@ public class SessionEntity {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean state;
+    private SessionState state;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

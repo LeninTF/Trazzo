@@ -12,10 +12,10 @@ class AuditTest {
         var now = LocalDateTime.now();
         var previous = Map.<String, Object>of("name", "old");
         var value = Map.<String, Object>of("name", "new");
-        var a = Audit.restore(1L, "User", "42", Action.UPDATE, "user-1",
+        var a = Audit.restore("1", "User", "42", Action.UPDATE, "user-1",
                 "/api/users/42", "192.168.1.1", "Mozilla/5.0",
                 previous, value, now);
-        assertEquals(1L, a.getId());
+        assertEquals("1", a.getId());
         assertEquals("User", a.getEntity());
         assertEquals("42", a.getEntityId());
         assertEquals(Action.UPDATE, a.getAction());

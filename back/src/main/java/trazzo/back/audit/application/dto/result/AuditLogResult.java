@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record AuditLogResult(
-    Long id,
+    String id,
     String eventId,
     LocalDateTime fecha,
     String tenant,

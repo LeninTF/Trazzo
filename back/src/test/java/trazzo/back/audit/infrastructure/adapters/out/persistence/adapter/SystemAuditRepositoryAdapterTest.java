@@ -67,7 +67,7 @@ class SystemAuditRepositoryAdapterTest {
     @Test
     void findAll_shouldReturnFilteredDomains() {
         var entity = createEntity();
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, null, null, null, null, PageRequest.of(0, 10));
@@ -78,13 +78,9 @@ class SystemAuditRepositoryAdapterTest {
 
     @Test
     void findAll_shouldFilterByModule() {
-        var entity1 = createEntity();
-        var entity2 = createEntity();
-        entity2.setId(2L);
-        entity2.setModulo("Roles");
-        entity2.setDescripcion("Fetched roles");
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
-                .thenReturn(new PageImpl<>(List.of(entity1, entity2)));
+        var entity = createEntity();
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, "Users", null, null, null, PageRequest.of(0, 10));
 
@@ -95,7 +91,7 @@ class SystemAuditRepositoryAdapterTest {
     @Test
     void findAll_shouldFilterBySearchTerm() {
         var entity = createEntity();
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll("Fetched", null, null, null, null, PageRequest.of(0, 10));
@@ -106,7 +102,7 @@ class SystemAuditRepositoryAdapterTest {
     @Test
     void findAll_shouldFilterByDateRange() {
         var entity = createEntity();
-        when(jpaRepository.findAll((org.springframework.data.domain.Pageable) any()))
+        when(jpaRepository.findByFilters(any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
         var result = adapter.findAll(null, null, null,
@@ -117,8 +113,8 @@ class SystemAuditRepositoryAdapterTest {
 
     @Test
     void count_shouldReturnFilteredCount() {
-        var entity = createEntity();
-        when(jpaRepository.findAll()).thenReturn(List.of(entity));
+        when(jpaRepository.countByFilters(any(), any(), any(), any()))
+                .thenReturn(1L);
 
         var result = adapter.count(null, null, null, null, null);
 
@@ -131,7 +127,8 @@ class SystemAuditRepositoryAdapterTest {
         var entity2 = createEntity();
         entity2.setId(2L);
         entity2.setModulo("Roles");
-        when(jpaRepository.findAll()).thenReturn(List.of(entity1, entity2));
+        when(jpaRepository.countByFilters(any(), any(), any(), any()))
+                .thenReturn(1L);
 
         var result = adapter.count(null, "Users", null, null, null);
 

@@ -16,7 +16,7 @@ class AuditMapperTest {
     @Test
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
-        var domain = Audit.restore(1L, "User", "user-1", Action.CREATE, "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        var domain = Audit.restore("00000000-0000-0000-0000-000000000001", "User", "user-1", Action.CREATE, "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "/api/users", "192.168.1.1", "Mozilla/5.0",
                 Map.of("old", "value1"), Map.of("new", "value2"), now);
 
@@ -67,7 +67,7 @@ class AuditMapperTest {
     @Test
     void shouldMapRoundTrip() {
         var now = LocalDateTime.now();
-        var original = Audit.restore(1L, "Permission", "perm-1", Action.DELETE, null,
+        var original = Audit.restore("00000000-0000-0000-0000-000000000001", "Permission", "perm-1", Action.DELETE, null,
                 "/api/permissions", "192.168.1.100", null,
                 Map.of(), new java.util.HashMap<>(Map.of("enabled", false)), now);
 

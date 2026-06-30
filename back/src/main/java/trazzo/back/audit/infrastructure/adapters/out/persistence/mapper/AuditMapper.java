@@ -17,7 +17,11 @@ public final class AuditMapper {
 
     public static AuditEntity toEntity(Audit domain) {
         var entity = new AuditEntity();
-        entity.setId(UUID.randomUUID());
+        if (domain.getId() != null) {
+            entity.setId(UUID.fromString(domain.getId()));
+        } else {
+            entity.setId(UUID.randomUUID());
+        }
         entity.setEntity(domain.getEntity());
         entity.setEntityId(domain.getEntityId());
         entity.setAction(domain.getAction());
@@ -33,7 +37,7 @@ public final class AuditMapper {
 
     public static Audit toDomain(AuditEntity entity) {
         return Audit.restore(
-                0L,
+                entity.getId() != null ? entity.getId().toString() : null,
                 entity.getEntity(),
                 entity.getEntityId(),
                 entity.getAction(),

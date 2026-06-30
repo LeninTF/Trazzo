@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public class Audit {
-    private Long id;
+    private String id;
     private String entity;
     private String entityId;
     private Action action;
@@ -19,7 +19,7 @@ public class Audit {
     public Audit() {}
 
     public static Audit restore(
-            Long id, String entity, String entityId, Action action,
+            String id, String entity, String entityId, Action action,
             String userId, String endpoint, String ipAdress,
             String userAgent, Map<String, Object> previousValue,
             Map<String, Object> newValue, LocalDateTime createdAt) {
@@ -38,7 +38,7 @@ public class Audit {
         return audit;
     }
 
-    public Long getId() { return id; }
+    public String getId() { return id; }
     public String getEntity() { return entity; }
     public String getEntityId() { return entityId; }
     public Action getAction() { return action; }

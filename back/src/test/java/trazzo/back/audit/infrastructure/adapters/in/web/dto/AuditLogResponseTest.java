@@ -15,13 +15,13 @@ class AuditLogResponseTest {
         var now = LocalDateTime.now();
         var oldValue = Map.<String, Object>of("field1", "old");
         var newValue = Map.<String, Object>of("field1", "new");
-        var result = new AuditLogResult(1L, "evt-1", now, "tenant1", "tnt-1",
+        var result = new AuditLogResult("1", "evt-1", now, "tenant1", "tnt-1",
                 "jdoe", "jdoe@test.com", "UPDATE", "USER", "User", "usr-1",
                 "192.168.1.1", "Mozilla/5.0", oldValue, newValue);
 
         var response = AuditLogResponse.from(result);
 
-        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.id()).isEqualTo("1");
         assertThat(response.eventId()).isEqualTo("evt-1");
         assertThat(response.fecha()).isEqualTo(now);
         assertThat(response.tenant()).isEqualTo("tenant1");
@@ -41,7 +41,7 @@ class AuditLogResponseTest {
     @Test
     void equalsAndHashCode() {
         var now = LocalDateTime.now();
-        var result = new AuditLogResult(1L, "evt-1", now, "t1", "t1", "u", "e",
+        var result = new AuditLogResult("1", "evt-1", now, "t1", "t1", "u", "e",
                 "CREATE", "T", "E", "1", "ip", "ua", null, null);
         var a = AuditLogResponse.from(result);
         var b = AuditLogResponse.from(result);

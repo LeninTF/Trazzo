@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 public record AuditLogResponse(
-    Long id,
+    String id,
     @JsonProperty("event_id") String eventId,
     LocalDateTime fecha,
     String tenant,

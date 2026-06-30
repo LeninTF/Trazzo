@@ -8,5 +8,5 @@ import trazzo.back.audit.domain.model.master.Action;
 public interface AuditLogUseCase {
     PaginatedResult<AuditLogResult> findAll(String searchTerm, String tenantId, Action action,
         String entity, String fechaDesde, String fechaHasta, int page, int size, String sort);
-    AuditLogDetailResult findById(Long id);
+    AuditLogDetailResult findById(String id);
 }

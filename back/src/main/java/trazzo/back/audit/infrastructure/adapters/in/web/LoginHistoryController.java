@@ -34,7 +34,7 @@ public class LoginHistoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LogInHistoryResponse> findById(@PathVariable Long id) {
+    public ResponseEntity<LogInHistoryResponse> findById(@PathVariable String id) {
         var result = loginHistoryUseCase.findById(id);
         return ResponseEntity.ok(LogInHistoryResponse.from(result));
     }

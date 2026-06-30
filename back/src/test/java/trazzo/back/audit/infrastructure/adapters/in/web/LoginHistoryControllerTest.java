@@ -31,7 +31,7 @@ class LoginHistoryControllerTest {
     LoginHistoryUseCase loginHistoryUseCase;
 
     private static LogInHistoryResult aResult() {
-        return new LogInHistoryResult(1L, "u-1", "user@test.com",
+        return new LogInHistoryResult("1", "u-1", "user@test.com",
                 StatusLogin.SUCCES, "192.168.1.1", "Mozilla/5.0", LocalDateTime.now());
     }
 
@@ -43,7 +43,7 @@ class LoginHistoryControllerTest {
 
         mockMvc.perform(get("/audit/login-history"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].id").value("1"))
                 .andExpect(jsonPath("$.content[0].user_id").value("u-1"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.totalElements").value(1));
@@ -51,17 +51,17 @@ class LoginHistoryControllerTest {
 
     @Test
     void getById_shouldReturn200WhenFound() throws Exception {
-        when(loginHistoryUseCase.findById(1L)).thenReturn(aResult());
+        when(loginHistoryUseCase.findById("1")).thenReturn(aResult());
 
         mockMvc.perform(get("/audit/login-history/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.status").value("SUCCES"));
     }
 
     @Test
     void getById_shouldReturn404WhenNotFound() throws Exception {
-        when(loginHistoryUseCase.findById(anyLong())).thenThrow(new AuditNotFoundException("Login history not found: 999"));
+        when(loginHistoryUseCase.findById(anyString())).thenThrow(new AuditNotFoundException("Login history not found: 999"));
 
         mockMvc.perform(get("/audit/login-history/999"))
                 .andExpect(status().isNotFound())
