@@ -6,10 +6,10 @@ services:
     image: ghcr.io/lenintf/trazzo/trazzo-back:main
     container_name: trazzo-backend
     restart: unless-stopped
-    # ports:
-    #   - "8080:8080" # Solo si necesitamos acceso directo, normalmente va a ir detrás del proxy
+    ports:
+      - "8080:8080" # Acceso directo al backend para esta fase temprana sin tunnel
     env_file:
-      - .env # Aquí se inyectan las credenciales de BD y JWT en producción
+      - .env # Aqui se inyectan las credenciales de BD y JWT en produccion
     networks:
       - trazzo-network
     healthcheck:
@@ -23,23 +23,25 @@ services:
     image: ghcr.io/lenintf/trazzo/trazzo-front:main
     container_name: trazzo-frontend
     restart: unless-stopped
+    ports:
+      - "4000:8080"
     networks:
       - trazzo-network
     depends_on:
       trazzo-backend:
-        condition: service_healthy # Espera a que Spring Boot esté 100% arriba para iniciar
-  
-  # TODO: El túnel de Cloudflare se ejecuta como un contenedor separado que se conecta a la misma red interna, lo que le permite enrutar tráfico hacia el backend sin exponer puertos directamente al host.
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: trazzo-tunnel
-    restart: unless-stopped
-    command: tunnel run
-    environment:
-      - TUNNEL_TOKEN=${TUNNEL_TOKEN} # Token del túnel (Cloudflare). Definirlo en .env o como variable de entorno del host.
-    networks:
-      - trazzo-network
-  
+        condition: service_healthy # Espera a que Spring Boot este 100% arriba para iniciar
+
+  # TODO: Reactivar este servicio cuando volvamos a exponer el stack por Cloudflare Tunnel.
+  # cloudflared:
+  #   image: cloudflare/cloudflared:latest
+  #   container_name: trazzo-tunnel
+  #   restart: unless-stopped
+  #   command: tunnel run
+  #   environment:
+  #     - TUNNEL_TOKEN=${TUNNEL_TOKEN} # Token del tunel (Cloudflare). Definirlo en .env o como variable de entorno del host.
+  #   networks:
+  #     - trazzo-network
+
 networks:
   trazzo-network:
     driver: bridge

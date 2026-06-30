@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
     },
     {
       provide: API_BASE_URL,
-      useValue: 'https://api.trazzo.pe/api/v1'
+      useValue: '/api/v1'
     }
   ]
 };
