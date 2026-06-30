@@ -1,6 +1,5 @@
 package trazzo.back.corehr.domain.model.attendance;
 
-import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
