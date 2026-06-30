@@ -1,7 +1,7 @@
 package trazzo.back.organization.domain.model.roles;
 
 import lombok.Getter;
-import trazzo.back.organization.domain.exception.OrgValidationException;
+import trazzo.back.organization.domain.OrgValidation;
 
 import java.time.LocalDateTime;
 
@@ -16,8 +16,8 @@ public class TenantUserRole {
 
     private TenantUserRole(Long id, Long tenantUserId, String roleId, Long departmentId, LocalDateTime createdAt) {
         this.id = id;
-        this.tenantUserId = requireId(tenantUserId, "tenantUserId");
-        this.roleId = requireText(roleId, "roleId");
+        this.tenantUserId = OrgValidation.requireId(tenantUserId, "tenantUserId");
+        this.roleId = OrgValidation.requireText(roleId, "roleId");
         this.departmentId = departmentId;
         this.createdAt = createdAt;
     }
@@ -29,19 +29,5 @@ public class TenantUserRole {
     public static TenantUserRole restore(Long id, Long tenantUserId, String roleId,
                                           Long departmentId, LocalDateTime createdAt) {
         return new TenantUserRole(id, tenantUserId, roleId, departmentId, createdAt);
-    }
-
-    private static Long requireId(Long value, String fieldName) {
-        if (value == null) {
-            throw new OrgValidationException(fieldName + " is required");
-        }
-        return value;
-    }
-
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new OrgValidationException(fieldName + " is required");
-        }
-        return value.trim();
     }
 }

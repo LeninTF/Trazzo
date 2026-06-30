@@ -40,8 +40,7 @@ public class AreaService implements AreaUseCase {
     public PaginatedResult<AreaResult> findAll(Long branchId, Boolean state, String search, int page, int size, String sort) {
         var items = areaRepository.findAll(branchId, state, search, page, size, sort);
         var total = areaRepository.count(branchId, state, search);
-        var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
-        return new PaginatedResult<>(items.stream().map(this::toResult).toList(), page, size, total, totalPages);
+        return PaginatedResult.of(items.stream().map(this::toResult).toList(), page, size, total);
     }
 
     @Override

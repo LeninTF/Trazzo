@@ -3,7 +3,7 @@ package trazzo.back.organization.domain.model.business;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import trazzo.back.organization.domain.exception.OrgValidationException;
+import trazzo.back.organization.domain.OrgValidation;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +23,8 @@ public class Department {
     private Department(Long id, Long areaId, String name, String description, boolean state,
                        LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id;
-        this.areaId = requireId(areaId, "areaId");
-        this.name = requireText(name, "name");
+        this.areaId = OrgValidation.requireId(areaId, "areaId");
+        this.name = OrgValidation.requireText(name, "name");
         this.description = description;
         this.state = state;
         this.createdAt = createdAt;
@@ -43,7 +43,7 @@ public class Department {
     }
 
     public void update(String name, String description) {
-        this.name = requireText(name, "name");
+        this.name = OrgValidation.requireText(name, "name");
         this.description = description;
         touch();
     }
@@ -56,19 +56,5 @@ public class Department {
 
     private void touch() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    private static Long requireId(Long value, String fieldName) {
-        if (value == null) {
-            throw new OrgValidationException(fieldName + " is required");
-        }
-        return value;
-    }
-
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new OrgValidationException(fieldName + " is required");
-        }
-        return value.trim();
     }
 }

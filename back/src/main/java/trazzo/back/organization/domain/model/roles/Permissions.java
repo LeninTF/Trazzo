@@ -3,7 +3,7 @@ package trazzo.back.organization.domain.model.roles;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import trazzo.back.organization.domain.exception.OrgValidationException;
+import trazzo.back.organization.domain.OrgValidation;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,7 +22,7 @@ public class Permissions {
     private Permissions(String id, String name, String description, String masterFeaturesCode,
                         LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
-        this.name = requireText(name, "name");
+        this.name = OrgValidation.requireText(name, "name");
         this.description = description;
         this.masterFeaturesCode = masterFeaturesCode;
         this.createdAt = createdAt;
@@ -40,16 +40,10 @@ public class Permissions {
     }
 
     public void update(String name, String description, String masterFeaturesCode) {
-        this.name = requireText(name, "name");
+        this.name = OrgValidation.requireText(name, "name");
         this.description = description;
         this.masterFeaturesCode = masterFeaturesCode;
         this.updatedAt = LocalDateTime.now();
     }
 
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new OrgValidationException(fieldName + " is required");
-        }
-        return value.trim();
-    }
 }
