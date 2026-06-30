@@ -129,7 +129,7 @@ function handleRoute(
     handleAuth(method, u, req, page, size, qp) ??
     handleTenantUserCollection(method, u, req, page, size, qp) ??
     handleTenantUserItem(method, u, req, page, size, qp) ??
-    handleMasterUsers(method, u, req, page, size, qp) ??
+    handleSaasUsers(method, u, req, page, size, qp) ??
     handleSecurity(method, u, req, page, size, qp) ??
     handleAsistencia(method, u, req, page, size, qp) ??
     handleIncidenteTipos(method, u, req, page, size, qp) ??
@@ -239,33 +239,22 @@ function handleTenantUserCollection(
   );
 }
 
-function handleTenantUserItem(
+function handleTenantUserById(
   method: string, u: string, req: HttpRequest<unknown>,
   _page: number, _size: number, _qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
-  if (!u.startsWith('/usuarios')) return null;
-
   const uidMatch = /^\/usuarios\/(\d+)$/.exec(u);
-  if (uidMatch) {
-    const id = Number.parseInt(uidMatch[1], 10);
-    const user = mockTenantUsers.find(u => u.id === id);
-    if (!user) return _error(404, 'Usuario no encontrado');
+  if (!uidMatch) return null;
 
-    if (method === 'GET') return ok(user);
-    if (method === 'PUT') return ok({ ...user, ...(req.body as object), id });
-    if (method === 'PATCH') {
-      const body = req.body as Record<string, unknown>;
-      if (body['estado'] && body['estado'] === 'INACTIVO') {
-        return ok<SoftDeleteResponse>({
-          id: user.id,
-          status: 'INACTIVO',
-          deleted_at: new Date().toISOString(),
-          deleted_by: 1,
-        });
-      }
-      return ok({ ...user, ...body, id });
-    }
-    if (method === 'DELETE') {
+  const id = Number.parseInt(uidMatch[1], 10);
+  const user = mockTenantUsers.find(u => u.id === id);
+  if (!user) return _error(404, 'Usuario no encontrado');
+
+  if (method === 'GET') return ok(user);
+  if (method === 'PUT') return ok({ ...user, ...(req.body as object), id });
+  if (method === 'PATCH') {
+    const body = req.body as Record<string, unknown>;
+    if (body['estado'] && body['estado'] === 'INACTIVO') {
       return ok<SoftDeleteResponse>({
         id: user.id,
         status: 'INACTIVO',
@@ -273,28 +262,60 @@ function handleTenantUserItem(
         deleted_by: 1,
       });
     }
+    return ok({ ...user, ...body, id });
   }
+  if (method === 'DELETE') {
+    return ok<SoftDeleteResponse>({
+      id: user.id,
+      status: 'INACTIVO',
+      deleted_at: new Date().toISOString(),
+      deleted_by: 1,
+    });
+  }
+  return null;
+}
 
+function handleTenantUserRole(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const rolMatch = /^\/usuarios\/(\d+)\/rol$/.exec(u);
-  if (rolMatch && method === 'PUT') {
-    const id = Number.parseInt(rolMatch[1], 10);
-    const user = mockTenantUsers.find(u => u.id === id);
-    if (!user) return _error(404, 'Usuario no encontrado');
-    const body = req.body as { role_id?: number };
-    const rolesDisponibles = mockTenantUsers.map(u => u.rol);
-    const newRole = rolesDisponibles.find(r => r.id === body.role_id);
-    return ok({ ...user, rol: newRole ?? user.rol });
-  }
+  if (!(rolMatch && method === 'PUT')) return null;
 
+  const id = Number.parseInt(rolMatch[1], 10);
+  const user = mockTenantUsers.find(u => u.id === id);
+  if (!user) return _error(404, 'Usuario no encontrado');
+  const body = req.body as { role_id?: number };
+  const rolesDisponibles = mockTenantUsers.map(u => u.rol);
+  const newRole = rolesDisponibles.find(r => r.id === body.role_id);
+  return ok({ ...user, rol: newRole ?? user.rol });
+}
+
+function handleTenantUserPassword(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const passMatch = /^\/usuarios\/(\d+)\/password$/.exec(u);
   if (passMatch && method === 'PATCH') {
     return noContent();
   }
-
   return null;
 }
 
-function handleMasterUsers(
+function handleTenantUserItem(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/usuarios')) return null;
+  return (
+    handleTenantUserById(method, u, req, page, size, qp) ??
+    handleTenantUserRole(method, u, req, page, size, qp) ??
+    handleTenantUserPassword(method, u, req, page, size, qp) ??
+    null
+  );
+}
+
+function handleSaasUsers(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -370,7 +391,7 @@ function handleAsistencia(
   return null;
 }
 
-function handleIncidenteTipos(
+function handleIncidenteTipoListCreate(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -394,17 +415,34 @@ function handleIncidenteTipos(
     };
     return created(newType);
   }
-
-  const itMatch = /^\/incidentes\/tipos\/(\d+)$/.exec(u);
-  if (itMatch) {
-    const id = Number.parseInt(itMatch[1], 10);
-    const tipo = mockIncidentTypes.find(t => t.id === id);
-    if (!tipo) return _error(404, 'Tipo de incidencia no encontrado');
-    if (method === 'GET') return ok(tipo);
-    if (method === 'PATCH') return ok({ ...tipo, ...(req.body as object), id });
-  }
-
   return null;
+}
+
+function handleIncidenteTipoById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const itMatch = /^\/incidentes\/tipos\/(\d+)$/.exec(u);
+  if (!itMatch) return null;
+
+  const id = Number.parseInt(itMatch[1], 10);
+  const tipo = mockIncidentTypes.find(t => t.id === id);
+  if (!tipo) return _error(404, 'Tipo de incidencia no encontrado');
+  if (method === 'GET') return ok(tipo);
+  if (method === 'PATCH') return ok({ ...tipo, ...(req.body as object), id });
+  return null;
+}
+
+function handleIncidenteTipos(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/incidentes/tipos')) return null;
+  return (
+    handleIncidenteTipoListCreate(method, u, req, page, size, qp) ??
+    handleIncidenteTipoById(method, u, req, page, size, qp) ??
+    null
+  );
 }
 
 function handleIncidenteListCreate(
@@ -544,7 +582,7 @@ function handleIncidenteEvidencias(
   return null;
 }
 
-function handleCorehrShifts(
+function handleCorehrShiftListCreate(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -570,21 +608,38 @@ function handleCorehrShifts(
     };
     return created(newShift);
   }
-
-  const shiftMatch = /^\/corehr\/shifts\/(\d+)$/.exec(u);
-  if (shiftMatch) {
-    const id = Number.parseInt(shiftMatch[1], 10);
-    const shift = mockShifts.find(s => s.id === id);
-    if (!shift) return _error(404, 'Turno no encontrado');
-    if (method === 'GET') return ok(shift);
-    if (method === 'PATCH') return ok({ ...shift, ...(req.body as object), id });
-    if (method === 'DELETE') return noContent();
-  }
-
   return null;
 }
 
-function handleCorehrSchedules(
+function handleCorehrShiftById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const shiftMatch = /^\/corehr\/shifts\/(\d+)$/.exec(u);
+  if (!shiftMatch) return null;
+
+  const id = Number.parseInt(shiftMatch[1], 10);
+  const shift = mockShifts.find(s => s.id === id);
+  if (!shift) return _error(404, 'Turno no encontrado');
+  if (method === 'GET') return ok(shift);
+  if (method === 'PATCH') return ok({ ...shift, ...(req.body as object), id });
+  if (method === 'DELETE') return noContent();
+  return null;
+}
+
+function handleCorehrShifts(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/shifts')) return null;
+  return (
+    handleCorehrShiftListCreate(method, u, req, page, size, qp) ??
+    handleCorehrShiftById(method, u, req, page, size, qp) ??
+    null
+  );
+}
+
+function handleCorehrScheduleListCreate(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -612,18 +667,35 @@ function handleCorehrSchedules(
     };
     return created(newSchedule);
   }
-
-  const schedMatch = /^\/corehr\/schedules\/(\d+)$/.exec(u);
-  if (schedMatch) {
-    const id = Number.parseInt(schedMatch[1], 10);
-    const schedule = mockSchedules.find(s => s.id === id);
-    if (!schedule) return _error(404, 'Schedule no encontrado');
-    if (method === 'GET') return ok(schedule);
-    if (method === 'PATCH') return ok({ ...schedule, ...(req.body as object), id });
-    if (method === 'DELETE') return noContent();
-  }
-
   return null;
+}
+
+function handleCorehrScheduleById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const schedMatch = /^\/corehr\/schedules\/(\d+)$/.exec(u);
+  if (!schedMatch) return null;
+
+  const id = Number.parseInt(schedMatch[1], 10);
+  const schedule = mockSchedules.find(s => s.id === id);
+  if (!schedule) return _error(404, 'Schedule no encontrado');
+  if (method === 'GET') return ok(schedule);
+  if (method === 'PATCH') return ok({ ...schedule, ...(req.body as object), id });
+  if (method === 'DELETE') return noContent();
+  return null;
+}
+
+function handleCorehrSchedules(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/schedules')) return null;
+  return (
+    handleCorehrScheduleListCreate(method, u, req, page, size, qp) ??
+    handleCorehrScheduleById(method, u, req, page, size, qp) ??
+    null
+  );
 }
 
 function handleCorehrTolerancias(
@@ -701,7 +773,7 @@ function handleCorehrUserSchedules(
   return null;
 }
 
-function handleCorehrDevices(
+function handleCorehrDeviceListCreate(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -730,22 +802,39 @@ function handleCorehrDevices(
       created_at: new Date().toISOString(),
     });
   }
-
-  const devMatch = /^\/corehr\/devices\/(\d+)$/.exec(u);
-  if (devMatch) {
-    const id = Number.parseInt(devMatch[1], 10);
-    const device = mockDevices.find(d => d.id === id);
-    if (!device) return _error(404, 'Dispositivo no encontrado');
-    if (method === 'GET') return ok(device);
-    if (method === 'PATCH') return ok({ ...device, ...(req.body as object), id });
-    if (method === 'DELETE') return noContent();
-  }
-
   return null;
 }
 
-function handleCorehrBiometria(
+function handleCorehrDeviceById(
   method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const devMatch = /^\/corehr\/devices\/(\d+)$/.exec(u);
+  if (!devMatch) return null;
+
+  const id = Number.parseInt(devMatch[1], 10);
+  const device = mockDevices.find(d => d.id === id);
+  if (!device) return _error(404, 'Dispositivo no encontrado');
+  if (method === 'GET') return ok(device);
+  if (method === 'PATCH') return ok({ ...device, ...(req.body as object), id });
+  if (method === 'DELETE') return noContent();
+  return null;
+}
+
+function handleCorehrDevices(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/devices')) return null;
+  return (
+    handleCorehrDeviceListCreate(method, u, req, page, size, qp) ??
+    handleCorehrDeviceById(method, u, req, page, size, qp) ??
+    null
+  );
+}
+
+function handleCorehrBiometriaList(
+  method: string, u: string, _req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   if (!u.startsWith('/corehr/biometria')) return null;
@@ -758,44 +847,72 @@ function handleCorehrBiometria(
     if (qp['activo'] === 'false') filtered = filtered.filter(b => !b.activo);
     return ok(paginate(filtered, page, size));
   }
-
-  if (u === '/corehr/biometria/enroll/iniciar' && method === 'POST') {
-    return created({
-      enroll_token: 'mock-enroll-token-001',
-      device_id: (req.body as { device_id: number }).device_id,
-      tenant_user_id: (req.body as { tenant_user_id: number }).tenant_user_id,
-      finger_index: (req.body as { finger_index: number }).finger_index,
-      expires_at: new Date(Date.now() + 120000).toISOString(),
-    });
-  }
-
-  if (u === '/corehr/biometria/enroll/completar' && method === 'POST') {
-    return created({
-      id: mockBiometria.length + 1,
-      tenant_user_id: 1,
-      device_id: 1,
-      device_code: 'ZK-C2PRO-00123',
-      finger_index: 1,
-      activo: true,
-      capturado_en: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-  }
-
-  const bioMatch = /^\/corehr\/biometria\/(\d+)$/.exec(u);
-  if (bioMatch && method === 'PATCH') {
-    const id = Number.parseInt(bioMatch[1], 10);
-    const bio = mockBiometria.find(b => b.id === id);
-    if (!bio) return _error(404, 'Registro biométrico no encontrado');
-    return ok({ ...bio, ...(req.body as object), id });
-  }
-
   return null;
 }
 
-function handleCorehrAttendance(
+function handleCorehrBiometriaEnrollIniciar(
   method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!(u === '/corehr/biometria/enroll/iniciar' && method === 'POST')) return null;
+
+  return created({
+    enroll_token: 'mock-enroll-token-001',
+    device_id: (req.body as { device_id: number }).device_id,
+    tenant_user_id: (req.body as { tenant_user_id: number }).tenant_user_id,
+    finger_index: (req.body as { finger_index: number }).finger_index,
+    expires_at: new Date(Date.now() + 120000).toISOString(),
+  });
+}
+
+function handleCorehrBiometriaEnrollCompletar(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!(u === '/corehr/biometria/enroll/completar' && method === 'POST')) return null;
+
+  return created({
+    id: mockBiometria.length + 1,
+    tenant_user_id: 1,
+    device_id: 1,
+    device_code: 'ZK-C2PRO-00123',
+    finger_index: 1,
+    activo: true,
+    capturado_en: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+}
+
+function handleCorehrBiometriaById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const bioMatch = /^\/corehr\/biometria\/(\d+)$/.exec(u);
+  if (!(bioMatch && method === 'PATCH')) return null;
+
+  const id = Number.parseInt(bioMatch[1], 10);
+  const bio = mockBiometria.find(b => b.id === id);
+  if (!bio) return _error(404, 'Registro biométrico no encontrado');
+  return ok({ ...bio, ...(req.body as object), id });
+}
+
+function handleCorehrBiometria(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/biometria')) return null;
+  return (
+    handleCorehrBiometriaList(method, u, req, page, size, qp) ??
+    handleCorehrBiometriaEnrollIniciar(method, u, req, page, size, qp) ??
+    handleCorehrBiometriaEnrollCompletar(method, u, req, page, size, qp) ??
+    handleCorehrBiometriaById(method, u, req, page, size, qp) ??
+    null
+  );
+}
+
+function handleCorehrAttendanceList(
+  method: string, u: string, _req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   if (!u.startsWith('/corehr/attendance')) return null;
@@ -809,20 +926,37 @@ function handleCorehrAttendance(
     if (qp['branch_id']) filtered = filtered.filter(() => true);
     return ok(paginate(filtered, page, size));
   }
-
-  const attMatch = /^\/corehr\/attendance\/(.+)$/.exec(u);
-  if (attMatch) {
-    const id = attMatch[1];
-    const record = mockAttendance.find(a => a.id === id);
-    if (!record) return _error(404, 'Registro de asistencia no encontrado');
-    if (method === 'GET') return ok(record);
-    if (method === 'PATCH') return ok({ ...record, ...(req.body as object) });
-  }
-
   return null;
 }
 
-function handleCorehrNonWorkingDays(
+function handleCorehrAttendanceById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const attMatch = /^\/corehr\/attendance\/(.+)$/.exec(u);
+  if (!attMatch) return null;
+
+  const id = attMatch[1];
+  const record = mockAttendance.find(a => a.id === id);
+  if (!record) return _error(404, 'Registro de asistencia no encontrado');
+  if (method === 'GET') return ok(record);
+  if (method === 'PATCH') return ok({ ...record, ...(req.body as object) });
+  return null;
+}
+
+function handleCorehrAttendance(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/attendance')) return null;
+  return (
+    handleCorehrAttendanceList(method, u, req, page, size, qp) ??
+    handleCorehrAttendanceById(method, u, req, page, size, qp) ??
+    null
+  );
+}
+
+function handleCorehrNonWorkingDayListCreate(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
@@ -845,17 +979,34 @@ function handleCorehrNonWorkingDays(
       created_at: new Date().toISOString(),
     });
   }
-
-  const nwdMatch = /^\/corehr\/non-working-days\/(\d+)$/.exec(u);
-  if (nwdMatch) {
-    const id = Number.parseInt(nwdMatch[1], 10);
-    const day = mockNonWorkingDays.find(d => d.id === id);
-    if (!day) return _error(404, 'Día no laborable no encontrado');
-    if (method === 'PATCH') return ok({ ...day, ...(req.body as object), id });
-    if (method === 'DELETE') return noContent();
-  }
-
   return null;
+}
+
+function handleCorehrNonWorkingDayById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const nwdMatch = /^\/corehr\/non-working-days\/(\d+)$/.exec(u);
+  if (!nwdMatch) return null;
+
+  const id = Number.parseInt(nwdMatch[1], 10);
+  const day = mockNonWorkingDays.find(d => d.id === id);
+  if (!day) return _error(404, 'Día no laborable no encontrado');
+  if (method === 'PATCH') return ok({ ...day, ...(req.body as object), id });
+  if (method === 'DELETE') return noContent();
+  return null;
+}
+
+function handleCorehrNonWorkingDays(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/non-working-days')) return null;
+  return (
+    handleCorehrNonWorkingDayListCreate(method, u, req, page, size, qp) ??
+    handleCorehrNonWorkingDayById(method, u, req, page, size, qp) ??
+    null
+  );
 }
 
 function handleCorehrTenantContacts(
