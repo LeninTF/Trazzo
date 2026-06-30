@@ -2,7 +2,7 @@ name: Gobernanza - Freno de Emergencia (Code Freeze)
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 # Permisos necesarios para que la acción pueda leer las alertas de seguridad de tu repo
 permissions:

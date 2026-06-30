@@ -2,9 +2,9 @@ name: Seguridad - Escáner de Secretos (Gitleaks)
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read         # Leer código e historial git

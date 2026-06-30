@@ -2,7 +2,7 @@ name: CI/CD Backend Spring Boot
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
   push:
     branches: [ "master" ]
     paths:
