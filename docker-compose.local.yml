@@ -44,6 +44,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: trazzo_dev_db
+    ports:
+      - "5433:5432"
     networks:
       - trazzo-local-net
 
