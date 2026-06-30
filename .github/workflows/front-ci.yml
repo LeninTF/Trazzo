@@ -107,5 +107,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha # Usa el caché nativo de GitHub Actions
-          cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max,ignore-error=true
