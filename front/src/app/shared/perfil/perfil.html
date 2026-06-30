@@ -1,3 +1,23 @@
+@if (loading()) {
+<div class="perfil-wrapper d-flex justify-content-center align-items-center" style="min-height: 400px;">
+    <div class="text-center">
+        <output class="spinner-border text-primary" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Cargando...</span>
+        </output>
+        <p class="mt-3 text-muted">Cargando perfil...</p>
+    </div>
+</div>
+} @else if (error()) {
+<div class="perfil-wrapper d-flex justify-content-center align-items-center" style="min-height: 400px;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+        <button class="perfil-btn perfil-btn--primary mt-2" (click)="cargarUsuario()">
+            <i class="bi bi-arrow-clockwise"></i> Reintentar
+        </button>
+    </div>
+</div>
+} @else {
 <div class="perfil-wrapper">
     @if (mensajeExito) {
     <div class="perfil-toast perfil-toast--success">
@@ -25,21 +45,70 @@
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="perfil-card rounded-4 p-4 text-center">
-                <div class="perfil-avatar">
+                <button class="perfil-avatar" (click)="fotoInput.click()" (keydown.enter)="fotoInput.click()" type="button">
+                    @if (fotoPreview) {
+                    <img [src]="fotoPreview" alt="Foto de perfil" class="perfil-avatar__img" />
+                    } @else {
                     <i class="bi bi-person-fill"></i>
+                    }
+                    <div class="perfil-avatar__overlay">
+                        <i class="bi bi-camera-fill"></i>
+                    </div>
+                </button>
+                <input #fotoInput id="foto-input" type="file" accept="image/*" (change)="onFotoSeleccionada($event)" hidden aria-label="Seleccionar foto de perfil" />
+                @if (selectedFile && !fotoSubiendo()) {
+                <button class="perfil-btn perfil-btn--primary btn-sm mb-3" (click)="subirFoto()">
+                    <i class="bi bi-check-lg"></i> Usar esta foto
+                </button>
+                }
+                @if (fotoSubiendo()) {
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Procesando...
+                    </small>
                 </div>
+                }
+                @if (editando) {
+                <div class="mb-3">
+                    <label class="perfil-field-label" for="perfil-foto-url">URL de la foto</label>
+                    <input id="perfil-foto-url" class="perfil-input" [ngModel]="usuarioEdit.img_url"
+                        (ngModelChange)="onUrlCambio($event)" placeholder="https://ejemplo.com/foto.jpg" />
+                </div>
+                }
                 <h2 class="perfil-name">{{ usuario.nombres }} {{ usuario.apellidos }}</h2>
                 <span class="perfil-badge">{{ usuario.rol }}</span>
 
                 <hr class="my-4" />
 
+                @if (!usuario['sede']) {
                 <div class="perfil-info-item">
-                    <i class="bi bi-globe2"></i>
+                    <i class="bi bi-shield"></i>
                     <div>
-                        <span class="perfil-info-label">Rol SASS</span>
-                        <span class="perfil-info-value">{{ usuario['rolSass'] }}</span>
+                        <span class="perfil-info-label">Rol</span>
+                        <span class="perfil-info-value">{{ usuario.rol }}</span>
                     </div>
                 </div>
+                }
+
+                @if (usuario['sede']) {
+                <div class="perfil-info-item">
+                    <i class="bi bi-building"></i>
+                    <div>
+                        <span class="perfil-info-label">Sede</span>
+                        <span class="perfil-info-value">{{ usuario['sede'] }}</span>
+                    </div>
+                </div>
+                }
+
+                @if (usuario['area']) {
+                <div class="perfil-info-item">
+                    <i class="bi bi-diagram-3"></i>
+                    <div>
+                        <span class="perfil-info-label">Area</span>
+                        <span class="perfil-info-value">{{ usuario['area'] }}</span>
+                    </div>
+                </div>
+                }
 
                 <div class="perfil-info-item">
                     <i class="bi bi-calendar3"></i>
@@ -86,10 +155,14 @@
 
                 @if (editando) {
                 <div class="d-flex gap-2 mt-4">
-                    <button class="perfil-btn perfil-btn--primary" (click)="guardarCambios()">
+                    <button class="perfil-btn perfil-btn--primary" (click)="guardarCambios()" [disabled]="guardando()">
+                        @if (guardando()) {
+                        <span class="spinner-border spinner-border-sm"></span> Guardando...
+                        } @else {
                         <i class="bi bi-check-lg"></i> Guardar Cambios
+                        }
                     </button>
-                    <button class="perfil-btn perfil-btn--outline" (click)="cancelarEdicion()">
+                    <button class="perfil-btn perfil-btn--outline" (click)="cancelarEdicion()" [disabled]="guardando()">
                         <i class="bi bi-x-lg"></i> Cancelar
                     </button>
                 </div>
@@ -103,9 +176,9 @@
 
                 <div class="row g-4 mt-2">
                     <div class="col-md-6">
-                        <label class="perfil-field-label" for="perfil-correo">Correo Electr&oacute;nico</label>
+                        <label class="perfil-field-label" for="perfil-email">Correo Electr&oacute;nico</label>
                         @if (editando) {
-                        <input id="perfil-correo" class="perfil-input" [(ngModel)]="usuarioEdit.email" placeholder="correo@ejemplo.com" />
+                        <input id="perfil-email" class="perfil-input" [(ngModel)]="usuarioEdit.email" placeholder="correo@ejemplo.com" />
                         } @else {
                         <div class="perfil-field-value">{{ usuario.email }}</div>
                         }
@@ -173,3 +246,4 @@
         </div>
     </div>
 </div>
+}

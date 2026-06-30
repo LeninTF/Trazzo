@@ -748,6 +748,21 @@
   }
 }
 
+@media (max-width: 767.98px) {
+  .roles-sidebar__list {
+    grid-template-columns: 1fr;
+  }
+
+  .roles-module__body {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-card {
+    width: 95%;
+    max-width: none;
+  }
+}
+
 @media (max-width: 575.98px) {
   .roles-main__topbar {
     flex-direction: column;

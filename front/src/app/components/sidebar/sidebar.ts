@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Component, computed, inject, OnDestroy } from '@angular/core';
+import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { RoleService } from '../../services/role.service';
+import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -8,8 +9,22 @@ import { RoleService } from '../../services/role.service';
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
 })
-export class Sidebar {
+export class Sidebar implements OnDestroy {
   protected readonly roleService = inject(RoleService);
+  private readonly router = inject(Router);
+  private readonly sub: Subscription;
+
+  constructor() {
+    this.sub = this.router.events.pipe(
+      filter(e => e instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.roleService.closeSidebar();
+    });
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+  }
 
   protected roleUrlPrefix = computed(() => {
     const role = this.roleService.role();

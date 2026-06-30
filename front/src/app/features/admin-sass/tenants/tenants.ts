@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../services/toast.service';
@@ -51,6 +51,8 @@ interface ConfiguracionTecnica {
   styleUrl: './tenants.css',
 })
 export class Tenants {
+  readonly loading = signal(false);
+  readonly error = signal('');
 
   private readonly toastService = inject(ToastService);
   

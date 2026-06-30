@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
@@ -42,6 +42,8 @@ interface Metricas {
   styleUrl: './log-auditoria.css',
 })
 export class LogAuditoria {
+  readonly loading = signal(false);
+  readonly error = signal('');
 
   private readonly toastService = inject(ToastService);
   private readonly exportService = inject(ExportService);

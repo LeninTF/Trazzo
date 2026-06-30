@@ -1,4 +1,12 @@
 <!-- log-auditoria.html -->
+@if (error()) {
+<div class="log-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="log-wrapper">
 
   <!-- HEADER -->
@@ -88,15 +96,15 @@
         <tbody>
           @for (log of logsPaginado; track log.id) {
             <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)" (keydown.enter)="seleccionarLog(log)" role="button" tabindex="0">
-              <td class="log-table__date">
+              <td class="log-table__date" data-label="Fecha/Hora">
                 <strong>{{ log.fecha | date:'dd/MM/yyyy' }}</strong>
                 <div class="small text-muted">{{ log.hora }}</div>
               </td>
-              <td class="log-table__tenant">
+              <td class="log-table__tenant" data-label="Tenant">
                 <strong>{{ log.tenant }}</strong>
                 <div class="small text-muted">{{ log.tenantId }}</div>
               </td>
-              <td class="log-table__user">
+              <td class="log-table__user" data-label="Usuario">
                 <div class="user-initials" [style.backgroundColor]="log.userColor">
                   {{ log.userInitials }}
                 </div>
@@ -105,16 +113,16 @@
                   <div class="small text-muted">{{ log.userEmail }}</div>
                 </div>
               </td>
-              <td>
+              <td data-label="Acción">
                 <span class="action-badge" [class.action-badge--success]="log.tipo === 'exito'" [class.action-badge--warning]="log.tipo === 'advertencia'" [class.action-badge--danger]="log.tipo === 'error'">
                   {{ log.accion }}
                 </span>
               </td>
-              <td>
+              <td data-label="Entidad">
                 {{ log.entidad }}
                 <div class="small text-muted">{{ log.entidadId }}</div>
               </td>
-              <td class="log-table__detail">
+              <td class="log-table__detail" data-label="">
                 <button class="btn-action" title="Ver detalles" (click)="seleccionarLog(log); $event.stopPropagation()">
                   <i class="bi bi-chevron-right"></i>
                 </button>
@@ -134,6 +142,7 @@
     }
   </div>
 </div>
+}
 
 <!-- ========================================== -->
 <!-- PANEL DE DETALLES (LATERAL DERECHO)        -->

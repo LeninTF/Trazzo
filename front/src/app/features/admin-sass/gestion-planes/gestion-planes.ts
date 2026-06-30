@@ -51,6 +51,9 @@ interface Suscripcion {
   styleUrl: './gestion-planes.css',
 })
 export class GestionPlanes {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly fb = new FormBuilder();
   private readonly toastService = inject(ToastService);
   private readonly exportService = inject(ExportService);

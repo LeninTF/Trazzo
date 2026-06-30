@@ -1,3 +1,11 @@
+@if (error()) {
+<div class="solicitudes-page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="solicitudes-page">
 	<div class="page-header">
 		<div>
@@ -147,12 +155,12 @@
 					<tbody>
 						@for (s of paginated('pendiente'); track s.id) {
 							<tr>
-								<td class="td-primary">{{ s.institucion }}</td>
-								<td>{{ s.contacto }}</td>
-								<td>{{ s.plan }}</td>
-								<td>{{ s.fecha }}</td>
-								<td><span class="status-badge status-badge--pending">Pendiente</span></td>
-								<td class="td-actions">
+								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
+								<td data-label="Contacto">{{ s.contacto }}</td>
+								<td data-label="Plan">{{ s.plan }}</td>
+								<td data-label="Fecha">{{ s.fecha }}</td>
+								<td data-label="Estado"><span class="status-badge status-badge--pending">Pendiente</span></td>
+								<td class="td-actions" data-label="Acciones">
 									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
 									<button type="button" class="btn-action btn-action--approve" (click)="confirmarAprobar(s.id)" title="Aprobar"><i class="bi bi-check-lg"></i></button>
 									<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
@@ -179,12 +187,12 @@
 					<tbody>
 						@for (s of paginated('aprobado'); track s.id) {
 							<tr>
-								<td class="td-primary">{{ s.institucion }}</td>
-								<td>{{ s.contacto }}</td>
-								<td>{{ s.plan }}</td>
-								<td>{{ s.fecha }}</td>
-								<td><span class="status-badge status-badge--approved">Aprobado</span></td>
-								<td class="td-actions">
+								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
+								<td data-label="Contacto">{{ s.contacto }}</td>
+								<td data-label="Plan">{{ s.plan }}</td>
+								<td data-label="Fecha">{{ s.fecha }}</td>
+								<td data-label="Estado"><span class="status-badge status-badge--approved">Aprobado</span></td>
+								<td class="td-actions" data-label="Acciones">
 									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
 									<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
 								</td>
@@ -210,12 +218,12 @@
 					<tbody>
 						@for (s of paginated('rechazado'); track s.id) {
 							<tr>
-								<td class="td-primary">{{ s.institucion }}</td>
-								<td>{{ s.contacto }}</td>
-								<td>{{ s.plan }}</td>
-								<td>{{ s.fecha }}</td>
-								<td><span class="status-badge status-badge--rejected">Rechazado</span></td>
-								<td class="td-actions">
+								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
+								<td data-label="Contacto">{{ s.contacto }}</td>
+								<td data-label="Plan">{{ s.plan }}</td>
+								<td data-label="Fecha">{{ s.fecha }}</td>
+								<td data-label="Estado"><span class="status-badge status-badge--rejected">Rechazado</span></td>
+								<td class="td-actions" data-label="Acciones">
 									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
 									<button type="button" class="btn-action btn-action--approve" (click)="confirmarReconsiderar(s.id)" title="Reconsiderar"><i class="bi bi-arrow-counterclockwise"></i></button>
 								</td>
@@ -303,3 +311,4 @@
 	</div>
 
 </div>
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../services/toast.service';
@@ -42,6 +42,9 @@ interface Metricas {
 })
 export class Monitoreo implements OnInit, OnDestroy {
   
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
   
@@ -248,7 +251,7 @@ export class Monitoreo implements OnInit, OnDestroy {
     const nuevoEscanerObj = this.crearObjetoEscaner();
     this.escaneres.push(nuevoEscanerObj);
     this.actualizarMetricasEscaner();
-    this.agregarEventoDeSistema(`📡 Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
+    this.agregarEventoDeSistema(`Nuevo escáner registrado: ${nuevoEscanerObj.nombre} - ${nuevoEscanerObj.ubicacion}`);
     this.mostrarToast(`Escáner "${this.nuevoEscaner.nombre}" registrado correctamente`);
     this.limpiarFormularioEscaner();
     this.modalService.hide('modalRegistrarEscaner');
@@ -256,7 +259,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   private validarFormularioEscaner(): boolean {
     if (!this.nuevoEscaner.nombre || !this.nuevoEscaner.ubicacion) {
-      this.mostrarToast('⚠️ Complete los campos obligatorios: Nombre y Ubicación');
+      this.mostrarToast('Complete los campos obligatorios: Nombre y Ubicación');
       return false;
     }
     return true;
@@ -396,7 +399,7 @@ export class Monitoreo implements OnInit, OnDestroy {
    */
   refrescarDatos(): void {
     this.actualizarDatosTiempoReal();
-    this.mostrarToast('🔄 Datos actualizados correctamente');
+    this.mostrarToast('Datos actualizados correctamente');
   }
 
   private static secureRandomInt(max: number): number {

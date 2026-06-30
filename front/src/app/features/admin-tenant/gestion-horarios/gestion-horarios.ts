@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, signal } from '@angular/core';
 import { TurnosComponent } from './turnos/turnos';
 import { AsignacionComponent } from './asignacion/asignacion';
 import { FeriadosComponent } from './feriados/feriados';
@@ -10,6 +10,9 @@ import { FeriadosComponent } from './feriados/feriados';
   styleUrl: './gestion-horarios.css',
 })
 export class GestionHorarios {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   @ViewChild(TurnosComponent) turnosComponent!: TurnosComponent;
 
   activeSection: string = 'turnos';

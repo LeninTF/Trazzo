@@ -24,6 +24,9 @@ type ToastType = 'success' | 'error' | 'info';
   styleUrl: './solicitudes.css',
 })
 export class Solicitudes {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
 
