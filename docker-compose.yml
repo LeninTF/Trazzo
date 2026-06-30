@@ -1,6 +1,50 @@
 version: '3.8'
 
 services:
+  trazzo-db:
+    image: postgres:15-alpine
+    container_name: trazzo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      APP_DB_NAME: ${APP_DB_NAME}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - trazzo-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - trazzo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  trazzo-db-ssh:
+    image: lscr.io/linuxserver/openssh-server:latest
+    container_name: trazzo-db-ssh
+    restart: unless-stopped
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: ${TZ}
+      USER_NAME: ${SSH_USERNAME}
+      PUBLIC_KEY: ${SSH_PUBLIC_KEY}
+      PASSWORD_ACCESS: "false"
+      SUDO_ACCESS: "false"
+      LOG_STDOUT: "true"
+    ports:
+      - "2222:2222"
+    networks:
+      - trazzo-network
+    depends_on:
+      trazzo-db:
+        condition: service_healthy
+
   trazzo-backend:
     # 1. Se descarga la imagen del registro.
     image: ghcr.io/lenintf/trazzo/trazzo-back:main
@@ -10,8 +54,20 @@ services:
       - "8080:8080" # Acceso directo al backend para esta fase temprana sin tunnel
     env_file:
       - .env # Aqui se inyectan las credenciales de BD y JWT en produccion
+    environment:
+      DB_URL: jdbc:postgresql://trazzo-db:5432/${APP_DB_NAME}
+      DB_USER: ${APP_DB_USER}
+      DB_PASSWORD: ${APP_DB_PASSWORD}
+      PROVISIONING_ADMIN_URL: jdbc:postgresql://trazzo-db:5432/${POSTGRES_DB}
+      PROVISIONING_ADMIN_USER: ${POSTGRES_USER}
+      PROVISIONING_ADMIN_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      PROVISIONING_DB_HOST: trazzo-db
+      PROVISIONING_DB_PORT: 5432
     networks:
       - trazzo-network
+    depends_on:
+      trazzo-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -45,3 +101,6 @@ services:
 networks:
   trazzo-network:
     driver: bridge
+
+volumes:
+  trazzo-postgres-data:
