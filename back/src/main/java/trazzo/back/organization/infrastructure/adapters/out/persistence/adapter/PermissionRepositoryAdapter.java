@@ -1,0 +1,77 @@
+package trazzo.back.organization.infrastructure.adapters.out.persistence.adapter;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Component;
+import trazzo.back.organization.application.port.out.PermissionRepositoryPort;
+import trazzo.back.organization.domain.model.roles.Permissions;
+import trazzo.back.organization.infrastructure.adapters.out.persistence.mapper.OrgMapper;
+import trazzo.back.organization.infrastructure.adapters.out.persistence.repository.PermissionJpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Component
+@RequiredArgsConstructor
+public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
+
+    private final PermissionJpaRepository permissionRepo;
+
+    @Override
+    public Permissions save(Permissions permission) {
+        return OrgMapper.toDomain(permissionRepo.save(OrgMapper.toEntity(permission)));
+    }
+
+    @Override
+    public Optional<Permissions> findById(String id) {
+        return permissionRepo.findById(id).map(OrgMapper::toDomain);
+    }
+
+    @Override
+    public List<Permissions> findAll(String search, int page, int size, String sort) {
+        var pageable = PageRequest.of(page, size, parseSort(sort));
+        return permissionRepo.findByFilters(blankToNull(search), pageable)
+                .stream().map(OrgMapper::toDomain).toList();
+    }
+
+    @Override
+    public long count(String search) {
+        return permissionRepo.findByFilters(blankToNull(search), PageRequest.of(0, 1)).getTotalElements();
+    }
+
+    @Override
+    public boolean existsByName(String name) {
+        return permissionRepo.existsByName(name);
+    }
+
+    @Override
+    public boolean existsByNameAndIdNot(String name, String id) {
+        return permissionRepo.existsByNameAndIdNot(name, id);
+    }
+
+    @Override
+    public void deleteById(String id) {
+        permissionRepo.deleteById(id);
+    }
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) return Sort.by(Sort.Direction.ASC, "name");
+        var parts = sort.split(",");
+        var direction = parts.length > 1 && "desc".equalsIgnoreCase(parts[1].trim())
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(direction, mapField(parts[0].trim()));
+    }
+
+    private String mapField(String field) {
+        return switch (field) {
+            case "created_at", "createdAt" -> "createdAt";
+            case "updated_at", "updatedAt" -> "updatedAt";
+            default -> "name";
+        };
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
+    }
+}

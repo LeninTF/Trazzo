@@ -1,4 +1,4 @@
-package trazzo.back.corehr.infrastructure.adapters.out.persistence.entity;
+package trazzo.back.organization.infrastructure.adapters.out.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,18 +9,21 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "branch")
+@Table(name = "area")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class BranchRefEntity extends AuditableEntity {
+public class AreaEntity extends OrgAuditableEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Column(name = "branch_id", nullable = false)
+    private Long branchId;
+
+    @Column(nullable = false, length = 255)
     private String name;
 
     @Column(columnDefinition = "TEXT")
