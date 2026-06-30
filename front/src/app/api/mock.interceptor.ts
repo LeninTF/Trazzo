@@ -107,6 +107,15 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
   }
 }
 
+type RouteHandler = (
+  method: string,
+  u: string,
+  req: HttpRequest<unknown>,
+  page: number,
+  size: number,
+  qp: Record<string, string>,
+) => Observable<HttpEvent<unknown>> | null;
+
 function handleRoute(
   method: string,
   url: string,
@@ -116,21 +125,53 @@ function handleRoute(
   qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   const u = url.split('?')[0];
+  return (
+    handleAuth(method, u, req, page, size, qp) ??
+    handleTenantUserCollection(method, u, req, page, size, qp) ??
+    handleTenantUserItem(method, u, req, page, size, qp) ??
+    handleMasterUsers(method, u, req, page, size, qp) ??
+    handleSecurity(method, u, req, page, size, qp) ??
+    handleAsistencia(method, u, req, page, size, qp) ??
+    handleIncidenteTipos(method, u, req, page, size, qp) ??
+    handleIncidenteListCreate(method, u, req, page, size, qp) ??
+    handleIncidenteById(method, u, req, page, size, qp) ??
+    handleIncidenteEstadoActions(method, u, req, page, size, qp) ??
+    handleIncidenteEvidencias(method, u, req, page, size, qp) ??
+    handleCorehrShifts(method, u, req, page, size, qp) ??
+    handleCorehrSchedules(method, u, req, page, size, qp) ??
+    handleCorehrTolerancias(method, u, req, page, size, qp) ??
+    handleCorehrUserSchedules(method, u, req, page, size, qp) ??
+    handleCorehrDevices(method, u, req, page, size, qp) ??
+    handleCorehrBiometria(method, u, req, page, size, qp) ??
+    handleCorehrAttendance(method, u, req, page, size, qp) ??
+    handleCorehrNonWorkingDays(method, u, req, page, size, qp) ??
+    handleCorehrTenantContacts(method, u, req, page, size, qp) ??
+    handleCorehrUserDepartments(method, u, req, page, size, qp) ??
+    handleWebsocket(method, u, req, page, size, qp) ??
+    null
+  );
+}
 
-  // ==========================================
-  // AUTH
-  // ==========================================
-  if (u === '/auth/login' && method === 'POST') {
+function handleAuth(
+  _method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u === '/auth/login' && _method === 'POST') {
     return ok<AuthResponse>({
       ...mockAuthResponse,
       accessToken: 'mock-token-002',
       usuario: { ...mockUsuarioProfile, ultimo_acceso: new Date().toISOString() },
     });
   }
+  return null;
+}
 
-  // ==========================================
-  // USUARIOS (TENANT)
-  // ==========================================
+function handleTenantUserCollection(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/usuarios')) return null;
+
   if (u === '/usuarios' && method === 'GET') {
     let filtered = [...mockTenantUsers];
     if (qp['status']) filtered = filtered.filter(u => u.estado === qp['status']);
@@ -143,7 +184,6 @@ function handleRoute(
       );
     }
     if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
-    // scope
     return ok(paginate(filtered, page, size));
   }
 
@@ -169,7 +209,6 @@ function handleRoute(
     return created(newUser);
   }
 
-  // /usuarios/me
   if (u === '/usuarios/me') {
     if (method === 'GET') return ok(mockTenantUsers[0]);
     if (method === 'PATCH') {
@@ -177,7 +216,15 @@ function handleRoute(
     }
   }
 
-  // /usuarios/{id}
+  return null;
+}
+
+function handleTenantUserItem(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/usuarios')) return null;
+
   const uidMatch = /^\/usuarios\/(\d+)$/.exec(u);
   if (uidMatch) {
     const id = Number.parseInt(uidMatch[1], 10);
@@ -208,7 +255,6 @@ function handleRoute(
     }
   }
 
-  // /usuarios/{id}/rol
   const rolMatch = /^\/usuarios\/(\d+)\/rol$/.exec(u);
   if (rolMatch && method === 'PUT') {
     const id = Number.parseInt(rolMatch[1], 10);
@@ -220,15 +266,20 @@ function handleRoute(
     return ok({ ...user, rol: newRole ?? user.rol });
   }
 
-  // /usuarios/{id}/password
   const passMatch = /^\/usuarios\/(\d+)\/password$/.exec(u);
   if (passMatch && method === 'PATCH') {
     return noContent();
   }
 
-  // ==========================================
-  // SAAS / MASTER USERS
-  // ==========================================
+  return null;
+}
+
+function handleMasterUsers(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/saas/')) return null;
+
   if (u === '/saas/users' && method === 'GET') {
     let filtered = [...mockMasterUsers];
     if (qp['search']) {
@@ -254,10 +305,8 @@ function handleRoute(
     });
   }
 
-  // /saas/users/me
   if (u === '/saas/users/me' && method === 'GET') return ok(mockMasterUsers[0]);
 
-  // /saas/users/{id}
   const mUidMatch = /^\/saas\/users\/(\d+)$/.exec(u);
   if (mUidMatch) {
     const id = Number.parseInt(mUidMatch[1], 10);
@@ -275,26 +324,38 @@ function handleRoute(
     }
   }
 
-  // ==========================================
-  // SECURITY
-  // ==========================================
-  if (u === '/security/public-key' && method === 'GET') {
+  return null;
+}
+
+function handleSecurity(
+  _method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u === '/security/public-key' && _method === 'GET') {
     return ok(mockPublicKey);
   }
+  return null;
+}
 
-  // ==========================================
-  // ASISTENCIA (biometric middleware)
-  // ==========================================
+function handleAsistencia(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   if (u === '/asistencia/marcar' && method === 'POST') {
     return ok(mockAttendance[0]);
   }
   if (u === '/asistencia/sync' && method === 'POST') {
     return accepted<MessageResponse>({ message: 'Lote aceptado para procesamiento en segundo plano.', status: 'queued' });
   }
+  return null;
+}
 
-  // ==========================================
-  // INCIDENTES - TIPOS
-  // ==========================================
+function handleIncidenteTipos(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/incidentes/tipos')) return null;
+
   if (u === '/incidentes/tipos' && method === 'GET') {
     let filtered = [...mockIncidentTypes];
     if (qp['activo'] === 'true') filtered = filtered.filter(t => t.activo);
@@ -314,7 +375,6 @@ function handleRoute(
     return created(newType);
   }
 
-  // /incidentes/tipos/{id}
   const itMatch = /^\/incidentes\/tipos\/(\d+)$/.exec(u);
   if (itMatch) {
     const id = Number.parseInt(itMatch[1], 10);
@@ -324,9 +384,15 @@ function handleRoute(
     if (method === 'PATCH') return ok({ ...tipo, ...(req.body as object), id });
   }
 
-  // ==========================================
-  // INCIDENTES
-  // ==========================================
+  return null;
+}
+
+function handleIncidenteListCreate(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/incidentes')) return null;
+
   if (u === '/incidentes' && method === 'GET') {
     let filtered = [...mockIncidencias];
     if (qp['state']) filtered = filtered.filter(i => i.state === qp['state']);
@@ -368,7 +434,13 @@ function handleRoute(
     return created(newIncident);
   }
 
-  // /incidentes/{id}
+  return null;
+}
+
+function handleIncidenteById(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const incMatch = /^\/incidentes\/(\d+)$/.exec(u);
   if (incMatch) {
     const id = Number.parseInt(incMatch[1], 10);
@@ -380,8 +452,13 @@ function handleRoute(
       return ok({ ...incident, ...(req.body as object), id });
     }
   }
+  return null;
+}
 
-  // /incidentes/{id}/estado
+function handleIncidenteEstadoActions(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const incStateMatch = /^\/incidentes\/(\d+)\/estado$/.exec(u);
   if (incStateMatch && method === 'PATCH') {
     const id = Number.parseInt(incStateMatch[1], 10);
@@ -405,7 +482,21 @@ function handleRoute(
     } as typeof incident);
   }
 
-  // /incidentes/{id}/evidencias
+  if (/^\/incidentes\/(\d+)\/notificar$/.test(u) && method === 'POST') {
+    return accepted<MessageResponse>({ message: 'Notificación encolada para envío.', status: 'queued' });
+  }
+
+  if (/^\/incidentes\/(\d+)\/justificar$/.test(u) && method === 'POST') {
+    return accepted<MessageResponse>({ message: 'Proceso de justificación encolado.', status: 'queued' });
+  }
+
+  return null;
+}
+
+function handleIncidenteEvidencias(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const evMatch = /^\/incidentes\/(\d+)\/evidencias$/.exec(u);
   if (evMatch) {
     const id = Number.parseInt(evMatch[1], 10);
@@ -427,23 +518,18 @@ function handleRoute(
     }
   }
 
-  // /incidentes/{id}/evidencias/{evidenceId}
   const evDelMatch = /^\/incidentes\/(\d+)\/evidencias\/(\d+)$/.exec(u);
   if (evDelMatch && method === 'DELETE') return noContent();
 
-  // /incidentes/{id}/notificar
-  if (/^\/incidentes\/(\d+)\/notificar$/.test(u) && method === 'POST') {
-    return accepted<MessageResponse>({ message: 'Notificación encolada para envío.', status: 'queued' });
-  }
+  return null;
+}
 
-  // /incidentes/{id}/justificar
-  if (/^\/incidentes\/(\d+)\/justificar$/.test(u) && method === 'POST') {
-    return accepted<MessageResponse>({ message: 'Proceso de justificación encolado.', status: 'queued' });
-  }
+function handleCorehrShifts(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/shifts')) return null;
 
-  // ==========================================
-  // COREHR - SHIFTS
-  // ==========================================
   if (u === '/corehr/shifts' && method === 'GET') {
     let filtered = [...mockShifts];
     if (qp['search']) {
@@ -465,7 +551,6 @@ function handleRoute(
     return created(newShift);
   }
 
-  // /corehr/shifts/{id}
   const shiftMatch = /^\/corehr\/shifts\/(\d+)$/.exec(u);
   if (shiftMatch) {
     const id = Number.parseInt(shiftMatch[1], 10);
@@ -476,9 +561,15 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - SCHEDULES
-  // ==========================================
+  return null;
+}
+
+function handleCorehrSchedules(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/schedules')) return null;
+
   if (u === '/corehr/schedules' && method === 'GET') {
     let filtered = [...mockSchedules];
     if (qp['shift_id']) filtered = filtered.filter(s => s.shift_id === Number.parseInt(qp['shift_id'], 10));
@@ -502,7 +593,6 @@ function handleRoute(
     return created(newSchedule);
   }
 
-  // /corehr/schedules/{id}
   const schedMatch = /^\/corehr\/schedules\/(\d+)$/.exec(u);
   if (schedMatch) {
     const id = Number.parseInt(schedMatch[1], 10);
@@ -513,9 +603,13 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - TOLERANCIAS
-  // ==========================================
+  return null;
+}
+
+function handleCorehrTolerancias(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const tolMatch = /^\/corehr\/schedules\/(\d+)\/tolerancias$/.exec(u);
   if (tolMatch) {
     const schedId = Number.parseInt(tolMatch[1], 10);
@@ -550,9 +644,15 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - USER SCHEDULES
-  // ==========================================
+  return null;
+}
+
+function handleCorehrUserSchedules(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/user-schedules')) return null;
+
   if (u === '/corehr/user-schedules' && method === 'GET') {
     let filtered = [...mockUserSchedules];
     if (qp['tenant_user_id']) filtered = filtered.filter(us => us.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
@@ -578,9 +678,15 @@ function handleRoute(
 
   if (/^\/corehr\/user-schedules\/(\d+)$/.test(u) && method === 'DELETE') return noContent();
 
-  // ==========================================
-  // COREHR - DEVICES
-  // ==========================================
+  return null;
+}
+
+function handleCorehrDevices(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/devices')) return null;
+
   if (u === '/corehr/devices' && method === 'GET') {
     let filtered = [...mockDevices];
     if (qp['branch_id']) filtered = filtered.filter(d => d.branch_id === Number.parseInt(qp['branch_id'], 10));
@@ -615,9 +721,15 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - BIOMETRIA
-  // ==========================================
+  return null;
+}
+
+function handleCorehrBiometria(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/biometria')) return null;
+
   if (u === '/corehr/biometria' && method === 'GET') {
     let filtered = [...mockBiometria];
     if (qp['tenant_user_id']) filtered = filtered.filter(b => b.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
@@ -659,9 +771,15 @@ function handleRoute(
     return ok({ ...bio, ...(req.body as object), id });
   }
 
-  // ==========================================
-  // COREHR - ATTENDANCE
-  // ==========================================
+  return null;
+}
+
+function handleCorehrAttendance(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/attendance')) return null;
+
   if (u === '/corehr/attendance' && method === 'GET') {
     let filtered = [...mockAttendance];
     if (qp['tenant_user_id']) filtered = filtered.filter(a => a.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
@@ -681,9 +799,15 @@ function handleRoute(
     if (method === 'PATCH') return ok({ ...record, ...(req.body as object) });
   }
 
-  // ==========================================
-  // COREHR - NON-WORKING DAYS
-  // ==========================================
+  return null;
+}
+
+function handleCorehrNonWorkingDays(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/non-working-days')) return null;
+
   if (u === '/corehr/non-working-days' && method === 'GET') {
     let filtered = [...mockNonWorkingDays];
     if (qp['is_recurring'] === 'true') filtered = filtered.filter(d => d.is_recurring);
@@ -711,9 +835,15 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - TENANT CONTACTS
-  // ==========================================
+  return null;
+}
+
+function handleCorehrTenantContacts(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/corehr/tenant-contacts')) return null;
+
   if (u === '/corehr/tenant-contacts' && method === 'GET') {
     let filtered = [...mockTenantContacts];
     if (qp['type']) filtered = filtered.filter(c => c.type === qp['type']);
@@ -748,9 +878,13 @@ function handleRoute(
     if (method === 'DELETE') return noContent();
   }
 
-  // ==========================================
-  // COREHR - USUARIOS/{id}/DEPARTAMENTOS
-  // ==========================================
+  return null;
+}
+
+function handleCorehrUserDepartments(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
   const deptMatch = /^\/corehr\/usuarios\/(\d+)\/departamentos$/.exec(u);
   if (deptMatch) {
     const userId = Number.parseInt(deptMatch[1], 10);
@@ -785,10 +919,14 @@ function handleRoute(
     });
   }
 
-  // ==========================================
-  // WEBSOCKET INFO
-  // ==========================================
-  if (u.startsWith('/ws/') && method === 'GET') {
+  return null;
+}
+
+function handleWebsocket(
+  _method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u.startsWith('/ws/') && _method === 'GET') {
     return ok({
       endpoint: u,
       protocol: 'STOMP',
@@ -799,7 +937,5 @@ function handleRoute(
       ],
     });
   }
-
-  // Fall through to next handler
   return null;
 }

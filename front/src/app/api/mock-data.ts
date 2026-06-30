@@ -1,7 +1,7 @@
 import type {
   TenantUserProfile, MasterUserProfile, PermissionProfile, TenantRoleProfile,
   UsuarioProfile, AuthResponse, IncidentTypeProfile, IncidentProfile,
-  ShiftProfile, ShiftSummary,
+  ShiftProfile,
   ScheduleProfile, ScheduleSummary, ToleranciaProfile, DeviceProfile,
   UserBiometriaProfile, AttendanceProfile, NonWorkingDayProfile,
   TenantContactProfile, TenantUserDepartmentProfile, UserScheduleProfile,
@@ -50,11 +50,11 @@ function getAttendanceState(isAbsent: boolean, isLate: boolean): 'PUNTUAL' | 'TA
 }
 
 const MOCK_DEVICE_IPS = [
-  '192.168.1.105',
-  '192.168.1.106',
-  '192.168.2.105',
-  '192.168.3.105',
-  '192.168.3.106',
+  '192.168.1.105', // NOSONAR
+  '192.168.1.106', // NOSONAR
+  '192.168.2.105', // NOSONAR
+  '192.168.3.105', // NOSONAR
+  '192.168.3.106', // NOSONAR
 ];
 
 // ==========================================
