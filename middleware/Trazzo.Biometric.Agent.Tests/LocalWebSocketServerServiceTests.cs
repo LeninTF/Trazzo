@@ -85,6 +85,20 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task OriginAuth_CuandoListaVacia_AceptaOriginNullDesdeLoopback()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(allowedOrigins: []);
+
+        using ClientWebSocket client = new();
+        client.Options.SetRequestHeader("Origin", "null");
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        Assert.Equal(WebSocketState.Open, client.State);
+        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "ok", cts.Token);
+    }
+
+    [Fact]
     public async Task OriginAuth_CuandoOrigenPermitido_AceptaConexion()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));

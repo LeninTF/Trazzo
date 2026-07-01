@@ -10,10 +10,6 @@ permissions:
   contents: read         # Leer código e historial git
   security-events: write # Subir resultados SARIF a GitHub Code Scanning
 
-permissions:
-  contents: read         # Leer código e historial git
-  security-events: write # Subir resultados SARIF a GitHub Code Scanning
-
 jobs:
   gitleaks:
     runs-on: ubuntu-latest

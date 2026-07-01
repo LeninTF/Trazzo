@@ -119,7 +119,7 @@ public sealed class LocalWebSocketServerService(
 
         string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
         string? origin = context.Request.Headers["Origin"];
-        if (!IsOriginAllowed(origin, allowedOrigins))
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
         {
             logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
             context.Response.StatusCode = 403;
@@ -420,7 +420,10 @@ public sealed class LocalWebSocketServerService(
         return remoteEndPoint?.ToString() ?? "unknown";
     }
 
-    internal static bool IsOriginAllowed(string? origin, IReadOnlyCollection<string> allowedOrigins)
+    internal static bool IsOriginAllowed(
+        string? origin,
+        IReadOnlyCollection<string> allowedOrigins,
+        IPEndPoint? remoteEndPoint = null)
     {
         if (allowedOrigins.Count > 0)
         {
@@ -431,6 +434,11 @@ public sealed class LocalWebSocketServerService(
         if (string.IsNullOrWhiteSpace(origin))
         {
             return true;
+        }
+
+        if (string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
+        {
+            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
         }
 
         return Uri.TryCreate(origin, UriKind.Absolute, out Uri? originUri) && originUri.IsLoopback;

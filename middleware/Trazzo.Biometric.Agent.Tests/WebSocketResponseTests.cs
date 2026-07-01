@@ -234,6 +234,22 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
+    public void IsOriginAllowed_WhenOriginIsNullAndRemoteIsLoopback_AllowsConnection()
+    {
+        var remoteEndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", [], remoteEndPoint));
+    }
+
+    [Fact]
+    public void IsOriginAllowed_WhenOriginIsNullAndRemoteIsExternal_RejectsConnection()
+    {
+        var remoteEndPoint = new IPEndPoint(IPAddress.Parse("203.0.113.10"), 49152);
+
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("null", [], remoteEndPoint));
+    }
+
+    [Fact]
     public void IsOriginAllowed_WhenAllowedOriginsConfigured_RequiresExactMatch()
     {
         string[] allowedOrigins = ["https://app.trazzo.pe"];
