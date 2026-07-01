@@ -58,13 +58,26 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task OriginAuth_CuandoListaVacia_AceptaCualquierOrigen()
+    public async Task OriginAuth_CuandoListaVacia_RechazaOrigenExterno()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         Start(allowedOrigins: []);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", "http://cualquier-dominio.com");
+
+        await Assert.ThrowsAnyAsync<WebSocketException>(
+            () => client.ConnectAsync(new Uri(_wsUrl), cts.Token));
+    }
+
+    [Fact]
+    public async Task OriginAuth_CuandoListaVacia_AceptaOrigenLoopback()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(allowedOrigins: []);
+
+        using ClientWebSocket client = new();
+        client.Options.SetRequestHeader("Origin", _httpUrl.TrimEnd('/'));
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
 
         Assert.Equal(WebSocketState.Open, client.State);

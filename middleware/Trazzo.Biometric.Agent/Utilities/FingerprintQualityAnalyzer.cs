@@ -77,25 +77,25 @@ public static class FingerprintQualityAnalyzer
     {
         if (coveragePercent < criteria.MinimumForegroundCoveragePercent)
         {
-            return CreateResult(false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella insuficiente.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella insuficiente.");
         }
 
         if (coveragePercent > criteria.MaximumForegroundCoveragePercent)
         {
-            return CreateResult(false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella excesiva.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella excesiva.");
         }
 
         if (contrastScore < criteria.MinimumContrastScore)
         {
-            return CreateResult(false, foregroundCount, coveragePercent, contrastScore, isCentered, "Contraste de huella insuficiente.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Contraste de huella insuficiente.");
         }
 
         if (criteria.RequireCenteredFingerprint && !isCentered)
         {
-            return CreateResult(false, foregroundCount, coveragePercent, contrastScore, false, "La huella no está centrada.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, false, "La huella no está centrada.");
         }
 
-        return CreateResult(true, foregroundCount, coveragePercent, contrastScore, isCentered, "Calidad de huella aceptable.");
+        return CreateResult(criteria, true, foregroundCount, coveragePercent, contrastScore, isCentered, "Calidad de huella aceptable.");
     }
 
     private static double CalculateAverage(byte[] imageBuffer, int totalPixels)
@@ -135,6 +135,7 @@ public static class FingerprintQualityAnalyzer
     }
 
     private static FingerprintQualityResult CreateResult(
+        FingerprintQualityCriteria criteria,
         bool isAcceptable,
         int foregroundCount,
         double coveragePercent,
@@ -148,6 +149,89 @@ public static class FingerprintQualityAnalyzer
             Math.Round(coveragePercent, 2),
             Math.Round(contrastScore, 2),
             isCentered,
-            message);
+            message)
+        {
+            ScorePercent = Math.Round(CalculateScorePercent(criteria, coveragePercent, contrastScore, isCentered), 2)
+        };
+    }
+
+    private static double CalculateScorePercent(
+        FingerprintQualityCriteria criteria,
+        double coveragePercent,
+        double contrastScore,
+        bool isCentered)
+    {
+        if (coveragePercent <= 0)
+        {
+            return 0;
+        }
+
+        double coverageScore = CalculateCoverageScore(
+            coveragePercent,
+            criteria.MinimumForegroundCoveragePercent,
+            criteria.MaximumForegroundCoveragePercent);
+        double contrastScorePercent = CalculateContrastScore(contrastScore, criteria.MinimumContrastScore);
+        double centerScore = !criteria.RequireCenteredFingerprint || isCentered ? 100 : 45;
+
+        return Clamp(coverageScore * 0.45 + contrastScorePercent * 0.45 + centerScore * 0.10, 0, 100);
+    }
+
+    private static double CalculateCoverageScore(double coveragePercent, double minimumCoverage, double maximumCoverage)
+    {
+        if (coveragePercent <= 0)
+        {
+            return 0;
+        }
+
+        double safeMinimum = Math.Max(1, minimumCoverage);
+        double safeMaximum = Math.Max(safeMinimum + 1, maximumCoverage);
+        double idealMaximum = Math.Min(safeMaximum, Math.Max(safeMinimum + 20, safeMinimum * 2.5));
+
+        if (coveragePercent < safeMinimum)
+        {
+            return Clamp(coveragePercent / safeMinimum * 75, 0, 75);
+        }
+
+        if (coveragePercent <= idealMaximum)
+        {
+            double range = Math.Max(1, idealMaximum - safeMinimum);
+            return Clamp(85 + ((coveragePercent - safeMinimum) / range * 15), 85, 100);
+        }
+
+        if (coveragePercent <= safeMaximum)
+        {
+            double range = Math.Max(1, safeMaximum - idealMaximum);
+            return Clamp(100 - ((coveragePercent - idealMaximum) / range * 25), 75, 100);
+        }
+
+        double excessRange = Math.Max(1, 100 - safeMaximum);
+        return Clamp(75 - ((coveragePercent - safeMaximum) / excessRange * 75), 0, 75);
+    }
+
+    private static double CalculateContrastScore(double contrastScore, double minimumContrast)
+    {
+        if (contrastScore <= 0)
+        {
+            return 0;
+        }
+
+        double safeMinimum = Math.Max(1, minimumContrast);
+        if (contrastScore < safeMinimum)
+        {
+            return Clamp(contrastScore / safeMinimum * 75, 0, 75);
+        }
+
+        double targetContrast = safeMinimum * 1.5;
+        if (contrastScore >= targetContrast)
+        {
+            return 100;
+        }
+
+        return Clamp(75 + ((contrastScore - safeMinimum) / Math.Max(1, targetContrast - safeMinimum) * 25), 75, 100);
+    }
+
+    private static double Clamp(double value, double minimum, double maximum)
+    {
+        return Math.Min(maximum, Math.Max(minimum, value));
     }
 }

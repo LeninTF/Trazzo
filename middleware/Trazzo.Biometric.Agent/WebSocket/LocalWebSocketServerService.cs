@@ -118,16 +118,13 @@ public sealed class LocalWebSocketServerService(
         }
 
         string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
-        if (allowedOrigins.Length > 0)
+        string? origin = context.Request.Headers["Origin"];
+        if (!IsOriginAllowed(origin, allowedOrigins))
         {
-            string? origin = context.Request.Headers["Origin"];
-            if (!Array.Exists(allowedOrigins, o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
-            {
-                logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
-                context.Response.StatusCode = 403;
-                context.Response.Close();
-                return;
-            }
+            logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
+            context.Response.StatusCode = 403;
+            context.Response.Close();
+            return;
         }
 
         using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null, _keepAliveInterval)).WebSocket;
@@ -421,6 +418,22 @@ public sealed class LocalWebSocketServerService(
     internal static string ResolveClientId(IPEndPoint? remoteEndPoint)
     {
         return remoteEndPoint?.ToString() ?? "unknown";
+    }
+
+    internal static bool IsOriginAllowed(string? origin, IReadOnlyCollection<string> allowedOrigins)
+    {
+        if (allowedOrigins.Count > 0)
+        {
+            return allowedOrigins.Any(allowed =>
+                string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (string.IsNullOrWhiteSpace(origin))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(origin, UriKind.Absolute, out Uri? originUri) && originUri.IsLoopback;
     }
 
     private async Task<object> HandleMessageAsync(

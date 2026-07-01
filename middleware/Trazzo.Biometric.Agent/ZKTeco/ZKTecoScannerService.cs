@@ -19,30 +19,34 @@ public sealed class ZKTecoScannerService(
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
     private const int DefaultTemplateBufferSize = 2048;
-    private const int DefaultCaptureTimeoutSeconds = 5;
-    private const int DefaultCapturePollingIntervalMilliseconds = 80;
-    private const int DefaultPostCaptureCooldownMilliseconds = 700;
+    private const int DefaultCaptureTimeoutSeconds = 2;
+    private const int DefaultCapturePollingIntervalMilliseconds = 50;
+    private const int DefaultPostCaptureCooldownMilliseconds = 300;
     private const int DefaultMinimumTemplateSize = 400;
     private const int DefaultEnrollmentSamples = 3;
-    private const int DefaultEnrollmentSampleTimeoutSeconds = 8;
-    private const double DefaultMinimumForegroundCoveragePercent = 18;
+    private const int DefaultEnrollmentSampleTimeoutSeconds = 3;
+    private const int MaxCaptureTimeoutSeconds = 2;
+    private const int MaxCapturePollingIntervalMilliseconds = 80;
+    private const int MaxPostCaptureCooldownMilliseconds = 300;
+    private const int MaxEnrollmentSampleTimeoutSeconds = 3;
+    private const double DefaultMinimumForegroundCoveragePercent = 8;
     private const double DefaultMaximumForegroundCoveragePercent = 75;
-    private const double DefaultMinimumContrastScore = 25;
+    private const double DefaultMinimumContrastScore = 18;
     private const double DefaultCenterTolerancePercent = 28;
     private const double DefaultContrastThresholdOffset = 15;
 
     private readonly SemaphoreSlim _sdkLock = new(1, 1);
     private readonly SemaphoreSlim _operationLock = new(1, 1);
     private readonly object _operationStateLock = new();
-    private readonly int _captureTimeoutSeconds = GetPositiveConfigurationValue(configuration, "Biometric:CaptureTimeoutSeconds", DefaultCaptureTimeoutSeconds);
-    private readonly int _capturePollingIntervalMilliseconds = GetPositiveConfigurationValue(configuration, "Biometric:CapturePollingIntervalMilliseconds", DefaultCapturePollingIntervalMilliseconds);
-    private readonly int _postCaptureCooldownMilliseconds = GetPositiveConfigurationValue(configuration, "Biometric:PostCaptureCooldownMilliseconds", DefaultPostCaptureCooldownMilliseconds);
+    private readonly int _captureTimeoutSeconds = GetStandardizedConfigurationValue(configuration, "Biometric:CaptureTimeoutSeconds", DefaultCaptureTimeoutSeconds, MaxCaptureTimeoutSeconds);
+    private readonly int _capturePollingIntervalMilliseconds = GetStandardizedConfigurationValue(configuration, "Biometric:CapturePollingIntervalMilliseconds", DefaultCapturePollingIntervalMilliseconds, MaxCapturePollingIntervalMilliseconds);
+    private readonly int _postCaptureCooldownMilliseconds = GetStandardizedConfigurationValue(configuration, "Biometric:PostCaptureCooldownMilliseconds", DefaultPostCaptureCooldownMilliseconds, MaxPostCaptureCooldownMilliseconds);
     private readonly int _templateBufferSize = GetPositiveConfigurationValue(configuration, "Biometric:TemplateBufferSize", DefaultTemplateBufferSize);
     private readonly bool _includeFingerprintImageInResponses = configuration.GetValue("Biometric:IncludeFingerprintImageInResponses", false);
     private readonly bool _requireFingerLiftBeforeNextCapture = configuration.GetValue("Biometric:RequireFingerLiftBeforeNextCapture", true);
     private readonly int _minimumTemplateSize = GetPositiveConfigurationValue(configuration, "Biometric:Quality:MinimumTemplateSize", DefaultMinimumTemplateSize);
     private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
-    private readonly int _enrollmentSampleTimeoutSeconds = GetPositiveConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds);
+    private readonly int _enrollmentSampleTimeoutSeconds = GetStandardizedConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds, MaxEnrollmentSampleTimeoutSeconds);
     private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", true);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
@@ -500,8 +504,9 @@ public sealed class ZKTecoScannerService(
 
         FingerprintQualityResult qualityResult = FingerprintQualityAnalyzer.Analyze(_imageBuffer, _imageWidth, _imageHeight, _qualityCriteria);
         logger.LogInformation(
-            "Calidad de huella. Aceptable: {IsAcceptable}. Área: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Mensaje: {Message}",
+            "Calidad de huella. Aceptable: {IsAcceptable}. Score: {ScorePercent}%. Área cruda: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Mensaje: {Message}",
             qualityResult.IsAcceptable,
+            qualityResult.ScorePercent,
             qualityResult.ForegroundCoveragePercent,
             qualityResult.ContrastScore,
             qualityResult.IsCentered,
@@ -1140,6 +1145,16 @@ public sealed class ZKTecoScannerService(
     {
         string? configuredValue = configuration[key];
         return int.TryParse(configuredValue, out int value) && value > 0 ? value : fallback;
+    }
+
+    internal static int GetStandardizedConfigurationValue(
+        IConfiguration configuration,
+        string key,
+        int fallback,
+        int maximum)
+    {
+        int value = GetPositiveConfigurationValue(configuration, key, fallback);
+        return Math.Min(value, maximum);
     }
 
     private static double GetPositiveDoubleConfigurationValue(IConfiguration configuration, string key, double fallback)

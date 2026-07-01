@@ -42,6 +42,7 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.False(result.IsAcceptable);
         Assert.Equal("Área de huella insuficiente.", result.Message);
+        Assert.Equal(0.0, result.ScorePercent);
     }
 
     [Fact]
@@ -126,6 +127,41 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.True(result.IsAcceptable);
         Assert.Equal("Calidad de huella aceptable.", result.Message);
+        Assert.Equal(100.0, result.ScorePercent);
+    }
+
+    [Fact]
+    public void Analyze_CuandoHuellaOcupaParteNormalDelZk9500_RetornaScoreAlto()
+    {
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int row = 3; row <= 6; row++)
+            for (int col = 3; col <= 7; col++)
+                buffer[row * 10 + col] = 30;
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, DefaultCriteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(20.0, result.ForegroundCoveragePercent);
+        Assert.InRange(result.ScorePercent, 90, 100);
+    }
+
+    [Fact]
+    public void Analyze_CuandoHuellaDebilPeroCentrada_RetornaAceptable()
+    {
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int row = 4; row <= 5; row++)
+            for (int col = 3; col <= 6; col++)
+                buffer[row * 10 + col] = 30;
+
+        var criteria = DefaultCriteria with { MinimumForegroundCoveragePercent = 8 };
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(8.0, result.ForegroundCoveragePercent);
+        Assert.InRange(result.ScorePercent, 85, 100);
     }
 
     [Fact]
@@ -143,6 +179,7 @@ public sealed class FingerprintQualityAnalyzerTests
         Assert.Equal(30, result.ForegroundPixelCount);
         Assert.Equal(30.0, result.ForegroundCoveragePercent);
         Assert.Equal(170.0, result.ContrastScore);
+        Assert.Equal(100.0, result.ScorePercent);
     }
 
     [Fact]

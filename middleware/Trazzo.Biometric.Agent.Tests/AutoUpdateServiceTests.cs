@@ -292,15 +292,11 @@ public sealed class AutoUpdateServiceTests
         await service.CheckAndApplyUpdateAsync(CancellationToken.None);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task CheckAndApplyUpdateAsync_WhenDownloadSucceeds_AppliesVerifiedMsi(bool includeSha256)
+    [Fact]
+    public async Task CheckAndApplyUpdateAsync_WhenDownloadSucceeds_AppliesVerifiedMsi()
     {
         byte[] msiContent = [1, 2, 3, 4, 5];
-        string expectedSha = includeSha256
-            ? Convert.ToHexStringLower(SHA256.HashData(msiContent))
-            : "";
+        string expectedSha = Convert.ToHexStringLower(SHA256.HashData(msiContent));
         SequentialHttpMessageHandler handler = new();
         handler.Enqueue(HttpStatusCode.OK, SerializeManifest("2.0.0.0", "https://updates.example.com/a.msi", expectedSha));
         handler.Enqueue(HttpStatusCode.OK, msiContent);
@@ -331,10 +327,29 @@ public sealed class AutoUpdateServiceTests
     }
 
     [Fact]
-    public async Task CheckAndApplyUpdateAsync_WhenDownloadThrows_DoesNotApplyUpdate()
+    public async Task CheckAndApplyUpdateAsync_WhenSha256IsMissing_DoesNotDownloadOrApplyUpdate()
     {
         SequentialHttpMessageHandler handler = new();
         handler.Enqueue(HttpStatusCode.OK, SerializeManifest("2.0.0.0", "https://updates.example.com/a.msi", ""));
+        using HttpClient httpClient = new(handler);
+        bool applied = false;
+        AutoUpdateService service = CreateService(
+            "https://updates.example.com/v.json",
+            httpClient,
+            getCurrentVersion: () => new Version(1, 0, 0, 0),
+            applyUpdate: _ => applied = true);
+
+        await service.CheckAndApplyUpdateAsync(CancellationToken.None);
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.False(applied);
+    }
+
+    [Fact]
+    public async Task CheckAndApplyUpdateAsync_WhenDownloadThrows_DoesNotApplyUpdate()
+    {
+        SequentialHttpMessageHandler handler = new();
+        handler.Enqueue(HttpStatusCode.OK, SerializeManifest("2.0.0.0", "https://updates.example.com/a.msi", new string('0', 64)));
         handler.EnqueueException(new HttpRequestException("download failure"));
         using HttpClient httpClient = new(handler);
         bool applied = false;

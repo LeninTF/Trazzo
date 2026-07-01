@@ -221,6 +221,29 @@ public sealed class WebSocketResponseTests
     }
 
     [Theory]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    [InlineData("http://localhost:4200", true)]
+    [InlineData("http://127.0.0.1:4200", true)]
+    [InlineData("http://[::1]:4200", true)]
+    [InlineData("http://evil.example", false)]
+    [InlineData("null", false)]
+    public void IsOriginAllowed_WhenAllowedOriginsEmpty_AllowsOnlyNativeOrLoopback(string? origin, bool expected)
+    {
+        Assert.Equal(expected, LocalWebSocketServerService.IsOriginAllowed(origin, []));
+    }
+
+    [Fact]
+    public void IsOriginAllowed_WhenAllowedOriginsConfigured_RequiresExactMatch()
+    {
+        string[] allowedOrigins = ["https://app.trazzo.pe"];
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://app.trazzo.pe", allowedOrigins));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed(null, allowedOrigins));
+    }
+
+    [Theory]
     [InlineData("null")]
     [InlineData("{}")]
     public async Task HandleMessageAsync_WhenMessageHasNoType_ReturnsUnsupportedType(string json)

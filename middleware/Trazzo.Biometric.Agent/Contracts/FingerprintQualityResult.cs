@@ -6,4 +6,7 @@ public sealed record FingerprintQualityResult(
     double ForegroundCoveragePercent,
     double ContrastScore,
     bool IsCentered,
-    string Message);
+    string Message)
+{
+    public double ScorePercent { get; init; }
+}

@@ -118,17 +118,17 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     "TenantId": ""
   },
   "Biometric": {
-    "CaptureTimeoutSeconds": 5,
-    "CapturePollingIntervalMilliseconds": 80,
-    "PostCaptureCooldownMilliseconds": 700,
+    "CaptureTimeoutSeconds": 2,
+    "CapturePollingIntervalMilliseconds": 50,
+    "PostCaptureCooldownMilliseconds": 300,
     "RequireFingerLiftBeforeNextCapture": true,
     "TemplateBufferSize": 2048,
     "IncludeFingerprintImageInResponses": false,
     "Quality": {
       "MinimumTemplateSize": 400,
-      "MinimumForegroundCoveragePercent": 18,
+      "MinimumForegroundCoveragePercent": 8,
       "MaximumForegroundCoveragePercent": 75,
-      "MinimumContrastScore": 25,
+      "MinimumContrastScore": 18,
       "RequireCenteredFingerprint": true,
       "CenterTolerancePercent": 28,
       "ContrastThresholdOffset": 15
@@ -136,7 +136,7 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   },
   "Enrollment": {
     "RequiredSamples": 3,
-    "SampleTimeoutSeconds": 8,
+    "SampleTimeoutSeconds": 3,
     "RequireFingerLiftBetweenSamples": true
   },
   "Security": {
@@ -155,6 +155,16 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   }
 }
 ```
+
+### Calidad de captura
+
+El campo `quality.scorePercent` es el valor recomendado para mostrar en UI como calidad estimada de 0 a 100. `quality.foregroundCoveragePercent` queda como diagnóstico técnico: mide solo el porcentaje de píxeles oscuros dentro del frame crudo del ZK9500, por eso una huella válida puede verse como 20-30% de cobertura del sensor.
+
+Para dedos con poca huella, los umbrales por defecto son más tolerantes (`MinimumForegroundCoveragePercent = 8`, `MinimumContrastScore = 18`) y se sigue exigiendo template válido, contraste mínimo y centrado.
+
+### Tiempo de respuesta ZK9500
+
+La respuesta de captura e identificación está estandarizada a un máximo de 2 segundos. El enrolamiento usa hasta 3 segundos por muestra, con lectura cada 50 ms y cooldown de 300 ms entre operaciones. Si una configuración antigua trae valores mayores, el agente los limita internamente para evitar esperas de 5 segundos o más.
 
 ### Valores obligatorios en producción
 
@@ -191,7 +201,7 @@ dotnet build .\Trazzo.Middleware.slnx -c Release
 dotnet test
 ```
 
-Los 218 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico.
+Los 220 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico.
 
 ---
 

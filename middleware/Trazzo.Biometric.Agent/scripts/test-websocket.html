@@ -449,7 +449,8 @@
         <div class="quality-panel">
           <div class="quality-row"><span class="label">Tamaño de template</span><strong id="qSize">—</strong></div>
           <div class="quality-row"><span class="label">Vista del template</span><strong id="qPreview">—</strong></div>
-          <div class="quality-row"><span class="label">Área detectada</span><strong id="qCoverage">—</strong></div>
+          <div class="quality-row"><span class="label">Calidad estimada</span><strong id="qScore">—</strong></div>
+          <div class="quality-row"><span class="label">Área cruda del sensor</span><strong id="qCoverage">—</strong></div>
           <div class="quality-row"><span class="label">Contraste</span><strong id="qContrast">—</strong></div>
           <div class="quality-row"><span class="label">Centrada</span><strong id="qCentered">—</strong></div>
           <div class="quality-row"><span class="label">Calidad</span><strong id="qMessage">—</strong></div>
@@ -553,12 +554,14 @@
   }
 
   function clearQuality() {
-    ["qSize", "qPreview", "qCoverage", "qContrast", "qCentered", "qMessage"]
+    ["qSize", "qPreview", "qScore", "qCoverage", "qContrast", "qCentered", "qMessage"]
       .forEach(id => document.getElementById(id).textContent = "—");
   }
 
   function showQuality(q) {
     if (!q) { clearQuality(); return; }
+    const score = q.scorePercent ?? q.foregroundCoveragePercent ?? 0;
+    document.getElementById("qScore").textContent = `${Number(score).toFixed(1)}%`;
     document.getElementById("qCoverage").textContent = `${Number(q.foregroundCoveragePercent ?? 0).toFixed(1)}%`;
     document.getElementById("qContrast").textContent = Number(q.contrastScore ?? 0).toFixed(1);
     document.getElementById("qCentered").textContent = q.isCentered ? "Sí" : "No";

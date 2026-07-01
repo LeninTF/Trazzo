@@ -110,6 +110,9 @@ public sealed class ZKTecoScannerServiceTests
         Assert.Equal(Convert.ToBase64String(capturedTemplate), result.TemplateBase64);
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
+        Assert.NotNull(result.Quality);
+        Assert.InRange(result.Quality!.ForegroundCoveragePercent, 10, 20);
+        Assert.InRange(result.Quality.ScorePercent, 90, 100);
         Assert.Equal(1, sdk.InitCalls);
         Assert.Equal(2, sdk.OpenDeviceCalls);
         Assert.Equal(1, sdk.DBInitCalls);
@@ -444,6 +447,30 @@ public sealed class ZKTecoScannerServiceTests
 
         Assert.False(result.Success);
         Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", result.Message);
+    }
+
+    [Theory]
+    [InlineData(null, 2)]
+    [InlineData("", 2)]
+    [InlineData("0", 2)]
+    [InlineData("1", 1)]
+    [InlineData("5", 2)]
+    public void GetStandardizedConfigurationValue_NormalizaTiempoDeRespuesta(string? configuredValue, int expected)
+    {
+        const string key = "Biometric:CaptureTimeoutSeconds";
+        Dictionary<string, string?> settings = [];
+        if (configuredValue is not null)
+        {
+            settings[key] = configuredValue;
+        }
+
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
+            .Build();
+
+        int value = ZKTecoScannerService.GetStandardizedConfigurationValue(configuration, key, fallback: 2, maximum: 2);
+
+        Assert.Equal(expected, value);
     }
 
     [Fact]
