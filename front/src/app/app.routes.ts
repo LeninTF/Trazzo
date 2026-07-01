@@ -23,7 +23,7 @@ import { Solicitudes } from './features/admin-saas/solicitudes/solicitudes';
 import { LogAuditoria } from './features/admin-saas/log-auditoria/log-auditoria';
 import { Facturas } from './features/admin-saas/facturas/facturas';
 import { GestionUsuarios } from './features/admin-saas/gestion-usuarios/gestion-usuarios';
-import { GestionRoles as GestionRolesSass} from './features/admin-saas/gestion-roles/gestion-roles';
+import { GestionRoles as GestionRolesSaas} from './features/admin-saas/gestion-roles/gestion-roles';
 import { Dashboard as DashboardUsuario } from './features/usuario/dashboard/dashboard';
 import { Calendario as CalendarioUsuario } from './features/usuario/calendario/calendario';
 import { HistorialAsistencia as HistorialAsistenciaUsuario } from './features/usuario/historial-asistencia/historial-asistencia';
@@ -156,7 +156,7 @@ export const routes: Routes = [
     },
     {
         path: 'sass/gestion-roles',
-        component: GestionRolesSass
+        component: GestionRolesSaas
     },
     {
         path: 'sass/perfil',
