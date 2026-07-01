@@ -1,0 +1,914 @@
+﻿openapi: 3.1.0
+info:
+  title: Trazzo · Audit API
+  description: |
+    Contrato de la API del módulo **Audit**: trazabilidad completa de acciones
+    del sistema, historial de inicio de sesión, sesiones activas y registro
+    de cambios en configuración del tenant.
+
+    ## Bases de datos
+    - master_db: tablas globales (Audit, LogInHistory, TenantSettingsRecord)
+    - tenant_db: tablas por tenant (SystemAudit, Session)
+
+    ## Autenticación
+    - Rutas master_db → rol SUPER_ADMIN
+    - Rutas tenant_db → contexto TENANT
+
+    ## Seguridad
+    TenantSettingsRecord contiene credenciales de BD. El API NUNCA
+    expone dbPassword. dbHost, dbName y dbUser solo en
+    respuesta individual, nunca en listados.
+
+    ## Prefijos
+    | Prefijo                    | Entidad               | DB          | Seguridad     |
+    |----------------------------|-----------------------|-------------|---------------|
+    | /audit/logs              | Audit (cross-tenant)  | master_db | SUPER_ADMIN |
+    | /audit/system-audit      | SystemAudit (x tenant)| tenant_db | TENANT      |
+    | /audit/login-history     | LogInHistory          | master_db | SUPER_ADMIN |
+    | /audit/sessions          | Session               | tenant_db | TENANT      |
+    | /audit/tenant-settings   | TenantSettingsRecord  | master_db | SUPER_ADMIN |
+    | /audit/metrics           | Metricas              | master_db | SUPER_ADMIN |
+
+    ## Entidades
+    master_db
+      Audit → Auditoria global CRUD cross-tenant
+      LogInHistory → Historial login/logout
+      TenantSettingsRecord → Cambios config tenant (credenciales BD)
+    tenant_db
+      SystemAudit → Auditoria del sistema por modulo
+      Session → Sesiones activas
+
+    ## Notas frontend
+    - Paginacion: API base 0, frontend base 1.
+    - Fecha/hora: usar pipe date:'dd/MM/yyyy' y date:'HH:mm:ss'.
+    - Badge tipo: CREATE/UPDATE/LOGIN/READ → exito, DELETE → advertencia, errores → error.
+    - Avatar: calcular initials desde userName; color por hash de userId.
+
+  version: 1.0.0
+  contact:
+    name: Equipo Trazzo
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Produccion
+
+tags:
+  - name: Audit Logs
+    description: "Auditoria global cross-tenant (master_db). Rol: SUPER_ADMIN."
+  - name: System Audit
+    description: "Auditoria del sistema por tenant (tenant_db). Rol: TENANT."
+  - name: Login History
+    description: "Historial de inicio de sesion (master_db). Rol: SUPER_ADMIN."
+  - name: Sessions
+    description: "Sesiones activas por tenant (tenant_db). Rol: TENANT."
+  - name: Tenant Settings
+    description: "Registro de cambios en configuracion del tenant (master_db). Rol: SUPER_ADMIN."
+  - name: Metrics
+    description: "Metricas del panel de auditoria (master_db). Rol: SUPER_ADMIN."
+
+components:
+  schemas:
+    Action:
+      type: string
+      enum: [CREATE, UPDATE, DELETE]
+      description: "Accion CRUD a nivel global (master_db)."
+
+    StatusLogin:
+      type: string
+      enum: [SUCCES, FAILED_WRONG_PASSWORD, FAILED_USER_NOT_FOUND, FAILED_INACTIVE_USER, LOCKED_OUT, LOGOUT_EXPLICIT]
+      description: "Estado del intento de inicio de sesion."
+
+    SystemActions:
+      type: string
+      enum: [LOGIN, CREATE, UPDATE, DELETE, READ]
+      description: "Accion del sistema por tenant (tenant_db)."
+
+    HttpMethod:
+      type: string
+      enum: [GET, PUT, POST, DELETE, READ]
+      description: "Metodo HTTP asociado a la accion."
+
+    SessionState:
+      type: string
+      enum: [ACTIVE, EXPIRED, LOGGED_OUT, REVOKED, BLOCKED]
+      description: "Estado de una sesion de usuario."
+    PageSystemAudit:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemAuditResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+
+    PageLogInHistory:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/LogInHistoryResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+
+    PageSession:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+
+    PageTenantSettings:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TenantSettingsRecordResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+
+    AuditLogResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "ID del registro de auditoria."
+        eventId:
+          type: string
+          description: "ID legible para el usuario (ej. EVT-98234-X). Se genera automaticamente."
+        fecha:
+          type: string
+          format: date-time
+          description: "Fecha/hora del evento (ISO 8601)."
+        tenant:
+          type: string
+          description: "Nombre del tenant (resuelto desde tenantId)."
+        tenantId:
+          type: string
+          description: "ID del tenant asociado al evento."
+        userName:
+          type: string
+          description: "Nombre del usuario que realizo la accion (resuelto desde userId)."
+        userEmail:
+          type: string
+          description: "Email del usuario (resuelto desde userId)."
+        accion:
+          type: string
+          description: "Nombre legible de la accion realizada."
+        tipo:
+          type: string
+          enum: [exito, advertencia, error]
+          description: "Tipo de evento para el badge (derivado de action/result)."
+        entidad:
+          type: string
+          description: "Nombre de la entidad afectada."
+        entidadId:
+          type: string
+          description: "ID de la entidad afectada."
+        ipAddress:
+          type: string
+          description: "Direccion IP desde donde se realizo la accion."
+        userAgent:
+          type: string
+          description: "User agent del navegador/cliente."
+        oldValue:
+          type: object
+          nullable: true
+          description: "Valor anterior (Map<String, Object>)."
+        newValue:
+          type: object
+          nullable: true
+          description: "Valor nuevo (Map<String, Object>)."
+
+    AuditLogDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        entity:
+          type: string
+        entityId:
+          type: string
+        action:
+          $ref: '#/components/schemas/Action'
+        userId:
+          type: string
+        endpoint:
+          type: string
+        ipAdress:
+          type: string
+        userAgent:
+          type: string
+        previousValue:
+          type: object
+          nullable: true
+        newValue:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SystemAuditResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userTenantId:
+          type: string
+        systemActions:
+          $ref: '#/components/schemas/SystemActions'
+        module:
+          type: string
+        entity:
+          type: string
+        entityId:
+          type: string
+        httpMethod:
+          $ref: '#/components/schemas/HttpMethod'
+        endpoint:
+          type: string
+        description:
+          type: string
+        previousValue:
+          type: object
+          nullable: true
+        newValue:
+          type: object
+          nullable: true
+        ipAddress:
+          type: string
+        result:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    SystemAuditFilter:
+      type: object
+      properties:
+        searchTerm:
+          type: string
+        module:
+          type: string
+        systemActions:
+          $ref: '#/components/schemas/SystemActions'
+        entity:
+          type: string
+        fechaDesde:
+          type: string
+          format: date
+        fechaHasta:
+          type: string
+          format: date
+
+    LogInHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        userId:
+          type: string
+        attemptedEmail:
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusLogin'
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    LogInHistoryFilter:
+      type: object
+      properties:
+        userId:
+          type: string
+        attemptedEmail:
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusLogin'
+        fechaDesde:
+          type: string
+          format: date
+        fechaHasta:
+          type: string
+          format: date
+
+    SessionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        tenantUserId:
+          type: string
+        refreshTokenHash:
+          type: string
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        deviceFingerprint:
+          type: string
+        loginAt:
+          type: string
+          format: date-time
+        lasActivityAt:
+          type: string
+          format: date-time
+          nullable: true
+        logoutAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+        state:
+          $ref: '#/components/schemas/SessionState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SessionFilter:
+      type: object
+      properties:
+        tenantUserId:
+          type: string
+        state:
+          $ref: '#/components/schemas/SessionState'
+        ipAddress:
+          type: string
+
+    TenantSettingsRecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        tenantSettingId:
+          type: string
+        dbName:
+          type: string
+        dbHost:
+          type: string
+        dbUser:
+          type: string
+        userId:
+          type: string
+        changeReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      description: "Registro de cambios en configuracion del tenant. NUNCA expone dbPassword."
+
+    TenantSettingsRecordFilter:
+      type: object
+      properties:
+        tenantSettingId:
+          type: string
+        userId:
+          type: string
+        changeReason:
+          type: string
+        fechaDesde:
+          type: string
+          format: date
+        fechaHasta:
+          type: string
+          format: date
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+
+    AuditMetricsResponse:
+      type: object
+      properties:
+        totalEventos:
+          type: integer
+          format: int64
+          description: "Total de eventos de auditoria registrados."
+        errores:
+          type: integer
+          format: int64
+          description: "Cantidad de eventos con resultado de error."
+        sesionesActivas:
+          type: integer
+          format: int64
+          description: "Cantidad de sesiones activas en el sistema."
+        crecimiento:
+          type: number
+          format: double
+          description: "Porcentaje de crecimiento de eventos respecto al periodo anterior."
+        porcentajeSesiones:
+          type: number
+          format: double
+          description: "Porcentaje de sesiones activas respecto al total historico."
+      description: "Metricas del panel de auditoria (frontend Metricas)."
+
+paths:
+  /audit/logs:
+    get:
+      tags:
+        - Audit Logs
+      summary: "Lista paginada de eventos de auditoria (cross-tenant)."
+      description: |
+        Recupera los eventos de auditoria global con soporte de paginacion y filtros.
+        Utilizado por la vista principal del frontend en admin-sass/log-auditoria.
+        Los campos tenant, tenantId, userName, userEmail se resuelven en backend.
+      parameters:
+        - in: query
+          name: searchTerm
+          schema:
+            type: string
+          description: "Busqueda por descripcion, entidad, usuario o tenant."
+        - in: query
+          name: fechaDesde
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: fechaHasta
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: tenantId
+          schema:
+            type: string
+        - in: query
+          name: action
+          schema:
+            $ref: '#/components/schemas/Action'
+        - in: query
+          name: entity
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: "Numero de pagina (base 0)."
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: createdAt,desc
+          description: "Criterio de ordenacion."
+      responses:
+        '200':
+          description: "Lista paginada de eventos de auditoria."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere SUPER_ADMIN)."
+
+  /audit/logs/{id}:
+    get:
+      tags:
+        - Audit Logs
+      summary: "Detalle de un evento de auditoria."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: "ID del registro de auditoria."
+      responses:
+        '200':
+          description: "Detalle completo del evento de auditoria."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogDetailResponse'
+        '404':
+          description: "Evento no encontrado."
+
+  /audit/system-audit:
+    get:
+      tags:
+        - System Audit
+      summary: "Lista paginada de auditoria del sistema por tenant."
+      description: |
+        Recupera eventos de SystemAudit para el tenant actual.
+        El tenant se determina por el contexto de autenticacion.
+      parameters:
+        - in: query
+          name: searchTerm
+          schema:
+            type: string
+        - in: query
+          name: module
+          schema:
+            type: string
+        - in: query
+          name: systemActions
+          schema:
+            $ref: '#/components/schemas/SystemActions'
+        - in: query
+          name: entity
+          schema:
+            type: string
+        - in: query
+          name: fechaDesde
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: fechaHasta
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: createdAt,desc
+      responses:
+        '200':
+          description: "Lista paginada de SystemAudit."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageSystemAudit'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere contexto TENANT)."
+
+  /audit/system-audit/{id}:
+    get:
+      tags:
+        - System Audit
+      summary: "Detalle de un evento de auditoria del sistema."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "Detalle completo del evento."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAuditResponse'
+        '404':
+          description: "Evento no encontrado."
+
+  /audit/login-history:
+    get:
+      tags:
+        - Login History
+      summary: "Lista paginada del historial de inicio de sesion."
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+        - in: query
+          name: attemptedEmail
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/StatusLogin'
+        - in: query
+          name: fechaDesde
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: fechaHasta
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: createdAt,desc
+      responses:
+        '200':
+          description: "Lista paginada de historial de login."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageLogInHistory'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere SUPER_ADMIN)."
+
+  /audit/login-history/{id}:
+    get:
+      tags:
+        - Login History
+      summary: "Detalle de un registro de historial de login."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "Detalle completo del registro."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogInHistoryResponse'
+        '404':
+          description: "Registro no encontrado."
+
+  /audit/sessions:
+    get:
+      tags:
+        - Sessions
+      summary: "Lista paginada de sesiones activas por tenant."
+      parameters:
+        - in: query
+          name: tenantUserId
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            $ref: '#/components/schemas/SessionState'
+        - in: query
+          name: ipAddress
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: loginAt,desc
+      responses:
+        '200':
+          description: "Lista paginada de sesiones."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageSession'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere contexto TENANT)."
+
+  /audit/sessions/{id}:
+    get:
+      tags:
+        - Sessions
+      summary: "Detalle de una sesion."
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "Detalle completo de la sesion."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '404':
+          description: "Sesion no encontrada."
+
+  /audit/tenant-settings:
+    get:
+      tags:
+        - Tenant Settings
+      summary: "Lista paginada del historial de cambios en configuracion de tenants."
+      description: |
+        NO expone dbPassword. dbHost, dbName, dbUser solo visibles en detalle individual.
+      parameters:
+        - in: query
+          name: tenantSettingId
+          schema:
+            type: string
+        - in: query
+          name: userId
+          schema:
+            type: string
+        - in: query
+          name: changeReason
+          schema:
+            type: string
+        - in: query
+          name: fechaDesde
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: fechaHasta
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: createdAt,desc
+      responses:
+        '200':
+          description: "Lista paginada de cambios en configuracion."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageTenantSettings'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere SUPER_ADMIN)."
+
+  /audit/tenant-settings/{id}:
+    get:
+      tags:
+        - Tenant Settings
+      summary: "Detalle de un cambio de configuracion (expone dbHost, dbName, dbUser)."
+      description: |
+        Solo en respuesta individual se exponen dbHost, dbName, dbUser.
+        NUNCA se expone dbPassword.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "Detalle completo del cambio (sin dbPassword)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantSettingsRecordResponse'
+        '404':
+          description: "Registro no encontrado."
+
+  /audit/metrics:
+    get:
+      tags:
+        - Metrics
+      summary: "Metricas del panel de auditoria."
+      description: |
+        Devuelve totalEventos, errores, sesionesActivas, crecimiento y porcentajeSesiones
+        para la vista de dashboard del frontend admin-sass/log-auditoria.
+      responses:
+        '200':
+          description: "Metricas del panel de auditoria."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditMetricsResponse'
+        '401':
+          description: "No autenticado."
+        '403':
+          description: "Acceso denegado (requiere SUPER_ADMIN)."

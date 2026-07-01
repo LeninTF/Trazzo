@@ -1,0 +1,1941 @@
+openapi: 3.1.0
+info:
+  title: Trazzo · Organization API
+  description: |
+    Contrato de la API del módulo **Organization**: gestión de la jerarquía
+    organizacional (Branches, Areas, Departments) y control de accesos basado
+    en roles (Roles, Permissions, asignaciones) dentro de un tenant Trazzo.
+
+    ## Base de datos
+    Todas las operaciones de este módulo operan sobre `tenant_db` (base de datos
+    del tenant autenticado). El tenant se resuelve automáticamente desde el JWT.
+
+    ## Autenticación
+    Todas las rutas requieren un JWT Bearer válido con contexto `TENANT`.
+    Las rutas de administración requieren rol `ADMIN`.
+
+    ## Prefijos
+    | Prefijo               | Contexto                            | Base de datos |
+    |-----------------------|-------------------------------------|---------------|
+    | `/org/branches`       | Gestión de sucursales               | `tenant_db`   |
+    | `/org/areas`          | Gestión de áreas                    | `tenant_db`   |
+    | `/org/departments`    | Gestión de departamentos            | `tenant_db`   |
+    | `/org/roles`          | Catálogo de roles RBAC              | `tenant_db`   |
+    | `/org/permissions`    | Catálogo de permisos RBAC           | `tenant_db`   |
+    | `/org/users`          | Asignaciones usuario-org y usuario-rol | `tenant_db` |
+
+    ## Jerarquía
+    ```
+    Branch (Sucursal)
+    └── Area
+        └── Department
+    ```
+    Un `tenant_user` pertenece a uno o más `department`, y recibe `role`s con
+    sus `permissions` asociados.
+
+  version: 1.0.0
+  contact:
+    name: Equipo Trazzo
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT generado por Spring Boot. Payload relevante:
+        - `sub`: ID del usuario Trazzo
+        - `tenant_id`: UUID del tenant activo
+        - `context`: `TENANT`
+
+  parameters:
+    BranchId:
+      name: id
+      in: path
+      required: true
+      description: ID único de la sucursal.
+      schema:
+        type: integer
+        example: 1
+
+    AreaId:
+      name: id
+      in: path
+      required: true
+      description: ID único del área.
+      schema:
+        type: integer
+        example: 1
+
+    DepartmentId:
+      name: id
+      in: path
+      required: true
+      description: ID único del departamento.
+      schema:
+        type: integer
+        example: 1
+
+    RoleId:
+      name: id
+      in: path
+      required: true
+      description: UUID único del rol.
+      schema:
+        type: string
+        format: uuid
+        example: "c1d2e3f4-0000-0000-0000-000000000001"
+
+    PermissionId:
+      name: id
+      in: path
+      required: true
+      description: UUID único del permiso.
+      schema:
+        type: string
+        format: uuid
+        example: "d2e3f4a5-0000-0000-0000-000000000002"
+
+    RoleIdPath:
+      name: roleId
+      in: path
+      required: true
+      description: UUID del rol al que pertenece el permiso.
+      schema:
+        type: string
+        format: uuid
+        example: "c1d2e3f4-0000-0000-0000-000000000001"
+
+    PermissionIdPath:
+      name: permissionId
+      in: path
+      required: true
+      description: UUID del permiso a asignar o remover.
+      schema:
+        type: string
+        format: uuid
+        example: "d2e3f4a5-0000-0000-0000-000000000002"
+
+    TenantUserId:
+      name: tenantUserId
+      in: path
+      required: true
+      description: ID del usuario del tenant.
+      schema:
+        type: integer
+        example: 10
+
+    DepartmentAssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      description: ID de la asignación usuario-departamento (`tenant_user_department.id`).
+      schema:
+        type: integer
+        example: 5
+
+    UserRoleAssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      description: ID de la asignación usuario-rol (`tenant_user_role.id`).
+      schema:
+        type: integer
+        example: 3
+
+  schemas:
+    # ── Requests ──────────────────────────────────────────────────────────────
+
+    CreateBranchRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nombre único de la sucursal dentro del tenant.
+          example: "Sede Central Lima"
+        description:
+          type: ["string", "null"]
+          description: Descripción opcional de la sucursal.
+          example: "Oficina principal ubicada en Miraflores"
+
+    UpdateBranchRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nuevo nombre de la sucursal.
+          example: "Sede Central Lima – Renovada"
+        description:
+          type: ["string", "null"]
+          description: Nueva descripción de la sucursal.
+          example: "Oficina renovada en San Isidro"
+
+    CreateAreaRequest:
+      type: object
+      required: [branchId, name]
+      properties:
+        branchId:
+          type: integer
+          description: ID de la sucursal a la que pertenece el área.
+          example: 1
+        name:
+          type: string
+          maxLength: 255
+          description: Nombre del área. Único dentro de la sucursal.
+          example: "Recursos Humanos"
+        description:
+          type: ["string", "null"]
+          description: Descripción opcional del área.
+          example: "Gestión del talento y bienestar laboral"
+
+    UpdateAreaRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nuevo nombre del área.
+          example: "Talento Humano"
+        description:
+          type: ["string", "null"]
+          description: Nueva descripción del área.
+          example: "Reclutamiento y desarrollo organizacional"
+
+    CreateDepartmentRequest:
+      type: object
+      required: [areaId, name]
+      properties:
+        areaId:
+          type: integer
+          description: ID del área a la que pertenece el departamento.
+          example: 2
+        name:
+          type: string
+          maxLength: 255
+          description: Nombre del departamento. Único dentro del área.
+          example: "Selección de Personal"
+        description:
+          type: ["string", "null"]
+          description: Descripción opcional del departamento.
+          example: "Reclutamiento y evaluación de candidatos"
+
+    UpdateDepartmentRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nuevo nombre del departamento.
+          example: "Reclutamiento Avanzado"
+        description:
+          type: ["string", "null"]
+          description: Nueva descripción del departamento.
+          example: "Evaluación técnica y cultural de candidatos"
+
+    CreateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Nombre del rol.
+          example: "Supervisor de RRHH"
+        description:
+          type: ["string", "null"]
+          description: Descripción del rol y sus responsabilidades.
+          example: "Supervisa los procesos de selección y evaluación"
+
+    UpdateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Nuevo nombre del rol.
+          example: "Jefe de RRHH"
+        description:
+          type: ["string", "null"]
+          description: Nueva descripción del rol.
+          example: "Responsable del área de recursos humanos"
+
+    CreatePermissionRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Nombre del permiso (acción sobre recurso).
+          example: "employees:read"
+        description:
+          type: ["string", "null"]
+          description: Descripción de lo que autoriza el permiso.
+          example: "Ver listado y detalle de empleados"
+        masterFeaturesCode:
+          type: ["string", "null"]
+          maxLength: 100
+          description: |
+            Código de la feature de master_db que habilita este permiso.
+            Si está vacío, el permiso está disponible en todos los planes.
+          example: "BIOMETRIC_MODULE"
+
+    UpdatePermissionRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: Nuevo nombre del permiso.
+          example: "employees:write"
+        description:
+          type: ["string", "null"]
+          description: Nueva descripción del permiso.
+          example: "Crear y editar registros de empleados"
+        masterFeaturesCode:
+          type: ["string", "null"]
+          maxLength: 100
+          description: Nuevo código de feature asociado.
+          example: "ADVANCED_REPORTS"
+
+    # ── Responses ─────────────────────────────────────────────────────────────
+
+    BranchResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Sede Central Lima"
+        description:
+          type: ["string", "null"]
+          example: "Oficina principal ubicada en Miraflores"
+        state:
+          type: boolean
+          description: true = activa, false = inactiva (soft-deleted).
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-01T10:30:00"
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
+          example: null
+
+    AreaResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        branchId:
+          type: integer
+          description: ID de la sucursal a la que pertenece.
+          example: 1
+        name:
+          type: string
+          example: "Recursos Humanos"
+        description:
+          type: ["string", "null"]
+          example: "Gestión del talento y bienestar laboral"
+        state:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-20T09:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-10T11:00:00"
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
+          example: null
+
+    DepartmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        areaId:
+          type: integer
+          description: ID del área a la que pertenece.
+          example: 2
+        name:
+          type: string
+          example: "Selección de Personal"
+        description:
+          type: ["string", "null"]
+          example: "Reclutamiento y evaluación de candidatos"
+        state:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-02-01T08:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-15T14:00:00"
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
+          example: null
+
+    RoleResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "c1d2e3f4-0000-0000-0000-000000000001"
+        name:
+          type: string
+          example: "Supervisor de RRHH"
+        description:
+          type: ["string", "null"]
+          example: "Supervisa los procesos de selección y evaluación"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-10T07:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-05-20T09:00:00"
+
+    PermissionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d2e3f4a5-0000-0000-0000-000000000002"
+        name:
+          type: string
+          example: "employees:read"
+        description:
+          type: ["string", "null"]
+          example: "Ver listado y detalle de empleados"
+        masterFeaturesCode:
+          type: ["string", "null"]
+          example: "BIOMETRIC_MODULE"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-10T07:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-05-20T09:00:00"
+
+    AssignUserToDepartmentRequest:
+      type: object
+      required: [departmentId, startDate]
+      properties:
+        departmentId:
+          type: integer
+          description: ID del departamento al que se asigna el usuario.
+          example: 3
+        isPrimary:
+          type: boolean
+          description: Indica si este es el departamento principal del usuario.
+          default: false
+          example: true
+        startDate:
+          type: string
+          format: date
+          description: Fecha de inicio de la asignación.
+          example: "2026-01-15"
+        endDate:
+          type: ["string", "null"]
+          format: date
+          description: Fecha de fin. Null si la asignación no tiene término previsto.
+          example: null
+
+    UpdateUserDepartmentRequest:
+      type: object
+      properties:
+        isPrimary:
+          type: boolean
+          description: Nuevo valor para indicar si es el departamento principal.
+          example: false
+        endDate:
+          type: ["string", "null"]
+          format: date
+          description: Nueva fecha de fin de la asignación.
+          example: "2026-12-31"
+
+    AssignRoleToUserRequest:
+      type: object
+      required: [roleId]
+      properties:
+        roleId:
+          type: string
+          format: uuid
+          description: UUID del rol a asignar al usuario.
+          example: "c1d2e3f4-0000-0000-0000-000000000001"
+        departmentId:
+          type: ["integer", "null"]
+          description: |
+            ID del departamento que limita el scope del rol.
+            Si es null, el rol aplica a todo el tenant.
+          example: 3
+
+    UserDepartmentAssignmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        tenantUserId:
+          type: integer
+          example: 10
+        departmentId:
+          type: integer
+          example: 3
+        isPrimary:
+          type: boolean
+          example: true
+        startDate:
+          type: string
+          format: date
+          example: "2026-01-15"
+        endDate:
+          type: ["string", "null"]
+          format: date
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-06-01T10:00:00"
+
+    UserRoleAssignmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        tenantUserId:
+          type: integer
+          example: 10
+        roleId:
+          type: string
+          format: uuid
+          example: "c1d2e3f4-0000-0000-0000-000000000001"
+        departmentId:
+          type: ["integer", "null"]
+          description: Scope del rol. Null si aplica a todo el tenant.
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-01-15T08:00:00"
+
+    # ── Errores ───────────────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Token JWT ausente, expirado o inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 401
+            error: "Unauthorized"
+            message: "JWT token is missing or invalid"
+            path: "/api/v1/org/branches"
+
+    Forbidden:
+      description: El usuario no tiene el rol requerido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 403
+            error: "Forbidden"
+            message: "Access denied"
+            path: "/api/v1/org/branches"
+
+    NotFound:
+      description: El recurso solicitado no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 404
+            error: "Not Found"
+            message: "Resource not found with id: 99"
+            path: "/api/v1/org/branches/99"
+
+    BadRequest:
+      description: Datos de entrada inválidos o restricción de negocio violada.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 400
+            error: "Bad Request"
+            message: "name must not be blank"
+            path: "/api/v1/org/branches"
+
+    Conflict:
+      description: Violación de restricción de unicidad (nombre duplicado).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 409
+            error: "Conflict"
+            message: "A resource with this name already exists"
+            path: "/api/v1/org/branches"
+
+security:
+  - bearerAuth: []
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ============================================================================
+  # BRANCHES (Sucursales)
+  # ============================================================================
+
+  /org/branches:
+    get:
+      summary: Listar sucursales
+      description: |
+        Retorna todas las sucursales del tenant, incluyendo inactivas.
+        Para filtrar solo las activas usar el parámetro `active=true`.
+      operationId: listBranches
+      tags: [Branches]
+      parameters:
+        - name: active
+          in: query
+          required: false
+          description: Si es `true`, retorna solo sucursales con `state = true`.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Lista de sucursales.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BranchResponse'
+              example:
+                - id: 1
+                  name: "Sede Central Lima"
+                  description: "Oficina principal en Miraflores"
+                  state: true
+                  createdAt: "2026-01-15T08:00:00"
+                  updatedAt: "2026-06-01T10:30:00"
+                  deletedAt: null
+                - id: 2
+                  name: "Sede Arequipa"
+                  description: null
+                  state: false
+                  createdAt: "2026-02-10T09:00:00"
+                  updatedAt: "2026-05-20T08:00:00"
+                  deletedAt: "2026-05-20T08:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear sucursal
+      description: |
+        Registra una nueva sucursal para el tenant. El nombre debe ser único
+        dentro del tenant.
+      operationId: createBranch
+      tags: [Branches]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBranchRequest'
+            example:
+              name: "Sede Central Lima"
+              description: "Oficina principal ubicada en Miraflores"
+      responses:
+        "201":
+          description: Sucursal creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+              example:
+                id: 1
+                name: "Sede Central Lima"
+                description: "Oficina principal ubicada en Miraflores"
+                state: true
+                createdAt: "2026-06-27T10:00:00"
+                updatedAt: "2026-06-27T10:00:00"
+                deletedAt: null
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /org/branches/{id}:
+    get:
+      summary: Obtener sucursal por ID
+      operationId: getBranchById
+      tags: [Branches]
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        "200":
+          description: Datos de la sucursal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+              example:
+                id: 1
+                name: "Sede Central Lima"
+                description: "Oficina principal en Miraflores"
+                state: true
+                createdAt: "2026-01-15T08:00:00"
+                updatedAt: "2026-06-01T10:30:00"
+                deletedAt: null
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Actualizar sucursal
+      description: Modifica el nombre y descripción de una sucursal existente.
+      operationId: updateBranch
+      tags: [Branches]
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBranchRequest'
+            example:
+              name: "Sede Central Lima – Renovada"
+              description: "Oficina renovada en San Isidro"
+      responses:
+        "200":
+          description: Sucursal actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Eliminar sucursal (soft delete)
+      description: |
+        Marca la sucursal como eliminada (`state = false`, `deleted_at = now`).
+        Las áreas y departamentos asociados no se eliminan automáticamente.
+      operationId: deleteBranch
+      tags: [Branches]
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        "204":
+          description: Sucursal eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/branches/{id}/activate:
+    put:
+      summary: Activar sucursal
+      description: Establece `state = true` en la sucursal.
+      operationId: activateBranch
+      tags: [Branches]
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        "200":
+          description: Sucursal activada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+              example:
+                id: 1
+                name: "Sede Arequipa"
+                description: null
+                state: true
+                createdAt: "2026-02-10T09:00:00"
+                updatedAt: "2026-06-27T11:00:00"
+                deletedAt: null
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/branches/{id}/deactivate:
+    put:
+      summary: Desactivar sucursal
+      description: Establece `state = false` en la sucursal sin eliminarla.
+      operationId: deactivateBranch
+      tags: [Branches]
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        "200":
+          description: Sucursal desactivada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+              example:
+                id: 1
+                name: "Sede Central Lima"
+                description: "Oficina principal en Miraflores"
+                state: false
+                createdAt: "2026-01-15T08:00:00"
+                updatedAt: "2026-06-27T11:00:00"
+                deletedAt: null
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # AREAS
+  # ============================================================================
+
+  /org/areas:
+    get:
+      summary: Listar áreas
+      description: |
+        Retorna todas las áreas del tenant. Filtrable por sucursal con
+        `branchId` o por estado con `active`.
+      operationId: listAreas
+      tags: [Areas]
+      parameters:
+        - name: branchId
+          in: query
+          required: false
+          description: Filtra áreas pertenecientes a una sucursal específica.
+          schema:
+            type: integer
+            example: 1
+        - name: active
+          in: query
+          required: false
+          description: Si es `true`, retorna solo áreas con `state = true`.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Lista de áreas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AreaResponse'
+              example:
+                - id: 2
+                  branchId: 1
+                  name: "Recursos Humanos"
+                  description: "Gestión del talento"
+                  state: true
+                  createdAt: "2026-01-20T09:00:00"
+                  updatedAt: "2026-06-10T11:00:00"
+                  deletedAt: null
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear área
+      description: |
+        Registra una nueva área asociada a una sucursal. El nombre debe ser
+        único dentro de la misma sucursal.
+      operationId: createArea
+      tags: [Areas]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAreaRequest'
+            example:
+              branchId: 1
+              name: "Recursos Humanos"
+              description: "Gestión del talento y bienestar laboral"
+      responses:
+        "201":
+          description: Área creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaResponse'
+              example:
+                id: 2
+                branchId: 1
+                name: "Recursos Humanos"
+                description: "Gestión del talento y bienestar laboral"
+                state: true
+                createdAt: "2026-06-27T10:00:00"
+                updatedAt: "2026-06-27T10:00:00"
+                deletedAt: null
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: La sucursal referenciada (`branchId`) no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /org/areas/{id}:
+    get:
+      summary: Obtener área por ID
+      operationId: getAreaById
+      tags: [Areas]
+      parameters:
+        - $ref: '#/components/parameters/AreaId'
+      responses:
+        "200":
+          description: Datos del área.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Actualizar área
+      description: Modifica el nombre y descripción de un área existente.
+      operationId: updateArea
+      tags: [Areas]
+      parameters:
+        - $ref: '#/components/parameters/AreaId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAreaRequest'
+            example:
+              name: "Talento Humano"
+              description: "Reclutamiento y desarrollo organizacional"
+      responses:
+        "200":
+          description: Área actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Eliminar área (soft delete)
+      description: |
+        Marca el área como eliminada (`state = false`, `deleted_at = now`).
+        Los departamentos asociados no se eliminan automáticamente.
+      operationId: deleteArea
+      tags: [Areas]
+      parameters:
+        - $ref: '#/components/parameters/AreaId'
+      responses:
+        "204":
+          description: Área eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/areas/{id}/activate:
+    put:
+      summary: Activar área
+      operationId: activateArea
+      tags: [Areas]
+      parameters:
+        - $ref: '#/components/parameters/AreaId'
+      responses:
+        "200":
+          description: Área activada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/areas/{id}/deactivate:
+    put:
+      summary: Desactivar área
+      operationId: deactivateArea
+      tags: [Areas]
+      parameters:
+        - $ref: '#/components/parameters/AreaId'
+      responses:
+        "200":
+          description: Área desactivada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AreaResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # DEPARTMENTS (Departamentos)
+  # ============================================================================
+
+  /org/departments:
+    get:
+      summary: Listar departamentos
+      description: |
+        Retorna todos los departamentos del tenant. Filtrable por área con
+        `areaId` o por estado con `active`.
+      operationId: listDepartments
+      tags: [Departments]
+      parameters:
+        - name: areaId
+          in: query
+          required: false
+          description: Filtra departamentos pertenecientes a un área específica.
+          schema:
+            type: integer
+            example: 2
+        - name: active
+          in: query
+          required: false
+          description: Si es `true`, retorna solo departamentos con `state = true`.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Lista de departamentos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DepartmentResponse'
+              example:
+                - id: 3
+                  areaId: 2
+                  name: "Selección de Personal"
+                  description: "Reclutamiento y evaluación de candidatos"
+                  state: true
+                  createdAt: "2026-02-01T08:00:00"
+                  updatedAt: "2026-06-15T14:00:00"
+                  deletedAt: null
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear departamento
+      description: |
+        Registra un nuevo departamento asociado a un área. El nombre debe ser
+        único dentro del mismo área.
+      operationId: createDepartment
+      tags: [Departments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDepartmentRequest'
+            example:
+              areaId: 2
+              name: "Selección de Personal"
+              description: "Reclutamiento y evaluación de candidatos"
+      responses:
+        "201":
+          description: Departamento creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El área referenciada (`areaId`) no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /org/departments/{id}:
+    get:
+      summary: Obtener departamento por ID
+      operationId: getDepartmentById
+      tags: [Departments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "200":
+          description: Datos del departamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Actualizar departamento
+      operationId: updateDepartment
+      tags: [Departments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDepartmentRequest'
+            example:
+              name: "Reclutamiento Avanzado"
+              description: "Evaluación técnica y cultural de candidatos"
+      responses:
+        "200":
+          description: Departamento actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Eliminar departamento (soft delete)
+      description: Marca el departamento como eliminado (`state = false`, `deleted_at = now`).
+      operationId: deleteDepartment
+      tags: [Departments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "204":
+          description: Departamento eliminado exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/departments/{id}/activate:
+    put:
+      summary: Activar departamento
+      operationId: activateDepartment
+      tags: [Departments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "200":
+          description: Departamento activado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/departments/{id}/deactivate:
+    put:
+      summary: Desactivar departamento
+      operationId: deactivateDepartment
+      tags: [Departments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "200":
+          description: Departamento desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepartmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # ROLES (RBAC)
+  # ============================================================================
+
+  /org/roles:
+    get:
+      summary: Listar roles
+      description: Retorna todos los roles definidos en el tenant.
+      operationId: listRoles
+      tags: [Roles]
+      responses:
+        "200":
+          description: Lista de roles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleResponse'
+              example:
+                - id: "c1d2e3f4-0000-0000-0000-000000000001"
+                  name: "Supervisor de RRHH"
+                  description: "Supervisa procesos de selección"
+                  createdAt: "2026-01-10T07:00:00"
+                  updatedAt: "2026-05-20T09:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear rol
+      operationId: createRole
+      tags: [Roles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+            example:
+              name: "Supervisor de RRHH"
+              description: "Supervisa los procesos de selección y evaluación"
+      responses:
+        "201":
+          description: Rol creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /org/roles/{id}:
+    get:
+      summary: Obtener rol por ID
+      operationId: getRoleById
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        "200":
+          description: Datos del rol.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Actualizar rol
+      operationId: updateRole
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+            example:
+              name: "Jefe de RRHH"
+              description: "Responsable del área de recursos humanos"
+      responses:
+        "200":
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Eliminar rol
+      description: |
+        Elimina el rol de forma permanente. Fallará si el rol tiene usuarios
+        asignados (`tenant_user_role`). Desasignar usuarios antes de eliminar.
+      operationId: deleteRole
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleId'
+      responses:
+        "204":
+          description: Rol eliminado exitosamente.
+        "400":
+          description: No se puede eliminar el rol porque tiene usuarios asignados.
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/roles/{roleId}/permissions:
+    get:
+      summary: Listar permisos de un rol
+      description: Retorna todos los permisos asignados al rol especificado.
+      operationId: listRolePermissions
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+      responses:
+        "200":
+          description: Lista de permisos del rol.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/roles/{roleId}/permissions/{permissionId}:
+    post:
+      summary: Asignar permiso a rol
+      description: |
+        Crea la relación `role_permissions` entre el rol y el permiso indicados.
+        Si la asignación ya existe, retorna 409.
+      operationId: assignPermissionToRole
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+        - $ref: '#/components/parameters/PermissionIdPath'
+      responses:
+        "204":
+          description: Permiso asignado exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El rol o permiso especificado no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: El permiso ya está asignado a este rol.
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Remover permiso de rol
+      description: Elimina la relación `role_permissions` entre el rol y el permiso.
+      operationId: removePermissionFromRole
+      tags: [Roles]
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+        - $ref: '#/components/parameters/PermissionIdPath'
+      responses:
+        "204":
+          description: Permiso removido exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: La asignación rol-permiso no existe.
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # PERMISSIONS (Permisos)
+  # ============================================================================
+
+  /org/permissions:
+    get:
+      summary: Listar permisos
+      description: |
+        Retorna todos los permisos disponibles en el tenant. Filtrable por
+        `masterFeaturesCode` para ver solo los permisos de un módulo específico.
+      operationId: listPermissions
+      tags: [Permissions]
+      parameters:
+        - name: masterFeaturesCode
+          in: query
+          required: false
+          description: Filtra permisos asociados a una feature de master_db.
+          schema:
+            type: string
+            example: "BIOMETRIC_MODULE"
+      responses:
+        "200":
+          description: Lista de permisos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionResponse'
+              example:
+                - id: "d2e3f4a5-0000-0000-0000-000000000002"
+                  name: "employees:read"
+                  description: "Ver listado y detalle de empleados"
+                  masterFeaturesCode: null
+                  createdAt: "2026-01-10T07:00:00"
+                  updatedAt: "2026-05-20T09:00:00"
+                - id: "e3f4a5b6-0000-0000-0000-000000000003"
+                  name: "biometric:manage"
+                  description: "Administrar dispositivos biométricos"
+                  masterFeaturesCode: "BIOMETRIC_MODULE"
+                  createdAt: "2026-01-10T07:00:00"
+                  updatedAt: "2026-01-10T07:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear permiso
+      operationId: createPermission
+      tags: [Permissions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePermissionRequest'
+            example:
+              name: "employees:read"
+              description: "Ver listado y detalle de empleados"
+              masterFeaturesCode: null
+      responses:
+        "201":
+          description: Permiso creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+  /org/permissions/{id}:
+    get:
+      summary: Obtener permiso por ID
+      operationId: getPermissionById
+      tags: [Permissions]
+      parameters:
+        - $ref: '#/components/parameters/PermissionId'
+      responses:
+        "200":
+          description: Datos del permiso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Actualizar permiso
+      operationId: updatePermission
+      tags: [Permissions]
+      parameters:
+        - $ref: '#/components/parameters/PermissionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePermissionRequest'
+            example:
+              name: "employees:write"
+              description: "Crear y editar registros de empleados"
+              masterFeaturesCode: null
+      responses:
+        "200":
+          description: Permiso actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Eliminar permiso
+      description: |
+        Elimina el permiso de forma permanente. Las relaciones
+        `role_permissions` que lo referencien se eliminan en cascada
+        (`ON DELETE CASCADE` en la FK).
+      operationId: deletePermission
+      tags: [Permissions]
+      parameters:
+        - $ref: '#/components/parameters/PermissionId'
+      responses:
+        "204":
+          description: Permiso eliminado exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # USER ASSIGNMENTS (Asignaciones de usuarios)
+  # ============================================================================
+
+  /org/users/{tenantUserId}/departments:
+    get:
+      summary: Listar departamentos de un usuario
+      description: |
+        Retorna todas las asignaciones usuario-departamento de un `tenant_user`.
+        Incluye departamentos activos e históricos (con `endDate` pasado).
+      operationId: listUserDepartments
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-departamento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+              example:
+                - id: 5
+                  tenantUserId: 10
+                  departmentId: 3
+                  isPrimary: true
+                  startDate: "2026-01-15"
+                  endDate: null
+                  createdAt: "2026-01-15T08:00:00"
+                  updatedAt: "2026-01-15T08:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Asignar usuario a departamento
+      description: |
+        Crea una fila en `tenant_user_department`. Un usuario puede pertenecer a
+        varios departamentos; usar `isPrimary: true` para marcar el principal.
+      operationId: assignUserToDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUserToDepartmentRequest'
+            example:
+              departmentId: 3
+              isPrimary: true
+              startDate: "2026-01-15"
+              endDate: null
+      responses:
+        "201":
+          description: Asignación creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El usuario o departamento no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: El usuario ya está asignado a ese departamento.
+          $ref: '#/components/responses/Conflict'
+
+  /org/users/{tenantUserId}/departments/{assignmentId}:
+    put:
+      summary: Actualizar asignación usuario-departamento
+      description: |
+        Modifica `isPrimary` o `endDate` de una asignación existente.
+        Útil para cerrar una asignación (`endDate`) o cambiar el departamento
+        principal del usuario.
+      operationId: updateUserDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/DepartmentAssignmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserDepartmentRequest'
+            example:
+              isPrimary: false
+              endDate: "2026-12-31"
+      responses:
+        "200":
+          description: Asignación actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Remover usuario de departamento
+      description: Elimina la asignación `tenant_user_department` de forma permanente.
+      operationId: removeUserFromDepartment
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/DepartmentAssignmentId'
+      responses:
+        "204":
+          description: Asignación eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/departments/{id}/users:
+    get:
+      summary: Listar usuarios de un departamento
+      description: Retorna todas las asignaciones activas de usuarios en el departamento.
+      operationId: listDepartmentUsers
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/DepartmentId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-departamento.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserDepartmentAssignmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/users/{tenantUserId}/roles:
+    get:
+      summary: Listar roles de un usuario
+      description: |
+        Retorna todas las asignaciones usuario-rol de un `tenant_user`.
+        Cada asignación puede tener un `departmentId` que limita el scope del rol.
+      operationId: listUserRoles
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-rol.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRoleAssignmentResponse'
+              example:
+                - id: 3
+                  tenantUserId: 10
+                  roleId: "c1d2e3f4-0000-0000-0000-000000000001"
+                  departmentId: 3
+                  createdAt: "2026-01-15T08:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Asignar rol a usuario
+      description: |
+        Crea una fila en `tenant_user_role`. El campo `departmentId` es opcional
+        y limita el scope del rol a un departamento específico. Si se omite,
+        el rol aplica a todo el tenant.
+      operationId: assignRoleToUser
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleToUserRequest'
+            example:
+              roleId: "c1d2e3f4-0000-0000-0000-000000000001"
+              departmentId: 3
+      responses:
+        "201":
+          description: Rol asignado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRoleAssignmentResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: El usuario, rol o departamento no existe.
+          $ref: '#/components/responses/NotFound'
+        "409":
+          description: El usuario ya tiene ese rol asignado (con el mismo scope).
+          $ref: '#/components/responses/Conflict'
+
+  /org/users/{tenantUserId}/roles/{assignmentId}:
+    delete:
+      summary: Remover rol de usuario
+      description: Elimina la asignación `tenant_user_role` de forma permanente.
+      operationId: removeRoleFromUser
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/TenantUserId'
+        - $ref: '#/components/parameters/UserRoleAssignmentId'
+      responses:
+        "204":
+          description: Asignación de rol eliminada exitosamente.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  /org/roles/{roleId}/users:
+    get:
+      summary: Listar usuarios con un rol
+      description: Retorna todas las asignaciones de usuarios que tienen el rol especificado.
+      operationId: listRoleUsers
+      tags: [UserAssignments]
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+      responses:
+        "200":
+          description: Lista de asignaciones usuario-rol para este rol.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRoleAssignmentResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+tags:
+  - name: Branches
+    description: |
+      Gestión de sucursales (`branch`). Son el nivel más alto de la jerarquía
+      organizacional. Cada tenant puede tener múltiples sucursales.
+  - name: Areas
+    description: |
+      Gestión de áreas (`area`). Cada área pertenece a una sucursal.
+      El nombre de un área debe ser único dentro de su sucursal.
+  - name: Departments
+    description: |
+      Gestión de departamentos (`department`). Cada departamento pertenece a
+      un área. El nombre debe ser único dentro de su área. Los `tenant_user`
+      se asignan a departamentos.
+  - name: Roles
+    description: |
+      Catálogo de roles RBAC (`role`). Un rol agrupa un conjunto de permisos.
+      Los usuarios del tenant (`tenant_user`) reciben roles mediante
+      `tenant_user_role`, opcionalmente con scope a un departamento.
+  - name: Permissions
+    description: |
+      Catálogo de permisos RBAC (`permissions`). Cada permiso representa una
+      acción sobre un recurso (ej. `employees:read`). Los permisos pueden estar
+      condicionados a una feature de la suscripción via `masterFeaturesCode`.
+  - name: UserAssignments
+    description: |
+      Asignaciones de usuarios a la estructura organizacional y a roles.
+      Gestiona las tablas `tenant_user_department` y `tenant_user_role`.
+      Un usuario puede pertenecer a múltiples departamentos (`isPrimary` marca
+      el principal) y recibir múltiples roles, cada uno opcionalmente con scope
+      a un departamento específico.

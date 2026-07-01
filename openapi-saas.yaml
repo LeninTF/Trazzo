@@ -1,0 +1,1326 @@
+openapi: 3.1.0
+info:
+  title: Trazzo · SaaS Global API
+  description: |
+    Contrato de la API del módulo **SaaS Global**: gestión de Holdings, Plans,
+    Features, Tenants y Subscriptions desde el panel administrativo Trazzo.
+
+    ## Base de datos
+    Todas las operaciones de este módulo operan sobre `master_db`.
+
+    ## Autenticación
+    Todas las rutas requieren un JWT Bearer válido. Las rutas de administración
+    (`/saas/*`, `/tenants/*`, `/subscriptions/*`) requieren rol `ADMIN_SAAS`.
+
+    ## Prefijos
+    | Prefijo              | Contexto                  | Base de datos |
+    |----------------------|---------------------------|---------------|
+    | `/auth`              | Autenticación general     | —             |
+    | `/tenants`           | Aprovisionamiento         | `master_db`   |
+    | `/subscriptions`     | Gestión de suscripciones  | `master_db`   |
+    | `/saas/holdings`     | Gestión de Holdings       | `master_db`   |
+    | `/saas/plans`        | Catálogo de planes        | `master_db`   |
+    | `/saas/features`     | Catálogo de features      | `master_db`   |
+  version: 3.1.0
+  contact:
+    name: Equipo Trazzo
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT generado por Spring Boot. Payload relevante:
+        - `sub`: ID del usuario Trazzo
+        - `tenant_id`: null para usuarios MASTER
+        - `context`: `MASTER`
+
+  parameters:
+    HoldingId:
+      name: id
+      in: path
+      required: true
+      description: ID único del holding.
+      schema:
+        type: integer
+        example: 1
+
+    PlanId:
+      name: id
+      in: path
+      required: true
+      description: ID único del plan.
+      schema:
+        type: integer
+        example: 1
+
+    FeatureId:
+      name: id
+      in: path
+      required: true
+      description: ID único de la feature.
+      schema:
+        type: integer
+        example: 1
+
+    TenantId:
+      name: id
+      in: path
+      required: true
+      description: UUID único del tenant.
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-0000-0000-0000-000000000001"
+
+    SubscriptionId:
+      name: id
+      in: path
+      required: true
+      description: UUID único de la suscripción.
+      schema:
+        type: string
+        format: uuid
+        example: "b2c3d4e5-0000-0000-0000-000000000002"
+
+  schemas:
+    # ── Requests ──────────────────────────────────────────────────────────────
+    HoldingRequest:
+      type: object
+      required: [taxId, legalName, type]
+      properties:
+        taxId:
+          type: string
+          description: RUC del holding (único globalmente).
+          example: "20123456789"
+        legalName:
+          type: string
+          description: Razón social.
+          example: "Empresa SAC"
+        type:
+          type: string
+          enum: [PUBLICO, PRIVADO]
+          description: Naturaleza jurídica del holding.
+          example: "PRIVADO"
+
+    UpdateHoldingRequest:
+      type: object
+      required: [legalName, type]
+      properties:
+        legalName:
+          type: string
+          description: Nueva razón social del holding.
+          example: "Empresa SAC Actualizada"
+        type:
+          type: string
+          enum: [PUBLICO, PRIVADO]
+          example: "PRIVADO"
+
+    FeatureRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: "Biometric Access"
+        description:
+          type: [string, "null"]
+          example: "Autenticación por huella digital"
+
+    UpdateFeatureRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: "Biometric Access v2"
+        description:
+          type: [string, "null"]
+          example: "Autenticación por huella digital mejorada"
+
+    CreatePlanRequest:
+      type: object
+      required: [name, price, currency, billingPeriod]
+      properties:
+        name:
+          type: string
+          example: "Enterprise"
+        price:
+          type: number
+          format: double
+          minimum: 0
+          example: 299.00
+        currency:
+          type: string
+          enum: [SOLES, DOLAR, EURO]
+          example: "SOLES"
+        billingPeriod:
+          type: string
+          enum: [MONTHLY, ANNUAL]
+          example: "MONTHLY"
+
+    UpdatePlanRequest:
+      type: object
+      required: [name, price, currency, billingPeriod]
+      properties:
+        name:
+          type: string
+          example: "Enterprise Plus"
+        price:
+          type: number
+          format: double
+          minimum: 0
+          example: 399.00
+        currency:
+          type: string
+          enum: [SOLES, DOLAR, EURO]
+          example: "SOLES"
+        billingPeriod:
+          type: string
+          enum: [MONTHLY, ANNUAL]
+          example: "ANNUAL"
+
+    TenantTrialRequest:
+      type: object
+      required: [subDomain, planId, holdingId, dbHost, dbPort, dbName, dbUser, dbPassword]
+      properties:
+        subDomain:
+          type: string
+          description: Slug único del tenant.
+          example: "mi-empresa"
+        planId:
+          type: integer
+          example: 1
+        holdingId:
+          type: integer
+          example: 1
+        dbHost:
+          type: string
+          example: "db.ejemplo.com"
+        dbPort:
+          type: string
+          example: "5432"
+        dbName:
+          type: string
+          example: "trazzo_tenant_mi_empresa"
+        dbUser:
+          type: string
+          example: "tenant_user"
+        dbPassword:
+          type: string
+          format: password
+        logoUrl:
+          type: [string, "null"]
+          format: uri
+        slogan:
+          type: [string, "null"]
+          example: "Conectando personas"
+        primaryColor:
+          type: [string, "null"]
+          example: "#3B82F6"
+        secondaryColor:
+          type: [string, "null"]
+          example: "#1D4ED8"
+
+    UpdateBrandingRequest:
+      type: object
+      properties:
+        logoUrl:
+          type: [string, "null"]
+          format: uri
+        slogan:
+          type: [string, "null"]
+          example: "Conectando personas"
+        primaryColor:
+          type: [string, "null"]
+          example: "#3B82F6"
+        secondaryColor:
+          type: [string, "null"]
+          example: "#1D4ED8"
+
+    ActivateSubscriptionRequest:
+      type: object
+      required: [dateEnd]
+      properties:
+        dateEnd:
+          type: string
+          format: date
+          description: Fecha de fin de la suscripción activa.
+          example: "2027-06-30"
+
+    # ── Responses ─────────────────────────────────────────────────────────────
+    AuthMeResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: "admin@trazzo.pe"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["ROLE_ADMIN_SAAS"]
+
+    HoldingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        taxId:
+          type: string
+          example: "20123456789"
+        legalName:
+          type: string
+          example: "Empresa SAC"
+        type:
+          type: string
+          enum: [PUBLICO, PRIVADO]
+          example: "PRIVADO"
+        active:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PlanResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Basic"
+        price:
+          type: number
+          format: double
+          example: 99.00
+        currency:
+          type: string
+          enum: [SOLES, DOLAR, EURO]
+          example: "SOLES"
+        billingPeriod:
+          type: string
+          enum: [MONTHLY, ANNUAL]
+          example: "MONTHLY"
+        active:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+
+    FeatureResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Biometric Access"
+        description:
+          type: [string, "null"]
+          example: "Autenticación por huella digital"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        subDomain:
+          type: string
+          example: "mi-empresa"
+        planId:
+          type: integer
+          example: 1
+        holdingId:
+          type: integer
+          example: 1
+        activated:
+          type: boolean
+          example: false
+        activatedAt:
+          type: [string, "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenantTrialResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        subDomain:
+          type: string
+          example: "mi-empresa"
+        planId:
+          type: integer
+          example: 1
+        activated:
+          type: boolean
+          example: false
+        activatedAt:
+          type: [string, "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b2c3d4e5-0000-0000-0000-000000000002"
+        planId:
+          type: integer
+          example: 1
+        tenantId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        dateStart:
+          type: string
+          format: date
+          example: "2026-06-27"
+        dateEnd:
+          type: [string, "null"]
+          format: date
+          example: "2027-06-27"
+        status:
+          type: string
+          enum: [TRIAL, ACTIVE, SUSPENDED, CANCELED]
+          example: "TRIAL"
+        purchasePrice:
+          type: number
+          format: double
+          example: 99.00
+        createdAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Resource not found"
+        status:
+          type: integer
+          example: 404
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ----------------------------------------
+  # Autenticación
+  # ----------------------------------------
+  /auth/me:
+    get:
+      tags:
+        - Autenticación
+      summary: Datos del usuario autenticado
+      description: |
+        Devuelve el email y roles del JWT sin consultar la base de datos.
+        Válido en contexto MASTER y TENANT.
+      responses:
+        "200":
+          description: Datos del usuario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  # ----------------------------------------
+  # Tenants
+  # ----------------------------------------
+  /tenants:
+    get:
+      tags:
+        - Tenants
+      summary: Listar tenants
+      description: |
+        Devuelve todos los tenants no eliminados.
+        **Requiere rol:** `ADMIN_SAAS`
+      responses:
+        "200":
+          description: Lista de tenants.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TenantResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /tenants/trial:
+    post:
+      tags:
+        - Tenants
+      summary: Crear tenant en modo trial
+      description: |
+        Provisiona un nuevo tenant de forma atómica:
+        1. Crea el registro en `master_db`
+        2. Aprovisiona el schema de base de datos dedicado
+        3. Configura branding inicial
+        4. Activa la suscripción al plan indicado
+
+        Si cualquier paso falla, se hace rollback completo.
+
+        **Requiere rol:** `ADMIN_SAAS`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantTrialRequest'
+      responses:
+        "201":
+          description: Tenant creado y aprovisionado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantTrialResponse'
+        "400":
+          description: Datos inválidos o subdominio ya registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para crear tenants.
+
+  /tenants/{id}:
+    get:
+      tags:
+        - Tenants
+      summary: Obtener tenant por ID
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        "200":
+          description: Datos del tenant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        "404":
+          description: Tenant no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    delete:
+      tags:
+        - Tenants
+      summary: Eliminar tenant (baja lógica)
+      description: |
+        Marca el tenant como eliminado (`deleted_at = NOW()`).
+        No elimina el registro físicamente.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        "204":
+          description: Tenant eliminado exitosamente.
+        "404":
+          description: Tenant no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /tenants/{id}/activate:
+    put:
+      tags:
+        - Tenants
+      summary: Activar tenant
+      description: |
+        Activa un tenant en estado TRIAL. Requiere que el tenant
+        tenga configuración de base de datos asignada (`settings`).
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        "200":
+          description: Tenant activado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        "400":
+          description: Tenant ya activado o sin configuración de DB.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Tenant no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /tenants/{id}/branding:
+    put:
+      tags:
+        - Tenants
+      summary: Actualizar branding del tenant
+      description: Actualiza logo, slogan y colores corporativos del tenant.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBrandingRequest'
+      responses:
+        "200":
+          description: Branding actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResponse'
+        "404":
+          description: Tenant no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /tenants/{id}/subscriptions:
+    get:
+      tags:
+        - Subscriptions
+      summary: Listar suscripciones de un tenant
+      description: Devuelve el historial de suscripciones de un tenant específico.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        "200":
+          description: Lista de suscripciones del tenant.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionResponse'
+        "404":
+          description: Tenant no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  # ----------------------------------------
+  # Subscriptions
+  # ----------------------------------------
+  /subscriptions:
+    get:
+      tags:
+        - Subscriptions
+      summary: Listar todas las suscripciones
+      description: |
+        Devuelve todas las suscripciones registradas en `master_db`.
+        **Requiere rol:** `ADMIN_SAAS`
+      responses:
+        "200":
+          description: Lista de suscripciones.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /subscriptions/{id}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Obtener suscripción por ID
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        "200":
+          description: Datos de la suscripción.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        "404":
+          description: Suscripción no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /subscriptions/{id}/activate:
+    put:
+      tags:
+        - Subscriptions
+      summary: Activar suscripción
+      description: |
+        Transiciona la suscripción de TRIAL → ACTIVE.
+        Requiere fecha de fin (`dateEnd`).
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateSubscriptionRequest'
+      responses:
+        "200":
+          description: Suscripción activada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        "400":
+          description: La suscripción no está en estado TRIAL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Suscripción no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /subscriptions/{id}/suspend:
+    put:
+      tags:
+        - Subscriptions
+      summary: Suspender suscripción
+      description: |
+        Transiciona la suscripción de ACTIVE → SUSPENDED.
+        El tenant pierde acceso hasta que sea reactivado.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        "200":
+          description: Suscripción suspendida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        "400":
+          description: La suscripción no está en estado ACTIVE.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Suscripción no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /subscriptions/{id}/cancel:
+    put:
+      tags:
+        - Subscriptions
+      summary: Cancelar suscripción
+      description: |
+        Transiciona la suscripción a CANCELED (estado terminal).
+        No puede revertirse.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/SubscriptionId'
+      responses:
+        "200":
+          description: Suscripción cancelada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        "400":
+          description: La suscripción ya está cancelada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Suscripción no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  # ----------------------------------------
+  # Holdings
+  # ----------------------------------------
+  /saas/holdings:
+    get:
+      tags:
+        - Holdings
+      summary: Listar holdings
+      description: |
+        Devuelve todos los holdings no eliminados de `master_db`.
+        **Requiere rol:** `ADMIN_SAAS`
+      responses:
+        "200":
+          description: Lista de holdings.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HoldingResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso de acceso.
+    post:
+      tags:
+        - Holdings
+      summary: Crear holding
+      description: |
+        Registra una empresa holding. El `taxId` (RUC) debe ser único globalmente.
+        **Requiere rol:** `ADMIN_SAAS`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldingRequest'
+      responses:
+        "201":
+          description: Holding creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingResponse'
+        "400":
+          description: RUC duplicado o datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para crear holdings.
+
+  /saas/holdings/{id}:
+    get:
+      tags:
+        - Holdings
+      summary: Obtener holding por ID
+      parameters:
+        - $ref: '#/components/parameters/HoldingId'
+      responses:
+        "200":
+          description: Datos del holding.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingResponse'
+        "404":
+          description: Holding no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    put:
+      tags:
+        - Holdings
+      summary: Actualizar holding
+      description: |
+        Actualiza la razón social y el tipo del holding.
+        El `taxId` (RUC) no es modificable.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/HoldingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateHoldingRequest'
+      responses:
+        "200":
+          description: Holding actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingResponse'
+        "400":
+          description: Datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Holding no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    delete:
+      tags:
+        - Holdings
+      summary: Eliminar holding (baja lógica)
+      description: |
+        Marca el holding como eliminado (`deleted_at = NOW()`) y lo desactiva.
+        No elimina el registro físicamente.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/HoldingId'
+      responses:
+        "204":
+          description: Holding eliminado exitosamente.
+        "404":
+          description: Holding no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /saas/holdings/{id}/activate:
+    put:
+      tags:
+        - Holdings
+      summary: Activar holding
+      description: Reactiva un holding previamente desactivado.
+      parameters:
+        - $ref: '#/components/parameters/HoldingId'
+      responses:
+        "200":
+          description: Holding activado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingResponse'
+        "404":
+          description: Holding no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /saas/holdings/{id}/deactivate:
+    put:
+      tags:
+        - Holdings
+      summary: Desactivar holding
+      description: Marca el holding como inactivo (baja lógica, no elimina).
+      parameters:
+        - $ref: '#/components/parameters/HoldingId'
+      responses:
+        "200":
+          description: Holding desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoldingResponse'
+        "404":
+          description: Holding no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  # ----------------------------------------
+  # Plans
+  # ----------------------------------------
+  /saas/plans:
+    get:
+      tags:
+        - Plans
+      summary: Listar todos los planes
+      description: Catálogo completo de planes de suscripción.
+      responses:
+        "200":
+          description: Lista de planes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    post:
+      tags:
+        - Plans
+      summary: Crear plan
+      description: |
+        Registra un nuevo plan de suscripción en el catálogo.
+        El nombre debe ser único globalmente.
+        **Requiere rol:** `ADMIN_SAAS`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanRequest'
+      responses:
+        "201":
+          description: Plan creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        "400":
+          description: Nombre duplicado o datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para crear planes.
+
+  /saas/plans/active:
+    get:
+      tags:
+        - Plans
+      summary: Listar planes activos
+      description: |
+        Solo planes con `active = true`. Usado en el flujo de alta de tenants
+        para mostrar las opciones disponibles al cliente.
+      responses:
+        "200":
+          description: Lista de planes activos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /saas/plans/{id}:
+    get:
+      tags:
+        - Plans
+      summary: Obtener plan por ID
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        "200":
+          description: Datos del plan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        "404":
+          description: Plan no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    put:
+      tags:
+        - Plans
+      summary: Actualizar plan
+      description: |
+        Actualiza nombre, precio, moneda y periodo de facturación.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanRequest'
+      responses:
+        "200":
+          description: Plan actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        "400":
+          description: Datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Plan no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    delete:
+      tags:
+        - Plans
+      summary: Eliminar plan (baja lógica)
+      description: |
+        Marca el plan como eliminado y lo desactiva.
+        No elimina el registro físicamente para preservar la integridad de suscripciones existentes.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        "204":
+          description: Plan eliminado exitosamente.
+        "404":
+          description: Plan no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /saas/plans/{id}/activate:
+    put:
+      tags:
+        - Plans
+      summary: Activar plan
+      description: Reactiva un plan previamente desactivado.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        "200":
+          description: Plan activado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        "404":
+          description: Plan no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  /saas/plans/{id}/deactivate:
+    put:
+      tags:
+        - Plans
+      summary: Desactivar plan
+      description: |
+        Marca el plan como inactivo. Los tenants con suscripción activa
+        no se ven afectados inmediatamente.
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        "200":
+          description: Plan desactivado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        "404":
+          description: Plan no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+
+  # ----------------------------------------
+  # Features
+  # ----------------------------------------
+  /saas/features:
+    get:
+      tags:
+        - Features
+      summary: Listar features del catálogo
+      description: Devuelve todas las features disponibles para asignar a planes.
+      responses:
+        "200":
+          description: Lista de features.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeatureResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    post:
+      tags:
+        - Features
+      summary: Crear feature
+      description: |
+        Registra una nueva feature en el catálogo. Se asigna a planes
+        mediante el modelo `PlanFeature`.
+        **Requiere rol:** `ADMIN_SAAS`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureRequest'
+      responses:
+        "201":
+          description: Feature creada exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureResponse'
+        "400":
+          description: Datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para crear features.
+
+  /saas/features/{id}:
+    get:
+      tags:
+        - Features
+      summary: Obtener feature por ID
+      parameters:
+        - $ref: '#/components/parameters/FeatureId'
+      responses:
+        "200":
+          description: Datos de la feature.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureResponse'
+        "404":
+          description: Feature no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    put:
+      tags:
+        - Features
+      summary: Actualizar feature
+      description: Actualiza nombre y descripción de una feature del catálogo.
+      parameters:
+        - $ref: '#/components/parameters/FeatureId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFeatureRequest'
+      responses:
+        "200":
+          description: Feature actualizada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureResponse'
+        "400":
+          description: Datos inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Feature no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+    delete:
+      tags:
+        - Features
+      summary: Eliminar feature
+      description: |
+        Elimina permanentemente una feature del catálogo.
+        Verificar que no esté asignada a ningún plan activo.
+        **Requiere rol:** `ADMIN_SAAS`
+      parameters:
+        - $ref: '#/components/parameters/FeatureId'
+      responses:
+        "204":
+          description: Feature eliminada exitosamente.
+        "404":
+          description: Feature no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para eliminar features.
