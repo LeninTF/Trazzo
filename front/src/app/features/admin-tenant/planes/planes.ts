@@ -38,6 +38,9 @@ interface Metricas {
 })
 export class Planes {
 
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly toastService = inject(ToastService);
   
   // ==========================================

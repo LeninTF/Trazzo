@@ -1,0 +1,15 @@
+package trazzo.back.corehr.application.port.out;
+
+import trazzo.back.corehr.domain.model.employee.TenantUserDepartment;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface TenantUserDepartmentRepositoryPort {
+    TenantUserDepartment save(TenantUserDepartment department);
+    Optional<TenantUserDepartment> findById(Long id);
+    List<TenantUserDepartment> findAllByTenantUserId(Long tenantUserId);
+    Optional<TenantUserDepartment> findByTenantUserIdAndDepartmentId(Long tenantUserId, Long departmentId);
+    Optional<TenantUserDepartment> findPrimaryByTenantUserId(Long tenantUserId);
+    void deleteById(Long id);
+}

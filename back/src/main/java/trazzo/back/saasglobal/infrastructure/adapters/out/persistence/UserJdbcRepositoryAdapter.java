@@ -58,7 +58,7 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
         jdbc.update("""
                 INSERT INTO users (id, person_id, tenant_id, email, phone,
                                    password, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 user.getId(), user.getPersonId(), user.getTenantId(), user.getEmail(),
                 user.getPhone(), user.getPassword(), user.getCreatedAt(), user.getUpdatedAt()

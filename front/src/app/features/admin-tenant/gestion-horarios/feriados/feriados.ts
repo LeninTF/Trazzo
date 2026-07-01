@@ -1,12 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { ApiService } from '../../../../api/services/api.service';
+import { ToastService } from '../../../../services/toast.service';
+import type { NonWorkingDayProfile } from '../../../../api/types';
 
 interface Feriado {
   id: number;
   fecha: string;
   nombre: string;
-  tipo: 'nacional' | 'institucional';
+  tipo: string;
 }
 
 @Component({
@@ -15,21 +19,19 @@ interface Feriado {
   templateUrl: './feriados.html',
   styleUrl: './feriados.css',
 })
-export class FeriadosComponent {
-  feriados: Feriado[] = [
-    { id: 1, fecha: '2026-01-01', nombre: 'Año Nuevo', tipo: 'nacional' },
-    { id: 2, fecha: '2026-07-28', nombre: 'Fiestas Patrias', tipo: 'nacional' },
-    { id: 3, fecha: '2026-12-25', nombre: 'Navidad', tipo: 'nacional' },
-    { id: 4, fecha: '2026-09-15', nombre: 'Aniversario Institucional', tipo: 'institucional' },
-  ];
+export class FeriadosComponent implements OnInit {
+  private readonly api = inject(ApiService);
+  private readonly toastService = inject(ToastService);
+  readonly loading = signal(true);
+  readonly error = signal('');
+
+  feriados: Feriado[] = [];
 
   feriadoForm: FormGroup;
   editFeriadoForm: FormGroup;
 
   showNewForm = false;
   editingFeriadoId: number | null = null;
-
-  private nextId = 5;
 
   constructor(private fb: FormBuilder) {
     this.feriadoForm = this.fb.group({
@@ -44,6 +46,29 @@ export class FeriadosComponent {
     });
   }
 
+  ngOnInit(): void {
+    this.cargarFeriados();
+  }
+
+  async cargarFeriados(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const res = await firstValueFrom(this.api.corehr.listNonWorkingDays({ size: 100 }));
+      this.feriados = res.content.map(d => ({
+        id: d.id,
+        fecha: d.date,
+        nombre: d.description ?? '',
+        tipo: 'nacional',
+      }));
+    } catch {
+      this.error.set('Error al cargar feriados');
+      this.toastService.error('Error al cargar feriados');
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   openNewForm(): void {
     this.feriadoForm.reset({ tipo: 'nacional' });
     this.showNewForm = true;
@@ -54,14 +79,18 @@ export class FeriadosComponent {
     this.feriadoForm.reset();
   }
 
-  addFeriado(): void {
+  async addFeriado(): Promise<void> {
     if (this.feriadoForm.invalid) return;
-    this.feriados.push({
-      id: this.nextId++,
-      fecha: this.feriadoForm.value.fecha,
-      nombre: this.feriadoForm.value.nombre,
-      tipo: this.feriadoForm.value.tipo,
-    });
+    try {
+      await firstValueFrom(this.api.corehr.createNonWorkingDay({
+        date: this.feriadoForm.value.fecha,
+        description: this.feriadoForm.value.nombre,
+      }));
+      await this.cargarFeriados();
+      this.toastService.success('Feriado creado');
+    } catch {
+      this.toastService.error('Error al crear feriado');
+    }
     this.cancelNewForm();
   }
 
@@ -79,15 +108,28 @@ export class FeriadosComponent {
     this.editFeriadoForm.reset();
   }
 
-  saveEdit(feriado: Feriado): void {
+  async saveEdit(feriado: Feriado): Promise<void> {
     if (this.editFeriadoForm.invalid) return;
-    feriado.fecha = this.editFeriadoForm.value.fecha;
-    feriado.nombre = this.editFeriadoForm.value.nombre;
-    feriado.tipo = this.editFeriadoForm.value.tipo;
+    try {
+      await firstValueFrom(this.api.corehr.patchNonWorkingDay(feriado.id, {
+        date: this.editFeriadoForm.value.fecha,
+        description: this.editFeriadoForm.value.nombre,
+      }));
+      await this.cargarFeriados();
+      this.toastService.success('Feriado actualizado');
+    } catch {
+      this.toastService.error('Error al actualizar feriado');
+    }
     this.cancelEdit();
   }
 
-  deleteFeriado(id: number): void {
-    this.feriados = this.feriados.filter(f => f.id !== id);
+  async deleteFeriado(id: number): Promise<void> {
+    try {
+      await firstValueFrom(this.api.corehr.deleteNonWorkingDay(id));
+      await this.cargarFeriados();
+      this.toastService.success('Feriado eliminado');
+    } catch {
+      this.toastService.error('Error al eliminar feriado');
+    }
   }
 }

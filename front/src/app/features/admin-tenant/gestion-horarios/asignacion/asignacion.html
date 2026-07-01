@@ -1,3 +1,23 @@
+@if (loading()) {
+  <div class="asig-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <output class="spinner-border text-primary">
+        <span class="visually-hidden">Cargando...</span>
+      </output>
+      <p class="mt-2 text-muted small">Cargando asignaciones...</p>
+    </div>
+  </div>
+} @else if (error()) {
+  <div class="asig-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2rem;"></i>
+      <p class="mt-2 text-muted">{{ error() }}</p>
+      <button class="btn btn-outline-primary btn-sm mt-2" (click)="cargarDatos()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+      </button>
+    </div>
+  </div>
+} @else {
 <div class="asig-section">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-2">
@@ -123,16 +143,21 @@
             <div class="asig-modal-body">
               <div class="form-group">
                 <label class="form-label-custom" for="asig-trabajador">Trabajador</label>
-                <input
+                <select
                   id="asig-trabajador"
-                  type="text"
                   class="input-custom"
-                  [class.invalid]="asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched"
-                  formControlName="trabajador"
-                  placeholder="Nombre completo"
+                  [class.invalid]="asignacionForm.get('trabajadorId')?.invalid && asignacionForm.get('trabajadorId')?.touched"
+                  formControlName="trabajadorId"
                 >
-                @if (asignacionForm.get('trabajador')?.invalid && asignacionForm.get('trabajador')?.touched) {
-                  <div class="error-msg">Ingrese el nombre del trabajador.</div>
+                  <option value="">Seleccione un trabajador</option>
+                  @for (worker of workers; track worker.id) {
+                    <option [value]="worker.id">
+                      {{ worker.persona.name }} {{ worker.persona.father_surname }} {{ worker.persona.mother_surname }}
+                    </option>
+                  }
+                </select>
+                @if (asignacionForm.get('trabajadorId')?.invalid && asignacionForm.get('trabajadorId')?.touched) {
+                  <div class="error-msg">Seleccione un trabajador.</div>
                 }
               </div>
               <div class="form-group">
@@ -200,3 +225,4 @@
     </div>
   }
 </div>
+}

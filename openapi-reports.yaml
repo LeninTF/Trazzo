@@ -1,0 +1,596 @@
+openapi: 3.1.0
+info:
+  title: Trazzo · Reports API
+  description: |
+    Contrato de la API del módulo **Reports**: gestión de cierres mensuales
+    de asistencia (Monthly Closures) y generación de reportes Excel/PDF con
+    el detalle por empleado dentro de un tenant Trazzo.
+
+    ## Base de datos
+    Todas las operaciones de este módulo operan sobre `tenant_db` (base de datos
+    del tenant autenticado). El tenant se resuelve automáticamente desde el JWT.
+
+    ## Autenticación
+    Todas las rutas requieren un JWT Bearer válido con contexto `TENANT`.
+    Las rutas de administración requieren rol `ADMIN`.
+
+    ## Prefijos
+    | Prefijo                               | Contexto                                           | Base de datos |
+    |---------------------------------------|----------------------------------------------------|---------------|
+    | `/reports/monthly-closures`           | CRUD de cierres mensuales                          | `tenant_db`   |
+    | `/reports/monthly-closure-details`    | Detalle individual de un cierre mensual            | `tenant_db`   |
+    | `/reports/monthly-reports`            | Reporte completo (cierre + detalles)               | `tenant_db`   |
+
+    ## Jerarquía
+    ```
+    MonthlyClosure (Cierre Mensual)
+    └── MonthlyClosureDetail (Detalle por empleado)
+    ```
+    Un `MonthlyClosure` representa el cierre de asistencia de un mes/año.
+    Contiene `N` detalles (`MonthlyClosureDetail`), uno por cada empleado
+    del tenant que registró asistencia en ese período. Los reportes Excel
+    y PDF se generan automáticamente al crear el cierre.
+
+    ## Flujo de creación
+    1. El cliente solicita la creación de un cierre para un mes/año.
+    2. El sistema consulta el resumen de asistencia del módulo CoreHR.
+    3. Se genera el detalle por empleado con horas trabajadas, tardanzas,
+       ausencias y horas extras.
+    4. Se generan los archivos Excel y PDF con las URLs resultantes.
+    5. Se persiste el cierre y sus detalles.
+    6. Se publica un evento de dominio `MonthlyClosureCreatedEvent`.
+
+  version: 1.0.0
+  contact:
+    name: Equipo Trazzo
+servers:
+  - url: https://api.trazzo.pe/api/v1
+    description: Producción
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT generado por Spring Boot. Payload relevante:
+        - `sub`: ID del usuario Trazzo
+        - `tenant_id`: UUID del tenant activo
+        - `context`: `TENANT`
+
+  parameters:
+    MonthlyClosureId:
+      name: id
+      in: path
+      required: true
+      description: UUID del cierre mensual.
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-0000-0000-0000-000000000001"
+
+    MonthlyClosureDetailId:
+      name: id
+      in: path
+      required: true
+      description: UUID del detalle del cierre mensual.
+      schema:
+        type: string
+        format: uuid
+        example: "b2c3d4e5-0000-0000-0000-000000000002"
+
+    MonthlyReportId:
+      name: id
+      in: path
+      required: true
+      description: UUID del reporte mensual (mismo que el ID del cierre).
+      schema:
+        type: string
+        format: uuid
+        example: "a1b2c3d4-0000-0000-0000-000000000001"
+
+  schemas:
+    # ── Requests ──────────────────────────────────────────────────────────────
+
+    CreateMonthlyClosureRequest:
+      type: object
+      required: [month, year]
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Mes del cierre (1 = Enero, 12 = Diciembre).
+          example: 6
+        year:
+          type: integer
+          minimum: 2000
+          description: Año del cierre.
+          example: 2026
+
+    # ── Responses ─────────────────────────────────────────────────────────────
+
+    MonthlyClosureResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID del cierre mensual.
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        month:
+          type: integer
+          description: Mes del cierre (1-12).
+          example: 6
+        year:
+          type: integer
+          description: Año del cierre.
+          example: 2026
+        totalEmployees:
+          type: integer
+          description: Cantidad total de empleados incluidos en el cierre.
+          example: 45
+        excelReportUrl:
+          type: ["string", "null"]
+          description: URL del reporte Excel generado.
+          example: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+        pdfReportUrl:
+          type: ["string", "null"]
+          description: URL del reporte PDF generado.
+          example: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación del cierre.
+          example: "2026-06-27T10:00:00"
+
+    MonthlyClosureDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID del detalle.
+          example: "b2c3d4e5-0000-0000-0000-000000000002"
+        monthClosureId:
+          type: string
+          format: uuid
+          description: UUID del cierre mensual al que pertenece.
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        tenantUserId:
+          type: integer
+          format: int64
+          description: ID del usuario (empleado) en el tenant.
+          example: 1001
+        tenantUserFullName:
+          type: string
+          description: Nombre completo del empleado.
+          example: "Juan Pérez López"
+        tenantUserDocument:
+          type: string
+          description: Número de documento del empleado.
+          example: "DNI 12345678"
+        departmentName:
+          type: ["string", "null"]
+          description: Nombre del departamento al que pertenece el empleado.
+          example: "Selección de Personal"
+        roleName:
+          type: ["string", "null"]
+          description: Nombre del rol del empleado en el departamento.
+          example: "Analista de RRHH"
+        totalWorkedHours:
+          type: number
+          format: double
+          description: Total de horas trabajadas en el período.
+          minimum: 0
+          example: 160.5
+        totalTardinessMinutes:
+          type: integer
+          description: Total de minutos de tardanza en el período.
+          minimum: 0
+          example: 45
+        totalAbsences:
+          type: integer
+          description: Total de ausencias en el período.
+          minimum: 0
+          example: 1
+        totalOvertimeHours:
+          type: number
+          format: double
+          description: Total de horas extras en el período.
+          minimum: 0
+          example: 12.0
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación del detalle.
+          example: "2026-06-27T10:00:00"
+
+    MonthlyClosureWithDetailsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID del cierre mensual.
+          example: "a1b2c3d4-0000-0000-0000-000000000001"
+        month:
+          type: integer
+          example: 6
+        year:
+          type: integer
+          example: 2026
+        totalEmployees:
+          type: integer
+          example: 45
+        excelReportUrl:
+          type: ["string", "null"]
+          example: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+        pdfReportUrl:
+          type: ["string", "null"]
+          example: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-06-27T10:00:00"
+        details:
+          type: array
+          description: Lista de detalles por empleado del cierre.
+          items:
+            $ref: '#/components/schemas/MonthlyClosureDetailResponse'
+
+    # ── Errores ───────────────────────────────────────────────────────────────
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Token JWT ausente, expirado o inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 401
+            error: "Unauthorized"
+            message: "JWT token is missing or invalid"
+            path: "/api/v1/reports/monthly-closures"
+
+    Forbidden:
+      description: El usuario no tiene el rol requerido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 403
+            error: "Forbidden"
+            message: "Access denied"
+            path: "/api/v1/reports/monthly-closures"
+
+    NotFound:
+      description: El recurso solicitado no existe.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 404
+            error: "Not Found"
+            message: "Monthly closure not found with id: a1b2c3d4-0000-0000-0000-000000000099"
+            path: "/api/v1/reports/monthly-closures/a1b2c3d4-0000-0000-0000-000000000099"
+
+    BadRequest:
+      description: Datos de entrada inválidos o restricción de negocio violada.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 400
+            error: "Bad Request"
+            message: "Month must be between 1 and 12"
+            path: "/api/v1/reports/monthly-closures"
+
+    Conflict:
+      description: Ya existe un cierre para el mismo mes y año.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-06-27T10:00:00"
+            status: 409
+            error: "Conflict"
+            message: "Monthly closure already exists for 6/2026"
+            path: "/api/v1/reports/monthly-closures"
+
+security:
+  - bearerAuth: []
+
+# ==============================================================================
+# PATHS
+# ==============================================================================
+
+paths:
+
+  # ============================================================================
+  # MONTHLY CLOSURES (Cierres Mensuales)
+  # ============================================================================
+
+  /reports/monthly-closures:
+    get:
+      summary: Listar cierres mensuales
+      description: |
+        Retorna todos los cierres mensuales del tenant. Opcionalmente filtrable
+        por `year` y/o `month`.
+      operationId: listMonthlyClosures
+      tags: [Monthly Closures]
+      parameters:
+        - name: year
+          in: query
+          required: false
+          description: Filtra cierres por año específico.
+          schema:
+            type: integer
+            minimum: 2000
+            example: 2026
+        - name: month
+          in: query
+          required: false
+          description: Filtra cierres por mes específico (1-12).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            example: 6
+      responses:
+        "200":
+          description: Lista de cierres mensuales.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MonthlyClosureResponse'
+              example:
+                - id: "a1b2c3d4-0000-0000-0000-000000000001"
+                  month: 6
+                  year: 2026
+                  totalEmployees: 45
+                  excelReportUrl: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+                  pdfReportUrl: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+                  createdAt: "2026-06-27T10:00:00"
+                - id: "c3d4e5f6-0000-0000-0000-000000000003"
+                  month: 5
+                  year: 2026
+                  totalEmployees: 42
+                  excelReportUrl: "/reports/excel/c3d4e5f6-0000-0000-0000-000000000003.xlsx"
+                  pdfReportUrl: "/reports/pdf/c3d4e5f6-0000-0000-0000-000000000003.pdf"
+                  createdAt: "2026-05-28T09:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Crear cierre mensual
+      description: |
+        Crea un nuevo cierre mensual de asistencia para el mes/año indicados.
+        El proceso incluye:
+          1. Validar que no exista un cierre previo para el mismo período.
+          2. Obtener el resumen de asistencia de todos los empleados del tenant
+             desde el módulo CoreHR.
+          3. Generar los reportes Excel y PDF.
+          4. Persistir el cierre y sus detalles.
+          5. Publicar un evento de dominio `MonthlyClosureCreatedEvent`.
+
+        El usuario autenticado se registra como creador del cierre.
+      operationId: createMonthlyClosure
+      tags: [Monthly Closures]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMonthlyClosureRequest'
+            example:
+              month: 6
+              year: 2026
+      responses:
+        "201":
+          description: Cierre mensual creado exitosamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyClosureResponse'
+              example:
+                id: "a1b2c3d4-0000-0000-0000-000000000001"
+                month: 6
+                year: 2026
+                totalEmployees: 45
+                excelReportUrl: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+                pdfReportUrl: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+                createdAt: "2026-06-27T10:00:00"
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /reports/monthly-closures/{id}:
+    get:
+      summary: Obtener cierre mensual por ID
+      description: |
+        Retorna los datos del cierre mensual (sin los detalles por empleado).
+        Para obtener el reporte completo con detalles, usar
+        `/reports/monthly-reports/{id}`.
+      operationId: getMonthlyClosureById
+      tags: [Monthly Closures]
+      parameters:
+        - $ref: '#/components/parameters/MonthlyClosureId'
+      responses:
+        "200":
+          description: Datos del cierre mensual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyClosureResponse'
+              example:
+                id: "a1b2c3d4-0000-0000-0000-000000000001"
+                month: 6
+                year: 2026
+                totalEmployees: 45
+                excelReportUrl: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+                pdfReportUrl: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+                createdAt: "2026-06-27T10:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # MONTHLY CLOSURE DETAILS (Detalle de Cierre Mensual)
+  # ============================================================================
+
+  /reports/monthly-closure-details/{id}:
+    get:
+      summary: Obtener detalle de cierre mensual por ID
+      description: |
+        Retorna el detalle individual de un empleado dentro de un cierre mensual,
+        incluyendo horas trabajadas, tardanzas, ausencias y horas extras.
+      operationId: getMonthlyClosureDetailById
+      tags: [Monthly Closure Details]
+      parameters:
+        - $ref: '#/components/parameters/MonthlyClosureDetailId'
+      responses:
+        "200":
+          description: Detalle del cierre mensual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyClosureDetailResponse'
+              example:
+                id: "b2c3d4e5-0000-0000-0000-000000000002"
+                monthClosureId: "a1b2c3d4-0000-0000-0000-000000000001"
+                tenantUserId: 1001
+                tenantUserFullName: "Juan Pérez López"
+                tenantUserDocument: "DNI 12345678"
+                departmentName: "Selección de Personal"
+                roleName: "Analista de RRHH"
+                totalWorkedHours: 160.5
+                totalTardinessMinutes: 45
+                totalAbsences: 1
+                totalOvertimeHours: 12.0
+                createdAt: "2026-06-27T10:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          description: Detalle de cierre mensual no encontrado.
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # MONTHLY REPORTS (Reportes Mensuales — Cierre + Detalles)
+  # ============================================================================
+
+  /reports/monthly-reports/{id}:
+    get:
+      summary: Obtener reporte mensual completo con detalles
+      description: |
+        Retorna el cierre mensual junto con toda la lista de detalles por
+        empleado. Este endpoint consolida la información del cierre y de
+        todos sus detalles en una sola respuesta.
+      operationId: getMonthlyReportById
+      tags: [Monthly Reports]
+      parameters:
+        - $ref: '#/components/parameters/MonthlyReportId'
+      responses:
+        "200":
+          description: Reporte mensual completo con detalles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyClosureWithDetailsResponse'
+              example:
+                id: "a1b2c3d4-0000-0000-0000-000000000001"
+                month: 6
+                year: 2026
+                totalEmployees: 2
+                excelReportUrl: "/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx"
+                pdfReportUrl: "/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf"
+                createdAt: "2026-06-27T10:00:00"
+                details:
+                  - id: "b2c3d4e5-0000-0000-0000-000000000002"
+                    monthClosureId: "a1b2c3d4-0000-0000-0000-000000000001"
+                    tenantUserId: 1001
+                    tenantUserFullName: "Juan Pérez López"
+                    tenantUserDocument: "DNI 12345678"
+                    departmentName: "Selección de Personal"
+                    roleName: "Analista de RRHH"
+                    totalWorkedHours: 160.5
+                    totalTardinessMinutes: 45
+                    totalAbsences: 1
+                    totalOvertimeHours: 12.0
+                    createdAt: "2026-06-27T10:00:00"
+                  - id: "c3d4e5f6-0000-0000-0000-000000000004"
+                    monthClosureId: "a1b2c3d4-0000-0000-0000-000000000001"
+                    tenantUserId: 1002
+                    tenantUserFullName: "María García Torres"
+                    tenantUserDocument: "DNI 87654321"
+                    departmentName: "Nómina"
+                    roleName: "Especialista de Nómina"
+                    totalWorkedHours: 168.0
+                    totalTardinessMinutes: 15
+                    totalAbsences: 0
+                    totalOvertimeHours: 4.5
+                    createdAt: "2026-06-27T10:00:00"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+tags:
+  - name: Monthly Closures
+    description: |
+      Gestión de cierres mensuales de asistencia (`monthly_closures`).
+      Representan el resumen consolidado de asistencia de todos los empleados
+      del tenant para un mes y año específicos. Al crearse, se generan
+      automáticamente los reportes Excel y PDF.
+  - name: Monthly Closure Details
+    description: |
+      Detalle individual por empleado de un cierre mensual
+      (`monthly_closures_details`). Cada registro contiene las horas
+      trabajadas, tardanzas, ausencias y horas extras de un empleado
+      en el período del cierre.
+  - name: Monthly Reports
+    description: |
+      Reporte mensual completo que consolida un cierre (`MonthlyClosure`)
+      con todos sus detalles (`MonthlyClosureDetail`) en una sola respuesta.
+      Útil para visualización y exportación de datos.

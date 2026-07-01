@@ -8,6 +8,9 @@ import { Component, signal } from '@angular/core';
   styleUrl: './reglas-asistencia.css',
 })
 export class ReglasAsistencia {
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   tolerancia = signal(15);
   redondeo = signal<'estandar' | 'real'>('estandar');
   huellaActivada = signal(true);

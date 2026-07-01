@@ -201,7 +201,7 @@ dotnet build .\Trazzo.Middleware.slnx -c Release
 dotnet test
 ```
 
-Los 220 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico.
+Los 218 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico.
 
 ---
 

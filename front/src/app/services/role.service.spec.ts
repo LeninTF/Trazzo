@@ -1,0 +1,114 @@
+import { TestBed } from '@angular/core/testing';
+import { RoleService } from './role.service';
+
+describe('RoleService', () => {
+  let service: RoleService;
+
+  beforeEach(() => {
+    localStorage.clear();
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(RoleService);
+  });
+
+  it('creates the role service', () => {
+    expect(service).toBeTruthy();
+  });
+
+  describe('initial values', () => {
+    it('should have default role as admin-tenant', () => {
+      expect(service.role()).toBe('admin-tenant');
+    });
+
+    it('should have empty userName', () => {
+      expect(service.userName()).toBe('');
+    });
+
+    it('should have empty userEmail', () => {
+      expect(service.userEmail()).toBe('');
+    });
+
+    it('should have sidebarOpen as false', () => {
+      expect(service.sidebarOpen()).toBeFalse();
+    });
+  });
+
+  describe('setUserInfo', () => {
+    it('should set userName and userEmail', () => {
+      service.setUserInfo('John Doe', 'john@test.com');
+      expect(service.userName()).toBe('John Doe');
+      expect(service.userEmail()).toBe('john@test.com');
+    });
+
+    it('should persist userName to localStorage', () => {
+      service.setUserInfo('John Doe', 'john@test.com');
+      expect(localStorage.getItem('trazzo_user_name')).toBe('John Doe');
+    });
+  });
+
+  describe('switchRole', () => {
+    it('should update role signal', () => {
+      service.switchRole('admin-sass');
+      expect(service.role()).toBe('admin-sass');
+    });
+
+    it('should persist role to localStorage', () => {
+      service.switchRole('admin-sass');
+      expect(localStorage.getItem('trazzo_role')).toBe('admin-sass');
+    });
+
+    it('should allow switching to admin-tenant', () => {
+      service.switchRole('admin-tenant');
+      expect(service.role()).toBe('admin-tenant');
+    });
+
+    it('should allow switching to usuario', () => {
+      service.switchRole('usuario');
+      expect(service.role()).toBe('usuario');
+    });
+  });
+
+  describe('loadRole from localStorage', () => {
+    it('should load saved role from localStorage on creation', () => {
+      localStorage.clear();
+      localStorage.setItem('trazzo_role', 'admin-sass');
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({});
+      const newService = TestBed.inject(RoleService);
+      expect(newService.role()).toBe('admin-sass');
+    });
+
+    it('should default to admin-tenant for invalid stored role', () => {
+      localStorage.clear();
+      localStorage.setItem('trazzo_role', 'invalid-role');
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({});
+      const newService = TestBed.inject(RoleService);
+      expect(newService.role()).toBe('admin-tenant');
+    });
+  });
+
+  describe('toggleSidebar', () => {
+    it('should toggle sidebarOpen', () => {
+      service.toggleSidebar();
+      expect(service.sidebarOpen()).toBeTrue();
+      service.toggleSidebar();
+      expect(service.sidebarOpen()).toBeFalse();
+    });
+  });
+
+  describe('closeSidebar', () => {
+    it('should set sidebarOpen to false', () => {
+      service.sidebarOpen.set(true);
+      service.closeSidebar();
+      expect(service.sidebarOpen()).toBeFalse();
+    });
+  });
+
+  describe('roleLabel', () => {
+    it('should return correct labels for each role', () => {
+      expect(service.roleLabel['admin-tenant']).toBe('Administrador Tenant');
+      expect(service.roleLabel['admin-sass']).toBe('Administrador SaaS');
+      expect(service.roleLabel['usuario']).toBe('Usuario');
+    });
+  });
+});

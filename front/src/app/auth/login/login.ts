@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
+import { ApiService } from '../../api/services/api.service';
+import { RoleService } from '../../services/role.service';
 
 type LoginField = {
   id: string;
@@ -58,6 +60,8 @@ export class Login {
 
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
+  private readonly roleService = inject(RoleService);
 
   readonly email = signal('');
   readonly password = signal('');
@@ -92,9 +96,27 @@ export class Login {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    setTimeout(() => {
-      this.isLoading.set(false);
-      this.router.navigate(['/sass/tenants']);
-    }, 1500);
+    this.api.auth.login({ email, password }).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        localStorage.setItem('trazzo_token', res.accessToken);
+        this.roleService.setUserInfo(res.usuario.nombre, res.usuario.email);
+        const isMaster = res.usuario.rol.some(r => r.name === 'admin_trazzo');
+        if (isMaster) {
+          this.roleService.switchRole('admin-sass');
+          this.router.navigate(['/sass/tenants']);
+        } else {
+          this.roleService.switchRole('admin-tenant');
+          this.router.navigate(['/tenant/dashboard']);
+        }
+        this.toastService.success(`Bienvenido(a), ${res.usuario.nombre}`);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        const msg = err.status === 401 ? 'Credenciales inválidas' : 'Error al iniciar sesión';
+        this.errorMessage.set(msg);
+        this.toastService.error(msg);
+      },
+    });
   }
 }

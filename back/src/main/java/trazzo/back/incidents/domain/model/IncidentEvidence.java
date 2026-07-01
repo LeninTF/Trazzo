@@ -2,6 +2,7 @@ package trazzo.back.incidents.domain.model;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -63,7 +64,7 @@ public class IncidentEvidence {
     ) {
         LocalDateTime now = LocalDateTime.now();
         return new IncidentEvidence(
-                null,
+                UUID.randomUUID().toString(),
                 incidentId,
                 fileName,
                 fileUrl,

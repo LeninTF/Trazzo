@@ -1,4 +1,12 @@
 package trazzo.back.corehr.domain.event;
 
-public class AttendanceRegisteredEvent {
+import java.time.LocalDateTime;
+
+public record AttendanceRegisteredEvent(
+        String attendanceId,
+        Long tenantUserId,
+        Long scheduleId,
+        Long deviceId,
+        LocalDateTime occurredAt
+) implements CoreHrDomainEvent {
 }

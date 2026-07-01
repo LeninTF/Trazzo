@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 
 interface RegistroAsistencia {
   fecha: string;
@@ -16,6 +16,8 @@ interface RegistroAsistencia {
   styleUrl: './historial-asistencia.css',
 })
 export class HistorialAsistencia {
+  readonly loading = signal(false);
+  readonly error = signal('');
   mesActual = 'Junio 2026';
 
   cambiarMes(delta: number): void {

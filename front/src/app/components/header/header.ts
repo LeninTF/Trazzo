@@ -1,7 +1,12 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { RoleService, Role } from '../../services/role.service';
 
+const ROLE_DASHBOARD: Record<Role, string> = {
+  'admin-tenant': '/tenant/dashboard',
+  'admin-sass': '/sass/tenants',
+  'usuario': '/usuario/dashboard',
+};
 
 @Component({
   selector: 'app-header',
@@ -11,6 +16,7 @@ import { RoleService, Role } from '../../services/role.service';
 })
 export class Header {
   protected readonly roleService = inject(RoleService);
+  private readonly router = inject(Router);
 
   protected readonly roles: { value: Role; label: string }[] = [
     { value: 'admin-tenant', label: 'Administrador Tenant' },
@@ -21,8 +27,8 @@ export class Header {
   protected settingsUrl = computed(() => {
     const role = this.roleService.role();
     if (role === 'admin-tenant') return '/tenant/configuracion-tenant';
-    if (role === 'admin-sass') return '/sass/dashboard';
-    return '/usuario/dashboard';
+    if (role === 'admin-sass') return '/sass/perfil';
+    return '/usuario/perfil';
   });
 
   protected readonly notificaciones = [
@@ -36,6 +42,11 @@ export class Header {
     warning: '#f59e0b',
     success: '#10b981',
   };
+
+  protected switchRoleAndNavigate(role: Role): void {
+    this.roleService.switchRole(role);
+    this.router.navigateByUrl(ROLE_DASHBOARD[role]);
+  }
 
   protected onUserChipEnter(event: Event): void {
     const target = event.currentTarget as HTMLElement;

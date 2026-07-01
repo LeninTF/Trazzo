@@ -205,8 +205,6 @@ export class GestionRoles extends BaseGestionRoles {
     },
   };
 
-  protected readonly defaultRolId = 'administrador';
-
   override rolSeleccionado = 'administrador';
 
   constructor() {
