@@ -70,7 +70,7 @@ bin\Release\Trazzo.Biometric.Agent.msi
 
 ### Qué hace el build
 
-1. **Publica el agente** con `dotnet publish --self-contained true -r win-x64`. Incluye el runtime de .NET 10 — la PC de destino no necesita tener .NET instalado.
+1. **Publica el agente** con `dotnet publish --self-contained true -r win-x64`. En CI, los binarios llegan como artefacto del job `build-test-analyze` y el paso se omite pasando `-p:SkipAgentPublish=true` — así no se duplica trabajo ni tiempo. En desarrollo local el publish siempre se ejecuta (valor por defecto: `false`).
 2. **Verifica la DLL nativa** (`libzkfpcsharp.dll`). Falla el build si no existe.
 3. **Ejecuta `GenerateInstallerWxs.ps1`** para crear `obj\Release\Product.Generated.wxs` con la lista completa de archivos del publish. Los IDs de componente y GUIDs son deterministas (basados en MD5 del path relativo), lo que garantiza actualizaciones in-place correctas.
 4. **Compila con WiX v4** enlazando `Product.wxs` + el WXS generado.
@@ -203,4 +203,4 @@ Los GUIDs son deterministas: dado el mismo conjunto de archivos, el script siemp
 | Qué | Detalle |
 |---|---|
 | Firma digital | Firmar el MSI con un certificado de código para evitar alertas de SmartScreen |
-| Versión desde ensamblado | Leer la versión del `.csproj` del agente en vez del valor fijo `1.0.0` en `.wixproj` |
+| Publicar en GitHub Releases | Agregar paso al workflow para que el MSI quede disponible con URL pública para los técnicos de los colegios |

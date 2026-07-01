@@ -1,0 +1,7 @@
+name: Configuración CodeQL - Trazzo
+
+paths-ignore:
+  # Archivo de pruebas manuales del WebSocket — no es código de producción.
+  # Las alertas XSS y URL redirect detectadas aquí deben marcarse manualmente
+  # como "Dismiss → Used in tests" en GitHub Security.
+  - middleware/Trazzo.Biometric.Agent/scripts/test-websocket.html

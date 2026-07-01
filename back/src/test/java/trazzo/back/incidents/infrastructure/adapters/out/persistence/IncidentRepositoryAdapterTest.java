@@ -1,0 +1,184 @@
+package trazzo.back.incidents.infrastructure.adapters.out.persistence;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.*;
+import trazzo.back.incidents.domain.model.Incident;
+import trazzo.back.incidents.domain.model.IncidentState;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentPermissionEntity;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentEvidenceSpringDataRepository;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentPermissionSpringDataRepository;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpringDataRepository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+class IncidentRepositoryAdapterTest {
+
+    private IncidentSpringDataRepository incidentRepo;
+    private IncidentEvidenceSpringDataRepository evidenceRepo;
+    private IncidentPermissionSpringDataRepository permissionRepo;
+    private IncidentRepositoryAdapter adapter;
+
+    @BeforeEach
+    void setUp() {
+        incidentRepo = mock(IncidentSpringDataRepository.class);
+        evidenceRepo = mock(IncidentEvidenceSpringDataRepository.class);
+        permissionRepo = mock(IncidentPermissionSpringDataRepository.class);
+        adapter = new IncidentRepositoryAdapter(incidentRepo, evidenceRepo, permissionRepo);
+    }
+
+    @Test
+    void saveWithoutPermission() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        when(incidentRepo.save(any())).thenReturn(entity);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(entity));
+        when(permissionRepo.findByIncidentId("inc-1")).thenReturn(Optional.empty());
+
+        var saved = adapter.save(incident);
+
+        assertEquals("inc-1", saved.getId());
+        verify(permissionRepo, never()).save(any());
+    }
+
+    @Test
+    void saveWithPermission() {
+        var now = LocalDateTime.now();
+        var permission = trazzo.back.incidents.domain.model.IncidentPermission.create("inc-1",
+                java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(1), 1);
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, permission, List.of(), now, now);
+        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        var permEntity = new IncidentPermissionEntity("perm-1", "inc-1",
+                java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(1), 1, now, now);
+        when(incidentRepo.save(any())).thenReturn(entity);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(entity));
+        when(permissionRepo.findByIncidentId("inc-1")).thenReturn(Optional.of(permEntity));
+
+        adapter.save(incident);
+
+        verify(permissionRepo).save(any());
+    }
+
+    @Test
+    void findByIdWhenNotFound() {
+        when(incidentRepo.findById("bad-id")).thenReturn(Optional.empty());
+        assertTrue(adapter.findById("bad-id").isEmpty());
+    }
+
+    @Test
+    void findByIdWithPermission() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        var permEntity = new IncidentPermissionEntity("perm-1", "inc-1",
+                java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(1), 1, now, now);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(entity));
+        when(permissionRepo.findByIncidentId("inc-1")).thenReturn(Optional.of(permEntity));
+
+        var result = adapter.findById("inc-1");
+
+        assertTrue(result.isPresent());
+        assertNotNull(result.get().getPermission());
+    }
+
+    @Test
+    void findAllWithFilters() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        var page = new PageImpl<>(List.of(entity));
+        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(page);
+
+        var results = adapter.findAll("u-1", "PENDIENTE", null, null, null, null, 0, 20, null);
+
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    void findAllWithoutFilters() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        var page = new PageImpl<>(List.of(entity));
+        when(incidentRepo.findAll(any(Pageable.class))).thenReturn(page);
+
+        var results = adapter.findAll(null, null, null, null, null, null, 0, 20, null);
+
+        assertEquals(1, results.size());
+    }
+
+    @Test
+    void countWithFilters() {
+        Page<IncidentEntity> page = new PageImpl<>(List.of(), PageRequest.of(0, 1), 5);
+        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(page);
+
+        var count = adapter.count("u-1", null, null, null, null, null);
+
+        assertEquals(5, count);
+    }
+
+    @Test
+    void countWithoutFilters() {
+        when(incidentRepo.count()).thenReturn(10L);
+
+        var count = adapter.count(null, null, null, null, null, null);
+
+        assertEquals(10, count);
+    }
+
+    @Test
+    void deleteById() {
+        adapter.deleteById("inc-1");
+
+        verify(evidenceRepo).deleteByIncidentId("inc-1");
+        verify(permissionRepo).deleteByIncidentId("inc-1");
+        verify(incidentRepo).deleteById("inc-1");
+    }
+
+    @Test
+    void parseSortWithBlankDefaultsToDescCreatedAt() {
+        when(incidentRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+        adapter.findAll(null, null, null, null, null, null, 0, 20, null);
+        verify(incidentRepo).findAll(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")));
+    }
+
+    @Test
+    void parseSortWithFieldAndAscDirection() {
+        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        adapter.findAll("u-1", null, null, null, null, null, 0, 20, "state,asc");
+        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "state"))));
+    }
+
+    @Test
+    void parseSortWithFieldAndDescDirection() {
+        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        adapter.findAll("u-1", null, null, null, null, null, 0, 20, "updatedAt,desc");
+        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "updatedAt"))));
+    }
+
+    @Test
+    void parseSortMapsCreatedAtField() {
+        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+        adapter.findAll("u-1", null, null, null, null, null, 0, 20, "created_at,asc");
+        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "createdAt"))));
+    }
+}

@@ -4708,10 +4708,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   # ── Evidence ───────────────────────────────────────────────────────────
   /incidentes/{id}/evidencias:
@@ -4770,10 +4766,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
     get:
       tags:

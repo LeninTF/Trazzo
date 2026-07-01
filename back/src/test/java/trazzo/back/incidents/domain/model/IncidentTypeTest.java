@@ -20,7 +20,7 @@ class IncidentTypeTest {
         var type = IncidentType.create("Urgente", "Incidencias urgentes");
         var after = LocalDateTime.now();
 
-        assertNull(type.getId());
+        assertNotNull(type.getId());
         assertEquals("Urgente", type.getNombre());
         assertEquals("Incidencias urgentes", type.getDescripcion());
         assertTrue(type.isActivo());
@@ -53,7 +53,7 @@ class IncidentTypeTest {
     @Test
     void createInitialState() {
         var type = IncidentType.create("Urgente", "Desc");
-        assertNull(type.getId());
+        assertNotNull(type.getId());
         assertTrue(type.isActivo());
         assertNotNull(type.getCreatedAt());
         assertNotNull(type.getUpdatedAt());

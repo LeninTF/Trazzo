@@ -1,0 +1,360 @@
+@if (error()) {
+<div class="page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
+@if (!vistaCrear()) {
+	<div class="page">
+		<div class="page__top">
+			<div>
+				<h1 class="page__title">Gestión de Usuarios</h1>
+				<p class="page__desc">Administra el acceso y permisos del equipo interno.</p>
+			</div>
+		</div>
+
+		<div class="layout">
+			<div class="layout__main">
+				<div class="filters" role="group" aria-label="Filtros">
+					<div class="filters__group">
+						<label class="filters__label" for="usuarios-filtro-rol">Rol</label>
+						<select class="filters__control" id="usuarios-filtro-rol" [value]="filterRol()" (change)="setFilterRol(($any($event.target).value))">
+							<option value="todos">Todos</option>
+							<option value="Superadmin">Superadmin</option>
+							<option value="Soporte">Soporte</option>
+							<option value="Facturacion">Facturación</option>
+						</select>
+					</div>
+					<div class="filters__group">
+						<label class="filters__label" for="usuarios-filtro-estado">Estado</label>
+						<select class="filters__control" id="usuarios-filtro-estado" [value]="filterEstado()" (change)="setFilterEstado(($any($event.target).value))">
+							<option value="todos">Todos</option>
+							<option value="activo">Activo</option>
+							<option value="inactivo">Inactivo</option>
+						</select>
+					</div>
+					<button type="button" class="btn btn--outline" (click)="limpiarFiltros()">
+						<i class="bi bi-x-circle"></i> Limpiar Filtros
+					</button>
+				</div>
+
+				<div class="table-wrap">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Usuario</th>
+								<th>Correo</th>
+								<th>Nivel de Acceso</th>
+								<th>Estado</th>
+								<th>Última Conexión</th>
+								<th class="col-acciones">Acciones</th>
+							</tr>
+						</thead>
+						<tbody>
+							@for (u of usuariosFiltrados(); track u.id) {
+								<tr>
+									<td class="td-user" data-label="Usuario">
+										<span class="td-user__avatar">{{ u.nombre.charAt(0) }}{{ u.nombre.split(' ')[1]?.charAt(0) }}</span>
+										<span class="td-user__name">{{ u.nombre }}</span>
+									</td>
+									<td class="td-mono" data-label="Correo">{{ u.correo }}</td>
+									<td data-label="Nivel de Acceso">
+										<span class="role-badge" [class.role-badge--superadmin]="u.rol === 'Superadmin'"
+											[class.role-badge--soporte]="u.rol === 'Soporte'"
+											[class.role-badge--facturacion]="u.rol === 'Facturacion'">
+											{{ u.rol === 'Facturacion' ? 'Facturación' : u.rol }}
+										</span>
+									</td>
+									<td data-label="Estado">
+										<span class="status" [class.status--active]="u.estado === 'activo'" [class.status--inactive]="u.estado === 'inactivo'">
+											<span class="status__dot"></span>
+											{{ u.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+										</span>
+									</td>
+									<td class="td-muted" data-label="Última Conexión">{{ u.ultimaConexion }}</td>
+									<td class="td-actions" data-label="Acciones">
+										<button type="button" class="btn-icon" title="Editar" (click)="abrirCrear(u)"><i class="bi bi-pencil"></i></button>
+										<button type="button" class="btn-icon" [title]="u.estado === 'activo' ? 'Desactivar' : 'Activar'" (click)="toggleEstado(u)">
+											<i class="bi" [class.bi-pause-circle]="u.estado === 'activo'" [class.bi-play-circle]="u.estado === 'inactivo'"></i>
+										</button>
+										<button type="button" class="btn-icon btn-icon--danger" title="Eliminar" (click)="confirmarEliminar(u)">
+											<i class="bi bi-trash3"></i>
+										</button>
+									</td>
+								</tr>
+							} @empty {
+								<tr><td colspan="6" class="td-empty">No se encontraron usuarios</td></tr>
+							}
+						</tbody>
+					</table>
+				</div>
+
+				<div class="page__actions">
+					<button type="button" class="btn btn--primary" (click)="abrirCrear()">
+						<i class="bi bi-plus-lg"></i> Añadir Administrador
+					</button>
+				</div>
+			</div>
+
+			<aside class="layout__sidebar">
+				<div class="sidebar-card">
+					<h3 class="sidebar-card__title">Salud del Equipo</h3>
+					<div class="donut">
+						<svg viewBox="0 0 36 36" class="donut__svg">
+							<path class="donut__bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+							<path class="donut__fill" [attr.stroke-dasharray]="actividadSemanal() + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+						</svg>
+						<span class="donut__label">{{ actividadSemanal() }}%</span>
+					</div>
+					<span class="sidebar-card__hint">Actividad semanal</span>
+				</div>
+
+				<div class="sidebar-card">
+					<h3 class="sidebar-card__title">Estado de Usuarios</h3>
+					<div class="stat-row">
+						<div class="stat stat--active">
+							<strong class="stat__num">{{ activos() }}</strong>
+							<span class="stat__label">Activos ahora</span>
+						</div>
+						<div class="stat stat--inactive">
+							<strong class="stat__num">{{ inactivos() }}</strong>
+							<span class="stat__label">Inactivos</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="sidebar-card">
+					<h3 class="sidebar-card__title">Distribución de Roles</h3>
+					<div class="dist">
+						<div class="dist__row">
+							<span class="dist__label">Superadmins</span>
+							<div class="dist__bar-wrap">
+								<div class="dist__bar dist__bar--superadmin" [style.width.%]="pctSuperadmin()"></div>
+							</div>
+							<span class="dist__num">{{ superadmins() }}</span>
+						</div>
+						<div class="dist__row">
+							<span class="dist__label">Soporte Técnico</span>
+							<div class="dist__bar-wrap">
+								<div class="dist__bar dist__bar--soporte" [style.width.%]="pctSoporte()"></div>
+							</div>
+							<span class="dist__num">{{ soportes() }}</span>
+						</div>
+						<div class="dist__row">
+							<span class="dist__label">Facturación</span>
+							<div class="dist__bar-wrap">
+								<div class="dist__bar dist__bar--facturacion" [style.width.%]="pctFacturacion()"></div>
+							</div>
+							<span class="dist__num">{{ facturaciones() }}</span>
+						</div>
+					</div>
+				</div>
+			</aside>
+		</div>
+	</div>
+} @else {
+	<div class="page">
+		<div class="page__top">
+			<div>
+				<h1 class="page__title">Registrar Administrador</h1>
+				<p class="page__desc">Complete el protocolo de incorporación institucional.</p>
+			</div>
+			<button type="button" class="btn btn--outline" (click)="cancelarCrear()">
+				<i class="bi bi-arrow-left"></i> Volver
+			</button>
+		</div>
+
+		<div class="progress-bar">
+			<div class="progress-bar__steps">
+				@for (p of [1,2,3]; track p) {
+					<button type="button" class="progress-bar__step" [class.progress-bar__step--active]="paso() >= p"
+						(click)="irPaso(p)" [disabled]="p > paso()">
+						<span class="progress-bar__num">{{ p }}</span>
+						<span class="progress-bar__step-label">
+							{{ p === 1 ? 'Personal' : p === 2 ? 'Empleado' : 'Credenciales' }}
+						</span>
+					</button>
+				}
+			</div>
+			<div class="progress-bar__track">
+				<div class="progress-bar__fill" [style.width.%]="progreso()"></div>
+			</div>
+			<span class="progress-bar__pct">{{ progreso() }}% completado</span>
+		</div>
+
+		<form [formGroup]="createForm" class="form-card">
+			@if (paso() === 1) {
+				<section class="form-section">
+					<h2 class="form-section__title">Información Personal</h2>
+					<div class="form-row">
+						<div class="form-photo">
+							<div class="form-photo__preview">
+								<i class="bi bi-camera"></i>
+							</div>
+							<button type="button" class="btn btn--sm">Subir foto</button>
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field form-field--full">
+							<label class="form-label" for="usuario-nombre-completo">Nombre completo</label>
+							<input type="text" class="form-input" id="usuario-nombre-completo" formControlName="nombreCompleto" placeholder="Ej: Juan Pérez">
+							@if (createForm.get('nombreCompleto')?.invalid && createForm.get('nombreCompleto')?.touched) {
+								<span class="form-error">El nombre es obligatorio (mín. 3 caracteres)</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-tipo-documento">Tipo de documento</label>
+							<select class="form-input" id="usuario-tipo-documento" formControlName="tipoDocumento">
+								<option value="DNI">DNI</option>
+								<option value="Pasaporte">Pasaporte</option>
+							</select>
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="usuario-num-documento">Número de identificación</label>
+							<input type="text" class="form-input" id="usuario-num-documento" formControlName="numDocumento" placeholder="Ej: 12345678">
+							@if (createForm.get('numDocumento')?.invalid && createForm.get('numDocumento')?.touched) {
+								<span class="form-error">Campo obligatorio</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-correo">Correo institucional</label>
+							<input type="email" class="form-input" id="usuario-correo" formControlName="correo" placeholder="Ej: juan@trazzo.pe">
+							@if (createForm.get('correo')?.invalid && createForm.get('correo')?.touched) {
+								<span class="form-error">Correo inválido</span>
+							}
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="usuario-telefono">Teléfono</label>
+							<input type="tel" class="form-input" id="usuario-telefono" formControlName="telefono" placeholder="Ej: 999 888 777">
+							@if (createForm.get('telefono')?.invalid && createForm.get('telefono')?.touched) {
+								<span class="form-error">Campo obligatorio</span>
+							}
+						</div>
+						<div class="form-field">
+							<label class="form-label" for="usuario-fecha-nacimiento">Fecha de nacimiento</label>
+							<input type="date" class="form-input" id="usuario-fecha-nacimiento" formControlName="fechaNacimiento">
+						</div>
+					</div>
+				</section>
+			}
+
+			@if (paso() === 2) {
+				<section class="form-section">
+					<h2 class="form-section__title">Detalles de Empleado</h2>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-empleado-id">ID de empleado</label>
+							<input type="text" class="form-input" id="usuario-empleado-id" formControlName="empleadoId" placeholder="Ej: EMP-001">
+							@if (createForm.get('empleadoId')?.invalid && createForm.get('empleadoId')?.touched) {
+								<span class="form-error">Campo obligatorio</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field form-field--full">
+							<label class="form-label">Roles del sistema</label>
+							<div class="checks" formGroupName="roles">
+								@for (r of rolesDisponibles; track r.id) {
+									<label class="check">
+										<input type="checkbox" class="check__input" [formControlName]="r.id">
+										<span class="check__box"><i class="bi bi-check-lg"></i></span>
+										<span class="check__text">{{ r.label }}</span>
+									</label>
+								}
+							</div>
+						</div>
+					</div>
+				</section>
+			}
+
+			@if (paso() === 3) {
+				<section class="form-section">
+					<h2 class="form-section__title">Credenciales de Acceso al Sistema</h2>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-nombre-usuario">Nombre de usuario</label>
+							<div class="input-group">
+								<input type="text" class="form-input" id="usuario-nombre-usuario" formControlName="nombreUsuario" placeholder="Ej: juan.perez">
+								<button type="button" class="btn btn--sm btn--outline" (click)="generarUsuario()">Auto-generar</button>
+							</div>
+							@if (createForm.get('nombreUsuario')?.invalid && createForm.get('nombreUsuario')?.touched) {
+								<span class="form-error">Mín. 4 caracteres</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-contrasena">Contraseña inicial</label>
+							<input type="password" class="form-input" id="usuario-contrasena" formControlName="contrasena" placeholder="••••••••">
+							@if (createForm.get('contrasena')?.invalid && createForm.get('contrasena')?.touched) {
+								<span class="form-error">Mín. 8 caracteres</span>
+							}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-field">
+							<label class="form-label" for="usuario-rol-institucional">Rol institucional</label>
+							<select class="form-input" id="usuario-rol-institucional" formControlName="rolInstitucional">
+								<option value="Empleado Estandar">Empleado Estándar</option>
+								<option value="Administrador">Administrador</option>
+							</select>
+						</div>
+					</div>
+				</section>
+			}
+
+			<div class="form-footer">
+				<button type="button" class="btn btn--outline" (click)="cancelarCrear()">
+					<i class="bi bi-x-lg"></i> Cancelar
+				</button>
+				<button type="button" class="btn btn--secondary" (click)="guardarBorrador()">
+					<i class="bi bi-save"></i> Guardar Borrador
+				</button>
+				<div class="form-footer__right">
+					@if (paso() > 1) {
+						<button type="button" class="btn btn--outline" (click)="pasoAnterior()">
+							<i class="bi bi-chevron-left"></i> Anterior
+						</button>
+					}
+					@if (paso() < totalPasos) {
+						<button type="button" class="btn btn--primary" (click)="siguientePaso()">
+							Siguiente <i class="bi bi-chevron-right"></i>
+						</button>
+					} @else {
+						<button type="button" class="btn btn--primary" (click)="registrarPersonal()">
+							<i class="bi bi-check-lg"></i> Registrar Personal
+						</button>
+					}
+				</div>
+			</div>
+		</form>
+	</div>
+}
+
+<div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" data-bs-backdrop="static">
+	<div class="modal-dialog modal-dialog-centered modal-sm">
+		<div class="modal-content modal-content--custom">
+			<div class="modal__header">
+				<h5 class="modal__title">Eliminar usuario</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+			</div>
+			<div class="modal__body">
+				<p class="confirm-text">¿Estás seguro de eliminar a <strong>{{ editandoUsuario()?.nombre }}</strong>? Esta acción no se puede deshacer.</p>
+			</div>
+			<div class="modal__footer">
+				<button type="button" class="btn btn--outline" data-bs-dismiss="modal">Cancelar</button>
+				<button type="button" class="btn btn--danger" data-bs-dismiss="modal" (click)="eliminarUsuario()">
+					<i class="bi bi-trash3"></i> Eliminar
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+}
+

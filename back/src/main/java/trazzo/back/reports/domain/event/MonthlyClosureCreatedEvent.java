@@ -12,10 +12,10 @@ public class MonthlyClosureCreatedEvent implements DomainEvent {
 
     private final UUID closureId;
     private final ClosurePeriod period;
-    private final String createdByUserId;
+    private final UUID createdByUserId;
     private final LocalDateTime createdAt;
 
-    public MonthlyClosureCreatedEvent(UUID closureId, ClosurePeriod period, String createdByUserId, LocalDateTime createdAt) {
+    public MonthlyClosureCreatedEvent(UUID closureId, ClosurePeriod period, UUID createdByUserId, LocalDateTime createdAt) {
         this.closureId = Objects.requireNonNull(closureId, "Closure id cannot be null");
         this.period = Objects.requireNonNull(period, "Period cannot be null");
         this.createdByUserId = Objects.requireNonNull(createdByUserId, "Created by user id cannot be null");

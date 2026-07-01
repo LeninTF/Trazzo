@@ -21,6 +21,8 @@ type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
   styleUrl: './incidencias.css',
 })
 export class Incidencias {
+  readonly loading = signal(false);
+  readonly error = signal('');
   mostrarModalCrear = false;
   mostrarModalDetalle = false;
   selectedIncidencia: Incidencia | null = null;

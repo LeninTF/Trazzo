@@ -1,3 +1,11 @@
+@if (error()) {
+<div class="gh-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+  </div>
+</div>
+} @else {
 <div class="gh-wrapper">
   <div class="gh-container">
 
@@ -68,8 +76,8 @@
               <div>
                 <h2 class="gh-section-title">{{ currentSection.title }}</h2>
                 <p class="gh-section-subtitle mb-0">{{ currentSection.subtitle }}</p>
-              </div>
             </div>
+          </div>
           </div>
           <div class="gh-main-body">
             @switch (activeSection) {
@@ -99,3 +107,4 @@
     </div>
   </div>
 </div>
+}

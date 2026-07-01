@@ -4,8 +4,8 @@ services:
     image: postgres:15-alpine
     container_name: trazzo-db-dev
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: secretpassword
-      POSTGRES_DB: trazzo_db
+      POSTGRES_USER: trazzo_dev
+      POSTGRES_PASSWORD: trazzo_dev_pass
+      POSTGRES_DB: trazzo_dev_db
