@@ -109,6 +109,9 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.False(result.IsAcceptable);
         Assert.Equal("La huella no está centrada.", result.Message);
+        Assert.InRange(result.ForegroundCoveragePercent, criteria.MinimumForegroundCoveragePercent, criteria.MaximumForegroundCoveragePercent);
+        Assert.True(result.ContrastScore >= criteria.MinimumContrastScore);
+        Assert.InRange(result.ScorePercent, 0, 50);
     }
 
     [Fact]

@@ -12,6 +12,8 @@ public sealed record FingerprintQualityCriteria(
 
 public static class FingerprintQualityAnalyzer
 {
+    private const double MaximumRejectedScorePercent = 50;
+
     public static FingerprintQualityResult Analyze(
         byte[] imageBuffer,
         int width,
@@ -151,7 +153,7 @@ public static class FingerprintQualityAnalyzer
             isCentered,
             message)
         {
-            ScorePercent = Math.Round(CalculateScorePercent(criteria, coveragePercent, contrastScore, isCentered), 2)
+            ScorePercent = Math.Round(CalculateScorePercent(criteria, coveragePercent, contrastScore, isCentered, isAcceptable), 2)
         };
     }
 
@@ -159,7 +161,8 @@ public static class FingerprintQualityAnalyzer
         FingerprintQualityCriteria criteria,
         double coveragePercent,
         double contrastScore,
-        bool isCentered)
+        bool isCentered,
+        bool isAcceptable)
     {
         if (coveragePercent <= 0)
         {
@@ -173,7 +176,8 @@ public static class FingerprintQualityAnalyzer
         double contrastScorePercent = CalculateContrastScore(contrastScore, criteria.MinimumContrastScore);
         double centerScore = !criteria.RequireCenteredFingerprint || isCentered ? 100 : 45;
 
-        return Clamp(coverageScore * 0.45 + contrastScorePercent * 0.45 + centerScore * 0.10, 0, 100);
+        double scorePercent = Clamp(coverageScore * 0.45 + contrastScorePercent * 0.45 + centerScore * 0.10, 0, 100);
+        return isAcceptable ? scorePercent : Math.Min(scorePercent, MaximumRejectedScorePercent);
     }
 
     private static double CalculateCoverageScore(double coveragePercent, double minimumCoverage, double maximumCoverage)

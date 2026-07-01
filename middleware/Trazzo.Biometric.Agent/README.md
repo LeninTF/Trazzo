@@ -158,7 +158,7 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
 
 ### Calidad de captura
 
-El campo `quality.scorePercent` es el valor recomendado para mostrar en UI como calidad estimada de 0 a 100. `quality.foregroundCoveragePercent` queda como diagnóstico técnico: mide solo el porcentaje de píxeles oscuros dentro del frame crudo del ZK9500, por eso una huella válida puede verse como 20-30% de cobertura del sensor.
+El campo `quality.scorePercent` es el valor recomendado para mostrar en UI como calidad estimada de 0 a 100. `quality.foregroundCoveragePercent` queda como diagnóstico técnico: mide solo el porcentaje de píxeles oscuros dentro del frame crudo del ZK9500, por eso una huella válida puede verse como 20-30% de cobertura del sensor. Cuando `quality.isAcceptable` es `false`, `quality.scorePercent` se limita a 50 como máximo para evitar mostrar alta calidad en una captura rechazada.
 
 Para dedos con poca huella, los umbrales por defecto son más tolerantes (`MinimumForegroundCoveragePercent = 8`, `MinimumContrastScore = 18`) y se sigue exigiendo template válido, contraste mínimo y centrado.
 

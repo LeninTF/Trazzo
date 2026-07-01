@@ -433,7 +433,7 @@ public sealed class LocalWebSocketServerService(
 
         if (string.IsNullOrWhiteSpace(origin))
         {
-            return true;
+            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
         }
 
         if (string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))

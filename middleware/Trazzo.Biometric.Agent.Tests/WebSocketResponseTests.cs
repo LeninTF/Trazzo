@@ -221,16 +221,39 @@ public sealed class WebSocketResponseTests
     }
 
     [Theory]
-    [InlineData(null, true)]
-    [InlineData("", true)]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
     [InlineData("http://localhost:4200", true)]
     [InlineData("http://127.0.0.1:4200", true)]
     [InlineData("http://[::1]:4200", true)]
     [InlineData("http://evil.example", false)]
     [InlineData("null", false)]
-    public void IsOriginAllowed_WhenAllowedOriginsEmpty_AllowsOnlyNativeOrLoopback(string? origin, bool expected)
+    public void IsOriginAllowed_WhenAllowedOriginsEmpty_AllowsOnlyLoopbackOriginWithoutRemoteEndpoint(string? origin, bool expected)
     {
         Assert.Equal(expected, LocalWebSocketServerService.IsOriginAllowed(origin, []));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsOriginAllowed_WhenOriginMissingAndRemoteIsLoopback_AllowsConnection(string? origin)
+    {
+        var remoteEndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed(origin, [], remoteEndPoint));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsOriginAllowed_WhenOriginMissingAndRemoteIsExternal_RejectsConnection(string? origin)
+    {
+        var remoteEndPoint = new IPEndPoint(IPAddress.Parse("203.0.113.10"), 49152);
+
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed(origin, [], remoteEndPoint));
     }
 
     [Fact]
