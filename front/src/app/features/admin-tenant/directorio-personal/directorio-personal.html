@@ -1,4 +1,12 @@
 <!-- directorio-personal.html -->
+@if (error()) {
+<div class="personal-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="personal-wrapper">
 
   <!-- HEADER -->
@@ -162,6 +170,7 @@
     }
   </div>
 </div>
+}
 
 <!-- ========================================== -->
 <!-- MODAL: AGREGAR/EDITAR PERSONAL             -->

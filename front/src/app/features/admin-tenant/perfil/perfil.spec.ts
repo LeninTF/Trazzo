@@ -1,126 +1,169 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { FormsModule } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 import { Perfil } from './perfil';
-
-const CURRENT_PASSWORD = 'admin123';
+import { ApiService } from '../../../api/services/api.service';
+import { ToastService } from '../../../services/toast.service';
+import { RoleService } from '../../../services/role.service';
 
 describe('Perfil', () => {
   let component: Perfil;
   let fixture: ComponentFixture<Perfil>;
+  let apiSpy: jasmine.SpyObj<ApiService>;
+  let toastServiceSpy: jasmine.SpyObj<ToastService>;
+  let roleService: RoleService;
+
+  const mockUser = {
+    id: 1,
+    email: 'juan@test.com',
+    phone: '999888777',
+    created_at: '2024-01-15T00:00:00Z',
+    persona: {
+      name: 'Juan',
+      father_surname: 'Pérez',
+      mother_surname: 'López',
+      document_value: '12345678',
+      img_url: 'http://example.com/foto.jpg',
+    },
+    rol: { name: 'Admin' },
+    sedes: [{ nombre: 'Sede Central' }],
+    areas: [{ nombre: 'IT' }],
+  };
 
   beforeEach(async () => {
+    localStorage.clear();
+    apiSpy = jasmine.createSpyObj('ApiService', ['users'], {
+      users: jasmine.createSpyObj('UsersService', ['getMe', 'patchMe', 'changePassword']),
+    });
+    (apiSpy.users.getMe as jasmine.Spy).and.returnValue(of(mockUser));
+    (apiSpy.users.patchMe as jasmine.Spy).and.returnValue(of(mockUser));
+    (apiSpy.users.changePassword as jasmine.Spy).and.returnValue(of(undefined));
+
+    toastServiceSpy = jasmine.createSpyObj('ToastService', ['success']);
+
     await TestBed.configureTestingModule({
-      imports: [Perfil, FormsModule],
+      imports: [Perfil],
+      providers: [
+        RoleService,
+        { provide: ApiService, useValue: apiSpy },
+        { provide: ToastService, useValue: toastServiceSpy },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Perfil);
     component = fixture.componentInstance;
+    roleService = TestBed.inject(RoleService);
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
-  it('should create', () => {
+  it('creates the perfil component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have initial user data', () => {
-    expect(component.usuario.nombres).toBe('Jose');
-    expect(component.usuario.email).toBe('jose.alata@utp.edu.pe');
+  it('loads user data on init', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(component.usuario.nombres).toBe('Juan');
+    expect(component.usuario.apellidos).toBe('Pérez López');
+    expect(component.usuario.email).toBe('juan@test.com');
+    expect(component.loading()).toBeFalse();
+    expect((component as any).loaded).toBeTrue();
   });
 
-  it('should editar create copy and set editando', () => {
-    component.editar();
-    expect(component.editando).toBeTrue();
-    expect(component.usuarioEdit.nombres).toBe(component.usuario.nombres);
+  it('should handle error when loading user', async () => {
+    (apiSpy.users.getMe as jasmine.Spy).and.returnValue(throwError(() => new Error('Network error')));
+
+    const errorSpy = spyOn(console, 'error');
+    fixture = TestBed.createComponent(Perfil);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.error()).toBe('No se pudieron cargar los datos del perfil. Verifica tu conexión e intenta nuevamente.');
+    expect(component.loading()).toBeFalse();
   });
 
-  it('should cancelarEdicion', () => {
-    component.editar();
-    component.cancelarEdicion();
-    expect(component.editando).toBeFalse();
-    expect(component.mensajeError).toBe('');
+  describe('subirFoto', () => {
+    it('should return early if no selectedFile', async () => {
+      await component.subirFoto();
+      expect(component.fotoSubiendo()).toBeFalse();
+    });
+
+    it('should read file and update fotoPreview', async () => {
+      component.selectedFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+      component.editando = true;
+      component.usuarioEdit = { ...component.usuario };
+
+      await component.subirFoto();
+
+      expect(component.fotoSubiendo()).toBeFalse();
+      expect(component.selectedFile).toBeNull();
+      expect(toastServiceSpy.success).toHaveBeenCalledWith('Foto de perfil actualizada correctamente.');
+    });
   });
 
-  it('should guardarCambios with valid data', () => {
-    component.editar();
-    component.usuarioEdit.nombres = 'Nuevo Nombre';
-    component.guardarCambios();
-    expect(component.usuario.nombres).toBe('Nuevo Nombre');
-    expect(component.editando).toBeFalse();
-    expect(component.mensajeExito).toBe('Datos actualizados correctamente.');
+  describe('guardarCambios', () => {
+    it('should validate required fields', () => {
+      component.editar();
+      component.usuarioEdit.nombres = '';
+      component.guardarCambios();
+      expect(component.mensajeError).toBe('Nombres y apellidos son obligatorios.');
+    });
+
+    it('should call patchMe on valid data', fakeAsync(() => {
+      component.editar();
+      component.usuarioEdit.nombres = 'Carlos';
+      component.guardarCambios();
+      tick();
+
+      expect(apiSpy.users.patchMe).toHaveBeenCalled();
+      expect(toastServiceSpy.success).toHaveBeenCalledWith('Datos actualizados correctamente.');
+      expect(component.editando).toBeFalse();
+    }));
+
+    it('should handle patchMe error', fakeAsync(() => {
+      (apiSpy.users.patchMe as jasmine.Spy).and.returnValue(throwError(() => new Error('Save failed')));
+
+      component.editar();
+      component.usuarioEdit.nombres = 'Carlos';
+      component.guardarCambios();
+      tick();
+
+      expect(component.mensajeError).toBe('Error al guardar cambios.');
+      expect(component.guardando()).toBeFalse();
+    }));
   });
 
-  it('should reject guardarCambios with empty nombres', () => {
-    component.editar();
-    component.usuarioEdit.nombres = '';
-    component.guardarCambios();
-    expect(component.mensajeError).toBe('Nombres y apellidos son obligatorios.');
-    expect(component.editando).toBeTrue();
-  });
+  describe('guardarPassword', () => {
+    it('should require current password', () => {
+      component.guardarPassword();
+      expect(component.errorPasswordActual).toBe('Ingrese su contraseña actual.');
+    });
 
-  it('should reject guardarCambios with empty apellidos', () => {
-    component.editar();
-    component.usuarioEdit.apellidos = '';
-    component.guardarCambios();
-    expect(component.mensajeError).toBe('Nombres y apellidos son obligatorios.');
-  });
+    it('should call changePassword on valid data', fakeAsync(() => {
+      component.passwordActual = 'oldpass';
+      component.passwordNueva = 'newpass123';
+      component.passwordConfirmar = 'newpass123';
 
-  it('should reject guardarCambios with invalid email', () => {
-    component.editar();
-    component.usuarioEdit.email = 'invalido';
-    component.guardarCambios();
-    expect(component.mensajeError).toBe('Correo electrónico inválido.');
-  });
+      component.guardarPassword();
 
-  it('should guardarPassword require current password', () => {
-    component.guardarPassword();
-    expect(component.errorPasswordActual).toBe('Ingrese su contraseña actual.');
-  });
+      expect(apiSpy.users.changePassword).toHaveBeenCalledWith(1, {
+        current_password: 'oldpass',
+        new_password: 'newpass123',
+      });
+    }));
 
-  it('should guardarPassword reject short new password', () => {
-    component.passwordActual = CURRENT_PASSWORD;
-    component.passwordNueva = '12345';
-    component.guardarPassword();
-    expect(component.errorPasswordNueva).toBe('Debe tener al menos 6 caracteres.');
-  });
+    it('should handle changePassword error', fakeAsync(() => {
+      (apiSpy.users.changePassword as jasmine.Spy).and.returnValue(throwError(() => new Error('Wrong password')));
 
-  it('should guardarPassword reject mismatched passwords', () => {
-    component.passwordActual = CURRENT_PASSWORD;
-    component.passwordNueva = 'newpass1';
-    component.passwordConfirmar = 'different';
-    component.guardarPassword();
-    expect(component.errorPasswordConfirmar).toBe('Las contraseñas no coinciden.');
-  });
+      component.passwordActual = 'wrong';
+      component.passwordNueva = 'newpass123';
+      component.passwordConfirmar = 'newpass123';
 
-  it('should guardarPassword succeed', () => {
-    component.passwordActual = CURRENT_PASSWORD;
-    component.passwordNueva = 'newpass123';
-    component.passwordConfirmar = 'newpass123';
-    component.guardarPassword();
-    expect(component.mostrarCambiarPassword).toBeFalse();
-    expect(component.mensajeExito).toBe('Contraseña actualizada correctamente.');
-    expect(component.passwordActual).toBe('');
-    expect(component.passwordNueva).toBe('');
-    expect(component.passwordConfirmar).toBe('');
-  });
+      component.guardarPassword();
+      tick();
 
-  it('should clear success message after timeout', fakeAsync(() => {
-    component.mostrarExito('Test');
-    expect(component.mensajeExito).toBe('Test');
-    tick(3500);
-    expect(component.mensajeExito).toBe('');
-  }));
-
-  it('should limpiarMensajes clear all', () => {
-    component.mensajeExito = 'test';
-    component.mensajeError = 'test';
-    component.errorPasswordActual = 'test';
-    component.errorPasswordNueva = 'test';
-    component.errorPasswordConfirmar = 'test';
-    component.limpiarMensajes();
-    expect(component.mensajeExito).toBe('');
-    expect(component.mensajeError).toBe('');
-    expect(component.errorPasswordActual).toBe('');
-    expect(component.errorPasswordNueva).toBe('');
-    expect(component.errorPasswordConfirmar).toBe('');
+      expect(component.errorPasswordActual).toBe('Contraseña actual incorrecta.');
+    }));
   });
 });

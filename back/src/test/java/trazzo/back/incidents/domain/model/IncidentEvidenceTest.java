@@ -23,7 +23,7 @@ class IncidentEvidenceTest {
         );
         var after = LocalDateTime.now();
 
-        assertNull(evidence.getId());
+        assertNotNull(evidence.getId());
         assertEquals("inc-1", evidence.getIncidentId());
         assertEquals("documento.pdf", evidence.getFileName());
         assertEquals("http://files/doc.pdf", evidence.getFileUrl());

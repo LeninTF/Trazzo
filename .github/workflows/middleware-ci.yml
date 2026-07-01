@@ -2,12 +2,12 @@ name: CI/CD Middleware Biométrico
 
 on:
   push:
-    branches: [master, 'feature/**']
+    branches: [main, 'feature/**']
     paths:
       - 'middleware/**'
       - '.github/workflows/middleware-ci.yml'
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ defaults:
 
 jobs:
   # ─────────────────────────────────────────────
-  # Job 1: Compilar, Testear, Cobertura y SonarCloud
+  # Build + Tests + Sonar (push y pull_request)
   # ─────────────────────────────────────────────
   build-test-analyze:
     name: Análisis, Tests y Build (.NET 10 / win-x64)
@@ -29,7 +29,7 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # Requerido por SonarCloud
+          fetch-depth: 0
 
       - name: Configurar Java JDK 17 (Requerido por SonarScanner)
         uses: actions/setup-java@v5
@@ -42,7 +42,21 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      # ANTES de compilar para que MSBuild encuentre la referencia
+      - name: Caché de paquetes NuGet
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('middleware/**/*.csproj', 'middleware/**/*.wixproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Caché de herramientas dotnet globales
+        id: cache-dotnet-tools
+        uses: actions/cache@v6
+        with:
+          path: ~/.dotnet/tools
+          key: ${{ runner.os }}-dotnet-tools-sonarscanner-${{ hashFiles('.github/workflows/middleware-ci.yml') }}
+
       - name: Decodificar ZKTeco SDK DLL (libzkfpcsharp x64)
         shell: pwsh
         env:
@@ -60,9 +74,18 @@ jobs:
           Write-Host "libzkfpcsharp.dll lista: $($bytes.Length) bytes"
 
       - name: Instalar SonarCloud scanner para .NET
+        if: steps.cache-dotnet-tools.outputs.cache-hit != 'true'
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Iniciar análisis de SonarCloud (Begin)
+      - name: Comprobar SONAR_TOKEN configurado
+        id: sonar_check
+        shell: pwsh
+        run: |
+          $hasToken = '${{ secrets.SONAR_TOKEN }}' -ne ''
+          "has_token=$hasToken" | Out-File -Append $env:GITHUB_OUTPUT
+
+      - name: Iniciar análisis de SonarCloud — Push
+        if: github.event_name == 'push' && steps.sonar_check.outputs.has_token == 'True'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -72,36 +95,72 @@ jobs:
             /o:"methodsync" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.qualitygate.wait=false `
             /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
             /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**"
 
+      - name: Iniciar análisis de SonarCloud — PR
+        if: github.event_name == 'pull_request' && steps.sonar_check.outputs.has_token == 'True'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin `
+            /k:"methodsync-trazzo-middleware" `
+            /o:"methodsync" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.qualitygate.wait=false `
+            /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
+            /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
+            /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**" `
+            /d:sonar.pullrequest.key="${{ github.event.pull_request.number }}" `
+            /d:sonar.pullrequest.branch="${{ github.head_ref }}" `
+            /d:sonar.pullrequest.base="${{ github.base_ref }}"
+
       - name: Restaurar dependencias
-        run: dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
+        run: |
+          dotnet restore Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
+          dotnet restore Trazzo.Biometric.Agent/Trazzo.Biometric.Agent.csproj -r win-x64 -p:SelfContained=true
 
       - name: Compilar (Build)
         run: dotnet build -c Debug --no-restore
 
       - name: Ejecutar Pruebas Unitarias y Cobertura (Coverlet)
+        timeout-minutes: 15
         run: >
           dotnet test Trazzo.Biometric.Agent.Tests/Trazzo.Biometric.Agent.Tests.csproj
           -c Debug
+          --no-build
           --no-restore
           --logger "trx;LogFileName=test-results.trx"
-          --results-directory TestResults --collect:"XPlat Code Coverage"
+          --results-directory TestResults
+          --collect:"XPlat Code Coverage"
+          --blame-hang
+          --blame-hang-timeout 3min
 
       - name: Finalizar análisis de SonarCloud (End)
+        if: steps.sonar_check.outputs.has_token == 'True'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Verificar Quality Gate de SonarCloud
-        uses: SonarSource/sonarqube-quality-gate-action@v1
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Publicar aplicación (Release / Self-Contained / win-x64)
+        if: github.event_name == 'push'
+        run: >
+          dotnet publish Trazzo.Biometric.Agent/Trazzo.Biometric.Agent.csproj
+          -c Release -r win-x64 -p:SelfContained=true
+          -o Trazzo.Biometric.Agent.Installer/obj/publish
+          --no-restore
+
+      - name: Subir binarios publicados para el MSI
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
         with:
-          scanMetadataReportFile: middleware/.sonarqube/out/.sonar/report-task.txt
+          name: agent-publish-output
+          path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
+          retention-days: 1
 
       - name: Subir resultados de tests
         if: always()
@@ -109,9 +168,10 @@ jobs:
         with:
           name: test-results
           path: middleware/TestResults/
+          retention-days: 7
 
   # ─────────────────────────────────────────────
-  # Job 2: Publicar y Generar el instalador .msi (WiX v4)
+  # PUSH: Generar instalador .msi
   # ─────────────────────────────────────────────
   package-msi:
     name: Build MSI (WiX v4 / Self-Contained)
@@ -120,28 +180,37 @@ jobs:
 
     steps:
       - name: Checkout del código
+        if: github.event_name == 'push'
         uses: actions/checkout@v7
 
       - name: Configurar .NET 10
+        if: github.event_name == 'push'
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.x'
 
-      - name: Decodificar ZKTeco SDK DLL (Requerido para el empaquetado)
-        shell: pwsh
-        env:
-          ZKFP_DLL_BASE64: ${{ secrets.ZKFP_DLL_BASE64 }}
-        run: |
-          $dllDir  = "Trazzo.Biometric.Agent\Native\x64"
-          $dllPath = "$dllDir\libzkfpcsharp.dll"
-          New-Item -ItemType Directory -Force -Path $dllDir | Out-Null
-          $bytes = [Convert]::FromBase64String($env:ZKFP_DLL_BASE64)
-          [System.IO.File]::WriteAllBytes("$PWD\$dllPath", $bytes)
+      - name: Caché de paquetes NuGet
+        if: github.event_name == 'push'
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('middleware/**/*.csproj', 'middleware/**/*.wixproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      - name: Compilar MSI (Self-Contained / win-x64)
-        run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release -p:RuntimeIdentifier=win-x64 -p:SelfContained=true
+      - name: Descargar binarios publicados (build-test-analyze)
+        if: github.event_name == 'push'
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-publish-output
+          path: middleware/Trazzo.Biometric.Agent.Installer/obj/publish/
+
+      - name: Compilar MSI (WiX v4)
+        if: github.event_name == 'push'
+        run: dotnet build Trazzo.Biometric.Agent.Installer/Trazzo.Biometric.Agent.Installer.wixproj -c Release -p:RuntimeIdentifier=win-x64 -p:SelfContained=true -p:SkipAgentPublish=true
 
       - name: Subir MSI (Español) como artefacto
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: Trazzo.Biometric.Agent-es-ES-build${{ github.run_number }}

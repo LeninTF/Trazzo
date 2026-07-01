@@ -2,12 +2,12 @@ name: Nginx Config Validation
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths:
       - 'front/nginx.conf'
       - 'front/Dockerfile'
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths:
       - 'front/nginx.conf'
       - 'front/Dockerfile'

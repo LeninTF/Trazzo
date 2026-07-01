@@ -26,7 +26,7 @@
     "ngx-pagination": "^6.0.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
-    "zone.js": "^0.14.0"
+    "zone.js": "^0.16.2"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^21.2.16",
@@ -34,14 +34,22 @@
     "@angular/cli": "^21.2.16",
     "@angular/compiler-cli": "21.2.17",
     "@types/jasmine": "^6.0.0",
-    "jsdom": "^28.0.0",
+    "jsdom": "^29.1.1",
     "karma": "^6.4.4",
     "karma-chrome-launcher": "^3.2.0",
     "karma-coverage": "^2.2.1",
     "karma-jasmine": "^5.1.0",
     "karma-jasmine-html-reporter": "^2.2.0",
-    "prettier": "^3.8.1",
-    "typescript": "~5.9.2",
+    "prettier": "^3.9.3",
+    "typescript": "~6.0.3",
     "vitest": "^4.0.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "piscina": "5.2.0",
+      "undici": "7.28.0",
+      "esbuild": "0.28.1",
+      "@babel/core": "7.29.7"
+    }
   }
 }

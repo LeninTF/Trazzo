@@ -12,7 +12,7 @@ class MonthlyClosureDetailTest {
 
         UUID id = UUID.randomUUID();
         UUID closureId = UUID.randomUUID();
-        String userId = UUID.randomUUID().toString();
+        Long userId = 1L;
         LocalDateTime createdAt = LocalDateTime.now();
 
         MonthlyClosureDetail detail = new MonthlyClosureDetail(
@@ -24,7 +24,7 @@ class MonthlyClosureDetailTest {
                 "TI",
                 "Developer",
                 160.0,
-                10.0,
+                10,
                 1,
                 5.0,
                 createdAt);
@@ -37,7 +37,7 @@ class MonthlyClosureDetailTest {
         assertEquals("TI", detail.getDepartmentName());
         assertEquals("Developer", detail.getRoleName());
         assertEquals(160.0, detail.getTotalWorkedHours());
-        assertEquals(10.0, detail.getTotalTardinessMinutes());
+        assertEquals(Integer.valueOf(10), detail.getTotalTardinessMinutes());
         assertEquals(1, detail.getTotalAbsences());
         assertEquals(5.0, detail.getTotalOvertimeHours());
         assertEquals(createdAt, detail.getCreatedAt());
@@ -46,19 +46,19 @@ class MonthlyClosureDetailTest {
     @Test
     void shouldThrowExceptionWhenWorkedHoursIsNegative() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(-1.0, 10.0, 0, 5.0));
+                () -> createDetail(-1.0, 10, 0, 5.0));
     }
 
     @Test
     void shouldThrowExceptionWhenWorkedHoursIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(null, 10.0, 0, 5.0));
+                () -> createDetail(null, 10, 0, 5.0));
     }
 
     @Test
     void shouldThrowExceptionWhenTardinessMinutesIsNegative() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(10.0, -1.0, 0, 5.0));
+                () -> createDetail(10.0, -1, 0, 5.0));
     }
 
     @Test
@@ -70,38 +70,37 @@ class MonthlyClosureDetailTest {
     @Test
     void shouldThrowExceptionWhenOvertimeHoursIsNegative() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(10.0, 5.0, 0, -1.0));
+                () -> createDetail(10.0, 10, 0, -1.0));
     }
 
     @Test
     void shouldThrowExceptionWhenOvertimeHoursIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(10.0, 5.0, 0, null));
+                () -> createDetail(10.0, 10, 0, null));
     }
 
     @Test
     void shouldThrowExceptionWhenAbsencesIsNegative() {
         assertThrows(IllegalArgumentException.class,
-                () -> createDetail(10.0, 5.0, -1, 1.0));
+                () -> createDetail(10.0, 10, -1, 1.0));
     }
 
     @Test
     void shouldThrowExceptionWhenIdIsNull() {
         UUID monthClosureId = UUID.randomUUID();
-        String tenantUserId = UUID.randomUUID().toString();
         LocalDateTime createdAt = LocalDateTime.now();
 
         assertThrows(NullPointerException.class,
                 () -> new MonthlyClosureDetail(
                         null,
                         monthClosureId,
-                        tenantUserId,
+                        1L,
                         "Juan",
                         "123",
                         "TI",
                         "Dev",
                         10.0,
-                        1.0,
+                        10,
                         0,
                         1.0,
                         createdAt));
@@ -109,14 +108,14 @@ class MonthlyClosureDetailTest {
 
     private MonthlyClosureDetail createDetail(
             Double workedHours,
-            Double tardiness,
+            Integer tardiness,
             int absences,
             Double overtime) {
 
         return new MonthlyClosureDetail(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                "2",
+                2L,
                 "Juan Perez",
                 "12345678",
                 "TI",

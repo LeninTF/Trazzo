@@ -1,5 +1,4 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { signal } from '@angular/core';
 
 export interface DatosPersonales {
   nombres: string;
@@ -9,11 +8,21 @@ export interface DatosPersonales {
   dni: string;
   rol: string;
   fechaIngreso: string;
+  img_url: string;
   [key: string]: string;
 }
 
 export abstract class PerfilBase {
   abstract usuario: DatosPersonales;
+
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly guardando = signal(false);
+
+  selectedFile: File | null = null;
+  fotoPreview: string | null = null;
+  readonly fotoSubiendo = signal(false);
+  protected loaded = false;
 
   editando = false;
   usuarioEdit!: DatosPersonales;
@@ -36,8 +45,61 @@ export abstract class PerfilBase {
   }
 
   cancelarEdicion(): void {
+    this.fotoPreview = this.usuario.img_url || null;
+    this.selectedFile = null;
     this.editando = false;
     this.limpiarMensajes();
+  }
+
+  onUrlCambio(url: string): void {
+    this.usuarioEdit.img_url = url;
+    this.fotoPreview = url || null;
+    this.selectedFile = null;
+  }
+
+  onFotoSeleccionada(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.mensajeError = 'Selecciona un archivo de imagen válido.';
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.mensajeError = 'La imagen no debe superar los 2 MB.';
+      return;
+    }
+
+    this.selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.fotoPreview = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async subirFoto(): Promise<void> {
+    if (!this.selectedFile) return;
+    this.fotoSubiendo.set(true);
+    this.limpiarMensajes();
+    try {
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject();
+        reader.readAsDataURL(this.selectedFile!);
+      });
+      const target = this.editando ? this.usuarioEdit : this.usuario;
+      target.img_url = b64;
+      this.fotoPreview = b64;
+      this.selectedFile = null;
+      this.mostrarExito('Foto de perfil actualizada correctamente.');
+    } catch {
+      this.mensajeError = 'No se pudo leer la imagen. Intenta nuevamente.';
+    } finally {
+      this.fotoSubiendo.set(false);
+    }
   }
 
   guardarCambios(): void {

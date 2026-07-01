@@ -2,7 +2,7 @@ name: Seguridad - Revisión de Dependencias
 
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read

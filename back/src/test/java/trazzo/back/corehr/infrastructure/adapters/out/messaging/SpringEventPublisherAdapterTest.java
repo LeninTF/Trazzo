@@ -1,12 +1,34 @@
 package trazzo.back.corehr.infrastructure.adapters.out.messaging;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import trazzo.back.corehr.domain.event.CoreHrDomainEvent;
 
-public class SpringEventPublisherAdapterTest {
+import java.time.LocalDateTime;
+
+import static org.mockito.Mockito.verify;
+
+@ExtendWith(MockitoExtension.class)
+class SpringEventPublisherAdapterTest {
+
+    @Mock
+    ApplicationEventPublisher springPublisher;
+
+    @InjectMocks
+    SpringEventPublisherAdapter adapter;
+
+    private static CoreHrDomainEvent anEvent() {
+        return () -> LocalDateTime.now();
+    }
+
     @Test
-    @Disabled("TODO: El desarrollador asignado debe implementar las pruebas de asistencia aquí")
-    void testSpringEventPublisherAdapterLogic() {
-        // TODO: El test no se ejecutará, por lo tanto no generará un falso positivo en JaCoCo.
+    void publish_delegatesToSpringPublisher() {
+        var event = anEvent();
+        adapter.publish(event);
+        verify(springPublisher).publishEvent(event);
     }
 }

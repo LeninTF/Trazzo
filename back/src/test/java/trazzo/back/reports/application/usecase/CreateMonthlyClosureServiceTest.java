@@ -55,8 +55,8 @@ class CreateMonthlyClosureServiceTest {
         when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
 
         EmployeeMonthlySummary summary = new EmployeeMonthlySummary(
-                "user-1", "Juan Perez", "12345678",
-                "TI", "Developer", 160.0, 10.0, 1, 5.0);
+                1L, "Juan Perez", "12345678",
+                "TI", "Developer", 160.0, 10, 1, 5.0);
         when(attendanceSummaryPort.getMonthlySummaries(6, 2025))
                 .thenReturn(List.of(summary));
         when(reportGenerationPort.generateExcelReport(any(MonthlyClosure.class), anyList()))
@@ -66,7 +66,7 @@ class CreateMonthlyClosureServiceTest {
         when(closureRepository.save(any(MonthlyClosure.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, "creator-1");
+        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, UUID.randomUUID());
         MonthlyClosureResult result = service.execute(command);
 
         assertNotNull(result);
@@ -90,9 +90,9 @@ class CreateMonthlyClosureServiceTest {
     void shouldCreateWithMultipleEmployees() {
         when(closureRepository.findAndLockByMonthAndYear(6, 2025)).thenReturn(Optional.empty());
         EmployeeMonthlySummary emp1 = new EmployeeMonthlySummary(
-                "u1", "Juan", "111", "TI", "Dev", 160.0, 5.0, 0, 10.0);
+                1L, "Juan", "111", "TI", "Dev", 160.0, 5, 0, 10.0);
         EmployeeMonthlySummary emp2 = new EmployeeMonthlySummary(
-                "u2", "Ana", "222", "HR", "Mgr", 80.0, 15.0, 2, 0.0);
+                2L, "Ana", "222", "HR", "Mgr", 80.0, 15, 2, 0.0);
         when(attendanceSummaryPort.getMonthlySummaries(6, 2025))
                 .thenReturn(List.of(emp1, emp2));
         when(reportGenerationPort.generateExcelReport(any(MonthlyClosure.class), anyList()))
@@ -102,7 +102,7 @@ class CreateMonthlyClosureServiceTest {
         when(closureRepository.save(any(MonthlyClosure.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, "creator-1");
+        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, UUID.randomUUID());
         MonthlyClosureResult result = service.execute(command);
 
         assertEquals(2, result.totalEmployees());
@@ -122,7 +122,7 @@ class CreateMonthlyClosureServiceTest {
         when(closureRepository.save(any(MonthlyClosure.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, "creator-1");
+        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, UUID.randomUUID());
         MonthlyClosureResult result = service.execute(command);
 
         assertEquals(0, result.totalEmployees());
@@ -134,9 +134,9 @@ class CreateMonthlyClosureServiceTest {
     void shouldThrowExceptionWhenDuplicateClosureExists() {
         when(closureRepository.findAndLockByMonthAndYear(6, 2025))
                 .thenReturn(Optional.of(new MonthlyClosure(
-                        UUID.randomUUID(), 6, 2025, 10, null, null, "user", LocalDateTime.now())));
+                        UUID.randomUUID(), 6, 2025, 10, null, null, UUID.randomUUID(), LocalDateTime.now())));
 
-        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, "creator-1");
+        CreateMonthlyClosureCommand command = new CreateMonthlyClosureCommand(6, 2025, UUID.randomUUID());
 
         assertThrows(DuplicateClosureException.class, () -> service.execute(command));
 
