@@ -18,7 +18,7 @@ class AuthControllerTest {
     @Test
     @WithMockUser(username = "admin@test.com", roles = {"ADMIN"})
     void me_returns200WithEmailAndRoles() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/me"))
+        mockMvc.perform(get("/auth/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("admin@test.com"))
                 .andExpect(jsonPath("$.roles[0]").value("ROLE_ADMIN"));

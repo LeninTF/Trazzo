@@ -38,7 +38,7 @@ class MonthlyClosureDetailControllerTest {
 
         when(detailUseCase.execute(any(UUID.class))).thenReturn(result);
 
-        mockMvc.perform(get("/api/v1/reports/monthly-closure-details/{id}", id))
+        mockMvc.perform(get("/reports/monthly-closure-details/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.tenantUserFullName").value("Juan Perez"))

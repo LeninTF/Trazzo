@@ -14,7 +14,7 @@ import trazzo.back.saasglobal.application.port.in.CreateTrialTenantUseCase;
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.CreateTrialTenantRequest;
 
 @RestController
-@RequestMapping("/api/v1/tenants")
+@RequestMapping("/tenants")
 @RequiredArgsConstructor
 public class TenantController {
 

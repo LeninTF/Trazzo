@@ -179,10 +179,23 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>get-classpath-files</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version> <configuration>
-                <argLine>-XX:+EnableDynamicAgentLoading @{argLine}</argLine>
-            </configuration>
+                <version>3.5.2</version>
+                <configuration>
+                    <argLine>-javaagent:${net.bytebuddy:byte-buddy-agent:jar} -XX:+EnableDynamicAgentLoading @{argLine}</argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>

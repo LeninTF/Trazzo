@@ -21,7 +21,7 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.CreateHoldingRe
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.UpdateHoldingRequest;
 
 @RestController
-@RequestMapping("/api/v1/saas/holdings")
+@RequestMapping("/saas/holdings")
 @RequiredArgsConstructor
 public class HoldingController {
 

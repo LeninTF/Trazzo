@@ -9,8 +9,6 @@ import trazzo.back.incidents.domain.exception.*;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.ErrorResponse;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.ErrorResponse.ValidationDetail;
 
-import java.util.List;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
