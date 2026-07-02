@@ -445,24 +445,25 @@ public sealed class ZKTecoScannerService(
             bool captureCompleted =
                 await Task.WhenAny(captureTask, Task.Delay(remaining, cancellationToken)) == captureTask;
 
-            if (!captureCompleted || cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested)
             {
-                // The native AcquireFingerprint call may still be blocking in the background.
-                // Observe its exception to prevent UnobservedTaskException; _sdkLock will be
-                // released when the native call eventually returns.
                 _ = captureTask.ContinueWith(
                     static t => { _ = t.Exception; },
                     CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted,
                     TaskScheduler.Default);
+                logger.LogDebug(
+                    "Captura cancelada. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    logger.LogDebug(
-                        "Captura cancelada. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-
+            if (!captureCompleted)
+            {
+                _ = captureTask.ContinueWith(
+                    static t => { _ = t.Exception; },
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
                 logger.LogWarning(
                     "Captura abortada por timeout. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
                 break;
