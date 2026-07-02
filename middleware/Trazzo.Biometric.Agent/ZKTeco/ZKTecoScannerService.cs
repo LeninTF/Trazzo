@@ -19,16 +19,16 @@ public sealed class ZKTecoScannerService(
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
     private const int DefaultTemplateBufferSize = 2048;
-    private const double DefaultCaptureTimeoutSeconds = 2.5;
+    private const double DefaultCaptureTimeoutSeconds = 1.75;
     private const int DefaultCapturePollingIntervalMilliseconds = 50;
     private const int DefaultPostCaptureCooldownMilliseconds = 300;
     private const int DefaultMinimumTemplateSize = 400;
     private const int DefaultEnrollmentSamples = 3;
-    private const double DefaultEnrollmentSampleTimeoutSeconds = 2.5;
-    private const double MaxCaptureTimeoutSeconds = 2.5;
+    private const double DefaultEnrollmentSampleTimeoutSeconds = 1.75;
+    private const double MaxCaptureTimeoutSeconds = 1.75;
     private const int MaxCapturePollingIntervalMilliseconds = 80;
     private const int MaxPostCaptureCooldownMilliseconds = 300;
-    private const double MaxEnrollmentSampleTimeoutSeconds = 2.5;
+    private const double MaxEnrollmentSampleTimeoutSeconds = 1.75;
     private const double DefaultMinimumForegroundCoveragePercent = 8;
     private const double DefaultMaximumForegroundCoveragePercent = 75;
     private const double DefaultMinimumContrastScore = 18;
@@ -446,7 +446,19 @@ public sealed class ZKTecoScannerService(
                 await Task.WhenAny(captureTask, Task.Delay(remaining, cancellationToken)) == captureTask;
 
             if (!captureCompleted || cancellationToken.IsCancellationRequested)
+            {
+                // The native AcquireFingerprint call may still be blocking in the background.
+                // Observe its exception to prevent UnobservedTaskException; _sdkLock will be
+                // released when the native call eventually returns.
+                _ = captureTask.ContinueWith(
+                    static t => { _ = t.Exception; },
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
+                logger.LogWarning(
+                    "Captura abortada por timeout o cancelación. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
                 break;
+            }
 
             (int captureResult, int templateSize) = await captureTask;
 
@@ -708,7 +720,16 @@ public sealed class ZKTecoScannerService(
         TimeSpan drainDuration = TimeSpan.FromMilliseconds(Math.Clamp(_postCaptureCooldownMilliseconds, 300, 700));
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        await _sdkLock.WaitAsync();
+        // Use a bounded wait: a prior capture that timed out may still hold _sdkLock while
+        // the native SDK call runs to completion.  Give it up to 3 s; if it still holds
+        // the lock by then, skip the drain rather than blocking indefinitely.
+        if (!await _sdkLock.WaitAsync(TimeSpan.FromSeconds(3)))
+        {
+            logger.LogWarning(
+                "Drenado post-captura omitido: el lock del SDK sigue retenido por una llamada nativa que excedió el timeout de captura.");
+            return;
+        }
+
         try
         {
             if (IsBiometricOperationInProgress())

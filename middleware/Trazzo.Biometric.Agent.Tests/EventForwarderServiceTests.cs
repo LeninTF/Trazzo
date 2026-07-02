@@ -366,7 +366,7 @@ public sealed class EventForwarderServiceTests
     }
 
     [Fact]
-    public async Task BuildHttpSender_CuandoNoHayDeviceCode_NoEnviaPayloadInvalido()
+    public async Task BuildHttpSender_CuandoNoHayDeviceCode_DescartaSinConsumiReintentos()
     {
         BiometricEvent evt = new()
         {
@@ -388,12 +388,16 @@ public sealed class EventForwarderServiceTests
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
+        // No HTTP request must be made and the event must be removed from the queue (marked
+        // as sent) so it does not burn retry counts or cause permanent churn.
         Assert.Null(handler.LastRequest);
-        Assert.Contains(5L, queue.FailedIds);
+        Assert.Empty(queue.FailedIds);
+        Assert.Single(queue.SentIds);
+        Assert.Contains(5L, queue.SentIds[0]);
     }
 
     [Fact]
-    public async Task BuildHttpSender_CuandoEventoNoEsIdentify_NoLoSincronizaComoAsistencia()
+    public async Task BuildHttpSender_CuandoEventoNoEsIdentify_DescartaSinConsumiReintentos()
     {
         BiometricEvent evt = new()
         {
@@ -415,8 +419,12 @@ public sealed class EventForwarderServiceTests
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
+        // No HTTP request must be made; event is permanently skipped and marked as sent
+        // so it is pruned from the queue without burning retries.
         Assert.Null(handler.LastRequest);
-        Assert.Contains(6L, queue.FailedIds);
+        Assert.Empty(queue.FailedIds);
+        Assert.Single(queue.SentIds);
+        Assert.Contains(6L, queue.SentIds[0]);
     }
 
     private static EventForwarderService CreateForwarder(

@@ -52,7 +52,7 @@ public sealed class EventForwarderService : BackgroundService
         _queue = queue;
         _logger = logger;
         _retryIntervalSeconds = retryIntervalSeconds;
-        _sender = BuildHttpSender(config.BackendUrl, config.AgentToken, config.TenantId, config.DeviceCode, httpClient);
+        _sender = BuildHttpSender(config.BackendUrl, config.AgentToken, config.TenantId, config.DeviceCode, httpClient, logger);
         _isEnabled = true;
         _delay = Task.Delay;
         _nextJitter = Random.Shared.NextDouble;
@@ -81,7 +81,7 @@ public sealed class EventForwarderService : BackgroundService
         }
         else
         {
-            _sender = BuildHttpSender(backendUrl, agentToken, tenantId, deviceCode, SharedHttpClient);
+            _sender = BuildHttpSender(backendUrl, agentToken, tenantId, deviceCode, SharedHttpClient, _logger);
             _isEnabled = true;
         }
 
@@ -177,19 +177,26 @@ public sealed class EventForwarderService : BackgroundService
     }
 
     private static Func<BiometricEvent, CancellationToken, Task<bool>> BuildHttpSender(
-        string backendUrl, string? agentToken, string? tenantId, string? deviceCode, HttpClient httpClient)
+        string backendUrl, string? agentToken, string? tenantId, string? deviceCode,
+        HttpClient httpClient, ILogger logger)
     {
         return async (evt, ct) =>
         {
             if (!string.Equals(evt.EventType, "identify", StringComparison.OrdinalIgnoreCase))
             {
-                return false;
+                logger.LogWarning(
+                    "Evento Id={Id} de tipo '{EventType}' no es soportado por el forwarder de asistencia. Se descartará de la cola sin consumir reintentos.",
+                    evt.Id, evt.EventType);
+                return true;
             }
 
             string? resolvedDeviceCode = string.IsNullOrWhiteSpace(deviceCode) ? evt.DeviceId : deviceCode;
             if (string.IsNullOrWhiteSpace(resolvedDeviceCode))
             {
-                return false;
+                logger.LogWarning(
+                    "Evento Id={Id} (tipo '{EventType}') no tiene device_code ni en la configuración (Agent:DeviceCode) ni en el evento. Se descartará de la cola.",
+                    evt.Id, evt.EventType);
+                return true;
             }
 
             var payload = new
