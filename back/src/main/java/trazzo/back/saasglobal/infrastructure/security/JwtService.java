@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import trazzo.back.shared.security.TokenValidator;
 
 import javax.crypto.SecretKey;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 
@@ -26,10 +27,11 @@ public class JwtService implements TokenValidator {
     }
 
     public String generateToken(UserDetails userDetails) {
+        Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userDetails.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusMillis(expirationMs)))
                 .signWith(key)
                 .compact();
     }
@@ -42,7 +44,7 @@ public class JwtService implements TokenValidator {
     @Override
     public boolean isTokenValid(String token, UserDetails userDetails) {
         return extractUsername(token).equals(userDetails.getUsername())
-                && !parseClaims(token).getExpiration().before(new Date());
+                && parseClaims(token).getExpiration().toInstant().isAfter(Instant.now());
     }
 
     public long getExpirationMs() {
