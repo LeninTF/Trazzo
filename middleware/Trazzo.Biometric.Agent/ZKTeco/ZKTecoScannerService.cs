@@ -448,7 +448,9 @@ public sealed class ZKTecoScannerService(
             if (cancellationToken.IsCancellationRequested)
             {
                 _ = captureTask.ContinueWith(
-                    static t => { _ = t.Exception; },
+                    t => logger.LogWarning(
+                        t.Exception?.GetBaseException(),
+                        "AcquireFingerprint falló después de cancelación."),
                     CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted,
                     TaskScheduler.Default);
@@ -460,7 +462,9 @@ public sealed class ZKTecoScannerService(
             if (!captureCompleted)
             {
                 _ = captureTask.ContinueWith(
-                    static t => { _ = t.Exception; },
+                    t => logger.LogWarning(
+                        t.Exception?.GetBaseException(),
+                        "AcquireFingerprint falló después de timeout."),
                     CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted,
                     TaskScheduler.Default);
