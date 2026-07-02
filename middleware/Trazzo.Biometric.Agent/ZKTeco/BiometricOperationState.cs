@@ -6,7 +6,6 @@ internal enum BiometricOperationState
     Capturing,
     Identifying,
     Enrolling,
-    Cooldown,
     Completed,
     Rejected,
     TimedOut,

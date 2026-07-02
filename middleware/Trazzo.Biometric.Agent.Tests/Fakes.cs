@@ -285,6 +285,28 @@ internal sealed class FakeEventQueue : IEventQueue
         => Task.CompletedTask;
 }
 
+internal sealed class FakeAttendanceMarkingClient : IAttendanceMarkingClient
+{
+    public bool Result { get; init; }
+    public int Calls { get; private set; }
+    public EncryptedPayload? LastEncryptedTemplate { get; private set; }
+    public string? LastDeviceId { get; private set; }
+    public DateTimeOffset LastCapturedAtUtc { get; private set; }
+
+    public Task<bool> TryMarkAsync(
+        EncryptedPayload encryptedTemplate,
+        string? deviceId,
+        DateTimeOffset capturedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        Calls++;
+        LastEncryptedTemplate = encryptedTemplate;
+        LastDeviceId = deviceId;
+        LastCapturedAtUtc = capturedAtUtc;
+        return Task.FromResult(Result);
+    }
+}
+
 internal sealed class FakeAgentHealthService : IAgentHealthService
 {
     public Exception? Exception { get; init; }

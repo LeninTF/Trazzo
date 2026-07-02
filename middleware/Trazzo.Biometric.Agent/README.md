@@ -8,7 +8,7 @@ El agente corre como un Windows Service e instala sin necesitar .NET en la PC de
 ws://localhost:9001/
 ```
 
-El frontend Angular se conecta a ese WebSocket, solicita operaciones biométricas y el agente habla con el lector por USB. Cuando captura una huella, extrae el template, lo cifra y lo envía al backend. Si no hay conexión, lo guarda en cola SQLite local y lo reintenta automáticamente.
+El frontend Angular se conecta a ese WebSocket, solicita operaciones biométricas y el agente habla con el lector por USB. Para asistencia, el agente captura la huella, cifra el template y llama a `POST /asistencia/marcar`; si no puede completar esa marcación síncrona, guarda el evento en SQLite y lo reintenta por `POST /asistencia/sync`.
 
 ---
 
@@ -25,9 +25,10 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Cifrado híbrido | AES-256-GCM + RSA-2048-OAEP, clave pública desde el backend |
 | Caché de clave RSA | `%PROGRAMDATA%\TrazzoAgent\public_key.cache` |
 | Cola offline | SQLite en `%PROGRAMDATA%\TrazzoAgent\events.db` |
-| Reenvío al backend | `POST /asistencia/sync` con `X-Tenant-ID` y `Authorization: Bearer` |
+| Marcación síncrona | `POST /asistencia/marcar` con `X-Tenant-ID` y `Authorization: Bearer` |
+| Reenvío offline al backend | `POST /asistencia/sync` con `X-Tenant-ID` y `Authorization: Bearer` |
 | Backoff exponencial | Reintento con jitter, hasta 5 minutos entre intentos |
-| Rate limiting | Por cliente WebSocket, configurable (`Agent:RateLimitSeconds`) |
+| Operaciones repetidas | Captura, identificación y enrolamiento pueden repetirse al terminar la operación anterior |
 | CORS WebSocket | Restricción por origen (`Agent:AllowedOrigins`) |
 | Multi-tenant | `X-Tenant-ID` en cada request al backend (`Agent:TenantId`) |
 | Auto-updater | Descarga MSI desde manifiesto JSON, verifica SHA-256, instala silencioso |
@@ -35,7 +36,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Instalador visual | Bienvenida → Selección de ruta → Progreso → Finalizar |
 | Imágenes del instalador | Banner 493×58 px y panel 493×312 px personalizados |
 | CI/CD | GitHub Actions: 2 jobs — `build-test-analyze` (push y PR) + `package-msi` (solo push) |
-| Tests | 218 pruebas xUnit (unitarias + integración), sin hardware real |
+| Tests | 262 pruebas xUnit; 240 no abren listener local y 22 cubren `HttpListener`/WebSocket real, sin hardware biométrico |
 | Reporte de inicio | Log completo del estado de todos los módulos al arrancar |
 
 ### Pendiente para funcionamiento al 100%
@@ -43,9 +44,14 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Qué | Responsable | Detalle |
 |---|---|---|
 | `GET /security/public-key` | Backend Spring Boot | Debe devolver `{ "publicKey": "string", "kid": "string" }` en PEM base64 |
-| `POST /asistencia/sync` | Backend Spring Boot | Recibe array `[{ templateCifrado, llaveCifrada, timestampLocal, dispositivoId }]` con header `X-Tenant-ID` |
+| `POST /asistencia/marcar` | Backend Spring Boot | Recibe objeto `{ event_type: "identify", encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc, device_code }` y devuelve `AttendanceProfile` |
+| `POST /asistencia/sync` | Backend Spring Boot | Recibe array `[{ event_type: "identify", encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc, device_code, offline_event_id?, retry_count? }]` y devuelve aceptación del lote (`202`) |
+| `GET /corehr/biometria` | Backend Spring Boot / Frontend admin | Lista `UserBiometriaListResponse`; no expone templates cifrados |
+| `POST /corehr/biometria/enroll/iniciar` | Backend Spring Boot / Frontend admin | Recibe `{ tenant_user_id, device_id, finger_index }` y devuelve `{ enroll_token, device_id, tenant_user_id, finger_index, expires_at }` |
+| `GET /corehr/biometria/enroll/pendiente` | Backend Spring Boot | Recibe `device_code` por query y `X-Tenant-ID`; devuelve `{ enroll_token, device_id, device_code, tenant_user_id, finger_index, expires_at }` o `204` |
+| `POST /corehr/biometria/enroll/completar` | Backend Spring Boot | Recibe `{ enroll_token, device_code, finger_index, encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc }` y devuelve `UserBiometriaProfile` (`201`) |
 | Conexión WebSocket Angular | Frontend | Conectar a `ws://localhost:9001/` y manejar los mensajes JSON del protocolo |
-| Configurar `appsettings.json` por tenant | DevOps / Trazzo | Rellenar `BackendUrl`, `TenantId`, `AgentToken`, `BackendPublicKeyUrl` antes de distribuir el MSI |
+| Configurar `appsettings.json` por tenant | DevOps / Trazzo | Rellenar `Backend:BaseUrl`, `Agent:TenantId`, `Agent:DeviceCode` y `Queue:AgentTokenProtected` con `Configure-Agent.ps1` |
 | Publicar en GitHub Releases | CI/CD | Agregar paso en el workflow para crear Release pública automáticamente en cada push a master. Sin esto el MSI solo es descargable por miembros del repo |
 | Publicar manifiesto de auto-update | Infraestructura | Hostear el JSON de versiones en HTTPS (puede apuntar a GitHub Releases) para que el auto-updater funcione |
 | Firma digital del MSI | Trazzo | Certificado de firma de código para evitar alertas de SmartScreen en Windows |
@@ -71,7 +77,7 @@ middleware/
 │   │   └── test-websocket.html          # Herramienta de prueba local
 │   ├── Worker.cs                        # Orquestador principal
 │   └── appsettings.json                 # Configuración
-├── Trazzo.Biometric.Agent.Tests/        # 218 pruebas xUnit
+├── Trazzo.Biometric.Agent.Tests/        # 262 pruebas xUnit
 └── Trazzo.Biometric.Agent.Installer/    # MSI con WiX Toolset v4
     ├── Resources/
     │   ├── banner.bmp                   # Franja superior del instalador (493×58 px)
@@ -113,15 +119,27 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   "Agent": {
     "WebSocketUrl": "http://localhost:9001/",
     "AllowedOrigins": [],
-    "RateLimitSeconds": 5,
     "KeepAliveIntervalSeconds": 30,
-    "TenantId": ""
+    "DeviceMonitorIntervalSeconds": 5,
+    "TenantId": "",
+    "DeviceCode": ""
+  },
+  "Backend": {
+    "BaseUrl": "",
+    "Endpoints": {
+      "SecurityPublicKey": "/security/public-key",
+      "AttendanceMark": "/asistencia/marcar",
+      "AttendanceSync": "/asistencia/sync",
+      "BiometricList": "/corehr/biometria",
+      "StartEnrollment": "/corehr/biometria/enroll/iniciar",
+      "PendingEnrollment": "/corehr/biometria/enroll/pendiente",
+      "CompleteEnrollment": "/corehr/biometria/enroll/completar"
+    }
   },
   "Biometric": {
-    "CaptureTimeoutSeconds": 2,
+    "CaptureTimeoutSeconds": 5,
     "CapturePollingIntervalMilliseconds": 50,
     "PostCaptureCooldownMilliseconds": 300,
-    "RequireFingerLiftBeforeNextCapture": true,
     "TemplateBufferSize": 2048,
     "IncludeFingerprintImageInResponses": false,
     "Quality": {
@@ -136,8 +154,10 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   },
   "Enrollment": {
     "RequiredSamples": 3,
-    "SampleTimeoutSeconds": 3,
-    "RequireFingerLiftBetweenSamples": true
+    "SampleTimeoutSeconds": 5,
+    "RequireFingerLiftBetweenSamples": true,
+    "RemotePollingEnabled": true,
+    "RemotePollingIntervalSeconds": 5
   },
   "Security": {
     "BackendPublicKeyUrl": ""
@@ -146,6 +166,7 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     "DatabasePath": "",
     "BackendUrl": "",
     "AgentToken": "",
+    "AgentTokenProtected": "",
     "RetryIntervalSeconds": 30
   },
   "AutoUpdate": {
@@ -164,19 +185,43 @@ Para dedos con poca huella, los umbrales por defecto son más tolerantes (`Minim
 
 ### Tiempo de respuesta ZK9500
 
-La respuesta de captura e identificación está estandarizada a un máximo de 2 segundos. El enrolamiento usa hasta 3 segundos por muestra, con lectura cada 50 ms y cooldown de 300 ms entre operaciones. Si una configuración antigua trae valores mayores, el agente los limita internamente para evitar esperas de 5 segundos o más.
+La captura e identificación esperan hasta 5 segundos para que el usuario coloque el dedo, con lectura cada 50 ms. No hay bloqueo artificial de 5 segundos entre botones: cuando una operación termina por éxito, error o timeout, el usuario puede volver a capturar, identificar o enrolar inmediatamente. El `PostCaptureCooldownMilliseconds` es solo drenado técnico interno del lector y no debe devolver error al WebSocket. El enrolamiento usa hasta 5 segundos por muestra.
 
 ### Valores obligatorios en producción
 
 | Clave | Descripción |
 |---|---|
 | `Agent:TenantId` | UUID del tenant (institución educativa). Se envía como `X-Tenant-ID` en cada request al backend |
+| `Agent:DeviceCode` | Código del lector registrado en CoreHR (`device.code`). Debe coincidir con el valor usado por `/corehr/biometria/enroll/pendiente` |
 | `Agent:AllowedOrigins` | Dominios permitidos para el WebSocket, ej. `["https://app.trazzo.pe"]` |
-| `Security:BackendPublicKeyUrl` | URL del endpoint `GET /security/public-key` del backend |
-| `Queue:BackendUrl` | URL del endpoint `POST /asistencia/sync` del backend |
-| `Queue:AgentToken` | Token JWT del agente para autenticarse en el backend |
+| `Backend:BaseUrl` | Base del backend, ej. `https://api.trazzo.pe/api/v1` |
+| `Backend:Endpoints:SecurityPublicKey` | Ruta `GET /security/public-key` para llave RSA pública |
+| `Backend:Endpoints:AttendanceMark` | Ruta `POST /asistencia/marcar` para marcación biométrica síncrona |
+| `Backend:Endpoints:AttendanceSync` | Ruta `POST /asistencia/sync` para asistencia biométrica offline |
+| `Backend:Endpoints:BiometricList` | Ruta `GET /corehr/biometria` para listado admin de registros biométricos; no la consume el agente |
+| `Backend:Endpoints:StartEnrollment` | Ruta `POST /corehr/biometria/enroll/iniciar` para inicio admin/frontend del enrolamiento; no la invoca el agente |
+| `Backend:Endpoints:PendingEnrollment` | Ruta `GET /corehr/biometria/enroll/pendiente` para polling CoreHR |
+| `Backend:Endpoints:CompleteEnrollment` | Ruta `POST /corehr/biometria/enroll/completar` para completar enrolamiento |
+| `Queue:AgentTokenProtected` | Token JWT del agente cifrado con DPAPI LocalMachine por `Configure-Agent.ps1` |
+| `Queue:AgentToken` | Token JWT legacy en claro. Evitar en producción; se mantiene por compatibilidad |
 | `AutoUpdate:Enabled` | `true` para habilitar actualizaciones automáticas |
 | `AutoUpdate:ManifestUrl` | URL HTTPS del manifiesto JSON de versiones |
+
+`Security:BackendPublicKeyUrl` y `Queue:BackendUrl` siguen aceptándose como URLs absolutas legacy, pero para nuevas instalaciones se recomienda centralizar rutas en `Backend:BaseUrl` + `Backend:Endpoints`.
+
+Para configurar una instalación sin editar `appsettings.json` manualmente, use prompt seguro para no dejar el JWT en historial de consola:
+
+```powershell
+$token = Read-Host "Queue:AgentToken" -AsSecureString
+& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
+  -TenantId "00000000-0000-0000-0000-000000000000" `
+  -DeviceCode "ZK-C2PRO-00123" `
+  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
+  -AgentTokenSecure $token `
+  -AllowedOrigins "https://app.trazzo.pe"
+```
+
+El script guarda el JWT en `Queue:AgentTokenProtected` usando DPAPI de Windows con alcance `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON y endurece ACL del archivo para `SYSTEM` y Administradores.
 
 ### Manifiesto de auto-update
 
@@ -201,7 +246,7 @@ dotnet build .\Trazzo.Middleware.slnx -c Release
 dotnet test
 ```
 
-Los 218 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico.
+Los 262 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico. En entornos restringidos, los 22 tests de `LocalWebSocketServerServiceTests` pueden fallar al abrir `HttpListener`; ejecutar `dotnet test --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"` valida los 240 tests que no dependen del listener local.
 
 ---
 
@@ -214,7 +259,8 @@ dotnet build .\Trazzo.Biometric.Agent.Installer\Trazzo.Biometric.Agent.Installer
 El MSI queda en:
 
 ```text
-Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+Trazzo.Biometric.Agent.Installer\bin\Release\es-ES\Trazzo.Biometric.Agent.msi
+Trazzo.Biometric.Agent.Installer\bin\Release\en-US\Trazzo.Biometric.Agent.msi
 ```
 
 El MSI es **self-contained**: incluye el runtime de .NET 10. La PC del colegio no necesita tener .NET instalado.
@@ -229,7 +275,7 @@ El pipeline `.github/workflows/middleware-ci.yml` se activa automáticamente en 
 
 | Job | Trigger | Runner | Descripción |
 |---|---|---|---|
-| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 218 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
+| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 262 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
 | `package-msi` | solo push | Windows | Descarga los binarios del job anterior y genera el MSI con WiX v4 (`-p:SkipAgentPublish=true`). No re-publica el agente. |
 
 El job `package-msi` depende de `build-test-analyze` y sólo corre en push, por lo que en pull requests sólo se ejecuta el primer job.
@@ -240,7 +286,7 @@ Actualmente el MSI generado por CI queda como artefacto interno de GitHub Action
 
 ```
 Push a master
-  → CI compila y ejecuta 218 tests
+  → CI compila y ejecuta 262 tests
   → CI genera MSI self-contained
   → CI publica GitHub Release con URL pública   ← pendiente de implementar
        ↓
@@ -275,7 +321,7 @@ Luego en GitHub: **Settings → Secrets and variables → Actions → New reposi
 Doble clic en el MSI o desde PowerShell como administrador:
 
 ```powershell
-msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\es-ES\Trazzo.Biometric.Agent.msi
 ```
 
 El instalador muestra:
@@ -344,7 +390,7 @@ Página HTML autocontenida para probar el agente sin escribir código. No requie
 | Conectar / Desconectar | Abre o cierra la conexión WebSocket. Al conectar se hace un health check automático |
 | Estado del lector | Consulta si el ZK9500 está enchufado y el SDK inicializado |
 | Capturar huella | Captura y cifra el template. El evento **no** se encola en SQLite |
-| Identificar huella | Igual que capturar, pero el evento **sí** se encola para reenvío al backend |
+| Identificar huella | Captura para asistencia: intenta `POST /asistencia/marcar`; si falla, encola el evento para `POST /asistencia/sync` |
 | Enrolar huella | Captura 3 muestras consecutivas y genera template definitivo con DBMerge |
 | Cancelar enrolamiento | Interrumpe un enrolamiento en curso |
 | Limpiar | Limpia el log y resetea la UI |
@@ -399,7 +445,7 @@ Todos los mensajes son JSON. El cliente envía `{ "type": "..." }` y el agente r
 { "type": "fingerprint.capture" }
 ```
 
-Captura simple. Devuelve el template cifrado y encola el evento offline.
+Captura simple. Devuelve el template cifrado para diagnóstico o flujos locales; no registra asistencia ni encola eventos offline.
 
 ### fingerprint.identify
 
@@ -407,7 +453,7 @@ Captura simple. Devuelve el template cifrado y encola el evento offline.
 { "type": "fingerprint.identify" }
 ```
 
-Captura para asistencia. Encola el evento cifrado para reenvío al backend.
+Captura para asistencia. Intenta `POST /asistencia/marcar` inmediatamente; si el backend no está disponible o rechaza la llamada, encola el evento cifrado para reenvío por `POST /asistencia/sync`.
 
 ### fingerprint.enroll.start
 
@@ -481,7 +527,7 @@ Huella física
   → SDK extrae template (binario, en RAM)
   → AES-256-GCM cifra el template (clave efímera por captura)
   → RSA-2048-OAEP cifra la clave AES (con clave pública del backend)
-  → Se transmite: { templateCifrado, llaveCifrada, iv, tag }
+  → Se transmite: { encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64 }
   → Imagen cruda descartada
 ```
 
@@ -566,7 +612,7 @@ dotnet test
 dotnet build .\Trazzo.Biometric.Agent.Installer\Trazzo.Biometric.Agent.Installer.wixproj -c Release
 
 # Instalar MSI
-msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+msiexec /i .\Trazzo.Biometric.Agent.Installer\bin\Release\es-ES\Trazzo.Biometric.Agent.msi
 
 # Instalar MSI silencioso
 msiexec /i Trazzo.Biometric.Agent.msi /quiet /norestart
@@ -576,5 +622,5 @@ Stop-Service -Name TrazzoAgent
 Start-Service -Name TrazzoAgent
 
 # Desinstalar
-msiexec /x .\Trazzo.Biometric.Agent.Installer\bin\Release\Trazzo.Biometric.Agent.msi
+msiexec /x .\Trazzo.Biometric.Agent.Installer\bin\Release\es-ES\Trazzo.Biometric.Agent.msi
 ```

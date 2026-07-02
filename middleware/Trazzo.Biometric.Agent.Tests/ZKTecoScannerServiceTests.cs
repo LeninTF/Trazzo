@@ -449,12 +449,30 @@ public sealed class ZKTecoScannerServiceTests
         Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", result.Message);
     }
 
+    [Fact]
+    public async Task CaptureFingerprintAsync_CuandoTimeoutTermina_PermiteReintentoInmediato()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureResult: -1, template: []);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var first = await service.CaptureFingerprintAsync(CancellationToken.None);
+        var second = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.False(first.Success);
+        Assert.False(second.Success);
+        Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", first.Message);
+        Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", second.Message);
+        Assert.DoesNotContain("Ya hay una operación biométrica en progreso.", second.Message);
+    }
+
     [Theory]
-    [InlineData(null, 2)]
-    [InlineData("", 2)]
-    [InlineData("0", 2)]
+    [InlineData(null, 5)]
+    [InlineData("", 5)]
+    [InlineData("0", 5)]
     [InlineData("1", 1)]
-    [InlineData("5", 2)]
+    [InlineData("5", 5)]
+    [InlineData("10", 5)]
     public void GetStandardizedConfigurationValue_NormalizaTiempoDeRespuesta(string? configuredValue, int expected)
     {
         const string key = "Biometric:CaptureTimeoutSeconds";
@@ -468,7 +486,7 @@ public sealed class ZKTecoScannerServiceTests
             .AddInMemoryCollection(settings)
             .Build();
 
-        int value = ZKTecoScannerService.GetStandardizedConfigurationValue(configuration, key, fallback: 2, maximum: 2);
+        int value = ZKTecoScannerService.GetStandardizedConfigurationValue(configuration, key, fallback: 5, maximum: 5);
 
         Assert.Equal(expected, value);
     }
@@ -509,7 +527,7 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
-    public async Task CaptureFingerprintAsync_CuandoDedoYaEstaApoyado_SolicitaRetirarlo()
+    public async Task CaptureFingerprintAsync_CuandoDedoYaEstaApoyado_NoBloqueaCaptura()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
         await using ZKTecoScannerService service = CreateService(
@@ -522,8 +540,8 @@ public sealed class ZKTecoScannerServiceTests
 
         var result = await service.CaptureFingerprintAsync(CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Equal("Retire el dedo del lector y vuelva a colocarlo para iniciar una nueva operación.", result.Message);
+        Assert.True(result.Success);
+        Assert.Equal("Huella capturada correctamente.", result.Message);
     }
 
     [Fact]
@@ -771,7 +789,6 @@ public sealed class ZKTecoScannerServiceTests
             ["Biometric:CapturePollingIntervalMilliseconds"] = "1",
             ["Biometric:PostCaptureCooldownMilliseconds"] = "1",
             ["Biometric:TemplateBufferSize"] = "2048",
-            ["Biometric:RequireFingerLiftBeforeNextCapture"] = "false",
             ["Biometric:Quality:MinimumTemplateSize"] = "1",
             ["Biometric:Quality:MinimumForegroundCoveragePercent"] = "10",
             ["Biometric:Quality:MaximumForegroundCoveragePercent"] = "80",

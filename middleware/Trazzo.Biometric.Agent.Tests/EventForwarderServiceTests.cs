@@ -28,9 +28,10 @@ public sealed class EventForwarderServiceTests
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Queue:BackendUrl"] = "https://localhost/api/asistencias/sync",
+                ["Backend:BaseUrl"] = "https://localhost/api/v1",
                 ["Queue:AgentToken"] = "token",
                 ["Agent:TenantId"] = "tenant-1",
+                ["Agent:DeviceCode"] = "ZK9500-1",
                 ["Queue:RetryIntervalSeconds"] = "1"
             })
             .Build();
@@ -261,7 +262,7 @@ public sealed class EventForwarderServiceTests
         BiometricEvent evt = new()
         {
             Id = 1,
-            EventType = "capture",
+            EventType = "identify",
             EncryptedTemplateBase64 = Convert.ToBase64String(ciphertext),
             EncryptedAesKeyBase64 = llaveCifrada,
             IvBase64 = Convert.ToBase64String(iv),
@@ -283,12 +284,15 @@ public sealed class EventForwarderServiceTests
         using JsonDocument doc = JsonDocument.Parse(handler.LastRequestBody!);
         JsonElement root = doc.RootElement;
 
-        // templateCifrado = base64(IV[12] + Tag[16] + Ciphertext)
-        byte[] combined = [.. iv, .. tag, .. ciphertext];
-        Assert.Equal(Convert.ToBase64String(combined), root.GetProperty("templateCifrado").GetString());
-        Assert.Equal(llaveCifrada, root.GetProperty("llaveCifrada").GetString());
-        Assert.Equal("ZK9500-12345", root.GetProperty("dispositivoId").GetString());
-        Assert.Equal(capturedAt.ToString("O"), root.GetProperty("timestampLocal").GetString());
+        JsonElement item = root.EnumerateArray().Single();
+        Assert.Equal("identify", item.GetProperty("event_type").GetString());
+        Assert.Equal(Convert.ToBase64String(ciphertext), item.GetProperty("encrypted_template_base64").GetString());
+        Assert.Equal(llaveCifrada, item.GetProperty("encrypted_aes_key_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(iv), item.GetProperty("iv_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(tag), item.GetProperty("tag_base64").GetString());
+        Assert.Equal("ZK9500-12345", item.GetProperty("device_code").GetString());
+        Assert.Equal(capturedAt.ToString("O"), item.GetProperty("captured_at_utc").GetString());
+        Assert.Equal(1, item.GetProperty("offline_event_id").GetInt64());
     }
 
     [Fact]
@@ -343,6 +347,83 @@ public sealed class EventForwarderServiceTests
         Assert.Equal("tenant-1", handler.LastRequest?.Headers.GetValues("X-Tenant-ID").Single());
     }
 
+    [Fact]
+    public async Task BuildHttpSender_CuandoDeviceCodeConfigurado_UsaValorDeConfiguracion()
+    {
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        EventForwarderService forwarder = new(
+            new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
+            httpClient,
+            "http://localhost/api/asistencias/sync",
+            agentToken: null,
+            retryIntervalSeconds: 60,
+            NullLogger<EventForwarderService>.Instance,
+            tenantId: "tenant-1",
+            deviceCode: "ZK9500-CONFIG");
+
+        await forwarder.TryForwardPendingAsync(CancellationToken.None);
+
+        Assert.NotNull(handler.LastRequestBody);
+        using JsonDocument doc = JsonDocument.Parse(handler.LastRequestBody!);
+        JsonElement item = doc.RootElement.EnumerateArray().Single();
+        Assert.Equal("ZK9500-CONFIG", item.GetProperty("device_code").GetString());
+    }
+
+    [Fact]
+    public async Task BuildHttpSender_CuandoNoHayDeviceCode_NoEnviaPayloadInvalido()
+    {
+        BiometricEvent evt = new()
+        {
+            Id = 5,
+            EventType = "identify",
+            EncryptedTemplateBase64 = Convert.ToBase64String([1, 2, 3]),
+            EncryptedAesKeyBase64 = Convert.ToBase64String([4, 5, 6]),
+            IvBase64 = Convert.ToBase64String(new byte[12]),
+            TagBase64 = Convert.ToBase64String(new byte[16]),
+            DeviceId = null,
+            CapturedAtUtc = DateTimeOffset.UtcNow
+        };
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        FakeEventQueue queue = new() { PendingToReturn = [evt] };
+        EventForwarderService forwarder = new(
+            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            NullLogger<EventForwarderService>.Instance);
+
+        await forwarder.TryForwardPendingAsync(CancellationToken.None);
+
+        Assert.Null(handler.LastRequest);
+        Assert.Contains(5L, queue.FailedIds);
+    }
+
+    [Fact]
+    public async Task BuildHttpSender_CuandoEventoNoEsIdentify_NoLoSincronizaComoAsistencia()
+    {
+        BiometricEvent evt = new()
+        {
+            Id = 6,
+            EventType = "enroll",
+            EncryptedTemplateBase64 = Convert.ToBase64String([1, 2, 3]),
+            EncryptedAesKeyBase64 = Convert.ToBase64String([4, 5, 6]),
+            IvBase64 = Convert.ToBase64String(new byte[12]),
+            TagBase64 = Convert.ToBase64String(new byte[16]),
+            DeviceId = "ZK9500-1",
+            CapturedAtUtc = DateTimeOffset.UtcNow
+        };
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        FakeEventQueue queue = new() { PendingToReturn = [evt] };
+        EventForwarderService forwarder = new(
+            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            NullLogger<EventForwarderService>.Instance);
+
+        await forwarder.TryForwardPendingAsync(CancellationToken.None);
+
+        Assert.Null(handler.LastRequest);
+        Assert.Contains(6L, queue.FailedIds);
+    }
+
     private static EventForwarderService CreateForwarder(
         FakeEventQueue queue,
         Func<BiometricEvent, CancellationToken, Task<bool>>? sender = null,
@@ -358,7 +439,7 @@ public sealed class EventForwarderServiceTests
     private static BiometricEvent MakeEvent(long id) => new()
     {
         Id = id,
-        EventType = "capture",
+        EventType = "identify",
         EncryptedTemplateBase64 = Convert.ToBase64String([1, 2, 3]),
         EncryptedAesKeyBase64 = Convert.ToBase64String([4, 5, 6]),
         IvBase64 = Convert.ToBase64String(new byte[12]),

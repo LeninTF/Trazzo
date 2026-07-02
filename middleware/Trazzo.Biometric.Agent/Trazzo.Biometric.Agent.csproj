@@ -29,5 +29,10 @@
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>test-websocket.html</TargetPath>
     </None>
+    <None Include="scripts\Configure-Agent.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>Configure-Agent.ps1</TargetPath>
+    </None>
   </ItemGroup>
 </Project>

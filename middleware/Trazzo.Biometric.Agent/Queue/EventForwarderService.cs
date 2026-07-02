@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Trazzo.Biometric.Agent.Backend;
+using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Queue;
 
@@ -41,12 +43,13 @@ public sealed class EventForwarderService : BackgroundService
         string? agentToken,
         int retryIntervalSeconds,
         ILogger<EventForwarderService> logger,
-        string? tenantId = null)
+        string? tenantId = null,
+        string? deviceCode = null)
     {
         _queue = queue;
         _logger = logger;
         _retryIntervalSeconds = retryIntervalSeconds;
-        _sender = BuildHttpSender(backendUrl, agentToken, tenantId, httpClient);
+        _sender = BuildHttpSender(backendUrl, agentToken, tenantId, deviceCode, httpClient);
         _isEnabled = true;
         _delay = Task.Delay;
         _nextJitter = Random.Shared.NextDouble;
@@ -61,20 +64,21 @@ public sealed class EventForwarderService : BackgroundService
         _logger = logger;
         _retryIntervalSeconds = configuration.GetValue<int>("Queue:RetryIntervalSeconds", 30);
 
-        string? backendUrl = configuration["Queue:BackendUrl"];
-        string? agentToken = configuration["Queue:AgentToken"];
+        string? backendUrl = BackendEndpointResolver.ResolveAttendanceSyncUrl(configuration);
+        string? agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         string? tenantId = configuration["Agent:TenantId"];
+        string? deviceCode = configuration["Agent:DeviceCode"];
 
         if (string.IsNullOrWhiteSpace(backendUrl))
         {
             _logger.LogWarning(
-                "Queue:BackendUrl no configurada. El reenvío automático de eventos biométricos está deshabilitado.");
+                "Endpoint de asistencia no configurado. Configure Backend:BaseUrl o Queue:BackendUrl para habilitar el reenvío.");
             _sender = (_, _) => Task.FromResult(false);
             _isEnabled = false;
         }
         else
         {
-            _sender = BuildHttpSender(backendUrl, agentToken, tenantId, SharedHttpClient);
+            _sender = BuildHttpSender(backendUrl, agentToken, tenantId, deviceCode, SharedHttpClient);
             _isEnabled = true;
         }
 
@@ -170,29 +174,36 @@ public sealed class EventForwarderService : BackgroundService
     }
 
     private static Func<BiometricEvent, CancellationToken, Task<bool>> BuildHttpSender(
-        string backendUrl, string? agentToken, string? tenantId, HttpClient httpClient)
+        string backendUrl, string? agentToken, string? tenantId, string? deviceCode, HttpClient httpClient)
     {
         return async (evt, ct) =>
         {
-            // template = base64( iv[12] || tag[16] || ciphertext[N] )
-            byte[] iv = Convert.FromBase64String(evt.IvBase64);
-            byte[] tag = Convert.FromBase64String(evt.TagBase64);
-            byte[] ciphertext = Convert.FromBase64String(evt.EncryptedTemplateBase64);
-            byte[] combined = new byte[iv.Length + tag.Length + ciphertext.Length];
-            Buffer.BlockCopy(iv, 0, combined, 0, iv.Length);
-            Buffer.BlockCopy(tag, 0, combined, iv.Length, tag.Length);
-            Buffer.BlockCopy(ciphertext, 0, combined, iv.Length + tag.Length, ciphertext.Length);
+            if (!string.Equals(evt.EventType, "identify", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string? resolvedDeviceCode = string.IsNullOrWhiteSpace(deviceCode) ? evt.DeviceId : deviceCode;
+            if (string.IsNullOrWhiteSpace(resolvedDeviceCode))
+            {
+                return false;
+            }
 
             var payload = new
             {
-                templateCifrado = Convert.ToBase64String(combined),
-                llaveCifrada = evt.EncryptedAesKeyBase64,
-                timestampLocal = evt.CapturedAtUtc.ToString("O"),
-                dispositivoId = evt.DeviceId
+                event_type = "identify",
+                encrypted_template_base64 = evt.EncryptedTemplateBase64,
+                encrypted_aes_key_base64 = evt.EncryptedAesKeyBase64,
+                iv_base64 = evt.IvBase64,
+                tag_base64 = evt.TagBase64,
+                captured_at_utc = evt.CapturedAtUtc.ToString("O"),
+                device_code = resolvedDeviceCode,
+                offline_event_id = evt.Id,
+                retry_count = evt.RetryCount
             };
 
             using StringContent content = new(
-                JsonSerializer.Serialize(payload, JsonOptions),
+                JsonSerializer.Serialize(new[] { payload }, JsonOptions),
                 Encoding.UTF8,
                 "application/json");
 

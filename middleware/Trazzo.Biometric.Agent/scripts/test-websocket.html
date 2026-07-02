@@ -381,7 +381,7 @@
       <div class="step">
         <div class="step-number">4</div>
         <h3>Captura una huella</h3>
-        <p>Haz clic en <strong>Capturar</strong> o <strong>Identificar</strong>, luego coloca el dedo en el lector. Tienes 5 segundos. La diferencia: <em>Identificar</em> encola el evento en SQLite para enviarlo al backend.</p>
+        <p>Haz clic en <strong>Capturar</strong> o <strong>Identificar</strong>, luego coloca el dedo en el lector. Tienes 5 segundos. La diferencia: <em>Identificar</em> intenta marcar asistencia en el backend; si no puede, encola el evento en SQLite para sincronizarlo luego.</p>
       </div>
       <div class="step">
         <div class="step-number">5</div>
@@ -395,7 +395,7 @@
       </div>
     </div>
     <div class="tutorial-note">
-      <strong>Sin backend configurado:</strong> Los warnings de <em>BackendPublicKeyUrl</em> y <em>BackendUrl</em> son normales en desarrollo local. El agente captura y cifra correctamente, pero no reenvía eventos al servidor.
+      <strong>Sin backend configurado:</strong> Los warnings de <em>Backend:BaseUrl</em>, <em>Agent:TenantId</em> o <em>Agent:DeviceCode</em> son normales en desarrollo local. El agente captura correctamente, pero no reenvía eventos al servidor.
     </div>
   </div>
 

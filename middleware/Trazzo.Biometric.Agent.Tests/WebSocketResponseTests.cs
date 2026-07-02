@@ -87,7 +87,7 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
-    public async Task HandleMessageAsync_ForCaptureWithEncryptedTemplate_EnqueuesEvent()
+    public async Task HandleMessageAsync_ForCaptureWithEncryptedTemplate_DoesNotEnqueueAttendanceEvent()
     {
         EncryptedPayload enc = new("cipher", "key", "iv", "tag");
         FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded(
@@ -99,9 +99,7 @@ public sealed class WebSocketResponseTests
 
         await server.HandleMessageAsync("""{ "type": "fingerprint.capture" }""", CancellationToken.None);
 
-        Assert.Single(queue.Enqueued);
-        Assert.Equal("capture", queue.Enqueued[0].EventType);
-        Assert.Equal("ZK9500-1", queue.Enqueued[0].DeviceId);
+        Assert.Empty(queue.Enqueued);
     }
 
     [Fact]
@@ -169,7 +167,59 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
-    public async Task HandleMessageAsync_ForEnrollWithEncryptedTemplate_EnqueuesEvent()
+    public async Task HandleMessageAsync_ForIdentifyWhenSynchronousMarkSucceeds_DoesNotEnqueueEvent()
+    {
+        EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
+        FingerprintIdentifyResult identifyResult = FingerprintIdentifyResult.Succeeded(
+            [1, 2, 3],
+            3,
+            quality: null,
+            deviceId: "ZK9500-IDENTIFY",
+            encryptedTemplate: encrypted);
+        FakeEventQueue queue = new();
+        FakeAttendanceMarkingClient attendanceClient = new() { Result = true };
+        LocalWebSocketServerService server = CreateServer(
+            identifyResult: identifyResult,
+            eventQueue: queue,
+            attendanceClient: attendanceClient);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.identify" }""",
+            CancellationToken.None);
+
+        Assert.Equal(1, attendanceClient.Calls);
+        Assert.Same(encrypted, attendanceClient.LastEncryptedTemplate);
+        Assert.Equal("ZK9500-IDENTIFY", attendanceClient.LastDeviceId);
+        Assert.Empty(queue.Enqueued);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForIdentifyWhenSynchronousMarkFails_EnqueuesEvent()
+    {
+        EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
+        FingerprintIdentifyResult identifyResult = FingerprintIdentifyResult.Succeeded(
+            [1, 2, 3],
+            3,
+            quality: null,
+            deviceId: "ZK9500-IDENTIFY",
+            encryptedTemplate: encrypted);
+        FakeEventQueue queue = new();
+        FakeAttendanceMarkingClient attendanceClient = new() { Result = false };
+        LocalWebSocketServerService server = CreateServer(
+            identifyResult: identifyResult,
+            eventQueue: queue,
+            attendanceClient: attendanceClient);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.identify" }""",
+            CancellationToken.None);
+
+        Assert.Equal(1, attendanceClient.Calls);
+        Assert.Single(queue.Enqueued);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollWithEncryptedTemplate_DoesNotEnqueueAttendanceEvent()
     {
         EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
         FingerprintEnrollResult enrollResult = FingerprintEnrollResult.Succeeded(
@@ -188,9 +238,7 @@ public sealed class WebSocketResponseTests
             CancellationToken.None);
 
         Assert.Equal(enrollResult, response);
-        BiometricEvent queued = Assert.Single(queue.Enqueued);
-        Assert.Equal("enroll", queued.EventType);
-        Assert.Equal("ZK9500-ENROLL", queued.DeviceId);
+        Assert.Empty(queue.Enqueued);
     }
 
     [Fact]
@@ -296,22 +344,28 @@ public sealed class WebSocketResponseTests
         Assert.Equal("Tipo de mensaje WebSocket no soportado.", document.RootElement.GetProperty("message").GetString());
     }
 
-    [Fact]
-    public void IsRateLimited_WhenEnabled_RejectsSecondOperation()
+    [Theory]
+    [InlineData("fingerprint.capture")]
+    [InlineData("fingerprint.identify")]
+    [InlineData("fingerprint.enroll.start")]
+    public async Task HandleMessageAsync_ForRepeatedBiometricOperation_DoesNotThrottle(string messageType)
     {
-        LocalWebSocketServerService server = CreateServer(rateLimitSeconds: 5);
+        LocalWebSocketServerService server = CreateServer();
+        string json = $$"""{ "type": "{{messageType}}" }""";
 
-        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
-        Assert.True(server.IsRateLimited("client-1", "fingerprint.capture"));
-    }
+        object first = await server.HandleMessageAsync(json, CancellationToken.None);
+        object second = await server.HandleMessageAsync(json, CancellationToken.None);
 
-    [Fact]
-    public void IsRateLimited_WhenDisabled_AllowsRepeatedOperations()
-    {
-        LocalWebSocketServerService server = CreateServer(rateLimitSeconds: 0);
-
-        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
-        Assert.False(server.IsRateLimited("client-1", "fingerprint.capture"));
+        using JsonDocument firstDocument = ToJsonDocument(first);
+        using JsonDocument secondDocument = ToJsonDocument(second);
+        Assert.NotEqual("error", firstDocument.RootElement.GetProperty("type").GetString());
+        Assert.NotEqual("error", secondDocument.RootElement.GetProperty("type").GetString());
+        Assert.DoesNotContain(
+            "Demasiadas solicitudes",
+            JsonSerializer.Serialize(first, JsonOptions));
+        Assert.DoesNotContain(
+            "Demasiadas solicitudes",
+            JsonSerializer.Serialize(second, JsonOptions));
     }
 
     private static LocalWebSocketServerService CreateServer(
@@ -320,7 +374,7 @@ public sealed class WebSocketResponseTests
         FingerprintIdentifyResult? identifyResult = null,
         FingerprintEnrollResult? enrollResult = null,
         FakeEventQueue? eventQueue = null,
-        int rateLimitSeconds = 5)
+        FakeAttendanceMarkingClient? attendanceClient = null)
     {
         FakeBiometricScannerService scanner = new()
         {
@@ -340,10 +394,7 @@ public sealed class WebSocketResponseTests
         };
 
         IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Agent:RateLimitSeconds"] = rateLimitSeconds.ToString()
-            })
+            .AddInMemoryCollection(new Dictionary<string, string?>())
             .Build();
 
         return new LocalWebSocketServerService(
@@ -351,7 +402,8 @@ public sealed class WebSocketResponseTests
             new FakeAgentHealthService(),
             eventQueue ?? new FakeEventQueue(),
             configuration,
-            NullLogger<LocalWebSocketServerService>.Instance);
+            NullLogger<LocalWebSocketServerService>.Instance,
+            attendanceClient);
     }
 
     private static JsonDocument ToJsonDocument(object response)

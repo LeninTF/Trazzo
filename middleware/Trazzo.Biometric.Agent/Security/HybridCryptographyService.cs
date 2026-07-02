@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Trazzo.Biometric.Agent.Backend;
 using Trazzo.Biometric.Agent.Contracts;
 using Trazzo.Biometric.Agent.Services;
 
@@ -60,7 +61,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             _logger.LogWarning(
                 "No se encontró clave pública RSA (ni endpoint ni caché de disco). " +
                 "Los templates biométricos se transmitirán sin cifrado AES-256/RSA-2048. " +
-                "Configure Security:BackendPublicKeyUrl antes de desplegar en producción.");
+                "Configure Backend:BaseUrl antes de desplegar en producción.");
             return;
         }
 
@@ -185,13 +186,13 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         ILogger<HybridCryptographyService> logger,
         HttpClient httpClient)
     {
-        string? url = configuration["Security:BackendPublicKeyUrl"];
-        string? agentToken = configuration["Queue:AgentToken"];
+        string? url = BackendEndpointResolver.ResolveSecurityPublicKeyUrl(configuration);
+        string? agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
 
         if (string.IsNullOrWhiteSpace(url))
         {
             logger.LogWarning(
-                "URL del endpoint de clave pública no configurada (Security:BackendPublicKeyUrl). " +
+                "URL del endpoint de clave pública no configurada (Backend:BaseUrl o Security:BackendPublicKeyUrl). " +
                 "Se intentará usar la caché de disco si existe.");
             return _ => Task.FromResult<string?>(null);
         }
@@ -199,7 +200,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsedUrl) || parsedUrl.Scheme != Uri.UriSchemeHttps)
         {
             logger.LogError(
-                "Security:BackendPublicKeyUrl='{Url}' debe usar HTTPS. La clave pública no se descargará.",
+                "El endpoint de clave pública '{Url}' debe usar HTTPS. La clave pública no se descargará.",
                 url);
             return _ => Task.FromResult<string?>(null);
         }
