@@ -5,6 +5,7 @@ import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
 import { Login } from './auth/login/login';
+import { HelpPage } from './pages/public/help/help-page';
 import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
 import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
@@ -165,5 +166,14 @@ export const routes: Routes = [
     {
         path: 'usuario/perfil',
         component: Perfil
+    },
+    {
+        path: 'ayuda/:seccion',
+        component: HelpPage
+    },
+    {
+        path: 'ayuda',
+        pathMatch: 'full',
+        redirectTo: 'ayuda/guia-de-uso'
     }
 ];

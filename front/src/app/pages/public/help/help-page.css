@@ -1,0 +1,201 @@
+:host {
+  display: block;
+  min-height: 100%;
+  background: #f8faff;
+}
+
+.help-page {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.help-page__container {
+  max-width: 800px;
+  width: 100%;
+}
+
+.help-page__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.help-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid rgba(30, 64, 175, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: #4e5b77;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.help-page__back:hover {
+  background: #eef4ff;
+  color: #0f2a6e;
+  border-color: rgba(30, 64, 175, 0.2);
+}
+
+.help-page__nav-links {
+  display: flex;
+  gap: 0.35rem;
+  background: rgba(30, 64, 175, 0.04);
+  padding: 0.25rem;
+  border-radius: 999px;
+}
+
+.help-page__nav-link {
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7a98;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease;
+  white-space: nowrap;
+}
+
+.help-page__nav-link:hover {
+  color: #0f2a6e;
+  background: rgba(30, 64, 175, 0.06);
+}
+
+.help-page__nav-link.active {
+  background: #fff;
+  color: #173c97;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.help-page__title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0f2a6e;
+  margin: 0 0 0.5rem;
+}
+
+.help-page__intro {
+  font-size: 1.1rem;
+  color: #4e5b77;
+  margin-bottom: 2.5rem;
+}
+
+.help-page__section {
+  background: #fff;
+  border: 1px solid rgba(30, 64, 175, 0.08);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.help-page__section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #173c97;
+  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-page__section-title i {
+  color: #3b5fc0;
+  font-size: 1.3rem;
+}
+
+.help-page__section p {
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.help-page__pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2.5rem;
+  gap: 1rem;
+}
+
+.help-page__pager-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border: 1px solid rgba(30, 64, 175, 0.1);
+  border-radius: 999px;
+  background: #fff;
+  color: #4e5b77;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.help-page__pager-link:hover {
+  background: #eef4ff;
+  color: #0f2a6e;
+  border-color: rgba(30, 64, 175, 0.2);
+}
+
+.help-page__pager-link--prev {
+  align-self: flex-start;
+}
+
+.help-page__pager-link--next {
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.help-page__pager-link i {
+  font-size: 0.8rem;
+}
+
+@media (max-width: 575.98px) {
+  .help-page {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .help-page__nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .help-page__nav-links {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    justify-content: stretch;
+  }
+
+  .help-page__nav-link {
+    flex: 1;
+    text-align: center;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .help-page__title {
+    font-size: 1.5rem;
+  }
+
+  .help-page__intro {
+    font-size: 1rem;
+  }
+
+  .help-page__pager {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .help-page__pager-link--next {
+    margin-left: 0;
+  }
+}
