@@ -455,8 +455,16 @@ public sealed class ZKTecoScannerService(
                     CancellationToken.None,
                     TaskContinuationOptions.OnlyOnFaulted,
                     TaskScheduler.Default);
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogDebug(
+                        "Captura cancelada. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
                 logger.LogWarning(
-                    "Captura abortada por timeout o cancelación. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
+                    "Captura abortada por timeout. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
                 break;
             }
 
