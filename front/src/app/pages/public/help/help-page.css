@@ -2,18 +2,23 @@
   display: block;
   min-height: 100%;
   background: #f8faff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
+/* ── Layout ────────────────────────────────── */
 
 .help-page {
   display: flex;
   justify-content: center;
-  padding: 2rem 1.5rem 3rem;
+  padding: 2rem 1.5rem 4rem;
 }
 
 .help-page__container {
-  max-width: 800px;
+  max-width: 920px;
   width: 100%;
 }
+
+/* ── Navigation ────────────────────────────── */
 
 .help-page__nav {
   display: flex;
@@ -27,123 +32,264 @@
 .help-page__back {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 1rem;
-  border: 1px solid rgba(30, 64, 175, 0.12);
+  gap: 0.45rem;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid rgba(30, 64, 175, 0.1);
   border-radius: 999px;
   background: #fff;
   color: #4e5b77;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease,
+    box-shadow 200ms ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .help-page__back:hover {
   background: #eef4ff;
   color: #0f2a6e;
   border-color: rgba(30, 64, 175, 0.2);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
-.help-page__nav-links {
+.help-page__back i {
+  font-size: 0.9rem;
+}
+
+/* ── Tabs ──────────────────────────────────── */
+
+.help-page__tabs {
   display: flex;
   gap: 0.35rem;
   background: rgba(30, 64, 175, 0.04);
-  padding: 0.25rem;
+  padding: 0.3rem;
   border-radius: 999px;
 }
 
-.help-page__nav-link {
-  padding: 0.4rem 1rem;
+.help-page__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 600;
   color: #6b7a98;
   text-decoration: none;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease;
   white-space: nowrap;
 }
 
-.help-page__nav-link:hover {
+.help-page__tab:hover {
   color: #0f2a6e;
   background: rgba(30, 64, 175, 0.06);
 }
 
-.help-page__nav-link.active {
+.help-page__tab.active {
   background: #fff;
-  color: #173c97;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  color: var(--tab-color, #173c97);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
-.help-page__title {
+.help-page__tab i {
+  font-size: 0.9rem;
+}
+
+/* ── Hero ──────────────────────────────────── */
+
+.help-page__hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  padding: 2.5rem 2.5rem 1.75rem;
+  margin-bottom: 2rem;
+  isolation: isolate;
+}
+
+.help-page__hero-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.help-page__hero-circle {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--circle-color, #3b5fc0);
+  opacity: 0.06;
+  top: -100px;
+  right: -80px;
+}
+
+.help-page__hero-circle--sm {
+  width: 160px;
+  height: 160px;
+  opacity: 0.04;
+  bottom: -60px;
+  left: -40px;
+  top: auto;
+  right: auto;
+}
+
+.help-page__hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.help-page__hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  color: #fff;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.help-page__hero-title {
   font-size: 2rem;
   font-weight: 800;
+  color: #0f2a6e;
+  margin: 0 0 0.35rem;
+  letter-spacing: -0.02em;
+}
+
+.help-page__hero-intro {
+  font-size: 1.05rem;
+  color: #4e5b77;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ── Highlights ────────────────────────────── */
+
+.help-page__highlights {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(30, 64, 175, 0.08);
+  flex-wrap: wrap;
+}
+
+.help-page__highlight {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.help-page__highlight i {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.help-page__highlight-info strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f2a6e;
+  line-height: 1.2;
+}
+
+.help-page__highlight-info span {
+  font-size: 0.78rem;
+  color: #6b7a98;
+  font-weight: 500;
+}
+
+/* ── Card grid ─────────────────────────────── */
+
+.help-page__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.help-page__card {
+  background: #fff;
+  border: 1px solid rgba(30, 64, 175, 0.07);
+  border-radius: 1.1rem;
+  padding: 1.75rem 1.5rem;
+  transition: transform 240ms ease, box-shadow 240ms ease, border-color 240ms ease;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+}
+
+.help-page__card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.07);
+  border-color: var(--card-accent, #3b5fc0);
+}
+
+.help-page__card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.8rem;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  transition: transform 240ms ease;
+}
+
+.help-page__card:hover .help-page__card-icon {
+  transform: scale(1.1);
+}
+
+.help-page__card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
   color: #0f2a6e;
   margin: 0 0 0.5rem;
 }
 
-.help-page__intro {
-  font-size: 1.1rem;
-  color: #4e5b77;
-  margin-bottom: 2.5rem;
-}
-
-.help-page__section {
-  background: #fff;
-  border: 1px solid rgba(30, 64, 175, 0.08);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-}
-
-.help-page__section-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #173c97;
-  margin: 0 0 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.help-page__section-title i {
-  color: #3b5fc0;
-  font-size: 1.3rem;
-}
-
-.help-page__section p {
-  color: #4b5563;
-  line-height: 1.7;
+.help-page__card-desc {
+  font-size: 0.88rem;
+  color: #5a6a85;
+  line-height: 1.65;
   margin: 0;
 }
+
+/* ── Pager ─────────────────────────────────── */
 
 .help-page__pager {
   display: flex;
   justify-content: space-between;
-  margin-top: 2.5rem;
   gap: 1rem;
 }
 
 .help-page__pager-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
-  border: 1px solid rgba(30, 64, 175, 0.1);
-  border-radius: 999px;
+  gap: 0.75rem;
+  padding: 0.75rem 1.3rem;
+  border: 1px solid rgba(30, 64, 175, 0.08);
+  border-radius: 1rem;
   background: #fff;
-  color: #4e5b77;
-  font-size: 0.9rem;
-  font-weight: 600;
   text-decoration: none;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  flex: 1;
+  max-width: 260px;
 }
 
 .help-page__pager-link:hover {
   background: #eef4ff;
-  color: #0f2a6e;
-  border-color: rgba(30, 64, 175, 0.2);
+  border-color: rgba(30, 64, 175, 0.18);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
 .help-page__pager-link--prev {
@@ -153,41 +299,60 @@
 .help-page__pager-link--next {
   align-self: flex-end;
   margin-left: auto;
+  text-align: right;
 }
 
 .help-page__pager-link i {
-  font-size: 0.8rem;
+  font-size: 1rem;
+  color: #3b5fc0;
 }
 
-@media (max-width: 575.98px) {
-  .help-page {
-    padding: 1.25rem 1rem 2rem;
+.help-page__pager-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.help-page__pager-dir {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #98a4ba;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.help-page__pager-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f2a6e;
+}
+
+/* ── Responsive ────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .help-page__grid {
+    grid-template-columns: 1fr;
   }
 
-  .help-page__nav {
+  .help-page__hero {
+    padding: 1.75rem 1.5rem 1.5rem;
+  }
+
+  .help-page__hero-content {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .help-page__nav-links {
-    border-radius: 0.75rem;
-    overflow: hidden;
-    justify-content: stretch;
-  }
-
-  .help-page__nav-link {
-    flex: 1;
+    align-items: center;
     text-align: center;
-    font-size: 0.75rem;
-    padding: 0.35rem 0.5rem;
   }
 
-  .help-page__title {
+  .help-page__hero-title {
     font-size: 1.5rem;
   }
 
-  .help-page__intro {
-    font-size: 1rem;
+  .help-page__hero-intro {
+    font-size: 0.95rem;
+  }
+
+  .help-page__highlights {
+    justify-content: center;
   }
 
   .help-page__pager {
@@ -195,7 +360,42 @@
     align-items: stretch;
   }
 
+  .help-page__pager-link {
+    max-width: none;
+  }
+
   .help-page__pager-link--next {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .help-page {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .help-page__nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .help-page__tabs {
+    border-radius: 0.75rem;
+    justify-content: stretch;
+  }
+
+  .help-page__tab {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .help-page__tab span {
+    display: none;
+  }
+
+  .help-page__tab i {
+    font-size: 1rem;
   }
 }
