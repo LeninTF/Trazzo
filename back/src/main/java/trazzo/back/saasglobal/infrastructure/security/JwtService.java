@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Objects;
 
 @Service
 public class JwtService implements TokenValidator {
@@ -22,7 +23,19 @@ public class JwtService implements TokenValidator {
     public JwtService(
             @Value("${app.jwt.secret}") String secret,
             @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
-        this.key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("app.jwt.secret is required — set APP_JWT_SECRET env var");
+        }
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(secret.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("app.jwt.secret must be valid Base64", e);
+        }
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("app.jwt.secret must be at least 256 bits (32 bytes) for HS256");
+        }
+        this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
     }
 
@@ -43,8 +56,12 @@ public class JwtService implements TokenValidator {
 
     @Override
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername())
-                && parseClaims(token).getExpiration().toInstant().isAfter(Instant.now());
+        Claims claims = parseClaims(token);
+        String subject = claims.getSubject();
+        Date expiration = claims.getExpiration();
+        return expiration != null
+                && expiration.toInstant().isAfter(Instant.now())
+                && Objects.equals(subject, userDetails.getUsername());
     }
 
     public long getExpirationMs() {

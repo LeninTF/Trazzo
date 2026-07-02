@@ -102,4 +102,22 @@ class JwtAuthFilterTest {
         verify(chain).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
+
+    @Test
+    void request_withValidTokenButDisabledUser_doesNotSetAuthentication() throws Exception {
+        UserDetails disabledUser = User.withUsername("disabled@test.com")
+                .password("").authorities(List.of()).disabled(true).build();
+        when(tokenValidator.extractUsername("valid.token")).thenReturn("disabled@test.com");
+        when(userDetailsService.loadUserByUsername("disabled@test.com")).thenReturn(disabledUser);
+        when(tokenValidator.isTokenValid("valid.token", disabledUser)).thenReturn(true);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer valid.token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
 }
