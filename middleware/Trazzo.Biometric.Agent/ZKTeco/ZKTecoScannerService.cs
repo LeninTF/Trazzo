@@ -131,7 +131,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintCaptureResult.Failed(GetBusyMessage());
+            return FingerprintCaptureResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -198,7 +198,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintIdentifyResult.Failed(GetBusyMessage());
+            return FingerprintIdentifyResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -263,7 +263,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintEnrollResult.Failed(GetBusyMessage());
+            return FingerprintEnrollResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -467,10 +467,7 @@ public sealed class ZKTecoScannerService(
             }
 
             remaining = timeout - stopwatch.Elapsed;
-            if (remaining <= TimeSpan.Zero)
-                break;
-
-            TimeSpan delay = remaining < pollingInterval ? remaining : pollingInterval;
+            TimeSpan delay = TimeSpan.FromMilliseconds(Math.Min(remaining.TotalMilliseconds, pollingInterval.TotalMilliseconds));
             await Task.Delay(delay, cancellationToken);
         }
 
@@ -564,10 +561,7 @@ public sealed class ZKTecoScannerService(
         return true;
     }
 
-    private string GetBusyMessage()
-    {
-        return "Ya hay una operación biométrica en progreso.";
-    }
+    private const string BusyMessage = "Ya hay una operación biométrica en progreso.";
 
     private async Task<FingerprintCaptureResult?> EnsureReadyForOperationAsync(CancellationToken cancellationToken)
     {
@@ -673,7 +667,8 @@ public sealed class ZKTecoScannerService(
 
         ctsToDispose?.Cancel();
         ctsToDispose?.Dispose();
-        logger.LogInformation("Operacion biometrica finalizada con estado {FinalState}. Estado disponible para nueva solicitud.", finalState);
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Operacion biometrica finalizada con estado {FinalState}. Estado disponible para nueva solicitud.", finalState);
         CompletePostCaptureDrainAsync().ContinueWith(
             t => logger.LogWarning(t.Exception?.GetBaseException(), "Error no controlado durante drenado post-captura."),
             CancellationToken.None,

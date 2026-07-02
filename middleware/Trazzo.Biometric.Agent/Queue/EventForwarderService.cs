@@ -6,6 +6,12 @@ using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Queue;
 
+internal sealed record HttpSenderConfig(
+    string BackendUrl,
+    string? AgentToken,
+    string? TenantId = null,
+    string? DeviceCode = null);
+
 public sealed class EventForwarderService : BackgroundService
 {
     private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
@@ -39,17 +45,14 @@ public sealed class EventForwarderService : BackgroundService
     internal EventForwarderService(
         IEventQueue queue,
         HttpClient httpClient,
-        string backendUrl,
-        string? agentToken,
+        HttpSenderConfig config,
         int retryIntervalSeconds,
-        ILogger<EventForwarderService> logger,
-        string? tenantId = null,
-        string? deviceCode = null)
+        ILogger<EventForwarderService> logger)
     {
         _queue = queue;
         _logger = logger;
         _retryIntervalSeconds = retryIntervalSeconds;
-        _sender = BuildHttpSender(backendUrl, agentToken, tenantId, deviceCode, httpClient);
+        _sender = BuildHttpSender(config.BackendUrl, config.AgentToken, config.TenantId, config.DeviceCode, httpClient);
         _isEnabled = true;
         _delay = Task.Delay;
         _nextJitter = Random.Shared.NextDouble;

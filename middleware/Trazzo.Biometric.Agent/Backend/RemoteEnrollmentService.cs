@@ -124,11 +124,12 @@ public sealed class RemoteEnrollmentService : BackgroundService
         FingerprintEnrollResult enrollResult = await _scannerService.EnrollFingerprintAsync(
             (progress, _) =>
             {
-                _logger.LogInformation(
-                    "Enrolamiento remoto: muestra {Sample}/{Total}. {Message}",
-                    progress.Step,
-                    progress.TotalSteps,
-                    progress.Message);
+                if (_logger.IsEnabled(LogLevel.Information))
+                    _logger.LogInformation(
+                        "Enrolamiento remoto: muestra {Sample}/{Total}. {Message}",
+                        progress.Step,
+                        progress.TotalSteps,
+                        progress.Message);
                 return Task.CompletedTask;
             },
             cancellationToken);
@@ -173,7 +174,8 @@ public sealed class RemoteEnrollmentService : BackgroundService
         using HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken);
         if (response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Enrolamiento remoto completado para device_code={DeviceCode}.", deviceCode);
+            if (_logger.IsEnabled(LogLevel.Information))
+                _logger.LogInformation("Enrolamiento remoto completado para device_code={DeviceCode}.", deviceCode);
             return true;
         }
 

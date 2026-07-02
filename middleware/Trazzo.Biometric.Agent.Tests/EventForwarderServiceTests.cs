@@ -275,7 +275,7 @@ public sealed class EventForwarderServiceTests
         using HttpClient httpClient = new(handler);
         FakeEventQueue queue = new() { PendingToReturn = [evt] };
         EventForwarderService forwarder = new(
-            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            queue, httpClient, new HttpSenderConfig("http://localhost/api/asistencias/sync", null), 60,
             NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
@@ -303,7 +303,7 @@ public sealed class EventForwarderServiceTests
         using HttpClient httpClient = new(handler);
         FakeEventQueue queue = new() { PendingToReturn = [evt] };
         EventForwarderService forwarder = new(
-            queue, httpClient, "http://localhost/api/asistencias/sync", "mi-token-jwt", 60,
+            queue, httpClient, new HttpSenderConfig("http://localhost/api/asistencias/sync", "mi-token-jwt"), 60,
             NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
@@ -320,7 +320,7 @@ public sealed class EventForwarderServiceTests
         using HttpClient httpClient = new(handler);
         FakeEventQueue queue = new() { PendingToReturn = [evt] };
         EventForwarderService forwarder = new(
-            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            queue, httpClient, new HttpSenderConfig("http://localhost/api/asistencias/sync", null), 60,
             NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
@@ -336,11 +336,9 @@ public sealed class EventForwarderServiceTests
         EventForwarderService forwarder = new(
             new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
             httpClient,
-            "http://localhost/api/asistencias/sync",
-            agentToken: null,
+            new HttpSenderConfig("http://localhost/api/asistencias/sync", AgentToken: null, TenantId: "tenant-1"),
             retryIntervalSeconds: 60,
-            NullLogger<EventForwarderService>.Instance,
-            tenantId: "tenant-1");
+            NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
@@ -355,12 +353,9 @@ public sealed class EventForwarderServiceTests
         EventForwarderService forwarder = new(
             new FakeEventQueue { PendingToReturn = [MakeEvent(id: 1)] },
             httpClient,
-            "http://localhost/api/asistencias/sync",
-            agentToken: null,
+            new HttpSenderConfig("http://localhost/api/asistencias/sync", AgentToken: null, TenantId: "tenant-1", DeviceCode: "ZK9500-CONFIG"),
             retryIntervalSeconds: 60,
-            NullLogger<EventForwarderService>.Instance,
-            tenantId: "tenant-1",
-            deviceCode: "ZK9500-CONFIG");
+            NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
@@ -388,7 +383,7 @@ public sealed class EventForwarderServiceTests
         using HttpClient httpClient = new(handler);
         FakeEventQueue queue = new() { PendingToReturn = [evt] };
         EventForwarderService forwarder = new(
-            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            queue, httpClient, new HttpSenderConfig("http://localhost/api/asistencias/sync", null), 60,
             NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
@@ -415,7 +410,7 @@ public sealed class EventForwarderServiceTests
         using HttpClient httpClient = new(handler);
         FakeEventQueue queue = new() { PendingToReturn = [evt] };
         EventForwarderService forwarder = new(
-            queue, httpClient, "http://localhost/api/asistencias/sync", null, 60,
+            queue, httpClient, new HttpSenderConfig("http://localhost/api/asistencias/sync", null), 60,
             NullLogger<EventForwarderService>.Instance);
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);

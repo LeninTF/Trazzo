@@ -78,15 +78,15 @@ public sealed class Worker(
 
         bool autoUpdateEnabled = configuration.GetValue("AutoUpdate:Enabled", false);
         string? manifestUrl = configuration["AutoUpdate:ManifestUrl"];
-        if (autoUpdateEnabled && !string.IsNullOrWhiteSpace(manifestUrl))
+        if (!autoUpdateEnabled)
+            logger.LogInformation("  Auto-Update:       DESHABILITADO — habilite AutoUpdate:Enabled en produccion.");
+        else if (string.IsNullOrWhiteSpace(manifestUrl))
+            logger.LogWarning("  Auto-Update:       HABILITADO pero sin ManifestUrl — configure AutoUpdate:ManifestUrl.");
+        else
         {
             int checkIntervalMinutes = configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60);
             logger.LogInformation("  Auto-Update:       ACTIVO — verificacion cada {Minutes} min.", checkIntervalMinutes);
         }
-        else if (autoUpdateEnabled)
-            logger.LogWarning("  Auto-Update:       HABILITADO pero sin ManifestUrl — configure AutoUpdate:ManifestUrl.");
-        else
-            logger.LogInformation("  Auto-Update:       DESHABILITADO — habilite AutoUpdate:Enabled en produccion.");
 
         logger.LogInformation("=================================================");
     }

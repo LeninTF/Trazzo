@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Trazzo.Biometric.Agent.Security;
 
-internal static class AgentTokenProtector
+internal static partial class AgentTokenProtector
 {
     private const string ProtectedPrefix = "dpapi-localmachine:";
     private const int CryptProtectLocalMachine = 0x4;
@@ -162,18 +162,20 @@ internal static class AgentTokenProtector
         }
     }
 
-    [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool CryptProtectData(
+    [LibraryImport("crypt32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool CryptProtectData(
         ref DataBlob dataIn,
-        string description,
+        [MarshalAs(UnmanagedType.LPWStr)] string description,
         ref DataBlob optionalEntropy,
         IntPtr reserved,
         IntPtr promptStruct,
         int flags,
         out DataBlob dataOut);
 
-    [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern bool CryptUnprotectData(
+    [LibraryImport("crypt32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool CryptUnprotectData(
         ref DataBlob dataIn,
         IntPtr description,
         ref DataBlob optionalEntropy,
@@ -182,8 +184,8 @@ internal static class AgentTokenProtector
         int flags,
         out DataBlob dataOut);
 
-    [DllImport("kernel32.dll")]
-    private static extern IntPtr LocalFree(IntPtr handle);
+    [LibraryImport("kernel32.dll")]
+    private static partial IntPtr LocalFree(IntPtr handle);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct DataBlob(int length, IntPtr data)
