@@ -1,16 +1,19 @@
 package trazzo.back.saasglobal.infrastructure.security;
 
+import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtServiceTest {
 
-    private static final String SECRET = "dHJhenpvLWp3dC1sb2NhbC1kZXZlbG9wbWVudC1rZXk=";
+    private static final String SECRET = Base64.getEncoder()
+            .encodeToString(Jwts.SIG.HS256.key().build().getEncoded());
 
     private final JwtService jwtService = new JwtService(SECRET, 86_400_000L);
 
