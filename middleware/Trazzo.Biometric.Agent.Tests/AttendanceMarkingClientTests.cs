@@ -84,6 +84,42 @@ public sealed class AttendanceMarkingClientTests
         Assert.NotNull(handler.LastRequest);
     }
 
+    [Fact]
+    public async Task TryMarkAsync_WhenDisabled_ReturnsFalseWithoutSending()
+    {
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        AttendanceMarkingClient client = CreateClient(httpClient, new Dictionary<string, string?>
+        {
+            // No Backend:BaseUrl → _attendanceMarkUrl is null → _isEnabled = false
+        });
+
+        bool sent = await client.TryMarkAsync(
+            new EncryptedPayload("cipher", "key", "iv", "tag"),
+            deviceId: "ZK9500-1",
+            DateTimeOffset.UtcNow,
+            CancellationToken.None);
+
+        Assert.False(sent);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task TryMarkAsync_WhenHttpThrows_ReturnsFalse()
+    {
+        ThrowingHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        AttendanceMarkingClient client = CreateClient(httpClient);
+
+        bool sent = await client.TryMarkAsync(
+            new EncryptedPayload("cipher", "key", "iv", "tag"),
+            deviceId: "ZK9500-CAPTURED",
+            DateTimeOffset.UtcNow,
+            CancellationToken.None);
+
+        Assert.False(sent);
+    }
+
     private static AttendanceMarkingClient CreateClient(
         HttpClient httpClient,
         Dictionary<string, string?>? settings = null)

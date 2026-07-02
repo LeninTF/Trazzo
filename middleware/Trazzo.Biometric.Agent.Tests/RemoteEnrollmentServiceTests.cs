@@ -78,6 +78,199 @@ public sealed class RemoteEnrollmentServiceTests
     }
 
     [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_WhenBackendErrors_ReturnsFalse()
+    {
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError));
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new();
+        RemoteEnrollmentService service = CreateService(scanner, httpClient);
+
+        bool processed = await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        Assert.False(processed);
+        Assert.Equal(0, scanner.EnrollCalls);
+    }
+
+    [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_WhenJsonIsInvalid_ReturnsFalse()
+    {
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("{}")
+            });
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new();
+        RemoteEnrollmentService service = CreateService(scanner, httpClient);
+
+        bool processed = await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        Assert.False(processed);
+        Assert.Equal(0, scanner.EnrollCalls);
+    }
+
+    [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_WhenEnrollFails_ReturnsFalse()
+    {
+        string pendingJson = JsonSerializer.Serialize(new
+        {
+            enroll_token = "enroll-token",
+            device_code = "ZK9500-REMOTE",
+            finger_index = 1
+        });
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(pendingJson) });
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Failed("Timeout.")
+        };
+        RemoteEnrollmentService service = CreateService(scanner, httpClient);
+
+        bool processed = await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        Assert.False(processed);
+        Assert.Equal(1, scanner.EnrollCalls);
+    }
+
+    [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_WhenCompleteEnrollmentRejects_ReturnsFalse()
+    {
+        string pendingJson = JsonSerializer.Serialize(new
+        {
+            enroll_token = "enroll-token",
+            device_code = "ZK9500-REMOTE",
+            finger_index = 1
+        });
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(pendingJson) },
+            new HttpResponseMessage(System.Net.HttpStatusCode.UnprocessableEntity));
+        using HttpClient httpClient = new(handler);
+        EncryptedPayload encrypted = new("c", "k", "iv", "t");
+        CountingScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Succeeded(
+                [1, 2, 3], 3, capturedSamples: 3, deviceId: "ZK9500-CAPTURED", encryptedTemplate: encrypted)
+        };
+        RemoteEnrollmentService service = CreateService(scanner, httpClient);
+
+        bool processed = await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        Assert.False(processed);
+    }
+
+    [Fact]
+    public async Task Constructor_WhenMissingTenantAndDevice_DisablesService()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Enrollment:RemotePollingEnabled"] = "true",
+                ["Backend:BaseUrl"] = "https://api.trazzo.pe/api/v1"
+                // Missing Agent:TenantId and Agent:DeviceCode → _isEnabled = false
+            })
+            .Build();
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new();
+
+        RemoteEnrollmentService service = new(
+            scanner,
+            configuration,
+            NullLogger<RemoteEnrollmentService>.Instance,
+            httpClient);
+
+        bool result = await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        Assert.False(result);
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenEnabled_PollsAndCallsDelay()
+    {
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(HttpStatusCode.NoContent));
+        using HttpClient httpClient = new(handler);
+        bool delayInvoked = false;
+
+        RemoteEnrollmentService service = new(
+            new CountingScannerService(),
+            BuildConfig(),
+            NullLogger<RemoteEnrollmentService>.Instance,
+            httpClient,
+            (_, ct) =>
+            {
+                delayInvoked = true;
+                return Task.Delay(Timeout.Infinite, ct);
+            });
+
+        await service.StartAsync(CancellationToken.None);
+        await Task.Delay(200);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.True(delayInvoked);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenDisabled_ReturnsImmediately()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Enrollment:RemotePollingEnabled"] = "false"
+            })
+            .Build();
+        MockHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+
+        RemoteEnrollmentService service = new(
+            new CountingScannerService(),
+            configuration,
+            NullLogger<RemoteEnrollmentService>.Instance,
+            httpClient);
+
+        await service.StartAsync(CancellationToken.None);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.Null(handler.LastRequest);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTryProcessThrows_LogsAndContinues()
+    {
+        ThrowingHttpMessageHandler handler = new();
+        using HttpClient httpClient = new(handler);
+
+        RemoteEnrollmentService service = new(
+            new CountingScannerService(),
+            BuildConfig(),
+            NullLogger<RemoteEnrollmentService>.Instance,
+            httpClient,
+            (_, ct) => Task.Delay(Timeout.Infinite, ct));
+
+        await service.StartAsync(CancellationToken.None);
+        await Task.Delay(200);
+        await service.StopAsync(CancellationToken.None);
+        // Should complete without throwing — exception was caught and logged
+    }
+
+    private static IConfiguration BuildConfig() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Backend:BaseUrl"] = "https://api.trazzo.pe/api/v1",
+                ["Agent:TenantId"] = "tenant-1",
+                ["Agent:DeviceCode"] = "ZK9500-CONFIG",
+                ["Queue:AgentToken"] = "middleware-token",
+                ["Enrollment:RemotePollingEnabled"] = "true",
+                ["Enrollment:RemotePollingIntervalSeconds"] = "1"
+            })
+            .Build();
+
+    [Fact]
     public void BuildPendingEnrollmentUrl_AppendsEscapedDeviceCode()
     {
         string url = RemoteEnrollmentService.BuildPendingEnrollmentUrl(

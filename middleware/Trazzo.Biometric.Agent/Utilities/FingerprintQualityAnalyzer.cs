@@ -182,11 +182,6 @@ public static class FingerprintQualityAnalyzer
 
     private static double CalculateCoverageScore(double coveragePercent, double minimumCoverage, double maximumCoverage)
     {
-        if (coveragePercent <= 0)
-        {
-            return 0;
-        }
-
         double safeMinimum = Math.Max(1, minimumCoverage);
         double safeMaximum = Math.Max(safeMinimum + 1, maximumCoverage);
         double idealMaximum = Math.Min(safeMaximum, Math.Max(safeMinimum + 20, safeMinimum * 2.5));

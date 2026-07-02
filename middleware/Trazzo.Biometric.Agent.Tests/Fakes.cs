@@ -47,6 +47,12 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     // Serial por defecto que simula un ZK9500 real
     public int DeviceSerial { get; init; } = 12345;
 
+    public bool SerialAvailable { get; init; } = true;
+
+    public bool ImageDataSizeAvailable { get; init; } = true;
+
+    public Exception? GetDeviceCountException { get; init; }
+
     public int InitCalls { get; private set; }
 
     public int OpenDeviceCalls { get; private set; }
@@ -68,6 +74,9 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public int GetDeviceCount()
     {
+        if (GetDeviceCountException is not null)
+            throw GetDeviceCountException;
+
         if (DeviceCountSequence is { Count: > 0 })
             return DeviceCountSequence.Dequeue();
 
@@ -114,8 +123,8 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
         {
             1 => 300,
             2 => 400,
-            106 => 300 * 400,
-            1103 => DeviceSerial,
+            106 => ImageDataSizeAvailable ? 300 * 400 : 0,
+            1103 => SerialAvailable ? DeviceSerial : 0,
             _ => 0
         };
 
@@ -124,6 +133,12 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public bool TryGetParameterString(IntPtr deviceHandle, int parameterCode, out string value)
     {
+        if (!SerialAvailable && parameterCode == 1103)
+        {
+            value = string.Empty;
+            return false;
+        }
+
         value = parameterCode == 1103 ? DeviceSerial.ToString() : string.Empty;
         return value.Length > 0;
     }
