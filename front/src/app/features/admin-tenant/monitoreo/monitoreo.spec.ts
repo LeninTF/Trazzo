@@ -52,7 +52,7 @@ describe('Monitoreo', () => {
   });
 
   it('should show ultimaActualizacionTexto', () => {
-    expect(component.ultimaActualizacionTexto).toContain('segundos');
+    expect(component.ultimaActualizacionTexto()).toContain('segundos');
   });
 
   it('should actualizarDatosTiempoReal', () => {
