@@ -9,6 +9,6 @@ export default {
     'subject-case': [0], // importante para dependabot
   },
   ignores: [
-    (commit) => commit.includes('Bump')
+    (commit) => /^Bump .* from .* to .*$/m.test(commit)
   ]
 };
