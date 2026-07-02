@@ -50,6 +50,7 @@ services:
     # 1. Se descarga la imagen del registro.
     image: ghcr.io/lenintf/trazzo/trazzo-back:main
     container_name: trazzo-backend
+    pull_policy: always
     restart: unless-stopped
     env_file:
       - .env # Aqui se inyectan las credenciales de BD y JWT en produccion
@@ -77,6 +78,7 @@ services:
   trazzo-frontend:
     image: ghcr.io/lenintf/trazzo/trazzo-front:main
     container_name: trazzo-frontend
+    pull_policy: always
     restart: unless-stopped
     networks:
       - trazzo-network
