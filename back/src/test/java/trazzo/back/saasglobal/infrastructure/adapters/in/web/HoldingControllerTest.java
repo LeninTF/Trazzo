@@ -35,7 +35,7 @@ class HoldingControllerTest {
     void listAll_returns200WithArray() throws Exception {
         when(holdingUseCase.listAll()).thenReturn(List.of(result(true)));
 
-        mockMvc.perform(get("/api/v1/saas/holdings"))
+        mockMvc.perform(get("/saas/holdings"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].legalName").value("Corp SA"));
@@ -46,7 +46,7 @@ class HoldingControllerTest {
     void create_returns201WithBody() throws Exception {
         when(holdingUseCase.create(any())).thenReturn(result(true));
 
-        mockMvc.perform(post("/api/v1/saas/holdings")
+        mockMvc.perform(post("/saas/holdings")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -60,7 +60,7 @@ class HoldingControllerTest {
     @Test
     @WithMockUser
     void create_returns400WhenRequiredFieldMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/saas/holdings")
+        mockMvc.perform(post("/saas/holdings")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -74,7 +74,7 @@ class HoldingControllerTest {
     void getById_returns200() throws Exception {
         when(holdingUseCase.getById(1)).thenReturn(result(true));
 
-        mockMvc.perform(get("/api/v1/saas/holdings/1"))
+        mockMvc.perform(get("/saas/holdings/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
@@ -84,7 +84,7 @@ class HoldingControllerTest {
     void update_returns200WithBody() throws Exception {
         when(holdingUseCase.update(any())).thenReturn(result(true));
 
-        mockMvc.perform(put("/api/v1/saas/holdings/1")
+        mockMvc.perform(put("/saas/holdings/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -97,7 +97,7 @@ class HoldingControllerTest {
     @Test
     @WithMockUser
     void update_returns400WhenRequiredFieldMissing() throws Exception {
-        mockMvc.perform(put("/api/v1/saas/holdings/1")
+        mockMvc.perform(put("/saas/holdings/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -111,7 +111,7 @@ class HoldingControllerTest {
     void activate_returns200() throws Exception {
         when(holdingUseCase.activate(1)).thenReturn(result(true));
 
-        mockMvc.perform(put("/api/v1/saas/holdings/1/activate").with(csrf()))
+        mockMvc.perform(put("/saas/holdings/1/activate").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -121,7 +121,7 @@ class HoldingControllerTest {
     void deactivate_returns200() throws Exception {
         when(holdingUseCase.deactivate(1)).thenReturn(result(false));
 
-        mockMvc.perform(put("/api/v1/saas/holdings/1/deactivate").with(csrf()))
+        mockMvc.perform(put("/saas/holdings/1/deactivate").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
     }
@@ -131,7 +131,7 @@ class HoldingControllerTest {
     void delete_returns204() throws Exception {
         doNothing().when(holdingUseCase).deleteById(1);
 
-        mockMvc.perform(delete("/api/v1/saas/holdings/1").with(csrf()))
+        mockMvc.perform(delete("/saas/holdings/1").with(csrf()))
                 .andExpect(status().isNoContent());
     }
 }
