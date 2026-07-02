@@ -12,7 +12,7 @@ import trazzo.back.reports.infrastructure.adapters.in.web.dto.MonthlyClosureDeta
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/reports/monthly-closure-details")
+@RequestMapping("/reports/monthly-closure-details")
 public class MonthlyClosureDetailController {
 
     private final GetMonthlyClosureDetailUseCase detailUseCase;

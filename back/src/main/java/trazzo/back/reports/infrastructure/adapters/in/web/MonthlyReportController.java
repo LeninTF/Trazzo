@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/reports/monthly-reports")
+@RequestMapping("/reports/monthly-reports")
 public class MonthlyReportController {
 
     private final GetMonthlyReportUseCase reportUseCase;
