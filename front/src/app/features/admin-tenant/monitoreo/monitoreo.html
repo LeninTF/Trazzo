@@ -1,4 +1,3 @@
-<!-- monitoreo.html -->
 @if (error()) {
 <div class="container-fluid monitoreo-container p-4" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
     <div class="text-center">
@@ -16,6 +15,71 @@
     </h1>
     <button class="btn-refrescar" (click)="refrescarDatos()" title="Refrescar datos">
       <i class="bi bi-arrow-repeat"></i> Actualizar
+    </button>
+  </div>
+
+  <!-- STATUS GRID -->
+  <div class="status-grid">
+    <div class="status-box">
+      <span class="label">Conexión WS</span>
+      <span class="value" [class.ok]="mwConnectionState() === 'connected'"
+            [class.err]="mwConnectionState() === 'disconnected'"
+            [class.warn]="mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting'">
+        {{ mwConnectionState() === 'connected' ? 'Conectado' :
+           mwConnectionState() === 'connecting' ? 'Conectando...' :
+           mwConnectionState() === 'reconnecting' ? 'Reconectando...' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="status-box">
+      <span class="label">Operación</span>
+      <span class="value">{{ operationLabel() }}</span>
+    </div>
+    <div class="status-box">
+      <span class="label">Enrolamiento</span>
+      <span class="value">{{ enrollmentProgress() || '—' }}</span>
+    </div>
+    <div class="status-box">
+      <span class="label">Lector ZK9500</span>
+      <span class="value" [class.ok]="readerConnected()"
+            [class.err]="!readerConnected() && mwConnectionState() === 'connected'">
+        {{ readerDetail() }}
+      </span>
+    </div>
+  </div>
+
+  <!-- BIOMETRIC TOOLBAR -->
+  <div class="toolbar">
+    <button class="btn-toolbar primary" (click)="conectarWs()" [disabled]="mwConnectionState() === 'connected' || mwConnectionState() === 'connecting'">
+      <i class="bi bi-plug"></i> Conectar
+    </button>
+    <button class="btn-toolbar" (click)="desconectarWs()" [disabled]="mwConnectionState() === 'disconnected'">
+      <i class="bi bi-plug-fill"></i> Desconectar
+    </button>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="btn-toolbar" (click)="consultarEstadoLector()"
+            [disabled]="mwConnectionState() !== 'connected'">
+      <i class="bi bi-upc-scan"></i> Estado del lector
+    </button>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="btn-toolbar" (click)="capturarHuella()"
+            [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-fingerprint"></i> Capturar huella
+    </button>
+    <button class="btn-toolbar" (click)="identificarHuella()"
+            [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-person-badge"></i> Identificar huella
+    </button>
+    <button class="btn-toolbar" (click)="enrolarHuella()"
+            [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-plus-circle"></i> Enrolar huella
+    </button>
+    <button class="btn-toolbar danger" (click)="cancelarEnrolamiento()"
+            [disabled]="mwConnectionState() !== 'connected' || !enrollmentInProgress()">
+      <i class="bi bi-x-circle"></i> Cancelar enrolamiento
     </button>
   </div>
 
@@ -101,10 +165,12 @@
                       <span class="small text-muted">
                         <i class="bi bi-upc-scan"></i> ID: {{ evento.idDispositivo }}
                       </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
               <div class="col-2 text-end">
                 <button class="btn-eliminar-evento" (click)="eliminarEvento(evento.id)" title="Eliminar evento">
                   <i class="bi bi-trash3"></i>
@@ -124,20 +190,50 @@
           </div>
         </div>
       </div>
+
+      <!-- LOG CONSOLE -->
+      <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white border-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-terminal me-2"></i> Consola de eventos WS
+          </h5>
+          <button class="btn-toolbar btn-sm" (click)="limpiarLogs()">
+            <i class="bi bi-trash3"></i> Limpiar
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="log-console" #logContainer>
+            @if (logs().length === 0) {
+              <div class="log-empty">Sin eventos. Conéctese al middleware para ver la actividad.</div>
+            }
+            @for (entry of logs(); track entry.timestamp + entry.message) {
+              <div class="log-line" [class.log-info]="entry.type === 'info'"
+                   [class.log-success]="entry.type === 'success'"
+                   [class.log-error]="entry.type === 'error'"
+                   [class.log-warn]="entry.type === 'warn'">
+                <span class="log-ts">[{{ entry.timestamp }}]</span>
+                <span class="log-msg">{{ entry.message }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- COLUMNA DERECHA: ESCÁNERES -->
+    <!-- COLUMNA DERECHA: ESCÁNERES + HUELLA -->
     <div class="col-lg-4">
-      <div class="card border-0 shadow-sm">
+      <!-- ESCÁNERES -->
+      <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0 pt-4 pb-2">
           <h5 class="mb-0 fw-semibold">
             <i class="bi bi-hdd-stack me-2"></i> Estado de Escáneres
           </h5>
         </div>
         <div class="card-body">
-          <!-- Conexión al middleware -->
-          <div class="alert border-0 py-2 px-3 mb-3" [ngClass]="mwConnectionState() === 'connected' ? 'alert-success' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'alert-warning' : 'alert-secondary'">
-            <i class="bi" [ngClass]="mwConnectionState() === 'connected' ? 'bi-wifi' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'bi-arrow-repeat' : 'bi-wifi-off'"></i>
+          <div class="alert border-0 py-2 px-3 mb-3"
+               [ngClass]="mwConnectionState() === 'connected' ? 'alert-success' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'alert-warning' : 'alert-secondary'">
+            <i class="bi"
+               [ngClass]="mwConnectionState() === 'connected' ? 'bi-wifi' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'bi-arrow-repeat' : 'bi-wifi-off'"></i>
             <small class="ms-1 fw-semibold">Middleware:
               {{ mwConnectionState() === 'connected' ? 'CONECTADO' :
                  mwConnectionState() === 'connecting' ? 'CONECTANDO...' :
@@ -145,6 +241,9 @@
             </small>
             @if (mwDeviceStatus(); as st) {
               <small class="ms-2 text-muted">| {{ st.deviceCount }} dispositivo(s)</small>
+            }
+            @if (fingerprintStore.count > 0) {
+              <small class="ms-2 text-muted">| {{ fingerprintStore.count }} huella(s) enrolada(s)</small>
             }
           </div>
 
@@ -160,7 +259,8 @@
               </div>
             </div>
             <div class="escaner-actions">
-              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
+              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'"
+                    (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
                 <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
                 {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
               </span>
@@ -172,15 +272,64 @@
             </div>
           </div>
 
-          <!-- BOTÓN REGISTRAR NUEVO ESCÁNER -->
           <button class="btn-registrar-nuevo w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalRegistrarEscaner">
             <i class="bi bi-plus-circle me-2"></i> REGISTRAR NUEVO ESCÁNER
           </button>
 
-          <!-- Última actualización -->
           <div class="alert alert-info-custom mt-2 mb-0 py-2 px-3">
             <i class="bi bi-info-circle-fill me-1"></i>
-            <small>Última actualización: {{ ultimaActualizacionTexto }}</small>
+            <small>Última actualización: {{ ultimaActualizacionTexto() }}</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- FINGERPRINT PREVIEW -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-4 pb-2">
+          <h5 class="mb-0 fw-semibold">
+            <i class="bi bi-fingerprint me-2"></i> Huella Capturada
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="fp-status-text">{{ fpStatus() }}</div>
+          <div class="fp-preview">
+            @if (fpImageUrl(); as imgUrl) {
+              <img [src]="imgUrl" alt="Huella capturada" class="fp-image" />
+            } @else {
+              <span class="fp-empty-text">
+                <i class="bi bi-hand-index-thumb"></i> Sin imagen
+              </span>
+            }
+          </div>
+          <div class="quality-panel">
+            <div class="quality-row">
+              <span class="label">Tamaño de template</span>
+              <strong>{{ fpTemplateSize() > 0 ? fpTemplateSize() + ' bytes' : '—' }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Vista del template</span>
+              <strong>{{ fpTemplatePreview() || '—' }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Calidad estimada</span>
+              <strong>{{ calidadEstimada }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Área cruda del sensor</span>
+              <strong>{{ areaCruda }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Contraste</span>
+              <strong>{{ contraste }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Centrada</span>
+              <strong>{{ centrada }}</strong>
+            </div>
+            <div class="quality-row">
+              <span class="label">Calidad</span>
+              <strong>{{ calidadMensaje }}</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -189,9 +338,7 @@
 </div>
 }
 
-<!-- ========================================== -->
-<!-- MODAL REGISTRAR NUEVO ESCÁNER              -->
-<!-- ========================================== -->
+<!-- MODAL REGISTRAR NUEVO ESCÁNER -->
 <div class="modal fade" id="modalRegistrarEscaner" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalRegistrarEscanerLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content registrar-modal-content">
@@ -258,9 +405,7 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL CONFIRMAR ELIMINAR ESCÁNER           -->
-<!-- ========================================== -->
+<!-- MODAL CONFIRMAR ELIMINAR ESCÁNER -->
 <div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content registrar-modal-content">

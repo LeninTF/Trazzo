@@ -246,6 +246,13 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
         return FingerprintEnrollResult.Failed("Enrolamiento cancelado.");
     }
 
+    public Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+        IReadOnlyList<(int Index, byte[] Template)> templates,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(FingerprintMatchResult.Failed("No se encontró ningún lector biométrico."));
+    }
+
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 

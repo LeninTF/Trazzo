@@ -33,11 +33,93 @@ export interface MiddlewareDeviceStatusChanged {
   waitingSeconds?: number;
 }
 
+export interface MiddlewareFingerprintQuality {
+  isAcceptable: boolean;
+  foregroundPixelCount: number;
+  foregroundCoveragePercent: number;
+  contrastScore: number;
+  isCentered: boolean;
+  message: string;
+}
+
+export interface MiddlewareFingerprintMatchResult {
+  type: 'fingerprint.match.result';
+  success: boolean;
+  message: string;
+  matched: boolean;
+  matchedIndex: number | null;
+  templateSize: number;
+  quality: MiddlewareFingerprintQuality | null;
+  capturedAtUtc: string;
+  templatesProvided: number;
+}
+
+export interface MiddlewareFingerprintCaptureResult {
+  type: 'fingerprint.capture.result';
+  success: boolean;
+  message: string;
+  templateBase64: string | null;
+  encryptedTemplate: EncryptedPayload | null;
+  templateSize: number;
+  deviceId: string | null;
+  fingerprintImageBase64: string | null;
+  fingerprintImageMimeType: string | null;
+  fingerprintImageDataUrl: string | null;
+  quality: MiddlewareFingerprintQuality | null;
+  capturedAtUtc: string;
+}
+
+export interface MiddlewareFingerprintIdentifyResult {
+  type: 'fingerprint.identify.result';
+  success: boolean;
+  message: string;
+  templateBase64: string | null;
+  encryptedTemplate: EncryptedPayload | null;
+  templateSize: number;
+  deviceId: string | null;
+  fingerprintImageBase64: string | null;
+  fingerprintImageMimeType: string | null;
+  fingerprintImageDataUrl: string | null;
+  quality: MiddlewareFingerprintQuality | null;
+  capturedAtUtc: string;
+}
+
+export interface MiddlewareFingerprintEnrollResult {
+  type: 'fingerprint.enroll.result';
+  success: boolean;
+  message: string;
+  registeredTemplateBase64: string | null;
+  encryptedRegisteredTemplate: EncryptedPayload | null;
+  registeredTemplateSize: number;
+  deviceId: string | null;
+  capturedSamples: number;
+  capturedAtUtc: string;
+}
+
+export interface MiddlewareFingerprintEnrollProgress {
+  type: 'fingerprint.enroll.progress';
+  step: number;
+  totalSteps: number;
+  message: string;
+}
+
+export interface EncryptedPayload {
+  encryptedTemplateBase64: string;
+  encryptedAesKeyBase64: string;
+  ivBase64: string;
+  tagBase64: string;
+}
+
 export type MiddlewareMessage =
   | MiddlewareDeviceStatus
   | MiddlewareHealthResult
   | MiddlewareQueueStatus
   | MiddlewareDeviceStatusChanged
+  | MiddlewareFingerprintCaptureResult
+  | MiddlewareFingerprintIdentifyResult
+  | MiddlewareFingerprintMatchResult
+  | MiddlewareFingerprintEnrollResult
+  | MiddlewareFingerprintEnrollProgress
   | { type: string; [key: string]: unknown };
 
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';

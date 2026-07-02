@@ -328,7 +328,7 @@ public sealed class LocalWebSocketServerService(
         try
         {
             string? operationType = TryParseMessageType(json);
-            bool isBiometricOp = operationType is "fingerprint.capture" or "fingerprint.identify" or "fingerprint.enroll.start";
+            bool isBiometricOp = operationType is "fingerprint.capture" or "fingerprint.identify" or "fingerprint.enroll.start" or "fingerprint.match";
 
             if (isBiometricOp && IsRateLimited(clientId, operationType!))
             {
@@ -399,6 +399,10 @@ public sealed class LocalWebSocketServerService(
         return false;
     }
 
+    internal sealed record FingerprintMatchRequestTemplate(int Index, string TemplateBase64);
+
+    internal sealed record FingerprintMatchRequest(string Type, List<FingerprintMatchRequestTemplate>? Templates);
+
     internal static string? TryParseMessageType(string json)
     {
         try
@@ -437,6 +441,7 @@ public sealed class LocalWebSocketServerService(
                 "device.status" => await scannerService.GetStatusAsync(cancellationToken),
                 "fingerprint.capture" => await CaptureAndEnqueueAsync(cancellationToken),
                 "fingerprint.identify" => await IdentifyAndEnqueueAsync(cancellationToken),
+                "fingerprint.match" => await MatchAndEnqueueAsync(json, cancellationToken),
                 "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, cancellationToken),
                 "fingerprint.enroll.cancel" => scannerService.CancelEnrollment(),
                 "queue.status" => new
@@ -497,6 +502,48 @@ public sealed class LocalWebSocketServerService(
     {
         FingerprintIdentifyResult result = await scannerService.IdentifyFingerprintAsync(ct);
         await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+        return result;
+    }
+
+    private async Task<FingerprintMatchResult> MatchAndEnqueueAsync(string json, CancellationToken ct)
+    {
+        FingerprintMatchRequest? request;
+        try
+        {
+            request = JsonSerializer.Deserialize<FingerprintMatchRequest>(json, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return FingerprintMatchResult.Failed("Formato de solicitud de matching inválido.");
+        }
+
+        if (request?.Templates is null || request.Templates.Count == 0)
+        {
+            return FingerprintMatchResult.Failed("No se proporcionaron templates para matching.");
+        }
+
+        var templates = new List<(int Index, byte[] Template)>(request.Templates.Count);
+        foreach (var t in request.Templates)
+        {
+            try
+            {
+                byte[] templateBytes = Convert.FromBase64String(t.TemplateBase64);
+                templates.Add((t.Index, templateBytes));
+            }
+            catch (FormatException)
+            {
+                return FingerprintMatchResult.Failed($"Template en índice {t.Index} tiene formato Base64 inválido.");
+            }
+        }
+
+        FingerprintMatchResult result = await scannerService.MatchFingerprintAgainstTemplatesAsync(templates, ct);
+
+        if (result.Success && result.Matched && result.MatchedIndex.HasValue)
+        {
+            int originalIndex = request.Templates[result.MatchedIndex.Value].Index;
+            return result with { MatchedIndex = originalIndex };
+        }
+
         return result;
     }
 
