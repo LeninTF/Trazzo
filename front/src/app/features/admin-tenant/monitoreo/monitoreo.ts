@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
+import { MiddlewareWebSocketService, type MiddlewareDeviceStatusChanged } from '../../../services/middleware-websocket.service';
 
 // Interfaces
 interface Evento {
@@ -22,6 +23,7 @@ interface Escaner {
   nombre: string;
   ubicacion: string;
   online: boolean;
+  fisico?: boolean;
 }
 
 interface Metricas {
@@ -47,6 +49,12 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
+  private readonly middlewareWs = inject(MiddlewareWebSocketService);
+
+  readonly mwConnectionState = this.middlewareWs.connectionState.asReadonly();
+  readonly mwDeviceStatus = this.middlewareWs.lastDeviceStatus.asReadonly();
+
+  private unsubscribeMw: (() => void)[] = [];
   
   // ==========================================
   // MÉTRICAS PRINCIPALES
@@ -174,17 +182,60 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ==========================================
   
   ngOnInit(): void {
-    // Iniciar actualización automática cada 30 segundos
+    this.conectarMiddleware();
+
     this.intervalId = setInterval(() => {
       this.actualizarDatosTiempoReal();
     }, 30000);
   }
 
   ngOnDestroy(): void {
-    // Limpiar intervalo al destruir el componente
     if (this.intervalId) {
       clearInterval(this.intervalId);
     }
+    this.middlewareWs.disconnect();
+    this.unsubscribeMw.forEach(fn => fn());
+  }
+
+  private conectarMiddleware(): void {
+    this.middlewareWs.connect();
+
+    this.unsubscribeMw.push(
+      this.middlewareWs.on('device.status.changed', (msg) => {
+        const data = msg as MiddlewareDeviceStatusChanged;
+        this.actualizarEscaneresPorMiddleware(data);
+        this.agregarEventoDeSistema(data.message);
+      })
+    );
+
+    this.unsubscribeMw.push(
+      this.middlewareWs.on('device.connecting', (msg) => {
+        const data = msg as MiddlewareDeviceStatusChanged;
+        this.actualizarEscaneresPorMiddleware(data);
+      })
+    );
+
+    const interval = setInterval(() => {
+      this.middlewareWs.send('device.status');
+    }, 10000);
+    this.unsubscribeMw.push(() => clearInterval(interval));
+  }
+
+  private actualizarEscaneresPorMiddleware(data: MiddlewareDeviceStatusChanged): void {
+    const idxFisico = this.escaneres.findIndex(e => e.id === 0);
+    if (idxFisico >= 0) {
+      this.escaneres[idxFisico].online = data.isConnected;
+      this.escaneres[idxFisico].nombre = 'Lector Biométrico';
+    } else {
+      this.escaneres.unshift({
+        id: 0,
+        nombre: 'Lector Biométrico',
+        ubicacion: 'MIDDLEWARE',
+        online: data.isConnected,
+        fisico: true,
+      });
+    }
+    this.actualizarContadorDispositivos();
   }
 
   // ==========================================
@@ -398,6 +449,7 @@ export class Monitoreo implements OnInit, OnDestroy {
    * Refrescar todos los datos manualmente
    */
   refrescarDatos(): void {
+    this.middlewareWs.send('device.status');
     this.actualizarDatosTiempoReal();
     this.mostrarToast('Datos actualizados correctamente');
   }

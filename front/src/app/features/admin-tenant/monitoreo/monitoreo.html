@@ -135,12 +135,28 @@
           </h5>
         </div>
         <div class="card-body">
+          <!-- Conexión al middleware -->
+          <div class="alert border-0 py-2 px-3 mb-3" [ngClass]="mwConnectionState() === 'connected' ? 'alert-success' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'alert-warning' : 'alert-secondary'">
+            <i class="bi" [ngClass]="mwConnectionState() === 'connected' ? 'bi-wifi' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'bi-arrow-repeat' : 'bi-wifi-off'"></i>
+            <small class="ms-1 fw-semibold">Middleware:
+              {{ mwConnectionState() === 'connected' ? 'CONECTADO' :
+                 mwConnectionState() === 'connecting' ? 'CONECTANDO...' :
+                 mwConnectionState() === 'reconnecting' ? 'RECONECTANDO...' : 'DESCONECTADO' }}
+            </small>
+            @if (mwDeviceStatus(); as st) {
+              <small class="ms-2 text-muted">| {{ st.deviceCount }} dispositivo(s)</small>
+            }
+          </div>
+
           <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
             <div class="escaner-info" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
               <i class="bi bi-upc-scan fs-5 me-2" [ngClass]="escaner.online ? 'text-primary' : 'text-secondary'"></i>
               <div>
                 <strong>{{ escaner.nombre }}</strong>
                 <div class="small text-muted">{{ escaner.ubicacion }}</div>
+                @if (escaner.fisico) {
+                  <span class="badge bg-info mt-1" style="font-size: 0.6rem;">FÍSICO</span>
+                }
               </div>
             </div>
             <div class="escaner-actions">
@@ -148,9 +164,11 @@
                 <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
                 {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
               </span>
-              <button class="btn-eliminar-escaner" (click)="eliminarEscaner(escaner.id)" title="Eliminar escáner">
-                <i class="bi bi-trash3"></i>
-              </button>
+              @if (!escaner.fisico) {
+                <button class="btn-eliminar-escaner" (click)="eliminarEscaner(escaner.id)" title="Eliminar escáner">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              }
             </div>
           </div>
 
