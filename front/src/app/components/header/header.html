@@ -12,24 +12,35 @@
 		<div class="dropdown">
 			<button type="button" class="icon-button has-alert" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notificaciones">
 				<i class="bi bi-bell"></i>
-				<span class="notification-dot"></span>
+				@if (notificationService.noLeidas().length > 0) {
+					<span class="notification-dot"></span>
+				}
 			</button>
 			<div class="dropdown-menu dropdown-menu-end header-dropdown notif-dropdown">
-				<div class="dropdown-header">Notificaciones</div>
-				@for (notif of notificaciones; track notif.titulo) {
-					<button type="button" class="dropdown-item d-flex align-items-start gap-2">
+				<div class="dropdown-header">
+					Notificaciones
+					@if (notificationService.noLeidas().length > 0) {
+						<span class="notif-badge">{{ notificationService.noLeidas().length }}</span>
+					}
+				</div>
+				@for (notif of notificationService.notificacionesRecientes(); track notif.id) {
+					<button type="button" class="dropdown-item d-flex align-items-start gap-2" (click)="irANotificacion(notif)">
 						<i class="bi mt-1" [class]="notif.icono" [style.color]="tipoColor[notif.tipo]"></i>
 						<div class="d-flex flex-column lh-sm min-w-0">
 							<span class="notif-titulo">{{ notif.titulo }}</span>
 							<span class="notif-desc">{{ notif.descripcion }}</span>
 							<span class="notif-hora">{{ notif.hora }}</span>
 						</div>
+						@if (!notif.leida) {
+							<span class="notif-unread-dot"></span>
+						}
 					</button>
 				}
 				<div class="dropdown-divider"></div>
-				<button type="button" class="dropdown-item notif-ver-todas">Ver todas las notificaciones</button>
+				<button type="button" class="dropdown-item notif-ver-todas" data-bs-toggle="modal" data-bs-target="#notificationsModal">Ver todas las notificaciones</button>
 			</div>
 		</div>
+		<app-notifications-modal></app-notifications-modal>
 
 		<a class="icon-button" [routerLink]="settingsUrl()" aria-label="Configuración">
 			<i class="bi bi-gear"></i>

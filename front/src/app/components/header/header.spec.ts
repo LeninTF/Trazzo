@@ -2,23 +2,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Header } from './header';
 import { RoleService } from '../../services/role.service';
+import { NotificationService } from '../../services/notification.service';
 
 describe('Header', () => {
   let component: Header;
   let fixture: ComponentFixture<Header>;
   let roleService: RoleService;
+  let notificationService: NotificationService;
   let router: Router;
 
   beforeEach(async () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Header],
-      providers: [provideRouter([]), RoleService],
+      providers: [provideRouter([]), RoleService, NotificationService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Header);
     component = fixture.componentInstance;
     roleService = TestBed.inject(RoleService);
+    notificationService = TestBed.inject(NotificationService);
     router = TestBed.inject(Router);
     fixture.detectChanges();
   });
@@ -48,14 +51,18 @@ describe('Header', () => {
   });
 
   describe('notificaciones', () => {
-    it('should have 3 notifications', () => {
-      expect(component['notificaciones'].length).toBe(3);
+    it('should return notifications based on role from NotificationService', () => {
+      roleService.switchRole('admin-tenant');
+      fixture.detectChanges();
+      const notifs = notificationService.notificaciones();
+      expect(notifs.length).toBe(10);
     });
 
-    it('should have correct tipoColor mapping', () => {
+    it('should have correct tipoColor mapping including info', () => {
       expect(component['tipoColor']['danger']).toBe('#dc2626');
       expect(component['tipoColor']['warning']).toBe('#f59e0b');
       expect(component['tipoColor']['success']).toBe('#10b981');
+      expect(component['tipoColor']['info']).toBe('#3b82f6');
     });
   });
 
