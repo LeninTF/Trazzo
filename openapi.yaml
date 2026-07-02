@@ -668,7 +668,7 @@ components:
         MetodoRecuperacion:
           type: array
           items:
-            $ref}: '#/components/schemas/MetodoRecuperacionEntry'
+            $ref: '#/components/schemas/MetodoRecuperacionEntry'
         roles:
           type: array
           items:

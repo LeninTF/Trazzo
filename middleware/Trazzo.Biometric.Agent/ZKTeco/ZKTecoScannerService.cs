@@ -467,6 +467,8 @@ public sealed class ZKTecoScannerService(
             }
 
             remaining = timeout - stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                break;
             TimeSpan delay = TimeSpan.FromMilliseconds(Math.Min(remaining.TotalMilliseconds, pollingInterval.TotalMilliseconds));
             await Task.Delay(delay, cancellationToken);
         }
