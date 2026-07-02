@@ -43,7 +43,7 @@ public class SecurityConfig {
         RequestMatcher h2Console = h2ConsoleRequestMatcher(h2ConsolePath);
 
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable()) // codeql[java/spring-disabled-csrf-protection] - stateless JWT API, no session cookies
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(LOGIN_URL).permitAll();
