@@ -14,6 +14,7 @@ public sealed class ZKTecoScannerService(
 {
     private const string DeviceDisconnectedMessage = "Lector biométrico desconectado.";
     private const string NoDeviceConnectedMessage = "No se encontró ningún lector biométrico conectado.";
+    private const string OperationCanceledMessage = "Lectura ignorada porque la sesión de captura ya finalizó.";
 
     // ZK9500: 300×400 px (FAP20) según ZKTeco Fingerprint Scanners Hardware Selection Guide
     private const int DefaultImageWidth = 300;
@@ -183,7 +184,7 @@ public sealed class ZKTecoScannerService(
                 FinalizeOperation(id, BiometricOperationState.Error);
             }
 
-            return FingerprintCaptureResult.Failed("Lectura ignorada porque la sesión de captura ya finalizó.");
+            return FingerprintCaptureResult.Failed(OperationCanceledMessage);
         }
         finally
         {
@@ -246,7 +247,7 @@ public sealed class ZKTecoScannerService(
                 FinalizeOperation(id, BiometricOperationState.Error);
             }
 
-            return FingerprintIdentifyResult.Failed("Lectura ignorada porque la sesión de captura ya finalizó.");
+            return FingerprintIdentifyResult.Failed(OperationCanceledMessage);
         }
         finally
         {
@@ -317,7 +318,7 @@ public sealed class ZKTecoScannerService(
                 FinalizeOperation(id, BiometricOperationState.Error);
             }
 
-            return FingerprintMatchResult.Failed("Lectura ignorada porque la sesión de captura ya finalizó.");
+            return FingerprintMatchResult.Failed(OperationCanceledMessage);
         }
         finally
         {
@@ -538,7 +539,7 @@ public sealed class ZKTecoScannerService(
         if (!IsOperationActive(operationId))
         {
             logger.LogWarning("Lectura ignorada porque la sesión ya no está activa.");
-            return CapturedSample.Failed("Lectura ignorada porque la sesión de captura ya finalizó.", BiometricOperationState.Error);
+            return CapturedSample.Failed(OperationCanceledMessage, BiometricOperationState.Error);
         }
 
         logger.LogInformation(

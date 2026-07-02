@@ -178,6 +178,11 @@ public sealed class WorkerTests
             CancellationToken cancellationToken)
             => Task.FromResult(FingerprintEnrollResult.Failed("Not used."));
 
+        public Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+            IReadOnlyList<(int Index, byte[] Template)> templates,
+            CancellationToken cancellationToken)
+            => Task.FromResult(FingerprintMatchResult.Failed("Not used."));
+
         public FingerprintEnrollResult CancelEnrollment()
             => FingerprintEnrollResult.Failed("Not used.");
 
