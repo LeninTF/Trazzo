@@ -8,6 +8,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained Condition="'$(SelfContained)' == ''">false</SelfContained>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsService>true</UseWindowsService>
     <UserSecretsId>dotnet-Trazzo.Biometric.Agent-c1913859-d226-45c9-8574-2495ebd900c0</UserSecretsId>
   </PropertyGroup>
@@ -28,6 +29,11 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>test-websocket.html</TargetPath>
+    </None>
+    <None Include="scripts\Configure-Agent.ps1">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>Configure-Agent.ps1</TargetPath>
     </None>
   </ItemGroup>
 </Project>

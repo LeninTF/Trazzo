@@ -19,3 +19,6 @@ TestResults/
 
 # Publish output
 publish/
+
+# Local manual MSI/agent diagnostics
+tmp-agent-test/

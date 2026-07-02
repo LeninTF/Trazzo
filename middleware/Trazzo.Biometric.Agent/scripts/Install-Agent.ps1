@@ -43,7 +43,8 @@ if ($BuildMsi) {
 
     dotnet build $InstallerProject -c Release
 
-    $msiPath = Join-Path (Split-Path -Parent $InstallerProject) "bin\Release\Trazzo.Biometric.Agent.msi"
+    $installerDir = Split-Path -Parent $InstallerProject
+    $msiPath = Join-Path $installerDir "bin\Release\es-ES\Trazzo.Biometric.Agent.msi"
     Write-Host ""
     Write-Host "MSI generado: $msiPath" -ForegroundColor Green
     exit 0
@@ -134,8 +135,6 @@ Write-Host "  Directorio : $InstallDir"
 Write-Host "  Servicio   : $ServiceName ($ServiceDisplayName)"
 Write-Host "  WebSocket  : ws://localhost:9001"
 Write-Host ""
-Write-Host "Para configurar la URL del backend edite:"
-Write-Host "  $InstallDir\appsettings.json"
-Write-Host "  -> Queue:BackendUrl"
-Write-Host "  -> Security:BackendPublicKeyUrl"
-Write-Host "  -> Queue:AgentToken (cuando el JWT este disponible)"
+Write-Host "Para configurar el tenant sin editar JSON a mano ejecute:"
+Write-Host "  `$token = Read-Host 'Queue:AgentToken' -AsSecureString"
+Write-Host "  $InstallDir\Configure-Agent.ps1 -TenantId <uuid> -DeviceCode <device.code> -BackendBaseUrl <url> -AgentTokenSecure `$token"

@@ -65,7 +65,8 @@ dotnet build .\Trazzo.Biometric.Agent.Installer.wixproj -c Release
 El MSI queda en:
 
 ```text
-bin\Release\Trazzo.Biometric.Agent.msi
+bin\Release\es-ES\Trazzo.Biometric.Agent.msi
+bin\Release\en-US\Trazzo.Biometric.Agent.msi
 ```
 
 ### Qué hace el build
@@ -151,6 +152,22 @@ Configurada vía `util:ServiceConfig` de `WixToolset.Util.wixext`:
 ### Interactiva
 
 Doble clic en el MSI. Si ya hay una versión instalada (igual o anterior) se desinstala automáticamente antes de instalar la nueva — no es necesario desinstalar a mano ni abrir ningún comando.
+
+### Configuración por tenant
+
+Después de instalar, ejecutar el script de provisioning incluido en el MSI. No editar `appsettings.json` a mano salvo emergencia:
+
+```powershell
+$token = Read-Host "Queue:AgentToken" -AsSecureString
+& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
+  -TenantId "uuid-del-tenant" `
+  -DeviceCode "codigo-del-device-en-corehr" `
+  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
+  -AgentTokenSecure $token `
+  -AllowedOrigins "https://app.trazzo.pe"
+```
+
+`Configure-Agent.ps1` guarda el JWT en `Queue:AgentTokenProtected` cifrado con DPAPI `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON, endurece ACL para `SYSTEM` y Administradores, y reinicia `TrazzoAgent`.
 
 ### Silenciosa (GPO, SCCM, despliegue masivo)
 

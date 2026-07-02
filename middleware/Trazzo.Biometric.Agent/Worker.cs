@@ -1,4 +1,5 @@
 using Trazzo.Biometric.Agent.Contracts;
+using Trazzo.Biometric.Agent.Backend;
 using Trazzo.Biometric.Agent.Services;
 
 namespace Trazzo.Biometric.Agent;
@@ -43,7 +44,7 @@ public sealed class Worker(
         if (cryptoService.IsConfigured)
             logger.LogInformation("  Cifrado RSA:       ACTIVO — templates cifrados con AES-256-GCM + RSA-2048.");
         else
-            logger.LogWarning("  Cifrado RSA:       INACTIVO — configure Security:BackendPublicKeyUrl antes de produccion.");
+            logger.LogWarning("  Cifrado RSA:       INACTIVO — configure Backend:BaseUrl antes de produccion.");
 
         FingerprintDeviceStatus deviceStatus = await scannerService.GetStatusAsync(cancellationToken);
         if (deviceStatus.IsConnected)
@@ -51,11 +52,11 @@ public sealed class Worker(
         else
             logger.LogWarning("  Lector biometrico: SIN LECTOR — conecte el ZK9500 y reinicie el servicio.");
 
-        string? backendUrl = configuration["Queue:BackendUrl"];
+        string? backendUrl = BackendEndpointResolver.ResolveAttendanceSyncUrl(configuration);
         if (!string.IsNullOrWhiteSpace(backendUrl))
             logger.LogInformation("  Cola de eventos:   ACTIVA — reenvio automatico al backend habilitado.");
         else
-            logger.LogWarning("  Cola de eventos:   INACTIVA — configure Queue:BackendUrl para habilitar el reenvio.");
+            logger.LogWarning("  Cola de eventos:   INACTIVA — configure Backend:BaseUrl para habilitar el reenvio.");
 
         string[] origins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
         if (origins.Length > 0)
@@ -69,17 +70,23 @@ public sealed class Worker(
         else
             logger.LogWarning("  Tenant ID:         NO CONFIGURADO — configure Agent:TenantId antes de produccion.");
 
+        string? deviceCode = configuration["Agent:DeviceCode"];
+        if (!string.IsNullOrWhiteSpace(deviceCode))
+            logger.LogInformation("  Device Code:       CONFIGURADO - usado para CoreHR biometria.");
+        else
+            logger.LogWarning("  Device Code:       NO CONFIGURADO - configure Agent:DeviceCode para enrolamiento remoto CoreHR.");
+
         bool autoUpdateEnabled = configuration.GetValue("AutoUpdate:Enabled", false);
         string? manifestUrl = configuration["AutoUpdate:ManifestUrl"];
-        if (autoUpdateEnabled && !string.IsNullOrWhiteSpace(manifestUrl))
+        if (!autoUpdateEnabled)
+            logger.LogInformation("  Auto-Update:       DESHABILITADO — habilite AutoUpdate:Enabled en produccion.");
+        else if (string.IsNullOrWhiteSpace(manifestUrl))
+            logger.LogWarning("  Auto-Update:       HABILITADO pero sin ManifestUrl — configure AutoUpdate:ManifestUrl.");
+        else
         {
             int checkIntervalMinutes = configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60);
             logger.LogInformation("  Auto-Update:       ACTIVO — verificacion cada {Minutes} min.", checkIntervalMinutes);
         }
-        else if (autoUpdateEnabled)
-            logger.LogWarning("  Auto-Update:       HABILITADO pero sin ManifestUrl — configure AutoUpdate:ManifestUrl.");
-        else
-            logger.LogInformation("  Auto-Update:       DESHABILITADO — habilite AutoUpdate:Enabled en produccion.");
 
         logger.LogInformation("=================================================");
     }

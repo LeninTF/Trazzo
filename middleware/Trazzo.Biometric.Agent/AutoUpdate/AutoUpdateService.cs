@@ -153,6 +153,13 @@ public sealed class AutoUpdateService : BackgroundService
     private async Task<string?> DownloadAndVerifyAsync(
         string version, Uri downloadUri, string expectedSha256, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(expectedSha256))
+        {
+            _logger.LogError(
+                "Auto-Update: el manifiesto no incluye SHA-256. Actualizacion abortada por seguridad.");
+            return null;
+        }
+
         string updatesDir = _updatesDirectory;
         Directory.CreateDirectory(updatesDir);
         string tempPath = Path.Combine(updatesDir, $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
@@ -179,7 +186,7 @@ public sealed class AutoUpdateService : BackgroundService
             return null;
         }
 
-        if (!string.IsNullOrWhiteSpace(expectedSha256) && !VerifySha256(tempPath, expectedSha256))
+        if (!VerifySha256(tempPath, expectedSha256))
         {
             _logger.LogError(
                 "Auto-Update: la verificación SHA-256 del instalador falló. Instalación abortada.");

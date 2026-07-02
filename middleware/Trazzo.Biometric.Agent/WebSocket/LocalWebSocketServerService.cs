@@ -15,15 +15,14 @@ public sealed class LocalWebSocketServerService(
     IAgentHealthService healthService,
     IEventQueue eventQueue,
     IConfiguration configuration,
-    ILogger<LocalWebSocketServerService> logger) : IWebSocketServerService
+    ILogger<LocalWebSocketServerService> logger,
+    IAttendanceMarkingClient? attendanceMarkingClient = null) : IWebSocketServerService
 {
     private const string ErrorMessageType = "error";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpListener _listener = new();
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _clientLastOperationTime = new();
     private readonly ConcurrentDictionary<string, (System.Net.WebSockets.WebSocket WebSocket, SemaphoreSlim SendLock)> _activeClients = new();
-    private readonly int _rateLimitSeconds = configuration.GetValue("Agent:RateLimitSeconds", 5);
     private readonly TimeSpan _keepAliveInterval = TimeSpan.FromSeconds(
         Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
     private readonly int _deviceMonitorIntervalSeconds = Math.Max(1,
@@ -118,16 +117,13 @@ public sealed class LocalWebSocketServerService(
         }
 
         string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
-        if (allowedOrigins.Length > 0)
+        string? origin = context.Request.Headers["Origin"];
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
         {
-            string? origin = context.Request.Headers["Origin"];
-            if (!Array.Exists(allowedOrigins, o => string.Equals(o, origin, StringComparison.OrdinalIgnoreCase)))
-            {
-                logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
-                context.Response.StatusCode = 403;
-                context.Response.Close();
-                return;
-            }
+            logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
+            context.Response.StatusCode = 403;
+            context.Response.Close();
+            return;
         }
 
         using System.Net.WebSockets.WebSocket webSocket = (await context.AcceptWebSocketAsync(subProtocol: null, _keepAliveInterval)).WebSocket;
@@ -185,7 +181,6 @@ public sealed class LocalWebSocketServerService(
         {
             _activeClients.TryRemove(clientId, out _);
             sendLock.Dispose();
-            _clientLastOperationTime.TryRemove(clientId, out _);
             logger.LogInformation(
                 "Cliente WebSocket desconectado: {ClientId}. Duracion de sesion: {Duration:F1}s.",
                 clientId, sessionTimer.Elapsed.TotalSeconds);
@@ -330,14 +325,6 @@ public sealed class LocalWebSocketServerService(
             string? operationType = TryParseMessageType(json);
             bool isBiometricOp = operationType is "fingerprint.capture" or "fingerprint.identify" or "fingerprint.enroll.start";
 
-            if (isBiometricOp && IsRateLimited(clientId, operationType!))
-            {
-                await SendJsonAsync(webSocket,
-                    new { type = ErrorMessageType, success = false, message = $"Demasiadas solicitudes. Espere {_rateLimitSeconds}s entre operaciones biometricas." },
-                    sendLock, cancellationToken);
-                return;
-            }
-
             Stopwatch opTimer = Stopwatch.StartNew();
             bool isEnrollStart = operationType == "fingerprint.enroll.start";
             object response = await HandleMessageAsync(
@@ -380,25 +367,6 @@ public sealed class LocalWebSocketServerService(
         }
     }
 
-    internal bool IsRateLimited(string clientId, string operationType)
-    {
-        if (_rateLimitSeconds <= 0) return false;
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (_clientLastOperationTime.TryGetValue(clientId, out DateTimeOffset last)
-            && (now - last).TotalSeconds < _rateLimitSeconds)
-        {
-            double remaining = _rateLimitSeconds - (now - last).TotalSeconds;
-            logger.LogWarning(
-                "Rate limit: {OperationType} rechazada para {ClientId}. Espere {Remaining:F0}s.",
-                operationType, clientId, remaining);
-            return true;
-        }
-
-        _clientLastOperationTime[clientId] = now;
-        return false;
-    }
-
     internal static string? TryParseMessageType(string json)
     {
         try
@@ -421,6 +389,30 @@ public sealed class LocalWebSocketServerService(
     internal static string ResolveClientId(IPEndPoint? remoteEndPoint)
     {
         return remoteEndPoint?.ToString() ?? "unknown";
+    }
+
+    internal static bool IsOriginAllowed(
+        string? origin,
+        IReadOnlyCollection<string> allowedOrigins,
+        IPEndPoint? remoteEndPoint = null)
+    {
+        if (allowedOrigins.Count > 0)
+        {
+            return allowedOrigins.Any(allowed =>
+                string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (string.IsNullOrWhiteSpace(origin))
+        {
+            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
+        }
+
+        if (string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
+        {
+            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
+        }
+
+        return Uri.TryCreate(origin, UriKind.Absolute, out Uri? originUri) && originUri.IsLoopback;
     }
 
     private async Task<object> HandleMessageAsync(
@@ -489,14 +481,28 @@ public sealed class LocalWebSocketServerService(
     private async Task<FingerprintCaptureResult> CaptureAndEnqueueAsync(CancellationToken ct)
     {
         FingerprintCaptureResult result = await scannerService.CaptureFingerprintAsync(ct);
-        await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "capture", ct);
         return result;
     }
 
     private async Task<FingerprintIdentifyResult> IdentifyAndEnqueueAsync(CancellationToken ct)
     {
         FingerprintIdentifyResult result = await scannerService.IdentifyFingerprintAsync(ct);
-        await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+        bool marked = false;
+
+        if (result.Success && result.EncryptedTemplate is not null && attendanceMarkingClient is not null)
+        {
+            marked = await attendanceMarkingClient.TryMarkAsync(
+                result.EncryptedTemplate,
+                result.DeviceId,
+                result.CapturedAtUtc,
+                ct);
+        }
+
+        if (!marked)
+        {
+            await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+        }
+
         return result;
     }
 
@@ -504,7 +510,6 @@ public sealed class LocalWebSocketServerService(
         Func<FingerprintEnrollProgress, CancellationToken, Task> callback, CancellationToken ct)
     {
         FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(callback, ct);
-        await TryEnqueueAsync(result.EncryptedRegisteredTemplate, result.DeviceId, result.CapturedAtUtc, "enroll", ct);
         return result;
     }
 
