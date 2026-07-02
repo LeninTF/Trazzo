@@ -1,8 +1,8 @@
 import { routes } from './app.routes';
 
 describe('app.routes', () => {
-  it('should have 33 route definitions', () => {
-    expect(routes.length).toBe(33);
+  it('should have 35 route definitions', () => {
+    expect(routes.length).toBe(35);
   });
 
   it('should define public routes', () => {
@@ -58,9 +58,9 @@ describe('app.routes', () => {
     expect(paths).toContain('usuario/perfil');
   });
 
-  it('should have redirect routes for tenant, sass, and usuario', () => {
+  it('should have redirect routes for tenant, sass, usuario, and ayuda', () => {
     const redirectRoutes = routes.filter(r => r.redirectTo);
-    expect(redirectRoutes.length).toBe(3);
+    expect(redirectRoutes.length).toBe(4);
 
     const tenantRedirect = routes.find(r => r.path === 'tenant');
     expect(tenantRedirect?.redirectTo).toBe('tenant/dashboard');
@@ -73,6 +73,10 @@ describe('app.routes', () => {
     const usuarioRedirect = routes.find(r => r.path === 'usuario');
     expect(usuarioRedirect?.redirectTo).toBe('usuario/dashboard');
     expect(usuarioRedirect?.pathMatch).toBe('full');
+
+    const ayudaRedirect = routes.find(r => r.path === 'ayuda');
+    expect(ayudaRedirect?.redirectTo).toBe('ayuda/guia-de-uso');
+    expect(ayudaRedirect?.pathMatch).toBe('full');
   });
 
   it('should have component associated with non-redirect routes', () => {

@@ -13,7 +13,7 @@ export class HelpPage {
   private readonly route = inject(ActivatedRoute);
   protected readonly location = inject(Location);
 
-  protected content!: HelpSection;
+  protected content: HelpSection = helpContent[0];
   protected prev: HelpSection | null = null;
   protected next: HelpSection | null = null;
   protected sections: HelpSection[] = helpContent;
