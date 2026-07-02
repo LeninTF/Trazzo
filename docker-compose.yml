@@ -37,6 +37,7 @@ services:
       PASSWORD_ACCESS: "false"
       SUDO_ACCESS: "false"
       LOG_STDOUT: "true"
+      DOCKER_MODS: linuxserver/mods:openssh-server-ssh-tunnel
     ports:
       - "2222:2222"
     networks:
@@ -49,9 +50,8 @@ services:
     # 1. Se descarga la imagen del registro.
     image: ghcr.io/lenintf/trazzo/trazzo-back:main
     container_name: trazzo-backend
+    pull_policy: always
     restart: unless-stopped
-    ports:
-      - "8080:8080" # Acceso directo al backend para esta fase temprana sin tunnel
     env_file:
       - .env # Aqui se inyectan las credenciales de BD y JWT en produccion
     environment:
@@ -78,9 +78,8 @@ services:
   trazzo-frontend:
     image: ghcr.io/lenintf/trazzo/trazzo-front:main
     container_name: trazzo-frontend
+    pull_policy: always
     restart: unless-stopped
-    ports:
-      - "4000:8080"
     networks:
       - trazzo-network
     depends_on:
