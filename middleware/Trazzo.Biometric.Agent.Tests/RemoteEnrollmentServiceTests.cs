@@ -254,7 +254,8 @@ public sealed class RemoteEnrollmentServiceTests
         await service.StartAsync(CancellationToken.None);
         await Task.Delay(200);
         await service.StopAsync(CancellationToken.None);
-        // Should complete without throwing — exception was caught and logged
+
+        Assert.True(handler.CallCount >= 1, "El servicio debió intentar al menos una llamada HTTP antes de capturar la excepción.");
     }
 
     private static IConfiguration BuildConfig() =>

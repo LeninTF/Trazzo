@@ -440,9 +440,14 @@ internal sealed class SequentialHttpMessageHandler : HttpMessageHandler
 
 internal sealed class ThrowingHttpMessageHandler : HttpMessageHandler
 {
+    public int CallCount { get; private set; }
+
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
-        => Task.FromException<HttpResponseMessage>(new HttpRequestException("Simulated network error"));
+    {
+        CallCount++;
+        return Task.FromException<HttpResponseMessage>(new HttpRequestException("Simulated network error"));
+    }
 }
 
 internal sealed class BlockingHttpMessageHandler : HttpMessageHandler
