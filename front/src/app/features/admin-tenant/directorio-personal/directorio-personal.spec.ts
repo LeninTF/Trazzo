@@ -140,6 +140,13 @@ describe('DirectorioPersonal', () => {
       component.searchTerm = '76543210';
       expect(component.personalFiltrado.length).toBe(1);
     });
+
+    it('should combine multiple filters', () => {
+      component.searchTerm = 'José';
+      component.filtroSede = 'Sede San Isidro';
+      component.filtroArea = 'Dirección Académica';
+      expect(component.personalFiltrado.length).toBe(1);
+    });
   });
 
   describe('pagination', () => {
@@ -161,6 +168,18 @@ describe('DirectorioPersonal', () => {
       expect(component.paginaActual).toBe(2);
     });
 
+    it('should not change page beyond totalPaginas', () => {
+      component.itemsPerPage = 1;
+      component.cambiarPagina(99);
+      expect(component.paginaActual).toBe(1);
+    });
+
+    it('should return 0 totalPaginas and finRegistro when filtered list is empty', () => {
+      component.searchTerm = 'NONEXISTENT';
+      expect(component.totalPaginas).toBe(0);
+      expect(component.finRegistro).toBe(0);
+    });
+
     it('should compute inicioRegistro and finRegistro', () => {
       component.itemsPerPage = 1;
       expect(component.inicioRegistro).toBe(1);
@@ -176,8 +195,17 @@ describe('DirectorioPersonal', () => {
       component.abrirModalAgregar();
       expect(component.modalPersonalOpen).toBeTrue();
       expect(component.editandoPersonal).toBeFalse();
+      expect(component.personalForm.estado).toBe('ACTIVO');
       component.cerrarModalPersonal();
       expect(component.modalPersonalOpen).toBeFalse();
+    });
+
+    it('should set default sede/area/departamento from available options in add modal', () => {
+      setMockPersonal();
+      component.abrirModalAgregar();
+      expect(component.sedesDisponibles).toContain(component.personalForm.sede);
+      expect(component.areasDisponibles).toContain(component.personalForm.area);
+      expect(component.departamentosDisponibles).toContain(component.personalForm.departamento);
     });
 
     it('should open and close edit modal', () => {
@@ -189,6 +217,7 @@ describe('DirectorioPersonal', () => {
       expect(component.personalForm.nombre).toBe(persona.nombre);
       component.cerrarModalPersonal();
       expect(component.modalPersonalOpen).toBeFalse();
+      expect(component.imagenPreviewUrl).toBeNull();
     });
 
     it('should open and close detail modal', () => {
@@ -224,6 +253,12 @@ describe('DirectorioPersonal', () => {
       const event = { target: { files: [largeFile] } } as any;
       component.onFileSelected(event);
       expect(mockToast.info).toHaveBeenCalled();
+    });
+
+    it('should do nothing when no file selected', () => {
+      const event = { target: { files: null } } as any;
+      component.onFileSelected(event);
+      expect(component.imagenPreviewUrl).toBeNull();
     });
 
     it('should toggle image mode to URL', () => {
@@ -306,6 +341,15 @@ describe('DirectorioPersonal', () => {
       await component.guardarPersonal();
       expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
       mockApi.users.patch.and.returnValue(of(mockUsersResponse.content[0]));
+    });
+
+    it('should create user with single-word name', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'SoloNombre';
+      component.personalForm.idPersonal = '11111';
+      await component.guardarPersonal();
+      expect(mockApi.users.create).toHaveBeenCalled();
+      expect(component.modalPersonalOpen).toBeFalse();
     });
   });
 
@@ -410,6 +454,12 @@ describe('DirectorioPersonal', () => {
       }
       expect(component.enrolLogs().length).toBe(100);
     });
+
+    it('should default to info type when not specified', () => {
+      (component as any).addEnrolLog('no type');
+      expect(component.enrolLogs().length).toBe(1);
+      expect(component.enrolLogs()[0].type).toBe('info');
+    });
   });
 
   describe('ngOnDestroy', () => {
@@ -499,6 +549,12 @@ describe('DirectorioPersonal', () => {
       component.personalForm.imagenUrl = 'http://example.com/img.jpg';
       component.cambiarModoImagen(true);
       expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
+    });
+
+    it('should set preview to null when switching to URL mode with empty form', () => {
+      component.personalForm.imagenUrl = '';
+      component.cambiarModoImagen(true);
+      expect(component.imagenPreviewUrl).toBeNull();
     });
   });
 

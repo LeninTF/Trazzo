@@ -75,8 +75,21 @@ describe('Header', () => {
     });
   });
 
+  describe('irANotificacion', () => {
+    it('should mark as read and navigate to notification route', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const marcarSpy = spyOn(notificationService, 'marcarComoLeida');
+      const notif = { id: 'notif-1', route: '/tenant/configuracion-tenant' } as any;
+
+      component['irANotificacion'](notif);
+
+      expect(marcarSpy).toHaveBeenCalledWith('notif-1');
+      expect(navigateSpy).toHaveBeenCalledWith('/tenant/configuracion-tenant');
+    });
+  });
+
   describe('switchRoleAndNavigate', () => {
-    it('should switch role and navigate to dashboard', () => {
+    it('should switch to admin-sass and navigate to tenants', () => {
       const navigateSpy = spyOn(router, 'navigateByUrl');
       const switchSpy = spyOn(roleService, 'switchRole');
 
@@ -84,6 +97,26 @@ describe('Header', () => {
 
       expect(switchSpy).toHaveBeenCalledWith('admin-sass');
       expect(navigateSpy).toHaveBeenCalledWith('/sass/tenants');
+    });
+
+    it('should switch to admin-tenant and navigate to dashboard', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const switchSpy = spyOn(roleService, 'switchRole');
+
+      component['switchRoleAndNavigate']('admin-tenant');
+
+      expect(switchSpy).toHaveBeenCalledWith('admin-tenant');
+      expect(navigateSpy).toHaveBeenCalledWith('/tenant/dashboard');
+    });
+
+    it('should switch to usuario and navigate to dashboard', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const switchSpy = spyOn(roleService, 'switchRole');
+
+      component['switchRoleAndNavigate']('usuario');
+
+      expect(switchSpy).toHaveBeenCalledWith('usuario');
+      expect(navigateSpy).toHaveBeenCalledWith('/usuario/dashboard');
     });
   });
 

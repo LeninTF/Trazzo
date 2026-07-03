@@ -584,4 +584,149 @@ describe('Monitoreo', () => {
       expect(component.metricas.tardanzas).toBe(9);
     });
   });
+
+  describe('actualizarTextoUltimaActualizacion', () => {
+    it('should show segundos for < 60s diff', () => {
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toContain('segundos');
+    });
+
+    it('should show minutos for >= 60s diff', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 120000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toContain('minutos');
+    });
+
+    it('should show singular minuto for exactly 60s', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 60000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toContain('minuto');
+    });
+
+    it('should show time string for >= 3600s diff', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 7200000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).not.toContain('hace');
+    });
+  });
+
+  describe('actualizarMetricasConEvento', () => {
+    it('should increment tardanzas for TARDE event', () => {
+      const before = component.metricas.tardanzas;
+      (component as any).actualizarMetricasConEvento({
+        id: 1, nombre: 'Test', rol: '', hora: '', idDispositivo: '',
+        estado: 'TARDE', escaner: '', ubicacion: '', online: true,
+      });
+      expect(component.metricas.tardanzas).toBe(before + 1);
+    });
+
+    it('should not increment tardanzas for A TIEMPO event', () => {
+      const before = component.metricas.tardanzas;
+      (component as any).actualizarMetricasConEvento({
+        id: 1, nombre: 'Test', rol: '', hora: '', idDispositivo: '',
+        estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true,
+      });
+      expect(component.metricas.tardanzas).toBe(before);
+    });
+  });
+
+  describe('agregarEventoALista', () => {
+    it('should pop oldest when exceeding 10 events', () => {
+      component.eventos = Array.from({ length: 10 }, (_, i) => ({
+        id: i, nombre: 'E', rol: '', hora: '', idDispositivo: '',
+        estado: 'A TIEMPO' as const, escaner: '', ubicacion: '', online: true,
+      }));
+      (component as any).agregarEventoALista({
+        id: 999, nombre: 'New', rol: '', hora: '', idDispositivo: '',
+        estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true,
+      });
+      expect(component.eventos.length).toBe(10);
+      expect(component.eventos[0].id).toBe(999);
+      expect(component.eventos.some(e => e.id === 9)).toBeFalse();
+    });
+  });
+
+  describe('conectarMiddleware event handlers', () => {
+    function dispatch(type: string, data: unknown): void {
+      const handlers = (middlewareWs as any).messageHandlers as Map<string, Set<(msg: unknown) => void>>;
+      handlers.get(type)?.forEach(h => h(data));
+    }
+
+    afterEach(() => {
+      component.ngOnDestroy();
+    });
+
+    it('should handle device.connecting event', () => {
+      component.ngOnInit();
+      dispatch('device.connecting', {
+        type: 'device.connecting', success: true, isConnected: false, message: 'Conectando...',
+      });
+      expect(component.readerConnected()).toBeFalse();
+      expect(component.readerDetail()).toBe('Conectando...');
+    });
+
+    it('should handle device.status.result with connected reader', () => {
+      component.ngOnInit();
+      dispatch('device.status.result', {
+        type: 'device.status.result', success: true, isConnected: true, message: 'Conectado', deviceCount: 1,
+      });
+      expect(component.readerConnected()).toBeTrue();
+      expect(component.readerDetail()).toContain('Conectado');
+    });
+
+    it('should handle device.status.result with disconnected reader', () => {
+      component.ngOnInit();
+      dispatch('device.status.result', {
+        type: 'device.status.result', success: true, isConnected: false, message: 'Desconectado', deviceCount: 0,
+      });
+      expect(component.readerConnected()).toBeFalse();
+      expect(component.fpStatus()).toBe('Conecte el ZK9500 por USB y vuelva a consultar el estado.');
+    });
+
+    it('should handle error event from middleware', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('error', { type: 'error', success: false, message: 'Error de prueba' });
+      expect(toastService.error).toHaveBeenCalledWith('Error de prueba');
+      tick(800);
+    }));
+
+    it('should handle health.check.result silently', () => {
+      component.ngOnInit();
+      dispatch('health.check.result', {});
+      expect(component.operationLabel()).toBe('Inactivo');
+    });
+
+    it('should handle fingerprint.enroll.progress event', () => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.progress', {
+        type: 'fingerprint.enroll.progress', success: true, step: 1, totalSteps: 3, message: 'Captura 1 de 3',
+      });
+      expect(component.enrollmentProgress()).toBe('1/3');
+      expect(component.fpStatus()).toBe('Captura 1 de 3');
+      expect(component.operationLabel()).toBe('Enrolando huella…');
+      expect(component.operationInProgress()).toBeTrue();
+      expect(component.enrollmentInProgress()).toBeTrue();
+    });
+
+    it('should handle fingerprint.enroll.result with success', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: true, message: 'Enrolamiento exitoso',
+        registeredTemplateBase64: 'dGVzdA==', registeredTemplateSize: 500, capturedSamples: 3, encryptedRegisteredTemplate: null,
+      });
+      expect(component.fpTemplateSize()).toBe(500);
+      expect(component.fpStatus()).toBe('Enrolamiento exitoso');
+      tick(800);
+    }));
+
+    it('should handle fingerprint.enroll.result with failure', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: false, message: 'Error en enrolamiento',
+        registeredTemplateBase64: null, registeredTemplateSize: 0, capturedSamples: 0, encryptedRegisteredTemplate: null,
+      });
+      expect(component.fpStatus()).toBe('Error en enrolamiento');
+      tick(800);
+    }));
+  });
 });
