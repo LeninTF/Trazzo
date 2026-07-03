@@ -193,7 +193,7 @@ public sealed class RemoteEnrollmentServiceTests
         SequenceHttpMessageHandler handler = new(
             new HttpResponseMessage(HttpStatusCode.NoContent));
         using HttpClient httpClient = new(handler);
-        bool delayInvoked = false;
+        TaskCompletionSource delayStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         RemoteEnrollmentService service = new(
             new CountingScannerService(),
@@ -202,15 +202,14 @@ public sealed class RemoteEnrollmentServiceTests
             httpClient,
             (_, ct) =>
             {
-                delayInvoked = true;
+                delayStarted.TrySetResult();
                 return Task.Delay(Timeout.Infinite, ct);
             });
 
         await service.StartAsync(CancellationToken.None);
-        await Task.Delay(200);
+        await delayStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await service.StopAsync(CancellationToken.None);
 
-        Assert.True(delayInvoked);
         Assert.Single(handler.Requests);
     }
 
