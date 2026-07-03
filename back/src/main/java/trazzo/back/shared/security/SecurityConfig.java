@@ -29,6 +29,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
 
     private static final String LOGIN_URL = "/auth/login";
+    private static final String PUBLIC_KEY_URL = "/security/public-key";
 
     // CSRF is intentionally disabled: stateless REST API authenticated via JWT Bearer tokens.
     // Cookie-based CSRF attacks do not apply when no session cookies are used.
@@ -46,10 +47,11 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // codeql[java/spring-disabled-csrf-protection] - stateless JWT API, no session cookies
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers(LOGIN_URL).permitAll();
+                auth.requestMatchers(LOGIN_URL, PUBLIC_KEY_URL).permitAll();
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }
+                auth.requestMatchers("/saas/**", "/tenants/**").hasRole("ADMIN_SAAS");
                 auth.anyRequest().authenticated();
             })
             .headers(headers -> configureHeaders(headers, h2ConsoleEnabled, h2Console))
