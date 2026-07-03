@@ -53,7 +53,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            log.warn("JWT auth failed [{}]: {} — path={}", e.getClass().getSimpleName(), e.getMessage(), request.getRequestURI());
+            log.warn("JWT auth failed [{}] — path={}", e.getClass().getSimpleName(), request.getRequestURI());
         }
 
         filterChain.doFilter(request, response);
