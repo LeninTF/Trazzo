@@ -335,6 +335,11 @@ public sealed class RemoteEnrollmentServiceTests
         public Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken)
             => Task.FromResult(FingerprintIdentifyResult.Failed("No usado."));
 
+        public Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+            IReadOnlyList<(int Index, byte[] Template)> templates,
+            CancellationToken cancellationToken)
+            => Task.FromResult(FingerprintMatchResult.Failed("No usado."));
+
         public Task<FingerprintEnrollResult> EnrollFingerprintAsync(
             Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
             CancellationToken cancellationToken)
