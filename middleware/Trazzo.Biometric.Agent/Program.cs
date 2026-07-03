@@ -1,5 +1,6 @@
 using Trazzo.Biometric.Agent;
 using Trazzo.Biometric.Agent.AutoUpdate;
+using Trazzo.Biometric.Agent.Backend;
 using Trazzo.Biometric.Agent.Queue;
 using Trazzo.Biometric.Agent.Security;
 using Trazzo.Biometric.Agent.Services;
@@ -17,10 +18,12 @@ builder.Services.AddSingleton<IAgentHealthService, AgentHealthService>();
 builder.Services.AddSingleton<IZKTecoNativeSdk, ZKTecoNativeSdk>();
 builder.Services.AddSingleton<ICryptographyService, HybridCryptographyService>();
 builder.Services.AddSingleton<IBiometricScannerService, ZKTecoScannerService>();
+builder.Services.AddSingleton<IAttendanceMarkingClient, AttendanceMarkingClient>();
 builder.Services.AddSingleton<IEventQueue, SqliteEventQueue>();
 builder.Services.AddSingleton<IWebSocketServerService, LocalWebSocketServerService>();
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<EventForwarderService>();
+builder.Services.AddHostedService<RemoteEnrollmentService>();
 builder.Services.AddHostedService<AutoUpdateService>();
 
 var host = builder.Build();

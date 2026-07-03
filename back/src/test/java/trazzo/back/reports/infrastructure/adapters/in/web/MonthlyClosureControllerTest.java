@@ -69,7 +69,7 @@ class MonthlyClosureControllerTest {
 
         when(createUseCase.execute(any(CreateMonthlyClosureCommand.class))).thenReturn(result);
 
-        mockMvc.perform(post("/api/v1/reports/monthly-closures")
+        mockMvc.perform(post("/reports/monthly-closures")
                         .with(authPostProcessor)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -87,7 +87,7 @@ class MonthlyClosureControllerTest {
 
         when(getUseCase.execute(any(GetMonthlyClosureCommand.class))).thenReturn(result);
 
-        mockMvc.perform(get("/api/v1/reports/monthly-closures/{id}", id)
+        mockMvc.perform(get("/reports/monthly-closures/{id}", id)
                         .with(authPostProcessor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
@@ -101,7 +101,7 @@ class MonthlyClosureControllerTest {
 
         when(listUseCase.execute(any(ListMonthlyClosuresCommand.class))).thenReturn(List.of(r1, r2));
 
-        mockMvc.perform(get("/api/v1/reports/monthly-closures")
+        mockMvc.perform(get("/reports/monthly-closures")
                         .with(authPostProcessor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
@@ -113,7 +113,7 @@ class MonthlyClosureControllerTest {
 
         when(listUseCase.execute(any(ListMonthlyClosuresCommand.class))).thenReturn(List.of(result));
 
-        mockMvc.perform(get("/api/v1/reports/monthly-closures")
+        mockMvc.perform(get("/reports/monthly-closures")
                         .with(authPostProcessor)
                         .param("year", "2025")
                         .param("month", "6"))

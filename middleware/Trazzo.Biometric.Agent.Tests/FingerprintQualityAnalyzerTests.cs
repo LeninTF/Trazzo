@@ -42,6 +42,7 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.False(result.IsAcceptable);
         Assert.Equal("Área de huella insuficiente.", result.Message);
+        Assert.Equal(0.0, result.ScorePercent);
     }
 
     [Fact]
@@ -108,6 +109,9 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.False(result.IsAcceptable);
         Assert.Equal("La huella no está centrada.", result.Message);
+        Assert.InRange(result.ForegroundCoveragePercent, criteria.MinimumForegroundCoveragePercent, criteria.MaximumForegroundCoveragePercent);
+        Assert.True(result.ContrastScore >= criteria.MinimumContrastScore);
+        Assert.InRange(result.ScorePercent, 0, 50);
     }
 
     [Fact]
@@ -126,6 +130,41 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.True(result.IsAcceptable);
         Assert.Equal("Calidad de huella aceptable.", result.Message);
+        Assert.Equal(100.0, result.ScorePercent);
+    }
+
+    [Fact]
+    public void Analyze_CuandoHuellaOcupaParteNormalDelZk9500_RetornaScoreAlto()
+    {
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int row = 3; row <= 6; row++)
+            for (int col = 3; col <= 7; col++)
+                buffer[row * 10 + col] = 30;
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, DefaultCriteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(20.0, result.ForegroundCoveragePercent);
+        Assert.InRange(result.ScorePercent, 90, 100);
+    }
+
+    [Fact]
+    public void Analyze_CuandoHuellaDebilPeroCentrada_RetornaAceptable()
+    {
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int row = 4; row <= 5; row++)
+            for (int col = 3; col <= 6; col++)
+                buffer[row * 10 + col] = 30;
+
+        var criteria = DefaultCriteria with { MinimumForegroundCoveragePercent = 8 };
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(8.0, result.ForegroundCoveragePercent);
+        Assert.InRange(result.ScorePercent, 85, 100);
     }
 
     [Fact]
@@ -143,6 +182,7 @@ public sealed class FingerprintQualityAnalyzerTests
         Assert.Equal(30, result.ForegroundPixelCount);
         Assert.Equal(30.0, result.ForegroundCoveragePercent);
         Assert.Equal(170.0, result.ContrastScore);
+        Assert.Equal(100.0, result.ScorePercent);
     }
 
     [Fact]
@@ -161,5 +201,60 @@ public sealed class FingerprintQualityAnalyzerTests
 
         Assert.True(result.IsAcceptable);
         Assert.Equal("Calidad de huella aceptable.", result.Message);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCoberturaDebajoDeMinimoConContrasteAlto_ScoreProporcionalParcial()
+    {
+        // 5 pixels oscuros (0) + 95 brillantes (200) → coverage=5% < minimum=10%
+        // CalculateCoverageScore path: coveragePercent(5) < safeMinimum(10) → proportional branch
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int i = 0; i < 5; i++) buffer[i] = 0;
+
+        FingerprintQualityCriteria criteria = DefaultCriteria with { RequireCenteredFingerprint = false };
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.False(result.IsAcceptable);
+        Assert.Equal("Área de huella insuficiente.", result.Message);
+        Assert.InRange(result.ScorePercent, 0, 50);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCoberturaEntreIdealYMaxima_ScoreDecrementalCapped()
+    {
+        // 40% coverage (between idealMaximum≈30% and maximum=60%) → decremental branch in CalculateCoverageScore
+        // average=(40*50+60*200)/100=140, threshold=125 → 40 dark pixels at value 50
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)200);
+        for (int i = 0; i < 40; i++) buffer[i] = 50;
+
+        FingerprintQualityCriteria criteria = DefaultCriteria with { RequireCenteredFingerprint = false };
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.InRange(result.ForegroundCoveragePercent, 10, 60);
+        Assert.InRange(result.ScorePercent, 0, 100);
+    }
+
+    [Fact]
+    public void Analyze_CuandoContrasteEnRangoMinimo_ScoreInterpolado()
+    {
+        // contrast=100 (exactly at minimum=100), targetContrast=150 → interpolation branch in CalculateContrastScore
+        // 25 pixels at 120, 75 at 220 → average=195, threshold=180 → foreground=25 (coverage=25%)
+        byte[] buffer = new byte[100];
+        Array.Fill(buffer, (byte)220);
+        for (int i = 0; i < 25; i++) buffer[i] = 120;
+
+        FingerprintQualityCriteria criteria = DefaultCriteria with
+        {
+            RequireCenteredFingerprint = false,
+            MinimumContrastScore = 100
+        };
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, 10, 10, criteria);
+
+        Assert.True(result.IsAcceptable);
+        // Score must be between 75 and 100 (interpolated — not full 100 since contrast < target 150)
+        Assert.InRange(result.ScorePercent, 75, 99);
     }
 }

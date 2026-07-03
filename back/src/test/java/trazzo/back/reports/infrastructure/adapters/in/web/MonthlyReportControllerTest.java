@@ -41,7 +41,7 @@ class MonthlyReportControllerTest {
 
         when(reportUseCase.execute(any(UUID.class))).thenReturn(result);
 
-        mockMvc.perform(get("/api/v1/reports/monthly-reports/{id}", id))
+        mockMvc.perform(get("/reports/monthly-reports/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id.toString()))
                 .andExpect(jsonPath("$.month").value(6))
@@ -56,7 +56,7 @@ class MonthlyReportControllerTest {
 
         when(reportUseCase.execute(any(UUID.class))).thenReturn(result);
 
-        mockMvc.perform(get("/api/v1/reports/monthly-reports/{id}", id))
+        mockMvc.perform(get("/reports/monthly-reports/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.details.length()").value(0));
     }

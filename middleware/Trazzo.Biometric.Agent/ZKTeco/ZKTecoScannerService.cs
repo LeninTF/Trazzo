@@ -20,30 +20,33 @@ public sealed class ZKTecoScannerService(
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
     private const int DefaultTemplateBufferSize = 2048;
-    private const int DefaultCaptureTimeoutSeconds = 5;
-    private const int DefaultCapturePollingIntervalMilliseconds = 80;
-    private const int DefaultPostCaptureCooldownMilliseconds = 700;
+    private const double DefaultCaptureTimeoutSeconds = 1.75;
+    private const int DefaultCapturePollingIntervalMilliseconds = 50;
+    private const int DefaultPostCaptureCooldownMilliseconds = 300;
     private const int DefaultMinimumTemplateSize = 400;
     private const int DefaultEnrollmentSamples = 3;
-    private const int DefaultEnrollmentSampleTimeoutSeconds = 8;
-    private const double DefaultMinimumForegroundCoveragePercent = 18;
+    private const double DefaultEnrollmentSampleTimeoutSeconds = 1.75;
+    private const double MaxCaptureTimeoutSeconds = 1.75;
+    private const int MaxCapturePollingIntervalMilliseconds = 80;
+    private const int MaxPostCaptureCooldownMilliseconds = 300;
+    private const double MaxEnrollmentSampleTimeoutSeconds = 1.75;
+    private const double DefaultMinimumForegroundCoveragePercent = 8;
     private const double DefaultMaximumForegroundCoveragePercent = 75;
-    private const double DefaultMinimumContrastScore = 25;
+    private const double DefaultMinimumContrastScore = 18;
     private const double DefaultCenterTolerancePercent = 28;
     private const double DefaultContrastThresholdOffset = 15;
 
     private readonly SemaphoreSlim _sdkLock = new(1, 1);
     private readonly SemaphoreSlim _operationLock = new(1, 1);
     private readonly object _operationStateLock = new();
-    private readonly int _captureTimeoutSeconds = GetPositiveConfigurationValue(configuration, "Biometric:CaptureTimeoutSeconds", DefaultCaptureTimeoutSeconds);
-    private readonly int _capturePollingIntervalMilliseconds = GetPositiveConfigurationValue(configuration, "Biometric:CapturePollingIntervalMilliseconds", DefaultCapturePollingIntervalMilliseconds);
-    private readonly int _postCaptureCooldownMilliseconds = GetPositiveConfigurationValue(configuration, "Biometric:PostCaptureCooldownMilliseconds", DefaultPostCaptureCooldownMilliseconds);
+    private readonly double _captureTimeoutSeconds = GetStandardizedDoubleConfigurationValue(configuration, "Biometric:CaptureTimeoutSeconds", DefaultCaptureTimeoutSeconds, MaxCaptureTimeoutSeconds);
+    private readonly int _capturePollingIntervalMilliseconds = GetStandardizedConfigurationValue(configuration, "Biometric:CapturePollingIntervalMilliseconds", DefaultCapturePollingIntervalMilliseconds, MaxCapturePollingIntervalMilliseconds);
+    private readonly int _postCaptureCooldownMilliseconds = GetStandardizedConfigurationValue(configuration, "Biometric:PostCaptureCooldownMilliseconds", DefaultPostCaptureCooldownMilliseconds, MaxPostCaptureCooldownMilliseconds);
     private readonly int _templateBufferSize = GetPositiveConfigurationValue(configuration, "Biometric:TemplateBufferSize", DefaultTemplateBufferSize);
     private readonly bool _includeFingerprintImageInResponses = configuration.GetValue("Biometric:IncludeFingerprintImageInResponses", false);
-    private readonly bool _requireFingerLiftBeforeNextCapture = configuration.GetValue("Biometric:RequireFingerLiftBeforeNextCapture", true);
     private readonly int _minimumTemplateSize = GetPositiveConfigurationValue(configuration, "Biometric:Quality:MinimumTemplateSize", DefaultMinimumTemplateSize);
     private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
-    private readonly int _enrollmentSampleTimeoutSeconds = GetPositiveConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds);
+    private readonly double _enrollmentSampleTimeoutSeconds = GetStandardizedDoubleConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds, MaxEnrollmentSampleTimeoutSeconds);
     private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", true);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
@@ -129,7 +132,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintCaptureResult.Failed(GetBusyMessage());
+            return FingerprintCaptureResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -196,7 +199,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintIdentifyResult.Failed(GetBusyMessage());
+            return FingerprintIdentifyResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -332,7 +335,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintEnrollResult.Failed(GetBusyMessage());
+            return FingerprintEnrollResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
@@ -463,7 +466,7 @@ public sealed class ZKTecoScannerService(
         return FingerprintEnrollResult.Failed("Enrolamiento cancelado.");
     }
 
-    private async Task<CapturedSample> CaptureValidSampleAsync(Guid operationId, int timeoutSeconds)
+    private async Task<CapturedSample> CaptureValidSampleAsync(Guid operationId, double timeoutSeconds)
     {
         CancellationToken cancellationToken = GetActiveOperationToken(operationId);
         TimeSpan timeout = TimeSpan.FromSeconds(timeoutSeconds);
@@ -475,8 +478,12 @@ public sealed class ZKTecoScannerService(
             _capturePollingIntervalMilliseconds,
             timeoutSeconds);
 
-        while (stopwatch.Elapsed < timeout)
+        while (true)
         {
+            TimeSpan remaining = timeout - stopwatch.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+                break;
+
             if (IsDeviceDisconnected())
             {
                 logger.LogWarning("El lector fue desconectado durante la captura.");
@@ -484,13 +491,64 @@ public sealed class ZKTecoScannerService(
                 return CapturedSample.Failed("El lector biométrico fue desconectado durante la captura.", BiometricOperationState.Error);
             }
 
-            Array.Clear(_imageBuffer);
-            Array.Clear(_templateBuffer);
-            int templateSize = _templateBuffer.Length;
+            // Buffers locales por llamada: evitan race conditions si el SDK bloquea más
+            // de nuestro timeout y el task queda corriendo en background tras el WhenAny.
+            // _sdkLock dentro del task serializa con DrainResidualReadingsAsync.
+            byte[] localImage = new byte[_imageBuffer.Length];
+            byte[] localTemplate = new byte[_templateBuffer.Length];
 
-            int captureResult = await Task.Run(
-                () => sdk.AcquireFingerprint(_deviceHandle, _imageBuffer, _templateBuffer, ref templateSize),
-                cancellationToken);
+            Task<(int CaptureResult, int TemplateSize)> captureTask = Task.Run(async () =>
+            {
+                await _sdkLock.WaitAsync(CancellationToken.None);
+                try
+                {
+                    Array.Clear(localImage);
+                    Array.Clear(localTemplate);
+                    int size = localTemplate.Length;
+                    int r = sdk.AcquireFingerprint(_deviceHandle, localImage, localTemplate, ref size);
+                    return (r, size);
+                }
+                finally
+                {
+                    _sdkLock.Release();
+                }
+            }, CancellationToken.None);
+
+            bool captureCompleted =
+                await Task.WhenAny(captureTask, Task.Delay(remaining, cancellationToken)) == captureTask;
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _ = captureTask.ContinueWith(
+                    t => logger.LogWarning(
+                        t.Exception?.GetBaseException(),
+                        "AcquireFingerprint falló después de cancelación."),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
+                logger.LogDebug(
+                    "Captura cancelada. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            if (!captureCompleted)
+            {
+                _ = captureTask.ContinueWith(
+                    t => logger.LogWarning(
+                        t.Exception?.GetBaseException(),
+                        "AcquireFingerprint falló después de timeout."),
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted,
+                    TaskScheduler.Default);
+                logger.LogWarning(
+                    "Captura abortada por timeout. La llamada nativa al SDK puede seguir activa en segundo plano hasta que retorne.");
+                break;
+            }
+
+            (int captureResult, int templateSize) = await captureTask;
+
+            Buffer.BlockCopy(localImage, 0, _imageBuffer, 0, Math.Min(localImage.Length, _imageBuffer.Length));
+            Buffer.BlockCopy(localTemplate, 0, _templateBuffer, 0, Math.Min(localTemplate.Length, _templateBuffer.Length));
 
             logger.LogInformation("AcquireFingerprint devolvió: {CaptureResult}", captureResult);
 
@@ -505,13 +563,10 @@ public sealed class ZKTecoScannerService(
                 return CapturedSample.Failed(message, BiometricOperationState.Error);
             }
 
-            TimeSpan remaining = timeout - stopwatch.Elapsed;
+            remaining = timeout - stopwatch.Elapsed;
             if (remaining <= TimeSpan.Zero)
-            {
                 break;
-            }
-
-            TimeSpan delay = remaining < pollingInterval ? remaining : pollingInterval;
+            TimeSpan delay = TimeSpan.FromMilliseconds(Math.Min(remaining.TotalMilliseconds, pollingInterval.TotalMilliseconds));
             await Task.Delay(delay, cancellationToken);
         }
 
@@ -572,8 +627,9 @@ public sealed class ZKTecoScannerService(
 
         FingerprintQualityResult qualityResult = FingerprintQualityAnalyzer.Analyze(_imageBuffer, _imageWidth, _imageHeight, _qualityCriteria);
         logger.LogInformation(
-            "Calidad de huella. Aceptable: {IsAcceptable}. Área: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Mensaje: {Message}",
+            "Calidad de huella. Aceptable: {IsAcceptable}. Score: {ScorePercent}%. Área cruda: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Mensaje: {Message}",
             qualityResult.IsAcceptable,
+            qualityResult.ScorePercent,
             qualityResult.ForegroundCoveragePercent,
             qualityResult.ContrastScore,
             qualityResult.IsCentered,
@@ -604,24 +660,14 @@ public sealed class ZKTecoScannerService(
         return true;
     }
 
-    private string GetBusyMessage()
-    {
-        lock (_operationStateLock)
-        {
-            return _operationState == BiometricOperationState.Cooldown
-                ? "Espere un momento antes de iniciar otra captura."
-                : "Ya hay una operación biométrica en progreso.";
-        }
-    }
+    private const string BusyMessage = "Ya hay una operación biométrica en progreso.";
 
     private async Task<FingerprintCaptureResult?> EnsureReadyForOperationAsync(CancellationToken cancellationToken)
     {
         string? unavailableMessage = GetOperationUnavailableMessage();
         if (unavailableMessage is not null)
         {
-            logger.LogWarning(unavailableMessage == "Espere un momento antes de iniciar otra captura."
-                ? "Captura bloqueada: cooldown activo."
-                : "Captura bloqueada: ya hay una sesión activa.");
+            logger.LogWarning("Captura bloqueada: ya hay una sesión activa.");
             return FingerprintCaptureResult.Failed(unavailableMessage);
         }
 
@@ -638,11 +684,6 @@ public sealed class ZKTecoScannerService(
             {
                 logger.LogWarning("No se puede capturar porque el lector está desconectado.");
                 return FingerprintCaptureResult.Failed(NoDeviceConnectedMessage);
-            }
-
-            if (_requireFingerLiftBeforeNextCapture && await IsFingerAlreadyOnReaderAsync(cancellationToken))
-            {
-                return FingerprintCaptureResult.Failed("Retire el dedo del lector y vuelva a colocarlo para iniciar una nueva operación.");
             }
 
             return null;
@@ -662,9 +703,7 @@ public sealed class ZKTecoScannerService(
                 return null;
             }
 
-            return _operationState == BiometricOperationState.Cooldown
-                ? "Espere un momento antes de iniciar otra captura."
-                : "Ya hay una operación biométrica en progreso.";
+            return "Ya hay una operación biométrica en progreso.";
         }
     }
 
@@ -719,7 +758,7 @@ public sealed class ZKTecoScannerService(
                 return;
             }
 
-            _operationState = finalState;
+            _operationState = BiometricOperationState.Idle;
             ctsToDispose = _activeOperationCts;
             _activeOperationCts = null;
             _activeOperationId = null;
@@ -727,26 +766,20 @@ public sealed class ZKTecoScannerService(
 
         ctsToDispose?.Cancel();
         ctsToDispose?.Dispose();
-        CompleteCooldownAsync().ContinueWith(
-            t => logger.LogWarning(t.Exception?.GetBaseException(), "Error no controlado durante cooldown post-captura."),
+        if (logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation("Operacion biometrica finalizada con estado {FinalState}. Estado disponible para nueva solicitud.", finalState);
+        CompletePostCaptureDrainAsync().ContinueWith(
+            t => logger.LogWarning(t.Exception?.GetBaseException(), "Error no controlado durante drenado post-captura."),
             CancellationToken.None,
             TaskContinuationOptions.OnlyOnFaulted,
             TaskScheduler.Default);
     }
 
-    private async Task CompleteCooldownAsync()
+    private async Task CompletePostCaptureDrainAsync()
     {
         try
         {
             await DrainResidualReadingsAsync();
-            lock (_operationStateLock)
-            {
-                if (_activeOperationId is null)
-                {
-                    _operationState = BiometricOperationState.Cooldown;
-                }
-            }
-
             await Task.Delay(_postCaptureCooldownMilliseconds);
 
             lock (_operationStateLock)
@@ -757,11 +790,11 @@ public sealed class ZKTecoScannerService(
                 }
             }
 
-            logger.LogInformation("Cooldown finalizado. Estado: Idle.");
+            logger.LogInformation("Drenado post-captura finalizado. Estado: Idle.");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "No se pudo completar el cooldown de captura.");
+            logger.LogWarning(ex, "No se pudo completar el drenado post-captura.");
         }
     }
 
@@ -772,14 +805,35 @@ public sealed class ZKTecoScannerService(
         TimeSpan drainDuration = TimeSpan.FromMilliseconds(Math.Clamp(_postCaptureCooldownMilliseconds, 300, 700));
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        await _sdkLock.WaitAsync();
+        // Use a bounded wait: a prior capture that timed out may still hold _sdkLock while
+        // the native SDK call runs to completion.  Give it up to 3 s; if it still holds
+        // the lock by then, skip the drain rather than blocking indefinitely.
+        if (!await _sdkLock.WaitAsync(TimeSpan.FromSeconds(3)))
+        {
+            logger.LogWarning(
+                "Drenado post-captura omitido: el lock del SDK sigue retenido por una llamada nativa que excedió el timeout de captura.");
+            return;
+        }
+
         try
         {
+            if (IsBiometricOperationInProgress())
+            {
+                logger.LogDebug("Drenado post-captura omitido porque ya hay una operación activa.");
+                return;
+            }
+
             byte[] drainImageBuffer = new byte[_imageBuffer.Length];
             byte[] drainTemplateBuffer = new byte[_templateBufferSize];
 
             while (stopwatch.Elapsed < drainDuration && _deviceHandle != IntPtr.Zero)
             {
+                if (IsBiometricOperationInProgress())
+                {
+                    logger.LogDebug("Drenado post-captura detenido porque inició una nueva operación.");
+                    return;
+                }
+
                 Array.Clear(drainImageBuffer);
                 Array.Clear(drainTemplateBuffer);
                 int templateSize = drainTemplateBuffer.Length;
@@ -1212,6 +1266,26 @@ public sealed class ZKTecoScannerService(
     {
         string? configuredValue = configuration[key];
         return int.TryParse(configuredValue, out int value) && value > 0 ? value : fallback;
+    }
+
+    internal static int GetStandardizedConfigurationValue(
+        IConfiguration configuration,
+        string key,
+        int fallback,
+        int maximum)
+    {
+        int value = GetPositiveConfigurationValue(configuration, key, fallback);
+        return Math.Min(value, maximum);
+    }
+
+    internal static double GetStandardizedDoubleConfigurationValue(
+        IConfiguration configuration,
+        string key,
+        double fallback,
+        double maximum)
+    {
+        double value = GetPositiveDoubleConfigurationValue(configuration, key, fallback);
+        return Math.Min(value, maximum);
     }
 
     private static double GetPositiveDoubleConfigurationValue(IConfiguration configuration, string key, double fallback)

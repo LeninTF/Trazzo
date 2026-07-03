@@ -6,7 +6,9 @@ export default {
       'always',
       ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'revert', 'ci', 'build']
     ],
-    'body-max-line-length': [0, 'always'],
-    'footer-max-line-length': [0, 'always'],
+    'subject-case': [0], // importante para dependabot
   },
+  ignores: [
+    (commit) => /^Bump .* from .* to .*$/m.test(commit)
+  ]
 };

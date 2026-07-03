@@ -35,7 +35,7 @@ class FeatureControllerTest {
     void listAll_returns200WithArray() throws Exception {
         when(featureUseCase.listAll()).thenReturn(List.of(result()));
 
-        mockMvc.perform(get("/api/v1/saas/features"))
+        mockMvc.perform(get("/saas/features"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Biometric"));
@@ -46,7 +46,7 @@ class FeatureControllerTest {
     void create_returns201WithBody() throws Exception {
         when(featureUseCase.create(any())).thenReturn(result());
 
-        mockMvc.perform(post("/api/v1/saas/features")
+        mockMvc.perform(post("/saas/features")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -60,7 +60,7 @@ class FeatureControllerTest {
     @Test
     @WithMockUser
     void create_returns400WhenNameMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/saas/features")
+        mockMvc.perform(post("/saas/features")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -74,7 +74,7 @@ class FeatureControllerTest {
     void getById_returns200() throws Exception {
         when(featureUseCase.getById(1)).thenReturn(result());
 
-        mockMvc.perform(get("/api/v1/saas/features/1"))
+        mockMvc.perform(get("/saas/features/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
@@ -84,7 +84,7 @@ class FeatureControllerTest {
     void update_returns200WithBody() throws Exception {
         when(featureUseCase.update(any())).thenReturn(result());
 
-        mockMvc.perform(put("/api/v1/saas/features/1")
+        mockMvc.perform(put("/saas/features/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -97,7 +97,7 @@ class FeatureControllerTest {
     @Test
     @WithMockUser
     void update_returns400WhenNameMissing() throws Exception {
-        mockMvc.perform(put("/api/v1/saas/features/1")
+        mockMvc.perform(put("/saas/features/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -111,7 +111,7 @@ class FeatureControllerTest {
     void deleteById_returns204() throws Exception {
         doNothing().when(featureUseCase).deleteById(1);
 
-        mockMvc.perform(delete("/api/v1/saas/features/1").with(csrf()))
+        mockMvc.perform(delete("/saas/features/1").with(csrf()))
                 .andExpect(status().isNoContent());
     }
 }

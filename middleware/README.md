@@ -5,13 +5,18 @@ Documentación completa en cada subcarpeta:
 | README | Contenido |
 |--------|-----------|
 | [Trazzo.Biometric.Agent](./Trazzo.Biometric.Agent/README.md) | Arquitectura, configuración, protocolo WebSocket, seguridad, errores comunes |
-| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (218 pruebas), cobertura, fakes |
+| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (262 pruebas), cobertura, fakes |
 | [Trazzo.Biometric.Agent.Installer](./Trazzo.Biometric.Agent.Installer/README.md) | Generación del MSI con WiX v4, flujo del instalador, imágenes |
 | [Native/x64](./Trazzo.Biometric.Agent/Native/x64/README.md) | Cómo colocar la DLL del SDK ZKTeco |
+| [Dev handoff](./docs/README-dev-handoff.md) | Pendientes de integración: WebSocket, backend real, hardware, despliegue |
 
 ---
 
 ## Comandos principales
+
+## Estado para quien retome
+
+El middleware ya queda listo a nivel de código y MSI para los contratos de asistencia/biometría. Lo que falta no es implementación base del agente, sino validación con backend real, lector ZKTeco real y decidir si el WebSocket local debe devolver el `AttendanceProfile` completo al frontend. Ver [Dev handoff](./docs/README-dev-handoff.md) antes de cambiar código.
 
 ### Generar el MSI (desarrollador)
 
@@ -70,3 +75,19 @@ Debe responder:
 ```json
 {"type":"health.check.result","success":true}
 ```
+
+### Configurar tenant sin editar JSON
+
+Después de instalar el MSI, configurar el colegio con token protegido:
+
+```powershell
+$token = Read-Host "Queue:AgentToken" -AsSecureString
+& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
+  -TenantId "uuid-del-tenant" `
+  -DeviceCode "codigo-del-device-en-corehr" `
+  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
+  -AgentTokenSecure $token `
+  -AllowedOrigins "https://app.trazzo.pe"
+```
+
+El script guarda el JWT cifrado en `Queue:AgentTokenProtected` usando DPAPI `LocalMachine`; no deja el token en claro en `Queue:AgentToken`.

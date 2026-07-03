@@ -31,7 +31,7 @@ class TenantControllerTest {
         var result = new TenantResultDto("id-1", "acme", 1, true, null, null);
         when(createTrialTenantUseCase.createTrial(any())).thenReturn(result);
 
-        mockMvc.perform(post("/api/v1/tenants/trial")
+        mockMvc.perform(post("/saas/tenants/trial")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -55,7 +55,7 @@ class TenantControllerTest {
     @Test
     @WithMockUser
     void createTrial_returns400WhenRequiredFieldMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/tenants/trial")
+        mockMvc.perform(post("/saas/tenants/trial")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

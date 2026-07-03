@@ -21,7 +21,7 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.CreateFeatureRe
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.UpdateFeatureRequest;
 
 @RestController
-@RequestMapping("/api/v1/saas/features")
+@RequestMapping("/saas/features")
 @RequiredArgsConstructor
 public class FeatureController {
 

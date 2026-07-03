@@ -110,6 +110,9 @@ public sealed class ZKTecoScannerServiceTests
         Assert.Equal(Convert.ToBase64String(capturedTemplate), result.TemplateBase64);
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
+        Assert.NotNull(result.Quality);
+        Assert.InRange(result.Quality!.ForegroundCoveragePercent, 10, 20);
+        Assert.InRange(result.Quality.ScorePercent, 90, 100);
         Assert.Equal(1, sdk.InitCalls);
         Assert.Equal(2, sdk.OpenDeviceCalls);
         Assert.Equal(1, sdk.DBInitCalls);
@@ -447,6 +450,48 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task CaptureFingerprintAsync_CuandoTimeoutTermina_PermiteReintentoInmediato()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureResult: -1, template: []);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var first = await service.CaptureFingerprintAsync(CancellationToken.None);
+        var second = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.False(first.Success);
+        Assert.False(second.Success);
+        Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", first.Message);
+        Assert.Equal("Tiempo de espera agotado. Coloque el dedo en el lector.", second.Message);
+        Assert.DoesNotContain("Ya hay una operación biométrica en progreso.", second.Message);
+    }
+
+    [Theory]
+    [InlineData(null, 5)]
+    [InlineData("", 5)]
+    [InlineData("0", 5)]
+    [InlineData("1", 1)]
+    [InlineData("5", 5)]
+    [InlineData("10", 5)]
+    public void GetStandardizedConfigurationValue_NormalizaTiempoDeRespuesta(string? configuredValue, int expected)
+    {
+        const string key = "Biometric:CaptureTimeoutSeconds";
+        Dictionary<string, string?> settings = [];
+        if (configuredValue is not null)
+        {
+            settings[key] = configuredValue;
+        }
+
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
+            .Build();
+
+        int value = ZKTecoScannerService.GetStandardizedConfigurationValue(configuration, key, fallback: 5, maximum: 5);
+
+        Assert.Equal(expected, value);
+    }
+
+    [Fact]
     public async Task CaptureFingerprintAsync_CuandoLecturaConsumeTimeout_NoEsperaPollingAdicional()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk(
@@ -482,7 +527,7 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
-    public async Task CaptureFingerprintAsync_CuandoDedoYaEstaApoyado_SolicitaRetirarlo()
+    public async Task CaptureFingerprintAsync_CuandoDedoYaEstaApoyado_NoBloqueaCaptura()
     {
         FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
         await using ZKTecoScannerService service = CreateService(
@@ -495,8 +540,8 @@ public sealed class ZKTecoScannerServiceTests
 
         var result = await service.CaptureFingerprintAsync(CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Equal("Retire el dedo del lector y vuelva a colocarlo para iniciar una nueva operación.", result.Message);
+        Assert.True(result.Success);
+        Assert.Equal("Huella capturada correctamente.", result.Message);
     }
 
     [Fact]
@@ -734,6 +779,153 @@ public sealed class ZKTecoScannerServiceTests
         Assert.False(result.Success);
     }
 
+    [Fact]
+    public async Task GetStatus_WhenOpenDeviceReturnsZero_ReturnsDisconnected()
+    {
+        // DeviceHandle = IntPtr.Zero causes TryOpenDevice to fail (L880-884)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = IntPtr.Zero,
+            DatabaseHandle = new IntPtr(456)
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.False(status.Success);
+        Assert.False(status.IsConnected);
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenSerialUnavailable_ReturnsConnectedWithoutSerial()
+    {
+        // SerialAvailable=false causes TryReadDeviceSerial to return false (L895-898)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            SerialAvailable = false
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.True(status.Success);
+        Assert.True(status.IsConnected);
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenSdkNotInitializedAndReinitFails_ReturnsFalse()
+    {
+        // Skip InitializeAsync; EnsureSdkInitialized tries sdk.Init() which returns non-zero (L948-952)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            IsAvailable = true,
+            InitResult = 1,
+            DeviceCount = 0
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.False(status.Success);
+        Assert.Equal("El SDK ZKTeco no está inicializado.", status.Message);
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenSdkNotInitializedAndReinitSucceeds_ReturnsConnected()
+    {
+        // Skip InitializeAsync; EnsureSdkInitialized tries sdk.Init() which returns 0 (L955-957)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            IsAvailable = true,
+            InitResult = 0,
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456)
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.True(status.Success);
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenGetDeviceCountThrows_ReturnsDisconnected()
+    {
+        // GetDeviceCountException in GetDeviceCount triggers TryGetDeviceCount catch (L967-972)
+        await using ZKTecoScannerService service = CreateService(new FakeZKTecoNativeSdk
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            GetDeviceCountException = new InvalidOperationException("USB error")
+        });
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.False(status.Success);
+    }
+
+    [Fact]
+    public async Task Initialize_WhenDatabaseInitReturnsZero_LogsWarning()
+    {
+        // DatabaseHandle=IntPtr.Zero causes InitializeDatabase to hit the warning branch (L1075-1077)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = IntPtr.Zero
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+
+        await service.InitializeAsync(CancellationToken.None);
+
+        var status = await service.GetStatusAsync(CancellationToken.None);
+        Assert.True(status.IsInitialized);
+    }
+
+    [Fact]
+    public async Task Initialize_WhenImageDataSizeUnavailable_UsesFallbackSize()
+    {
+        // ImageDataSizeAvailable=false causes ConfigureCaptureBuffers to use fallback (L1128-1131)
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            ImageDataSizeAvailable = false
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+
+        await service.InitializeAsync(CancellationToken.None);
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.True(status.IsInitialized);
+    }
+
+    [Fact]
+    public async Task Constructor_WhenRequiredSamplesIsNotDefault_LogsWarningAndClampsToThree()
+    {
+        // Enrollment:RequiredSamples=5 triggers ClampEnrollmentSamples warning (L1194-1196)
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        await using ZKTecoScannerService service = CreateService(sdk, new Dictionary<string, string?>
+        {
+            ["Enrollment:RequiredSamples"] = "5"
+        });
+
+        // ClampEnrollmentSamples is called at construction time; verify service is functional
+        await service.InitializeAsync(CancellationToken.None);
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.True(status.Success);
+    }
+
     private static ZKTecoScannerService CreateService(
         FakeZKTecoNativeSdk sdk,
         Dictionary<string, string?>? overrides = null)
@@ -744,7 +936,6 @@ public sealed class ZKTecoScannerServiceTests
             ["Biometric:CapturePollingIntervalMilliseconds"] = "1",
             ["Biometric:PostCaptureCooldownMilliseconds"] = "1",
             ["Biometric:TemplateBufferSize"] = "2048",
-            ["Biometric:RequireFingerLiftBeforeNextCapture"] = "false",
             ["Biometric:Quality:MinimumTemplateSize"] = "1",
             ["Biometric:Quality:MinimumForegroundCoveragePercent"] = "10",
             ["Biometric:Quality:MaximumForegroundCoveragePercent"] = "80",

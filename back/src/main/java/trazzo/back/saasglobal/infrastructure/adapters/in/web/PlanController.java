@@ -21,7 +21,7 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.CreatePlanReque
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.UpdatePlanRequest;
 
 @RestController
-@RequestMapping("/api/v1/saas/plans")
+@RequestMapping("/saas/plans")
 @RequiredArgsConstructor
 public class PlanController {
 
