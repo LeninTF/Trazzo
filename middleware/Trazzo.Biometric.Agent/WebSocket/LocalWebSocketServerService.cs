@@ -367,25 +367,6 @@ public sealed class LocalWebSocketServerService(
         }
     }
 
-    internal bool IsRateLimited(string clientId, string operationType)
-    {
-        if (_rateLimitSeconds <= 0) return false;
-
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (_clientLastOperationTime.TryGetValue(clientId, out DateTimeOffset last)
-            && (now - last).TotalSeconds < _rateLimitSeconds)
-        {
-            double remaining = _rateLimitSeconds - (now - last).TotalSeconds;
-            logger.LogWarning(
-                "Rate limit: {OperationType} rechazada para {ClientId}. Espere {Remaining:F0}s.",
-                operationType, clientId, remaining);
-            return true;
-        }
-
-        _clientLastOperationTime[clientId] = now;
-        return false;
-    }
-
     internal sealed record FingerprintMatchRequestTemplate(int Index, string TemplateBase64);
 
     internal sealed record FingerprintMatchRequest(string Type, List<FingerprintMatchRequestTemplate>? Templates);

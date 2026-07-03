@@ -264,7 +264,7 @@ public sealed class ZKTecoScannerService(
     {
         if (!await TryEnterOperationAsync())
         {
-            return FingerprintMatchResult.Failed(GetBusyMessage());
+            return FingerprintMatchResult.Failed(BusyMessage);
         }
 
         Guid? operationId = null;
