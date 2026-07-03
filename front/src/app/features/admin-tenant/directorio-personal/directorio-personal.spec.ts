@@ -424,18 +424,7 @@ describe('DirectorioPersonal', () => {
     let freshComponent: DirectorioPersonal;
     let freshFixture: ComponentFixture<DirectorioPersonal>;
 
-    beforeEach(async () => {
-      TestBed.resetTestingModule();
-      await TestBed.configureTestingModule({
-        imports: [DirectorioPersonal],
-        providers: [
-          provideHttpClient(),
-          { provide: ApiService, useValue: mockApi },
-          { provide: ToastService, useValue: mockToast },
-          { provide: ModalService, useValue: mockModal },
-        ],
-      }).compileComponents();
-
+    beforeEach(() => {
       freshFixture = TestBed.createComponent(DirectorioPersonal);
       freshComponent = freshFixture.componentInstance;
     });
