@@ -289,17 +289,14 @@ public sealed class ZKTecoScannerService(
             if (logger.IsEnabled(LogLevel.Information))
                 logger.LogInformation("Captura para matching finalizada. Probando contra {TemplateCount} templates.", templates.Count);
 
-            for (int i = 0; i < templates.Count; i++)
-            {
-                int matchResult = sdk.DBMatch(_databaseHandle, sample.Template, templates[i].Template);
+            int matchIndex = FindMatchingTemplateIndex(sample.Template, templates);
 
-                if (matchResult == 0)
-                {
-                    if (logger.IsEnabled(LogLevel.Information))
-                        logger.LogInformation("Coincidencia encontrada con template en índice {Index}.", i);
-                    FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
-                    return FingerprintMatchResult.MatchedResult(i, sample.TemplateSize, sample.Quality, templates.Count);
-                }
+            if (matchIndex >= 0)
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Coincidencia encontrada con template en índice {Index}.", matchIndex);
+                FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
+                return FingerprintMatchResult.MatchedResult(matchIndex, sample.TemplateSize, sample.Quality, templates.Count);
             }
 
             logger.LogInformation("No se encontró coincidencia con ningún template.");
@@ -649,6 +646,16 @@ public sealed class ZKTecoScannerService(
 
         byte[] template = _templateBuffer[..templateSize].ToArray();
         return CapturedSample.Succeeded(template, templateSize, qualityResult, image);
+    }
+
+    private int FindMatchingTemplateIndex(byte[] sampleTemplate, IReadOnlyList<(int Index, byte[] Template)> templates)
+    {
+        for (int i = 0; i < templates.Count; i++)
+        {
+            if (sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template) == 0)
+                return i;
+        }
+        return -1;
     }
 
     private async Task<bool> TryEnterOperationAsync()
