@@ -286,7 +286,8 @@ public sealed class ZKTecoScannerService(
                 return FingerprintMatchResult.Failed(sample.Message);
             }
 
-            logger.LogInformation("Captura para matching finalizada. Probando contra {TemplateCount} templates.", templates.Count);
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation("Captura para matching finalizada. Probando contra {TemplateCount} templates.", templates.Count);
 
             for (int i = 0; i < templates.Count; i++)
             {
@@ -294,7 +295,8 @@ public sealed class ZKTecoScannerService(
 
                 if (matchResult == 0)
                 {
-                    logger.LogInformation("Coincidencia encontrada con template en índice {Index}.", i);
+                    if (logger.IsEnabled(LogLevel.Information))
+                        logger.LogInformation("Coincidencia encontrada con template en índice {Index}.", i);
                     FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
                     return FingerprintMatchResult.MatchedResult(i, sample.TemplateSize, sample.Quality, templates.Count);
                 }
