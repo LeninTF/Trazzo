@@ -127,6 +127,10 @@ describe('Solicitudes', () => {
     });
 
     it('should compute totalRechazadas', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
+      fixture.detectChanges();
       expect(component.totalRechazadas()).toBeGreaterThan(0);
     });
   });
