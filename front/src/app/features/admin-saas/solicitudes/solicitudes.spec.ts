@@ -118,6 +118,14 @@ describe('Solicitudes', () => {
   });
 
   describe('computed totals', () => {
+    beforeEach(() => {
+      // Disable the default 30-day rolling window so mock data is never
+      // excluded by time passage (most recent rechazado is 2026-06-03).
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2020-01-01');
+      fixture.detectChanges();
+    });
+
     it('should compute totalPendientes', () => {
       expect(component.totalPendientes()).toBeGreaterThan(0);
     });
