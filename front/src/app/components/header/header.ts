@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { RoleService, Role } from '../../services/role.service';
 import { NotificationService, Notification } from '../../services/notification.service';
+import { ModalService } from '../../services/modal.service';
 import { NotificationsModal } from '../notifications-modal/notifications-modal';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
@@ -20,6 +21,7 @@ export class Header {
   protected readonly roleService = inject(RoleService);
   protected readonly notificationService = inject(NotificationService);
   private readonly router = inject(Router);
+  private readonly modalService = inject(ModalService);
 
   protected readonly roles: { value: Role; label: string }[] = [
     { value: 'admin-tenant', label: 'Administrador Tenant' },
@@ -40,6 +42,10 @@ export class Header {
     success: '#10b981',
     info: '#3b82f6',
   };
+
+  protected abrirModalNotificaciones(): void {
+    this.modalService.show('notificationsModal');
+  }
 
   protected irANotificacion(notif: Notification): void {
     this.notificationService.marcarComoLeida(notif.id);

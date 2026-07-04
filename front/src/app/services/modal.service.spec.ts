@@ -9,24 +9,28 @@ describe('ModalService', () => {
     service = TestBed.inject(ModalService);
   });
 
+  afterEach(() => {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+  });
+
   it('creates the service', () => {
     expect(service).toBeTruthy();
   });
 
   describe('show', () => {
-    it('should create bootstrap modal and show it', () => {
+    it('should show the modal and add backdrop', () => {
       const el = document.createElement('div');
       el.id = 'testModal';
+      el.classList.add('modal', 'fade');
       document.body.appendChild(el);
-      const showSpy = jasmine.createSpy('show');
-      (window as any).bootstrap = {
-        Modal: function () {
-          return { show: showSpy, hide: () => {} };
-        },
-      };
 
       service.show('testModal');
-      expect(showSpy).toHaveBeenCalled();
+
+      expect(el.style.display).toBe('block');
+      expect(el.classList.contains('show')).toBeTrue();
+      expect(document.body.classList.contains('modal-open')).toBeTrue();
+      expect(document.querySelector('.modal-backdrop')).toBeTruthy();
       document.body.removeChild(el);
     });
 
@@ -36,21 +40,24 @@ describe('ModalService', () => {
   });
 
   describe('hide', () => {
-    it('should get bootstrap modal instance and hide it', () => {
+    it('should hide the modal and remove backdrop', (done) => {
       const el = document.createElement('div');
       el.id = 'testModal';
+      el.classList.add('modal', 'fade');
       document.body.appendChild(el);
-      const hideSpy = jasmine.createSpy('hide');
-      (window as any).bootstrap = {
-        Modal: Object.assign(
-          function () { return { show: () => {}, hide: () => {} }; },
-          { getInstance: () => ({ hide: hideSpy }) }
-        ),
-      };
+      service.show('testModal');
 
       service.hide('testModal');
-      expect(hideSpy).toHaveBeenCalled();
-      document.body.removeChild(el);
+
+      expect(el.classList.contains('show')).toBeFalse();
+
+      setTimeout(() => {
+        expect(el.style.display).toBe('');
+        expect(document.body.classList.contains('modal-open')).toBeFalse();
+        expect(document.querySelector('.modal-backdrop')).toBeFalsy();
+        document.body.removeChild(el);
+        done();
+      }, 350);
     });
 
     it('should do nothing if element not found', () => {
