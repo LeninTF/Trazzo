@@ -6,7 +6,7 @@ describe('app.routes', () => {
   });
 
   it('should define public routes', () => {
-    const publicRoutes = routes.filter(r => !r.path?.startsWith('tenant') && !r.path?.startsWith('sass') && !r.path?.startsWith('usuario'));
+    const publicRoutes = routes.filter(r => !r.path?.startsWith('tenant') && !r.path?.startsWith('saas') && !r.path?.startsWith('usuario'));
     const paths = publicRoutes.map(r => r.path);
     expect(paths).toContain('');
     expect(paths).toContain('login');
@@ -33,18 +33,18 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/perfil');
   });
 
-  it('should define sass routes', () => {
-    const sassRoutes = routes.filter(r => r.path?.startsWith('sass'));
-    const paths = sassRoutes.map(r => r.path);
-    expect(paths).toContain('sass');
-    expect(paths).toContain('sass/tenants');
-    expect(paths).toContain('sass/gestion-planes');
-    expect(paths).toContain('sass/solicitudes');
-    expect(paths).toContain('sass/log-auditoria');
-    expect(paths).toContain('sass/facturas');
-    expect(paths).toContain('sass/gestion-usuarios');
-    expect(paths).toContain('sass/gestion-roles');
-    expect(paths).toContain('sass/perfil');
+  it('should define saas routes', () => {
+    const saasRoutes = routes.filter(r => r.path?.startsWith('saas'));
+    const paths = saasRoutes.map(r => r.path);
+    expect(paths).toContain('saas');
+    expect(paths).toContain('saas/tenants');
+    expect(paths).toContain('saas/gestion-planes');
+    expect(paths).toContain('saas/solicitudes');
+    expect(paths).toContain('saas/log-auditoria');
+    expect(paths).toContain('saas/facturas');
+    expect(paths).toContain('saas/gestion-usuarios');
+    expect(paths).toContain('saas/gestion-roles');
+    expect(paths).toContain('saas/perfil');
   });
 
   it('should define usuario routes', () => {
@@ -58,7 +58,7 @@ describe('app.routes', () => {
     expect(paths).toContain('usuario/perfil');
   });
 
-  it('should have redirect routes for tenant, sass, usuario, and ayuda', () => {
+  it('should have redirect routes for tenant, saas, usuario, and ayuda', () => {
     const redirectRoutes = routes.filter(r => r.redirectTo);
     expect(redirectRoutes.length).toBe(4);
 
@@ -66,9 +66,9 @@ describe('app.routes', () => {
     expect(tenantRedirect?.redirectTo).toBe('tenant/dashboard');
     expect(tenantRedirect?.pathMatch).toBe('full');
 
-    const sassRedirect = routes.find(r => r.path === 'sass');
-    expect(sassRedirect?.redirectTo).toBe('sass/tenants');
-    expect(sassRedirect?.pathMatch).toBe('full');
+    const saasRedirect = routes.find(r => r.path === 'saas');
+    expect(saasRedirect?.redirectTo).toBe('saas/tenants');
+    expect(saasRedirect?.pathMatch).toBe('full');
 
     const usuarioRedirect = routes.find(r => r.path === 'usuario');
     expect(usuarioRedirect?.redirectTo).toBe('usuario/dashboard');

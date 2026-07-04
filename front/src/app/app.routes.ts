@@ -126,41 +126,41 @@ export const routes: Routes = [
         component: IncidenciasUsuario
     },
     {
-        path: 'sass',
+        path: 'saas',
         pathMatch: 'full',
-        redirectTo: 'sass/tenants'
+        redirectTo: 'saas/tenants'
     },
     
     {
-        path: 'sass/tenants',
+        path: 'saas/tenants',
         component: Tenants
     },
     {
-        path: 'sass/gestion-planes',
+        path: 'saas/gestion-planes',
         component: GestionPlanes
     },
     {
-        path: 'sass/solicitudes',
+        path: 'saas/solicitudes',
         component: Solicitudes
     },
     {
-        path: 'sass/log-auditoria',
+        path: 'saas/log-auditoria',
         component: LogAuditoria
     },
     {
-        path: 'sass/facturas',
+        path: 'saas/facturas',
         component: Facturas
     },
     {
-        path: 'sass/gestion-usuarios',
+        path: 'saas/gestion-usuarios',
         component: GestionUsuarios
     },
     {
-        path: 'sass/gestion-roles',
+        path: 'saas/gestion-roles',
         component: GestionRolesSaas
     },
     {
-        path: 'sass/perfil',
+        path: 'saas/perfil',
         component: PerfilSass
     },
     {

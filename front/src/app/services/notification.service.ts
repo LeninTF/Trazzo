@@ -108,15 +108,15 @@ export class NotificationService {
           { id: 'us-4', icono: 'bi-calendar-plus-fill', titulo: 'Nuevo horario asignado', descripcion: 'Se te ha asignado un nuevo turno', hora: timeAgo(addDays(now, -1)), timestamp: addDays(now, -1), tipo: 'info', route: '/usuario/calendario', leida: false },
           { id: 'us-5', icono: 'bi-exclamation-circle-fill', titulo: 'Incidente reportado', descripcion: 'Se ha reportado un incidente en tu horario', hora: timeAgo(addDays(now, -2)), timestamp: addDays(now, -2), tipo: 'warning', route: '/usuario/incidencias', leida: false },
         ];
-      case 'admin-sass':
+      case 'admin-saas':
         return [
-          { id: 'sass-1', icono: 'bi-building-add-fill', titulo: 'Nuevo tenant registrado', descripcion: 'Empresa XYZ se ha registrado en la plataforma', hora: timeAgo(addMinutes(now, -8)), timestamp: addMinutes(now, -8), tipo: 'success', route: '/sass/tenants', leida: false },
-          { id: 'sass-2', icono: 'bi-file-text-fill', titulo: 'Nueva solicitud de soporte', descripcion: 'Tenant ABC requiere asistencia técnica', hora: timeAgo(addMinutes(now, -25)), timestamp: addMinutes(now, -25), tipo: 'warning', route: '/sass/solicitudes', leida: false },
-          { id: 'sass-3', icono: 'bi-receipt-fill', titulo: 'Factura generada', descripcion: 'Factura del mes de junio generada', hora: timeAgo(addHours(now, -2)), timestamp: addHours(now, -2), tipo: 'info', route: '/sass/facturas', leida: false },
-          { id: 'sass-4', icono: 'bi-box-seam-fill', titulo: 'Nuevo plan creado', descripcion: 'Se creó el plan Enterprise Plus', hora: timeAgo(addHours(now, -6)), timestamp: addHours(now, -6), tipo: 'success', route: '/sass/gestion-planes', leida: false },
-          { id: 'sass-5', icono: 'bi-journal-text-fill', titulo: 'Evento de auditoría', descripcion: 'Cambio de configuración en tenant XYZ', hora: timeAgo(addDays(now, -1)), timestamp: addDays(now, -1), tipo: 'info', route: '/sass/log-auditoria', leida: false },
-          { id: 'sass-6', icono: 'bi-people-fill', titulo: 'Usuario administrador creado', descripcion: 'Nuevo admin para tenant DEF', hora: timeAgo(addDays(now, -2)), timestamp: addDays(now, -2), tipo: 'info', route: '/sass/gestion-usuarios', leida: false },
-          { id: 'sass-7', icono: 'bi-person-gear-fill', titulo: 'Rol modificado', descripcion: 'Se actualizaron permisos del rol Gerente', hora: timeAgo(addDays(now, -3)), timestamp: addDays(now, -3), tipo: 'warning', route: '/sass/gestion-roles', leida: false },
+          { id: 'saas-1', icono: 'bi-building-add-fill', titulo: 'Nuevo tenant registrado', descripcion: 'Empresa XYZ se ha registrado en la plataforma', hora: timeAgo(addMinutes(now, -8)), timestamp: addMinutes(now, -8), tipo: 'success', route: '/saas/tenants', leida: false },
+          { id: 'saas-2', icono: 'bi-file-text-fill', titulo: 'Nueva solicitud de soporte', descripcion: 'Tenant ABC requiere asistencia técnica', hora: timeAgo(addMinutes(now, -25)), timestamp: addMinutes(now, -25), tipo: 'warning', route: '/saas/solicitudes', leida: false },
+          { id: 'saas-3', icono: 'bi-receipt-fill', titulo: 'Factura generada', descripcion: 'Factura del mes de junio generada', hora: timeAgo(addHours(now, -2)), timestamp: addHours(now, -2), tipo: 'info', route: '/saas/facturas', leida: false },
+          { id: 'saas-4', icono: 'bi-box-seam-fill', titulo: 'Nuevo plan creado', descripcion: 'Se creó el plan Enterprise Plus', hora: timeAgo(addHours(now, -6)), timestamp: addHours(now, -6), tipo: 'success', route: '/saas/gestion-planes', leida: false },
+          { id: 'saas-5', icono: 'bi-journal-text-fill', titulo: 'Evento de auditoría', descripcion: 'Cambio de configuración en tenant XYZ', hora: timeAgo(addDays(now, -1)), timestamp: addDays(now, -1), tipo: 'info', route: '/saas/log-auditoria', leida: false },
+          { id: 'saas-6', icono: 'bi-people-fill', titulo: 'Usuario administrador creado', descripcion: 'Nuevo admin para tenant DEF', hora: timeAgo(addDays(now, -2)), timestamp: addDays(now, -2), tipo: 'info', route: '/saas/gestion-usuarios', leida: false },
+          { id: 'saas-7', icono: 'bi-person-gear-fill', titulo: 'Rol modificado', descripcion: 'Se actualizaron permisos del rol Gerente', hora: timeAgo(addDays(now, -3)), timestamp: addDays(now, -3), tipo: 'warning', route: '/saas/gestion-roles', leida: false },
         ];
     }
   }

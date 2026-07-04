@@ -26,8 +26,8 @@ describe('NotificationService', () => {
     expect(service.notificaciones().length).toBe(5);
   });
 
-  it('should have notifications for admin-sass role', () => {
-    roleService.role.set('admin-sass');
+  it('should have notifications for admin-saas role', () => {
+    roleService.role.set('admin-saas');
     expect(service.notificaciones().length).toBe(7);
   });
 

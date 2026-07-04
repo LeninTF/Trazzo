@@ -7,7 +7,7 @@ import { NotificationsModal } from '../notifications-modal/notifications-modal';
 
 const ROLE_DASHBOARD: Record<Role, string> = {
   'admin-tenant': '/tenant/dashboard',
-  'admin-sass': '/sass/tenants',
+  'admin-saas': '/saas/tenants',
   'usuario': '/usuario/dashboard',
 };
 
@@ -25,14 +25,14 @@ export class Header {
 
   protected readonly roles: { value: Role; label: string }[] = [
     { value: 'admin-tenant', label: 'Administrador Tenant' },
-    { value: 'admin-sass', label: 'Administrador SaaS' },
+    { value: 'admin-saas', label: 'Administrador SaaS' },
     { value: 'usuario', label: 'Usuario' },
   ];
 
   protected settingsUrl = computed(() => {
     const role = this.roleService.role();
     if (role === 'admin-tenant') return '/tenant/configuracion-tenant';
-    if (role === 'admin-sass') return '/sass/perfil';
+    if (role === 'admin-saas') return '/saas/perfil';
     return '/usuario/perfil';
   });
 

@@ -32,10 +32,10 @@ describe('Sidebar', () => {
   });
 
   describe('roleUrlPrefix', () => {
-    it('should return "sass" for admin-sass role', () => {
-      roleService.switchRole('admin-sass');
+    it('should return "saas" for admin-saas role', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
-      expect(component['roleUrlPrefix']()).toBe('sass');
+      expect(component['roleUrlPrefix']()).toBe('saas');
     });
 
     it('should return "usuario" for usuario role', () => {
@@ -58,8 +58,8 @@ describe('Sidebar', () => {
       expect(component['roleLabel']()).toBe('ADMINISTRADOR TENANT');
     });
 
-    it('should return "ADMINISTRADOR SAAS" for admin-sass', () => {
-      roleService.switchRole('admin-sass');
+    it('should return "ADMINISTRADOR SAAS" for admin-saas', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
       expect(component['roleLabel']()).toBe('ADMINISTRADOR SAAS');
     });

@@ -37,10 +37,10 @@ describe('Header', () => {
       expect(component['settingsUrl']()).toBe('/tenant/configuracion-tenant');
     });
 
-    it('should return sass profile url for admin-sass role', () => {
-      roleService.switchRole('admin-sass');
+    it('should return saas profile url for admin-saas role', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
-      expect(component['settingsUrl']()).toBe('/sass/perfil');
+      expect(component['settingsUrl']()).toBe('/saas/perfil');
     });
 
     it('should return usuario profile url for usuario role', () => {
@@ -70,7 +70,7 @@ describe('Header', () => {
     it('should contain 3 role options', () => {
       expect(component['roles'].length).toBe(3);
       expect(component['roles'][0].value).toBe('admin-tenant');
-      expect(component['roles'][1].value).toBe('admin-sass');
+      expect(component['roles'][1].value).toBe('admin-saas');
       expect(component['roles'][2].value).toBe('usuario');
     });
   });
@@ -89,14 +89,14 @@ describe('Header', () => {
   });
 
   describe('switchRoleAndNavigate', () => {
-    it('should switch to admin-sass and navigate to tenants', () => {
+    it('should switch to admin-saas and navigate to tenants', () => {
       const navigateSpy = spyOn(router, 'navigateByUrl');
       const switchSpy = spyOn(roleService, 'switchRole');
 
-      component['switchRoleAndNavigate']('admin-sass');
+      component['switchRoleAndNavigate']('admin-saas');
 
-      expect(switchSpy).toHaveBeenCalledWith('admin-sass');
-      expect(navigateSpy).toHaveBeenCalledWith('/sass/tenants');
+      expect(switchSpy).toHaveBeenCalledWith('admin-saas');
+      expect(navigateSpy).toHaveBeenCalledWith('/saas/tenants');
     });
 
     it('should switch to admin-tenant and navigate to dashboard', () => {
