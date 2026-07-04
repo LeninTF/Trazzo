@@ -542,6 +542,12 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
     this.middlewareWs.send('fingerprint.capture');
   }
 
+  reintentarEnrolamiento(): void {
+    if (this.enrolInProgress()) return;
+    this.addEnrolLog('Reintentando enrolamiento...', 'info');
+    this.iniciarEnrolamiento();
+  }
+
   cancelarEnrolamiento(): void {
     if (!this.enrolInProgress()) return;
     this.enrolAwaitingReference.set(false);

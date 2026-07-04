@@ -466,6 +466,9 @@
               <i class="bi" [class.bi-check-circle-fill]="enrolSuccess()" [class.bi-x-circle-fill]="!enrolSuccess()"></i>
               {{ enrolSuccess() ? 'Enrolamiento exitoso' : 'Enrolamiento fallido' }}
             </div>
+            <button class="btn-enroll primary" (click)="reintentarEnrolamiento()">
+              <i class="bi bi-arrow-clockwise"></i> Reintentar
+            </button>
           }
         </div>
 

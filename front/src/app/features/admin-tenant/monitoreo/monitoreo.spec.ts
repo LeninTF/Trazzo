@@ -37,21 +37,21 @@ describe('Monitoreo', () => {
   });
 
   it('should have initial metrics', () => {
-    expect(component.metricas.presentesHoy).toBe(1284);
-    expect(component.metricas.tardanzas).toBe(42);
-    expect(component.metricas.dispositivosActivos).toBe(2);
+    expect(component.metricas.presentesHoy).toBe(0);
+    expect(component.metricas.tardanzas).toBe(0);
+    expect(component.metricas.dispositivosActivos).toBe(0);
   });
 
-  it('should have 4 initial events', () => {
-    expect(component.eventos.length).toBe(4);
+  it('should have no initial events', () => {
+    expect(component.eventos.length).toBe(0);
   });
 
-  it('should have 3 escaneres', () => {
-    expect(component.escaneres.length).toBe(3);
+  it('should have no escaneres', () => {
+    expect(component.escaneres.length).toBe(0);
   });
 
   it('should compute totalDispositivosTexto', () => {
-    expect(component.totalDispositivosTexto).toBe('2/3');
+    expect(component.totalDispositivosTexto).toBe('0/0');
   });
 
   it('should compute eventosATiempo', () => {
@@ -68,53 +68,44 @@ describe('Monitoreo', () => {
     expect(component.ultimaActualizacionTexto()).toContain('segundos');
   });
 
-  it('should actualizarDatosTiempoReal', () => {
-    const lengthBefore = component.eventos.length;
-    component.actualizarDatosTiempoReal();
-    expect(component.eventos.length).toBeGreaterThanOrEqual(lengthBefore);
-    expect(component.metricas.presentesHoy).toBeGreaterThan(1284);
-  });
 
-  it('should keep max 10 events after real-time update', () => {
-    for (let i = 0; i < 10; i++) {
-      component.actualizarDatosTiempoReal();
-    }
-    expect(component.eventos.length).toBeLessThanOrEqual(10);
-  });
 
   it('should registrarEscaner', () => {
     component.nuevoEscaner = { nombre: 'Test Escaner', ubicacion: 'Test Ubicacion', online: true };
     component.registrarEscaner();
-    expect(component.escaneres.length).toBe(4);
-    expect(component.metricas.totalDispositivos).toBe(4);
+    expect(component.escaneres.length).toBe(1);
+    expect(component.metricas.totalDispositivos).toBe(1);
   });
 
   it('should not registrarEscaner with empty nombre', () => {
     component.nuevoEscaner = { nombre: '', ubicacion: 'Ubicacion', online: true };
     component.registrarEscaner();
-    expect(component.escaneres.length).toBe(3);
+    expect(component.escaneres.length).toBe(0);
   });
 
   it('should not registrarEscaner with empty ubicacion', () => {
     component.nuevoEscaner = { nombre: 'Nombre', ubicacion: '', online: true };
     component.registrarEscaner();
-    expect(component.escaneres.length).toBe(3);
+    expect(component.escaneres.length).toBe(0);
   });
 
   it('should eliminarEscaner find and set', () => {
+    component.escaneres.push({ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true });
     component.eliminarEscaner(1);
     expect(component.escanerAEliminar).toBeTruthy();
     expect(component.escanerAEliminar!.id).toBe(1);
   });
 
   it('should confirmarEliminarEscaner', () => {
+    component.escaneres.push({ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true });
     component.escanerAEliminar = component.escaneres[0];
     component.confirmarEliminarEscaner();
-    expect(component.escaneres.length).toBe(2);
+    expect(component.escaneres.length).toBe(0);
     expect(component.escanerAEliminar).toBeNull();
   });
 
   it('should toggleEscaner online/offline', () => {
+    component.escaneres.push({ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true });
     const escaner = component.escaneres[0];
     const wasOnline = escaner.online;
     component.toggleEscaner(escaner.id);
@@ -122,6 +113,7 @@ describe('Monitoreo', () => {
   });
 
   it('should toggleEscaner update metricas', () => {
+    component.escaneres.push({ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true });
     component.toggleEscaner(1);
     expect(component.metricas.dispositivosActivos).toBe(component.escaneres.filter(e => e.online).length);
   });
@@ -142,6 +134,7 @@ describe('Monitoreo', () => {
   });
 
   it('should eliminarEvento', () => {
+    component.eventos.push({ id: 1, nombre: 'Test', rol: '', hora: '', idDispositivo: '', estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true });
     const lenBefore = component.eventos.length;
     component.eliminarEvento(1);
     expect(component.eventos.length).toBe(lenBefore - 1);
@@ -154,15 +147,9 @@ describe('Monitoreo', () => {
   });
 
   it('should refrescarDatos', () => {
-    const presentesBefore = component.metricas.presentesHoy;
+    const sendSpy = spyOn(middlewareWs, 'send');
     component.refrescarDatos();
-    expect(component.metricas.presentesHoy).toBeGreaterThan(presentesBefore);
-  });
-
-  it('should update tardanza level on many late events', () => {
-    for (let i = 0; i < 30; i++) {
-      component.actualizarDatosTiempoReal();
-    }
+    expect(sendSpy).toHaveBeenCalledWith('device.status');
   });
 
   it('should set ultimaActualizacion on init', () => {
@@ -471,7 +458,7 @@ describe('Monitoreo', () => {
       (component as any).agregarEventoAsistencia('Juan Pérez', '123');
       expect(component.eventos.length).toBe(lenBefore + 1);
       expect(component.eventos[0].nombre).toBe('Juan Pérez');
-      expect(component.metricas.presentesHoy).toBe(1285);
+      expect(component.metricas.presentesHoy).toBe(1);
     });
 
     it('should cap events at 10', () => {
@@ -503,11 +490,10 @@ describe('Monitoreo', () => {
 
   describe('actualizarEscaneresPorMiddleware', () => {
     it('should add physical scanner if not present', () => {
-      const initialLen = component.escaneres.length;
       (component as any).actualizarEscaneresPorMiddleware({
         type: 'device.status.changed', success: true, isConnected: true, message: 'Conectado',
       });
-      expect(component.escaneres.length).toBe(initialLen + 1);
+      expect(component.escaneres.length).toBe(1);
       expect(component.escaneres[0].fisico).toBeTrue();
       expect(component.escaneres[0].online).toBeTrue();
     });
@@ -539,11 +525,11 @@ describe('Monitoreo', () => {
       component.ngOnDestroy();
     });
 
-    it('should set up interval for real-time updates', fakeAsync(() => {
+    it('should set up interval for ultimaActualizacion update', fakeAsync(() => {
       component.ngOnInit();
-      const eventosBefore = component.eventos.length;
+      const textBefore = component.ultimaActualizacionTexto();
       tick(30000);
-      expect(component.eventos.length).toBeGreaterThanOrEqual(eventosBefore);
+      expect(component.ultimaActualizacionTexto()).toBeDefined();
       component.ngOnDestroy();
       discardPeriodicTasks();
     }));
@@ -557,21 +543,7 @@ describe('Monitoreo', () => {
     });
   });
 
-  describe('actualizarDatosTiempoReal and nivelTardanza', () => {
-    it('should set nivelTardanza to MEDIO when tardanzas > 20', () => {
-      component.metricas.tardanzas = 21;
-      component.metricas.nivelTardanza = 'BAJO';
-      spyOn(Monitoreo as any, 'secureRandom').and.returnValue(0.9);
-      component.actualizarDatosTiempoReal();
-      expect(component.metricas.nivelTardanza).toBe('MEDIO');
-    });
 
-    it('should set nivelTardanza to ALTO when tardanzas > 50', () => {
-      component.metricas.tardanzas = 55;
-      component.actualizarDatosTiempoReal();
-      expect(component.metricas.nivelTardanza).toBe('ALTO');
-    });
-  });
 
   describe('eliminarEvento metrics update', () => {
     it('should decrease tardanzas when deleting a late event', () => {
@@ -610,41 +582,9 @@ describe('Monitoreo', () => {
     });
   });
 
-  describe('actualizarMetricasConEvento', () => {
-    it('should increment tardanzas for TARDE event', () => {
-      const before = component.metricas.tardanzas;
-      (component as any).actualizarMetricasConEvento({
-        id: 1, nombre: 'Test', rol: '', hora: '', idDispositivo: '',
-        estado: 'TARDE', escaner: '', ubicacion: '', online: true,
-      });
-      expect(component.metricas.tardanzas).toBe(before + 1);
-    });
 
-    it('should not increment tardanzas for A TIEMPO event', () => {
-      const before = component.metricas.tardanzas;
-      (component as any).actualizarMetricasConEvento({
-        id: 1, nombre: 'Test', rol: '', hora: '', idDispositivo: '',
-        estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true,
-      });
-      expect(component.metricas.tardanzas).toBe(before);
-    });
-  });
 
-  describe('agregarEventoALista', () => {
-    it('should pop oldest when exceeding 10 events', () => {
-      component.eventos = Array.from({ length: 10 }, (_, i) => ({
-        id: i, nombre: 'E', rol: '', hora: '', idDispositivo: '',
-        estado: 'A TIEMPO' as const, escaner: '', ubicacion: '', online: true,
-      }));
-      (component as any).agregarEventoALista({
-        id: 999, nombre: 'New', rol: '', hora: '', idDispositivo: '',
-        estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true,
-      });
-      expect(component.eventos.length).toBe(10);
-      expect(component.eventos[0].id).toBe(999);
-      expect(component.eventos.some(e => e.id === 9)).toBeFalse();
-    });
-  });
+
 
   describe('conectarMiddleware event handlers', () => {
     function dispatch(type: string, data: unknown): void {

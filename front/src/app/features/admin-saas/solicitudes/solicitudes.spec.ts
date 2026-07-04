@@ -89,16 +89,26 @@ describe('Solicitudes', () => {
 
   describe('filtered', () => {
     it('should return all when no filters applied', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
+      fixture.detectChanges();
       expect(component.filtered().length).toBeGreaterThanOrEqual(1);
     });
 
     it('should filter by estado', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
       component.filterEstado.setValue('aprobado');
       fixture.detectChanges();
       expect(component.filtered().every(s => s.estado === 'aprobado')).toBeTrue();
     });
 
     it('should filter by search text', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
       component.filterSearch.setValue('universidad');
       fixture.detectChanges();
       expect(component.filtered().length).toBeGreaterThan(0);
@@ -119,10 +129,18 @@ describe('Solicitudes', () => {
 
   describe('computed totals', () => {
     it('should compute totalPendientes', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
+      fixture.detectChanges();
       expect(component.totalPendientes()).toBeGreaterThan(0);
     });
 
     it('should compute totalAprobadas', () => {
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2026-01-01');
+      component.filterFechaHasta.setValue('2026-12-31');
+      fixture.detectChanges();
       expect(component.totalAprobadas()).toBeGreaterThan(0);
     });
 

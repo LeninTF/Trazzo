@@ -75,72 +75,23 @@ export class Monitoreo implements OnInit, OnDestroy {
   // MÉTRICAS PRINCIPALES
   // ==========================================
   metricas: Metricas = {
-    presentesHoy: 1284,
-    porcentajePresentes: 82,
-    tardanzas: 42,
-    nivelTardanza: 'ALTO',
-    dispositivosActivos: 2,
-    totalDispositivos: 3
+    presentesHoy: 0,
+    porcentajePresentes: 0,
+    tardanzas: 0,
+    nivelTardanza: 'BAJO',
+    dispositivosActivos: 0,
+    totalDispositivos: 0
   };
 
   // ==========================================
   // LISTA DE EVENTOS EN VIVO
   // ==========================================
-  eventos: Evento[] = [
-    {
-      id: 1,
-      nombre: 'Sara Cárdenas',
-      rol: 'Administración',
-      hora: '09:15:30 AM',
-      idDispositivo: 'AX-9124',
-      estado: 'TARDE',
-      escaner: 'ESCÁNER 02',
-      ubicacion: 'PUERTA NORTE',
-      online: true
-    },
-    {
-      id: 2,
-      nombre: 'David Velarde',
-      rol: 'Docente',
-      hora: '07:28:59 AM',
-      idDispositivo: 'AX-8802',
-      estado: 'A TIEMPO',
-      escaner: 'ESCÁNER 01',
-      ubicacion: 'ENTRADA PRINCIPAL',
-      online: true
-    },
-    {
-      id: 3,
-      nombre: 'Juan Peña',
-      rol: 'Docente',
-      hora: '07:13:01 AM',
-      idDispositivo: 'AX-8802',
-      estado: 'A TIEMPO',
-      escaner: 'ESCÁNER 01',
-      ubicacion: 'ENTRADA PRINCIPAL',
-      online: true
-    },
-    {
-      id: 4,
-      nombre: 'Carlos Ramiro',
-      rol: 'Personal de servicio',
-      hora: '05:42:15 AM',
-      idDispositivo: 'AX-8802',
-      estado: 'A TIEMPO',
-      escaner: 'ESCÁNER 01',
-      ubicacion: 'PUERTA NORTE',
-      online: true
-    }
-  ];
+  eventos: Evento[] = [];
 
   // ==========================================
   // LISTA DE ESCÁNERES
   // ==========================================
-  escaneres: Escaner[] = [
-    { id: 1, nombre: 'Escáner 01', ubicacion: 'PRINCIPAL', online: true },
-    { id: 2, nombre: 'Escáner 02', ubicacion: 'PUERTA NORTE', online: false },
-    { id: 3, nombre: 'Escáner 01', ubicacion: 'ENTRADA PRINCIPAL', online: true }
-  ];
+  escaneres: Escaner[] = [];
 
   // ==========================================
   // BIOMETRIC STATE
@@ -235,7 +186,6 @@ export class Monitoreo implements OnInit, OnDestroy {
     this.actualizarTextoUltimaActualizacion();
 
     this.intervalId = setInterval(() => {
-      this.actualizarDatosTiempoReal();
       this.actualizarTextoUltimaActualizacion();
     }, 30000);
 
@@ -526,55 +476,6 @@ export class Monitoreo implements OnInit, OnDestroy {
   }
 
   // ==========================================
-  // MÉTODOS DE ACTUALIZACIÓN
-  // ==========================================
-
-  actualizarDatosTiempoReal(): void {
-    this.ultimaActualizacion = new Date();
-    const nuevoEvento = this.crearEventoSimulado();
-    this.agregarEventoALista(nuevoEvento);
-    this.actualizarMetricasConEvento(nuevoEvento);
-  }
-
-  private crearEventoSimulado(): Evento {
-    const nombres = ['María López', 'Pedro Sánchez', 'Ana García', 'Luis Fernández'];
-    const roles = ['Administración', 'Docente', 'Personal de servicio', 'Invitado'];
-    const escaneres = ['ESCÁNER 01', 'ESCÁNER 02', 'ESCÁNER 03'];
-    const ubicaciones = ['ENTRADA PRINCIPAL', 'PUERTA NORTE', 'PUERTA SUR'];
-    return {
-      id: Date.now(),
-      nombre: nombres[Monitoreo.secureRandomInt(nombres.length)],
-      rol: roles[Monitoreo.secureRandomInt(roles.length)],
-      hora: new Date().toLocaleTimeString(),
-      idDispositivo: `AX-${Monitoreo.secureRandomInt(9000) + 1000}`,
-      estado: Monitoreo.secureRandom() > 0.8 ? 'TARDE' : 'A TIEMPO',
-      escaner: escaneres[Monitoreo.secureRandomInt(escaneres.length)],
-      ubicacion: ubicaciones[Monitoreo.secureRandomInt(ubicaciones.length)],
-      online: true,
-    };
-  }
-
-  private agregarEventoALista(evento: Evento): void {
-    this.eventos.unshift(evento);
-    if (this.eventos.length > 10) {
-      this.eventos.pop();
-    }
-  }
-
-  private actualizarMetricasConEvento(evento: Evento): void {
-    this.metricas.presentesHoy += 1;
-    this.metricas.porcentajePresentes = Math.floor((this.metricas.presentesHoy / 1500) * 100);
-    if (evento.estado === 'TARDE') {
-      this.metricas.tardanzas += 1;
-      if (this.metricas.tardanzas > 50) {
-        this.metricas.nivelTardanza = 'ALTO';
-      } else if (this.metricas.tardanzas > 20) {
-        this.metricas.nivelTardanza = 'MEDIO';
-      }
-    }
-  }
-
-  // ==========================================
   // MÉTODOS PARA ESCÁNERES
   // ==========================================
 
@@ -698,7 +599,7 @@ export class Monitoreo implements OnInit, OnDestroy {
 
   refrescarDatos(): void {
     this.middlewareWs.send('device.status');
-    this.actualizarDatosTiempoReal();
+    this.ultimaActualizacion = new Date();
     this.mostrarToast('Datos actualizados correctamente');
   }
 
@@ -719,18 +620,6 @@ export class Monitoreo implements OnInit, OnDestroy {
   // ==========================================
   // UTILITARIOS
   // ==========================================
-
-  private static secureRandomInt(max: number): number {
-    const array = new Uint32Array(1);
-    crypto.getRandomValues(array);
-    return array[0] % max;
-  }
-
-  private static secureRandom(): number {
-    const array = new Uint32Array(1);
-    crypto.getRandomValues(array);
-    return array[0] / 0xFFFFFFFF;
-  }
 
   private mostrarToast(mensaje: string): void {
     this.toastService.info(mensaje);
