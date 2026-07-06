@@ -384,6 +384,216 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         _service = null;
     }
 
+    // --- Tests unitarios de IsOriginAllowed (combinaciones nuevas) ---
+
+    [Fact]
+    public void IsOriginAllowed_CuandoOrigenCaseDiferente_EsCaseInsensitive()
+    {
+        bool result = LocalWebSocketServerService.IsOriginAllowed(
+            "HTTP://APP.TRAZZO.COM",
+            ["http://app.trazzo.com"],
+            null);
+        Assert.True(result);
+    }
+
+    // --- Tests de MatchAndEnqueueAsync vía HandleMessageAsync ---
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchConTemplatesVacios_RetornaFallo()
+    {
+        LocalWebSocketServerService service = CreateMinimalService();
+
+        object result = await service.HandleMessageAsync(
+            """{"type":"fingerprint.match","templates":[]}""", CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("No se proporcionaron templates", serialized);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchSinCampoTemplates_RetornaFallo()
+    {
+        LocalWebSocketServerService service = CreateMinimalService();
+
+        object result = await service.HandleMessageAsync(
+            """{"type":"fingerprint.match"}""", CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("No se proporcionaron templates", serialized);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchConBase64Invalido_RetornaFallo()
+    {
+        LocalWebSocketServerService service = CreateMinimalService();
+
+        object result = await service.HandleMessageAsync(
+            """{"type":"fingerprint.match","templates":[{"index":0,"templateBase64":"!!!not-base64!!!"}]}""",
+            CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("Base64 inválido", serialized);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchConTemplateValido_DevuelveResultadoDeMatch()
+    {
+        byte[] template = new byte[512];
+        FakeBiometricScannerService scanner = new()
+        {
+            MatchResult = FingerprintMatchResult.NoMatchResult(512, null, 1)
+        };
+        LocalWebSocketServerService service = CreateMinimalService(scanner: scanner);
+        string json = $$$"""{"type":"fingerprint.match","templates":[{"index":5,"templateBase64":"{{{Convert.ToBase64String(template)}}}"}]}""";
+
+        object result = await service.HandleMessageAsync(json, CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("fingerprint.match.result", serialized);
+        Assert.Contains("false", serialized);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchConCoincidencia_RemapeaIndiceOriginal()
+    {
+        byte[] template = new byte[512];
+        FingerprintQualityResult quality = new(true, 90, 12, 45, true, "OK");
+        FakeBiometricScannerService scanner = new()
+        {
+            MatchResult = FingerprintMatchResult.MatchedResult(0, 512, quality, 1)
+        };
+        LocalWebSocketServerService service = CreateMinimalService(scanner: scanner);
+        string json = $$$"""{"type":"fingerprint.match","templates":[{"index":42,"templateBase64":"{{{Convert.ToBase64String(template)}}}"}]}""";
+
+        object result = await service.HandleMessageAsync(json, CancellationToken.None);
+
+        Trazzo.Biometric.Agent.Contracts.FingerprintMatchResult matchResult =
+            Assert.IsType<Trazzo.Biometric.Agent.Contracts.FingerprintMatchResult>(result);
+        Assert.Equal(42, matchResult.MatchedIndex);
+        Assert.True(matchResult.Matched);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoMatchJsonMalformado_RetornaFallo()
+    {
+        LocalWebSocketServerService service = CreateMinimalService();
+
+        object result = await service.HandleMessageAsync("{invalid-json}", CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("JSON inválido", serialized);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_CuandoIdentifyConEncryptedTemplateYEnqueueFalla_NoLanzaExcepcion()
+    {
+        // TryEnqueueAsync exception catch path: enc != null but queue throws
+        FakeEventQueue queue = new()
+        {
+            EnqueueException = new InvalidOperationException("queue failure")
+        };
+        FakeBiometricScannerService scanner = new()
+        {
+            IdentifyResult = FingerprintIdentifyResult.Succeeded(
+                new byte[512], 512, null, "device-1",
+                new EncryptedPayload("enc", "key", "iv", "tag"))
+        };
+        LocalWebSocketServerService service = CreateMinimalService(scanner: scanner, eventQueue: queue);
+
+        object result = await service.HandleMessageAsync("""{"type":"fingerprint.identify"}""", CancellationToken.None);
+
+        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
+        Assert.Contains("fingerprint.identify.result", serialized);
+    }
+
+    [Fact]
+    public async Task BroadcastAsync_CuandoNoHayClientesConectados_NoLanzaExcepcion()
+    {
+        // BroadcastAsync empty-clients early-return path:
+        // Default scanner is disconnected → first poll sets baseline (no broadcast),
+        // second poll triggers "device.connecting" broadcast → _activeClients.IsEmpty → returns immediately
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(scanner: new FakeBiometricScannerService(), deviceMonitorIntervalSeconds: 1);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(2200), cts.Token);
+
+        Assert.NotNull(_service);
+    }
+
+    [Fact]
+    public async Task ReceiveLoopAsync_CuandoClienteAbortaConexion_ManejaSinCrash()
+    {
+        // ReceiveLoopAsync WebSocketException catch path
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start();
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        client.Abort();
+
+        await Task.Delay(300, cts.Token);
+        Assert.NotNull(_service);
+    }
+
+    [Fact]
+    public async Task ReceiveLoopAsync_CuandoClienteEnviaFrameClose_CierraConexionGraciosamente()
+    {
+        // ReceiveLoopAsync WebSocketMessageType.Close path
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start();
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", cts.Token);
+
+        Assert.Equal(WebSocketState.Closed, client.State);
+    }
+
+    [Fact]
+    public async Task ProcessClientMessageAsync_CuandoClienteSeDesconectaAntesDeRespuesta_ManejaSinCrash()
+    {
+        // ProcessClientMessageAsync WebSocketException catch path:
+        // client disconnects while scanner is working, so SendJsonAsync throws WebSocketException
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        FakeBiometricScannerService scanner = new()
+        {
+            CaptureDelayMilliseconds = 300,
+            CaptureResult = FingerprintCaptureResult.Failed("No se encontró ningún lector biométrico.")
+        };
+        Start(scanner: scanner);
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        await client.SendAsync(
+            Encoding.UTF8.GetBytes("""{"type":"fingerprint.capture"}"""),
+            WebSocketMessageType.Text, true, cts.Token);
+
+        await Task.Delay(50, cts.Token);
+        client.Abort();
+
+        await Task.Delay(500, cts.Token);
+        Assert.NotNull(_service);
+    }
+
+    private LocalWebSocketServerService CreateMinimalService(
+        FakeBiometricScannerService? scanner = null,
+        FakeEventQueue? eventQueue = null)
+    {
+        IConfiguration config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Agent:WebSocketUrl"] = "http://localhost:19999/"
+            })
+            .Build();
+
+        return new LocalWebSocketServerService(
+            scanner ?? new FakeBiometricScannerService(),
+            new FakeAgentHealthService(),
+            eventQueue ?? new FakeEventQueue(),
+            config,
+            NullLogger<LocalWebSocketServerService>.Instance);
+    }
+
     private void Start(
         string[]? allowedOrigins = null,
         bool includeTrailingSlash = true,

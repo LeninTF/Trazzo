@@ -926,6 +926,295 @@ public sealed class ZKTecoScannerServiceTests
         Assert.True(status.Success);
     }
 
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoCoincide_DevuelveMatchedResult()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(template: capturedTemplate);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+        var templates = new List<(int Index, byte[] Template)>
+        {
+            (0, new byte[512]),
+            (1, new byte[512])
+        };
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync(templates, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(result.Matched);
+        Assert.NotNull(result.MatchedIndex);
+        Assert.Equal(2, result.TemplatesProvided);
+        Assert.Equal("fingerprint.match.result", result.Type);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoNoCoincide_DevuelveNoMatch()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBMatchResult = 1
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+        var templates = new List<(int Index, byte[] Template)> { (0, new byte[512]) };
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync(templates, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.False(result.Matched);
+        Assert.Null(result.MatchedIndex);
+        Assert.Equal(1, result.TemplatesProvided);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoSinLector_RetornaFallo()
+    {
+        FakeZKTecoNativeSdk sdk = new() { DeviceCount = 0 };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("No se encontró ningún lector biométrico conectado.", result.Message);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoHayOperacionEnProgreso_RetornaOcupado()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureDelayMilliseconds: 200);
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+        Task<Trazzo.Biometric.Agent.Contracts.FingerprintCaptureResult> capture =
+            service.CaptureFingerprintAsync(CancellationToken.None);
+        await Task.Delay(50);
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], CancellationToken.None);
+        await capture;
+
+        Assert.False(result.Success);
+        Assert.Contains("operación biométrica en progreso", result.Message);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoTokenCancelado_RetornaCancelado()
+    {
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        await using ZKTecoScannerService service = CreateService(CreateConnectedSdk());
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], cancellation.Token);
+
+        Assert.False(result.Success);
+        Assert.Equal("Lectura ignorada porque la sesión de captura ya finalizó.", result.Message);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoSdkCancela_RetornaCancelado()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureException: new OperationCanceledException());
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("Lectura ignorada porque la sesión de captura ya finalizó.", result.Message);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoSdkLanzaExcepcion_RetornaFallo()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureException: new InvalidOperationException("match error"));
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("No se pudo verificar la huella contra los templates almacenados.", result.Message);
+    }
+
+    [Fact]
+    public async Task MatchFingerprintAgainstTemplatesAsync_CuandoListaVaciaDeTemplates_DevuelveNoMatch()
+    {
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray(),
+            CaptureResult = 0,
+            DBMatchResult = 1
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.MatchFingerprintAgainstTemplatesAsync([], CancellationToken.None);
+
+        // Loop runs 0 iterations → NoMatchResult (success=true, matched=false)
+        Assert.True(result.Success);
+        Assert.False(result.Matched);
+        Assert.Equal(0, result.TemplatesProvided);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_WhenSerialHasZKPrefix_DeviceIdIsSerialAsIs()
+    {
+        byte[] template = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = template,
+            CaptureResult = 0,
+            DeviceSerialString = "ZK9500-ABCDEF"
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal("ZK9500-ABCDEF", result.DeviceId);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_WhenStringSerialUnavailable_FallsBackToNumericSerial()
+    {
+        byte[] template = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = template,
+            CaptureResult = 0,
+            StringSerialUnavailable = true,
+            SerialAvailable = true,
+            DeviceSerial = 99999
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal("ZK9500-99999", result.DeviceId);
+    }
+
+    [Fact]
+    public async Task GetStatus_WhenCloseDeviceThrows_HandlesExceptionGracefully()
+    {
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CloseDeviceException = new InvalidOperationException("USB error on close")
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        // EnsureDeviceOpen calls CloseCurrentDeviceHandle then re-opens; CloseDevice throws but is caught
+        var status = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.NotNull(status);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_WhenWidthParamUnavailable_HeightValidatesDevice()
+    {
+        byte[] template = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = template,
+            CaptureResult = 0,
+            WidthParameterAvailable = false
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        // IsDeviceHandleValid branch 2: width fails → height succeeds
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task CaptureFingerprintAsync_WhenBothDimensionParamsUnavailable_SerialValidatesDevice()
+    {
+        byte[] template = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = template,
+            CaptureResult = 0,
+            WidthParameterAvailable = false,
+            HeightParameterAvailable = false
+        };
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        // IsDeviceHandleValid branch 3: width fails, height fails → TryReadDeviceSerial succeeds
+        var result = await service.CaptureFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_WhenCaptureIsInProgress_FinalizesOperationGracefully()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(captureDelayMilliseconds: 300);
+        ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        Task<Trazzo.Biometric.Agent.Contracts.FingerprintCaptureResult> capture =
+            service.CaptureFingerprintAsync(CancellationToken.None);
+        await Task.Delay(50);
+
+        await service.DisposeAsync();
+
+        var result = await capture.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.NotNull(result);
+    }
+
+    [Theory]
+    [InlineData(null, 1.75)]
+    [InlineData("", 1.75)]
+    [InlineData("0", 1.75)]
+    [InlineData("1.0", 1.0)]
+    [InlineData("2.5", 1.75)]
+    public void GetStandardizedDoubleConfigurationValue_NormalizaValor(string? configuredValue, double expected)
+    {
+        const string key = "Biometric:CaptureTimeoutSeconds";
+        Dictionary<string, string?> settings = [];
+        if (configuredValue is not null)
+            settings[key] = configuredValue;
+
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings)
+            .Build();
+
+        double value = ZKTecoScannerService.GetStandardizedDoubleConfigurationValue(
+            configuration, key, fallback: 1.75, maximum: 1.75);
+
+        Assert.Equal(expected, value, precision: 2);
+    }
+
     private static ZKTecoScannerService CreateService(
         FakeZKTecoNativeSdk sdk,
         Dictionary<string, string?>? overrides = null)
