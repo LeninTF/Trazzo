@@ -579,7 +579,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         Assert.NotNull(_service);
     }
 
-    private LocalWebSocketServerService CreateMinimalService(
+    private static LocalWebSocketServerService CreateMinimalService(
         FakeBiometricScannerService? scanner = null,
         FakeEventQueue? eventQueue = null)
     {
