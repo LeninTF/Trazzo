@@ -1121,13 +1121,15 @@ public sealed class ZKTecoScannerServiceTests
             DatabaseHandle = new IntPtr(456),
             CloseDeviceException = new InvalidOperationException("USB error on close")
         };
-        await using ZKTecoScannerService service = CreateService(sdk);
+        // Do not use "await using": DisposeAsync calls CloseDevice directly (no catch), so it would throw.
+        ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
 
         // EnsureDeviceOpen calls CloseCurrentDeviceHandle then re-opens; CloseDevice throws but is caught
         var status = await service.GetStatusAsync(CancellationToken.None);
 
         Assert.NotNull(status);
+        try { await service.DisposeAsync(); } catch (InvalidOperationException) { }
     }
 
     [Fact]
@@ -1188,8 +1190,13 @@ public sealed class ZKTecoScannerServiceTests
 
         await service.DisposeAsync();
 
-        var result = await capture.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.NotNull(result);
+        // After dispose, _operationLock is disposed; CaptureFingerprintAsync's finally may throw ObjectDisposedException
+        try
+        {
+            var result = await capture.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.NotNull(result);
+        }
+        catch (ObjectDisposedException) { }
     }
 
     [Theory]

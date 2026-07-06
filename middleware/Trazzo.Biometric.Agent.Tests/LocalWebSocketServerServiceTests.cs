@@ -431,8 +431,10 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
             """{"type":"fingerprint.match","templates":[{"index":0,"templateBase64":"!!!not-base64!!!"}]}""",
             CancellationToken.None);
 
-        string serialized = System.Text.Json.JsonSerializer.Serialize(result);
-        Assert.Contains("Base64 inválido", serialized);
+        // Assert on the typed result to avoid JsonSerializer Unicode-escape issues with 'á'
+        FingerprintMatchResult matchResult = Assert.IsType<FingerprintMatchResult>(result);
+        Assert.False(matchResult.Success);
+        Assert.Contains("Base64", matchResult.Message);
     }
 
     [Fact]
@@ -480,8 +482,10 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         object result = await service.HandleMessageAsync("{invalid-json}", CancellationToken.None);
 
+        // "Mensaje JSON inv" has no accented chars (á comes after these chars), avoids Unicode escape issues
         string serialized = System.Text.Json.JsonSerializer.Serialize(result);
-        Assert.Contains("JSON inválido", serialized);
+        Assert.Contains("error", serialized);
+        Assert.Contains("Mensaje JSON inv", serialized);
     }
 
     [Fact]
