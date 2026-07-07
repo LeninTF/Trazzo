@@ -45,6 +45,7 @@ build/
 
 ### Security ###
 .env
+**/application-local.properties
 
 ### Frontend ###
 # Compiled output
