@@ -1,4 +1,4 @@
-package trazzo.back.saasglobal.infrastructure.security;
+package trazzo.back.shared.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -6,7 +6,6 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import trazzo.back.shared.security.TokenValidator;
 
 import javax.crypto.SecretKey;
 import java.time.Instant;

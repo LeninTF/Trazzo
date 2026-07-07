@@ -1,6 +1,7 @@
 package trazzo.back.shared.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,6 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -33,6 +35,18 @@ public class SecurityConfig {
 
     // CSRF is intentionally disabled: stateless REST API authenticated via JWT Bearer tokens.
     // Cookie-based CSRF attacks do not apply when no session cookies are used.
+    @Bean
+    JwtAuthFilter jwtAuthFilter(TokenValidator tokenValidator, UserDetailsService userDetailsService) {
+        return new JwtAuthFilter(tokenValidator, userDetailsService);
+    }
+
+    @Bean
+    FilterRegistrationBean<JwtAuthFilter> jwtAuthFilterRegistration(JwtAuthFilter jwtAuthFilter) {
+        FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(jwtAuthFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     @SuppressWarnings({"java:S4502", "codeql[java/spring-disabled-csrf-protection]"})
     @Bean
     SecurityFilterChain filterChain(

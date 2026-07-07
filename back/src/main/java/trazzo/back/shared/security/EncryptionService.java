@@ -1,4 +1,4 @@
-package trazzo.back.saasglobal.infrastructure.security;
+package trazzo.back.shared.security;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
