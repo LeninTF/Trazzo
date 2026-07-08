@@ -8,8 +8,9 @@ RUN corepack enable pnpm
 # 1. Copiar los archivos de dependencias primero para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 
-# 2. Instalar dependencias de forma limpia
-RUN pnpm install --ignore-scripts
+# 2. Instalar dependencias de forma limpia, exigiendo que coincidan exactamente
+#    con pnpm-lock.yaml (evita resolver versiones distintas a las fijadas)
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 2.1 Reconstruir explícitamente solo los binarios nativos requeridos por Angular
 RUN pnpm rebuild esbuild @parcel/watcher lmdb msgpackr-extract

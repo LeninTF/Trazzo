@@ -45,7 +45,7 @@ const COLORS = ['#163A96', '#10B981', '#F59E0B', '#6366F1', '#EF4444', '#8B5CF6'
 
 function colorForUser(email: string): string {
   let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  for (const ch of email) hash = (ch.codePointAt(0) ?? 0) + ((hash << 5) - hash);
   return COLORS[Math.abs(hash) % COLORS.length];
 }
 
