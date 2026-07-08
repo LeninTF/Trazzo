@@ -25,7 +25,6 @@ interface Sede {
   descripcion: string;
   estado: 'activo' | 'inactivo';
   areas: Area[];
-  usuarios: number;
 }
 
 @Component({
@@ -85,7 +84,6 @@ export class Sedes implements OnInit {
             descripcion: b.description ?? '',
             estado: b.state ? 'activo' : 'inactivo',
             areas: branchAreas,
-            usuarios: 0,
           };
         });
         this.loading.set(false);
@@ -108,10 +106,6 @@ export class Sedes implements OnInit {
   get totalDepartamentos(): number {
     return this.sedes.reduce((t, s) =>
       t + s.areas.reduce((sub, a) => sub + a.departamentos.length, 0), 0);
-  }
-
-  get totalUsuarios(): number {
-    return 0;
   }
 
   totalDepartamentosPorSede(sede: Sede): number {
