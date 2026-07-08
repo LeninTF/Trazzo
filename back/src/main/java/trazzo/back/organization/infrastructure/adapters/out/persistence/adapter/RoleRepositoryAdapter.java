@@ -32,13 +32,13 @@ public class RoleRepositoryAdapter implements RoleRepositoryPort {
     @Override
     public List<Role> findAll(String search, int page, int size, String sort) {
         var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
-        return roleRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), pageable)
+        return roleRepo.findByFilters(OrgPersistenceUtils.likePattern(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(String search) {
-        return roleRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1)).getTotalElements();
+        return roleRepo.findByFilters(OrgPersistenceUtils.likePattern(search), PageRequest.of(0, 1)).getTotalElements();
     }
 
     @Override

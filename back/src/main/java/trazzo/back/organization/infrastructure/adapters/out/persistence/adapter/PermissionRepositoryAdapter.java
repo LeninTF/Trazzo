@@ -32,13 +32,13 @@ public class PermissionRepositoryAdapter implements PermissionRepositoryPort {
     @Override
     public List<Permissions> findAll(String search, int page, int size, String sort) {
         var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
-        return permissionRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), pageable)
+        return permissionRepo.findByFilters(OrgPersistenceUtils.likePattern(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(String search) {
-        return permissionRepo.findByFilters(OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1)).getTotalElements();
+        return permissionRepo.findByFilters(OrgPersistenceUtils.likePattern(search), PageRequest.of(0, 1)).getTotalElements();
     }
 
     @Override

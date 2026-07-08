@@ -25,4 +25,14 @@ public final class OrgPersistenceUtils {
     public static String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value;
     }
+
+    /**
+     * Builds a lowercase LIKE pattern in Java rather than via JPQL CONCAT(), since Hibernate
+     * binds a null CONCAT() argument as bytea against PostgreSQL, breaking LOWER(name) LIKE ...
+     * queries whenever no search term is provided.
+     */
+    public static String likePattern(String search) {
+        String normalized = blankToNull(search);
+        return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
+    }
 }

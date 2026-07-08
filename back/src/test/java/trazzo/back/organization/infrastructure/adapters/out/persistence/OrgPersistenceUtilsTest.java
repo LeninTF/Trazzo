@@ -94,4 +94,19 @@ class OrgPersistenceUtilsTest {
     void mapField_unknownField_defaultsToName() {
         assertThat(OrgPersistenceUtils.mapField("other")).isEqualTo("name");
     }
+
+    @Test
+    void likePattern_null_returnsNull() {
+        assertThat(OrgPersistenceUtils.likePattern(null)).isNull();
+    }
+
+    @Test
+    void likePattern_blankString_returnsNull() {
+        assertThat(OrgPersistenceUtils.likePattern("   ")).isNull();
+    }
+
+    @Test
+    void likePattern_nonBlankString_wrapsWithWildcardsAndLowercases() {
+        assertThat(OrgPersistenceUtils.likePattern("HeLLo")).isEqualTo("%hello%");
+    }
 }

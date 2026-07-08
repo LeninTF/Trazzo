@@ -18,9 +18,9 @@ public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
     boolean existsByNameAndIdNot(String name, UUID id);
 
     @Query("SELECT r FROM RoleEntity r WHERE " +
-           "(:search IS NULL OR LOWER(r.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(:searchPattern IS NULL OR LOWER(r.name) LIKE :searchPattern)")
     Page<RoleEntity> findByFilters(
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }

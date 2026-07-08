@@ -33,11 +33,12 @@ COPY --from=build /app/dist/front/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 9. Configurar nginx para usuario no-root:
-#    - Los temp paths apuntan a /tmp (via nginx.conf), nginx los crea al arrancar
-#    - run/log dirs pre-creados y cedidos al usuario nginx
+#    - Los temp paths usan /tmp (via nginx.conf), ya escribible por cualquier
+#      usuario sin mkdir/chown adicionales
+#    - run dir pre-creado y cedido al usuario nginx para el pid file
 #    - pid y directiva user ajustados en nginx.conf principal
-RUN mkdir -p /var/run/nginx /var/log/nginx /tmp/nginx && \
-    chown -R nginx:nginx /var/run/nginx /var/log/nginx /tmp/nginx && \
+RUN mkdir -p /var/run/nginx && \
+    chown -R nginx:nginx /var/run/nginx /var/log/nginx && \
     sed -i '/^user /s/^/#/' /etc/nginx/nginx.conf && \
     sed -i 's|^pid .*|pid /var/run/nginx/nginx.pid;|' /etc/nginx/nginx.conf
 

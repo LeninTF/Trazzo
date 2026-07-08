@@ -18,11 +18,11 @@ public interface DepartmentJpaRepository extends JpaRepository<DepartmentEntity,
     @Query("SELECT d FROM DepartmentEntity d WHERE " +
            "(:areaId IS NULL OR d.areaId = :areaId) AND " +
            "(:state IS NULL OR d.state = :state) AND " +
-           "(:search IS NULL OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(:searchPattern IS NULL OR LOWER(d.name) LIKE :searchPattern)")
     Page<DepartmentEntity> findByFilters(
             @Param("areaId") Long areaId,
             @Param("state") Boolean state,
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }

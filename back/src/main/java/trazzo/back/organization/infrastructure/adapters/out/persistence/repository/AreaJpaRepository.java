@@ -18,11 +18,11 @@ public interface AreaJpaRepository extends JpaRepository<AreaEntity, Long> {
     @Query("SELECT a FROM AreaEntity a WHERE " +
            "(:branchId IS NULL OR a.branchId = :branchId) AND " +
            "(:state IS NULL OR a.state = :state) AND " +
-           "(:search IS NULL OR LOWER(a.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(:searchPattern IS NULL OR LOWER(a.name) LIKE :searchPattern)")
     Page<AreaEntity> findByFilters(
             @Param("branchId") Long branchId,
             @Param("state") Boolean state,
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }

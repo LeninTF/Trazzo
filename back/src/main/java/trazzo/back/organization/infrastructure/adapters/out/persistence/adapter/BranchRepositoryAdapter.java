@@ -31,13 +31,13 @@ public class BranchRepositoryAdapter implements BranchRepositoryPort {
     @Override
     public List<Branch> findAll(Boolean state, String search, int page, int size, String sort) {
         var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
-        return branchRepo.findByFilters(state, OrgPersistenceUtils.blankToNull(search), pageable)
+        return branchRepo.findByFilters(state, OrgPersistenceUtils.likePattern(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(Boolean state, String search) {
-        return branchRepo.findByFilters(state, OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1))
+        return branchRepo.findByFilters(state, OrgPersistenceUtils.likePattern(search), PageRequest.of(0, 1))
                 .getTotalElements();
     }
 
