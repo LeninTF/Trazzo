@@ -20,8 +20,11 @@ RUN ./mvnw clean package -DskipTests
 
 # 5. Extraer el JAR en capas (Layered JAR) usando jarmode (Spring Boot 3.3+)
 WORKDIR /build/extracted
-# Spring Boot 3.3+ creates a thin-jar + lib/ structure (not separate spring-boot-loader layer)
-RUN java -Djarmode=tools -jar /build/target/*.jar extract --layers --destination .
+# Sin --launcher, "extract --layers" reescribe el jar de application/ como un jar
+# delgado: Main-Class apunta directo a la app y Class-Path referencia "lib/*.jar"
+# de forma relativa (no usa BOOT-INF ni el loader de Spring Boot). Por eso no se
+# copia la capa spring-boot-loader/: queda vacía en este modo, no hace falta.
+RUN java -Djarmode=tools -jar /build/target/app.jar extract --layers --destination .
 
 # Etapa 2: Imagen de Ejecución Ligera (Runtime)
 FROM eclipse-temurin:21-jre
@@ -30,7 +33,7 @@ WORKDIR /app
 # 6. Crear y usar un usuario sin privilegios (Seguridad)
 RUN groupadd -r trazzo && useradd -r -g trazzo trazzo
 
-# 7. Copiar capas: la layer "application" contiene thin-jar + lib/ de dependencias
+# 7. Copiar capas: dependencies/ trae lib/*.jar, application/ trae el jar delgado (app.jar)
 COPY --from=builder /build/extracted/dependencies/ ./
 COPY --from=builder /build/extracted/snapshot-dependencies/ ./
 COPY --from=builder /build/extracted/application/ ./
@@ -41,5 +44,6 @@ USER trazzo
 # Exponer el puerto estándar del backend
 EXPOSE 8080
 
-# 8. Spring Boot 3.3+ thin-jar con lib/ adyacente; el loader está embebido en el jar
-ENTRYPOINT ["java", "-jar", "back-0.0.1-SNAPSHOT.jar"]
+# 8. finalName=app fijado en pom.xml: el nombre no depende de project.version,
+# así un bump de versión no puede romper este ENTRYPOINT silenciosamente.
+ENTRYPOINT ["java", "-jar", "app.jar"]
