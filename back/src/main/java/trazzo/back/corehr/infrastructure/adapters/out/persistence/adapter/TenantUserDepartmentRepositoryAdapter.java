@@ -10,6 +10,7 @@ import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.Ten
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 
 @Component
 @RequiredArgsConstructor
@@ -37,6 +38,18 @@ public class TenantUserDepartmentRepositoryAdapter implements TenantUserDepartme
                 .stream()
                 .map(TenantUserDepartmentMapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<TenantUserDepartment> findAllByTenantUserId(Long tenantUserId, int page, int size) {
+        var pageable = PageRequest.of(page, size);
+        return tenantUserDepartmentRepo.findByTenantUserId(tenantUserId, pageable)
+                .map(TenantUserDepartmentMapper::toDomain);
+    }
+
+    @Override
+    public long countByTenantUserId(Long tenantUserId) {
+        return tenantUserDepartmentRepo.countByTenantUserId(tenantUserId);
     }
 
     @Override

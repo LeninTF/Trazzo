@@ -1,4 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CorehrService } from '../../../api/services/corehr.service';
+import type { AttendanceProfile } from '../../../api/types';
 
 interface RegistroAsistencia {
   fecha: string;
@@ -15,10 +17,34 @@ interface RegistroAsistencia {
   templateUrl: './historial-asistencia.html',
   styleUrl: './historial-asistencia.css',
 })
-export class HistorialAsistencia {
+export class HistorialAsistencia implements OnInit {
+  private readonly corehrService = inject(CorehrService);
   readonly loading = signal(false);
   readonly error = signal('');
   mesActual = 'Junio 2026';
+  readonly registros = signal<RegistroAsistencia[]>([]);
+
+  ngOnInit(): void {
+    this.cargarHistorial();
+  }
+
+  private cargarHistorial(): void {
+    this.loading.set(true);
+    this.error.set('');
+
+    this.corehrService.listAttendance({ scope: 'SELF', page: 0, size: 50 }).subscribe({
+      next: response => {
+        const registros = response.content.map(attendance => this.toRegistro(attendance));
+        this.registros.set(registros);
+        this.mesActual = this.formatearMes(response.content[0]?.attendance_date ?? new Date().toISOString());
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('No fue posible cargar el historial de asistencia.');
+        this.loading.set(false);
+      },
+    });
+  }
 
   cambiarMes(delta: number): void {
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
@@ -32,33 +58,48 @@ export class HistorialAsistencia {
     this.mesActual = `${meses[nuevoMes]} ${nuevoAnio}`;
   }
 
-  registros: RegistroAsistencia[] = [
-    { fecha: '05/06/2026', ingreso: '06:02', salida: '14:05', turno: 'Mañana', estado: 'A tiempo' },
-    { fecha: '04/06/2026', ingreso: '06:15', salida: '14:10', turno: 'Mañana', estado: 'Tardanza' },
-    { fecha: '03/06/2026', ingreso: '05:58', salida: '14:02', turno: 'Mañana', estado: 'A tiempo' },
-    { fecha: '02/06/2026', ingreso: '06:00', salida: '14:00', turno: 'Mañana', estado: 'A tiempo' },
-    { fecha: '01/06/2026', ingreso: '—', salida: '—', turno: 'Mañana', estado: 'Justificado' },
-    { fecha: '30/05/2026', ingreso: '14:05', salida: '22:08', turno: 'Tarde', estado: 'A tiempo' },
-    { fecha: '29/05/2026', ingreso: '14:00', salida: '22:00', turno: 'Tarde', estado: 'A tiempo' },
-    { fecha: '28/05/2026', ingreso: '14:30', salida: '22:15', turno: 'Tarde', estado: 'Tardanza' },
-    { fecha: '27/05/2026', ingreso: '13:58', salida: '22:02', turno: 'Tarde', estado: 'A tiempo' },
-    { fecha: '26/05/2026', ingreso: '06:00', salida: '14:00', turno: 'Mañana', estado: 'A tiempo' },
-  ];
+  private toRegistro(attendance: AttendanceProfile): RegistroAsistencia {
+    const fecha = new Date(attendance.attendance_date);
+    const estado = this.mapEstado(attendance.state);
+    return {
+      fecha: `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`,
+      ingreso: attendance.check_in?.slice(11, 16) ?? '—',
+      salida: attendance.check_out?.slice(11, 16) ?? '—',
+      turno: attendance.schedule?.name ?? '—',
+      estado,
+    };
+  }
+
+  private mapEstado(state: AttendanceProfile['state']): RegistroAsistencia['estado'] {
+    if (state === 'PUNTUAL') {
+      return 'A tiempo';
+    }
+    if (state === 'TARDANZA') {
+      return 'Tardanza';
+    }
+    return 'Falta';
+  }
+
+  private formatearMes(fechaIso: string): string {
+    const fecha = new Date(fechaIso);
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+    return `${meses[fecha.getMonth()]} ${fecha.getFullYear()}`;
+  }
 
   get completos(): number {
-    return this.registros.filter(r => r.estado === 'A tiempo').length;
+    return this.registros().filter(r => r.estado === 'A tiempo').length;
   }
 
   get tardanzas(): number {
-    return this.registros.filter(r => r.estado === 'Tardanza').length;
+    return this.registros().filter(r => r.estado === 'Tardanza').length;
   }
 
   get faltas(): number {
-    return this.registros.filter(r => r.estado === 'Falta').length;
+    return this.registros().filter(r => r.estado === 'Falta').length;
   }
 
   get justificados(): number {
-    return this.registros.filter(r => r.estado === 'Justificado').length;
+    return this.registros().filter(r => r.estado === 'Justificado').length;
   }
 
   get resumen() {
@@ -71,7 +112,7 @@ export class HistorialAsistencia {
   }
 
   get eficiencia(): number {
-    const total = this.registros.filter(r => r.estado !== 'Falta').length;
+    const total = this.registros().filter(r => r.estado !== 'Falta').length;
     const onTime = this.completos;
     return total > 0 ? Math.round((onTime / total) * 100) : 0;
   }
@@ -87,7 +128,7 @@ export class HistorialAsistencia {
       ['Fecha', 'Turno', 'Ingreso', 'Salida', 'Estado'].join(','),
     ];
 
-    for (const r of this.registros) {
+    for (const r of this.registros()) {
       lineas.push([esc(r.fecha), esc(r.turno), esc(r.ingreso), esc(r.salida), esc(r.estado)].join(','));
     }
 

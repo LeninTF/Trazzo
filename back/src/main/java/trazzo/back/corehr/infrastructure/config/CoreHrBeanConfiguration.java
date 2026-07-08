@@ -61,8 +61,8 @@ public class CoreHrBeanConfiguration {
     }
 
     @Bean
-    public UserBiometriaService userBiometriaUseCase(UserBiometriaRepositoryPort userBiometriaRepo) {
-        return new UserBiometriaService(userBiometriaRepo);
+    public UserBiometriaService userBiometriaUseCase(UserBiometriaRepositoryPort userBiometriaRepo, EnrollService enrollService) {
+        return new UserBiometriaService(userBiometriaRepo, enrollService);
     }
 
     @Bean
