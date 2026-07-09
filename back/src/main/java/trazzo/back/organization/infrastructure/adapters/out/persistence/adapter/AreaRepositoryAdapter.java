@@ -31,13 +31,13 @@ public class AreaRepositoryAdapter implements AreaRepositoryPort {
     @Override
     public List<Area> findAll(Long branchId, Boolean state, String search, int page, int size, String sort) {
         var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
-        return areaRepo.findByFilters(branchId, state, OrgPersistenceUtils.blankToNull(search), pageable)
+        return areaRepo.findByFilters(branchId, state, OrgPersistenceUtils.likePattern(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(Long branchId, Boolean state, String search) {
-        return areaRepo.findByFilters(branchId, state, OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1))
+        return areaRepo.findByFilters(branchId, state, OrgPersistenceUtils.likePattern(search), PageRequest.of(0, 1))
                 .getTotalElements();
     }
 

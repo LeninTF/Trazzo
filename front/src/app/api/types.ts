@@ -663,3 +663,142 @@ export interface EndpointMatch {
   pattern: RegExp;
   paramNames: string[];
 }
+
+// ==========================================
+// SECCIÓN: ORGANIZACIÓN
+// ==========================================
+
+export interface OrgPaginatedResult<T> {
+  content: T[];
+  page: number;
+  size: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface OrgBranchResult {
+  id: number;
+  name: string;
+  description: string | null;
+  state: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgAreaResult {
+  id: number;
+  branchId: number;
+  name: string;
+  description: string | null;
+  state: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgDepartmentResult {
+  id: number;
+  areaId: number;
+  name: string;
+  description: string | null;
+  state: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgRoleResult {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgPermissionResult {
+  id: string;
+  name: string;
+  description: string | null;
+  masterFeaturesCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgRolePermissionResult {
+  roleId: string;
+  permissionId: string;
+  createdAt: string;
+}
+
+export interface OrgUserRoleResult {
+  id: number;
+  tenantUserId: number;
+  roleId: string;
+  departmentId: number | null;
+  createdAt: string;
+}
+
+// ==========================================
+// SECCIÓN: SAAS PLANES
+// ==========================================
+
+export interface SaasPlanResult {
+  id: number;
+  name: string;
+  price: number;
+  currency: string;
+  billingPeriod: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface CreateSaasPlanRequest {
+  name: string;
+  price: number;
+  currency: string;
+  billingPeriod: string;
+}
+
+export interface UpdateSaasPlanRequest {
+  id: number;
+  name: string;
+  price: number;
+  currency: string;
+  billingPeriod: string;
+}
+
+// ==========================================
+// SECCIÓN: AUDITORÍA
+// ==========================================
+
+export interface AuditLogEntry {
+  id: string;
+  eventId: string;
+  fecha: string;
+  tenant: string;
+  tenantId: string;
+  userName: string;
+  userEmail: string;
+  accion: string;
+  tipo: string;
+  entidad: string;
+  entidadId: string;
+  ipAddress: string;
+  userAgent: string;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+}
+
+export interface AuditLogListResponse {
+  content: AuditLogEntry[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface AuditMetricsResult {
+  total_eventos: number;
+  errores: number;
+  sesiones_activas: number;
+  crecimiento: number;
+  porcentaje_sesiones: number;
+}

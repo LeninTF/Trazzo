@@ -1,12 +1,13 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { ToastService } from '../../../services/toast.service';
 import { ExportService } from '../../../services/export.service';
+import { AuditService } from '../../../api/services/audit.service';
 
 interface LogEvento {
-  id: number;
+  id: string;
   fecha: Date;
   hora: string;
   tenant: string;
@@ -34,6 +35,24 @@ interface Metricas {
   porcentajeSesiones: number;
 }
 
+const TIPO_MAP: Record<string, 'exito' | 'advertencia' | 'error'> = {
+  exito: 'exito', success: 'exito',
+  advertencia: 'advertencia', warning: 'advertencia',
+  error: 'error',
+};
+
+const COLORS = ['#163A96', '#10B981', '#F59E0B', '#6366F1', '#EF4444', '#8B5CF6'];
+
+function colorForUser(email: string): string {
+  let hash = 0;
+  for (const ch of email) hash = (ch.codePointAt(0) ?? 0) + ((hash << 5) - hash);
+  return COLORS[Math.abs(hash) % COLORS.length];
+}
+
+function initialsFor(name: string): string {
+  return name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
+}
+
 @Component({
   selector: 'app-log-auditoria',
   standalone: true,
@@ -41,260 +60,163 @@ interface Metricas {
   templateUrl: './log-auditoria.html',
   styleUrl: './log-auditoria.css',
 })
-export class LogAuditoria {
+export class LogAuditoria implements OnInit {
   readonly loading = signal(false);
   readonly error = signal('');
 
   private readonly toastService = inject(ToastService);
   private readonly exportService = inject(ExportService);
-  
-  // ==========================================
-  // DATOS PRINCIPALES
-  // ==========================================
-  
-  logs: LogEvento[] = [
-    {
-      id: 1,
-      fecha: new Date(),
-      hora: '14:23:45',
-      tenant: 'I.E Andres Avelino',
-      tenantId: 'tenant-001',
-      userInitials: 'JD',
-      userName: 'J. Doe',
-      userEmail: 'j.doe@ieaa.edu',
-      userColor: '#163A96',
-      accion: 'Login',
-      tipo: 'exito',
-      entidad: 'Auth Service',
-      entidadId: 'auth/login',
-      eventId: 'EVT-98234-X',
-      ipAddress: '192.168.1.144',
-      userAgent: 'Chrome / MacOS',
-      oldValue: null,
-      newValue: { status: 'success', userId: 'user-001' }
-    },
-    {
-      id: 2,
-      fecha: new Date(),
-      hora: '13:45:12',
-      tenant: 'Trazzo',
-      tenantId: 'tenant-002',
-      userInitials: 'SA',
-      userName: 'S. Admin',
-      userEmail: 'admin@trazzo.com',
-      userColor: '#10B981',
-      accion: 'Update User',
-      tipo: 'exito',
-      entidad: 'Users/1204',
-      entidadId: 'user-1204',
-      eventId: 'EVT-98235-Y',
-      ipAddress: '10.0.0.45',
-      userAgent: 'Firefox / Windows',
-      oldValue: { id: '1204', role: 'editor', status: 'active', mfa_enabled: false },
-      newValue: { id: '1204', role: 'admin', status: 'active', mfa_enabled: true }
-    },
-    {
-      id: 3,
-      fecha: new Date(),
-      hora: '12:10:05',
-      tenant: 'Trazzo',
-      tenantId: 'tenant-002',
-      userInitials: 'RM',
-      userName: 'R. Miller',
-      userEmail: 'r.miller@trazzo.com',
-      userColor: '#F59E0B',
-      accion: 'Delete Tenant',
-      tipo: 'error',
-      entidad: 'Organization/09',
-      entidadId: 'org-09',
-      eventId: 'EVT-98236-Z',
-      ipAddress: '192.168.1.200',
-      userAgent: 'Safari / iOS',
-      oldValue: { name: 'Test Org', status: 'active' },
-      newValue: null
-    },
-    {
-      id: 4,
-      fecha: new Date(Date.now() - 86400000),
-      hora: '23:58:10',
-      tenant: 'I.E Cristo Moreno',
-      tenantId: 'tenant-003',
-      userInitials: 'BT',
-      userName: 'B. Taylor',
-      userEmail: 'b.taylor@iecm.edu',
-      userColor: '#6366F1',
-      accion: 'Config Change',
-      tipo: 'exito',
-      entidad: 'App/Settings',
-      entidadId: 'settings-001',
-      eventId: 'EVT-98237-A',
-      ipAddress: '172.16.0.10',
-      userAgent: 'Edge / Windows',
-      oldValue: { theme: 'light', notifications: true },
-      newValue: { theme: 'dark', notifications: true }
-    },
-    {
-      id: 5,
-      fecha: new Date(Date.now() - 86400000),
-      hora: '22:15:44',
-      tenant: 'Trazzo',
-      tenantId: 'tenant-002',
-      userInitials: 'SA',
-      userName: 'S. Admin',
-      userEmail: 'admin@trazzo.com',
-      userColor: '#10B981',
-      accion: 'Policy Update',
-      tipo: 'advertencia',
-      entidad: 'IAM/Policies',
-      entidadId: 'policy-789',
-      eventId: 'EVT-98238-B',
-      ipAddress: '10.0.0.45',
-      userAgent: 'Firefox / Windows',
-      oldValue: { mfa_required: false, session_timeout: 30 },
-      newValue: { mfa_required: true, session_timeout: 15 }
-    }
-  ];
-  
-  // ==========================================
-  // ESTADO DE FILTROS Y PAGINACIÓN
-  // ==========================================
-  searchTerm: string = '';
-  filtroFecha: string = '';
-  
-  paginaActual: number = 1;
-  itemsPerPage: number = 5;
-  
-  // ==========================================
-  // ESTADO DE DETALLE
-  // ==========================================
+  private readonly auditService = inject(AuditService);
+
+  logs: LogEvento[] = [];
+
+  searchTerm = '';
+  filtroFecha = '';
+  paginaActual = 1;
+  itemsPerPage = 5;
+  totalElementos = 0;
+  totalPaginasServidor = 1;
+
   logSeleccionado: LogEvento | null = null;
-  
-  // ==========================================
-  // MÉTRICAS
-  // ==========================================
+
   metricas: Metricas = {
-    totalEventos: 1240,
-    errores: 12,
-    sesionesActivas: 184,
-    crecimiento: 12,
-    porcentajeSesiones: 15
+    totalEventos: 0,
+    errores: 0,
+    sesionesActivas: 0,
+    crecimiento: 0,
+    porcentajeSesiones: 0,
   };
-  
-  // ==========================================
-  // GETTERS
-  // ==========================================
-  
+
+  ngOnInit(): void {
+    this.cargarLogs();
+    this.cargarMetricas();
+  }
+
+  cargarLogs(): void {
+    this.loading.set(true);
+    this.auditService.listLogs({
+      searchTerm: this.searchTerm || undefined,
+      fecha_desde: this.filtroFecha || undefined,
+      fecha_hasta: this.filtroFecha || undefined,
+      page: this.paginaActual - 1,
+      size: this.itemsPerPage,
+    }).subscribe({
+      next: resp => {
+        this.totalElementos = resp.totalElements;
+        this.totalPaginasServidor = resp.totalPages;
+        this.logs = resp.content.map(e => {
+          const fecha = new Date(e.fecha);
+          return {
+            id: e.id,
+            fecha,
+            hora: fecha.toLocaleTimeString('es-PE', { hour12: false }),
+            tenant: e.tenant,
+            tenantId: e.tenantId,
+            userInitials: initialsFor(e.userName),
+            userName: e.userName,
+            userEmail: e.userEmail,
+            userColor: colorForUser(e.userEmail),
+            accion: e.accion,
+            tipo: TIPO_MAP[e.tipo?.toLowerCase()] ?? 'exito',
+            entidad: e.entidad,
+            entidadId: e.entidadId,
+            eventId: e.eventId,
+            ipAddress: e.ipAddress,
+            userAgent: e.userAgent,
+            oldValue: e.oldValue,
+            newValue: e.newValue,
+          };
+        });
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Error al cargar los logs');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  cargarMetricas(): void {
+    this.auditService.getMetrics().subscribe({
+      next: m => {
+        this.metricas = {
+          totalEventos: m.total_eventos,
+          errores: m.errores,
+          sesionesActivas: m.sesiones_activas,
+          crecimiento: m.crecimiento,
+          porcentajeSesiones: m.porcentaje_sesiones,
+        };
+      },
+      error: () => {},
+    });
+  }
+
   get logsFiltrado(): LogEvento[] {
-    let resultado = this.logs;
-    
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
-      resultado = resultado.filter(l => 
-        l.accion.toLowerCase().includes(term) || 
-        l.entidad.toLowerCase().includes(term) ||
-        l.tenant.toLowerCase().includes(term)
-      );
-    }
-    
-    if (this.filtroFecha) {
-      const fechaFiltro = new Date(this.filtroFecha);
-      resultado = resultado.filter(l => 
-        l.fecha.toDateString() === fechaFiltro.toDateString()
-      );
-    }
-    
-    return resultado;
+    return this.logs;
   }
-  
+
   get logsPaginado(): LogEvento[] {
-    const start = (this.paginaActual - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.logsFiltrado.slice(start, end);
+    return this.logs;
   }
-  
+
   get totalPaginas(): number {
-    return Math.ceil(this.logsFiltrado.length / this.itemsPerPage);
+    return this.totalPaginasServidor;
   }
-  
+
   get inicioRegistro(): number {
-    return this.logsFiltrado.length === 0 ? 0 : (this.paginaActual - 1) * this.itemsPerPage + 1;
+    return this.totalElementos === 0 ? 0 : (this.paginaActual - 1) * this.itemsPerPage + 1;
   }
-  
+
   get finRegistro(): number {
-    return Math.min(this.paginaActual * this.itemsPerPage, this.logsFiltrado.length);
+    return Math.min(this.paginaActual * this.itemsPerPage, this.totalElementos);
   }
-  
-  // ==========================================
-  // MÉTODOS DE FILTRADO
-  // ==========================================
-  
+
   filtrarLogs(): void {
     this.paginaActual = 1;
     this.logSeleccionado = null;
+    this.cargarLogs();
   }
-  
+
   aplicarFiltros(): void {
     this.filtrarLogs();
-    this.mostrarToast(' Filtros aplicados correctamente');
+    this.mostrarToast('Filtros aplicados');
   }
-  
+
   limpiarFiltros(): void {
     this.searchTerm = '';
     this.filtroFecha = '';
     this.filtrarLogs();
-    this.mostrarToast(' Filtros limpiados');
+    this.mostrarToast('Filtros limpiados');
   }
-  
+
   cambiarPagina(pagina: number): void {
     if (pagina >= 1 && pagina <= this.totalPaginas) {
       this.paginaActual = pagina;
       this.logSeleccionado = null;
+      this.cargarLogs();
     }
   }
-  
-  // ==========================================
-  // MÉTODOS DE DETALLE
-  // ==========================================
-  
+
   seleccionarLog(log: LogEvento): void {
-    if (this.logSeleccionado?.id === log.id) {
-      this.logSeleccionado = null;
-    } else {
-      this.logSeleccionado = log;
-    }
+    this.logSeleccionado = this.logSeleccionado?.id === log.id ? null : log;
   }
-  
+
   cerrarDetalle(): void {
     this.logSeleccionado = null;
   }
-  
-  // ==========================================
-  // MÉTODOS DE ACCIÓN
-  // ==========================================
-  
+
   exportarCSV(): void {
     const headers = ['FECHA/HORA', 'TENANT', 'TENANT ID', 'USUARIO', 'ACCION', 'TIPO', 'ENTIDAD', 'ENTIDAD ID', 'IP ADDRESS', 'USER AGENT'];
-    const rows = this.logsFiltrado.map(log => [
+    const rows = this.logs.map(log => [
       `${log.fecha.toLocaleDateString()} ${log.hora}`,
-      log.tenant,
-      log.tenantId,
+      log.tenant, log.tenantId,
       `${log.userName} (${log.userEmail})`,
-      log.accion,
-      log.tipo,
-      log.entidad,
-      log.entidadId,
-      log.ipAddress,
-      log.userAgent
+      log.accion, log.tipo, log.entidad, log.entidadId, log.ipAddress, log.userAgent,
     ]);
-    
     this.exportService.exportCSV(`log-auditoria-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
     this.mostrarToast('Exportando CSV...');
   }
-  
-  // ==========================================
-  // MÉTODOS UTILITARIOS
-  // ==========================================
-  
+
   private mostrarToast(mensaje: string): void {
     this.toastService.info(mensaje);
   }

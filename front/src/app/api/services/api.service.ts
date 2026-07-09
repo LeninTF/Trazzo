@@ -4,6 +4,9 @@ import { UsersService } from './users.service';
 import { IncidentsService } from './incidents.service';
 import { HorariosService } from './horarios.service';
 import { CorehrService } from './corehr.service';
+import { OrgService } from './org.service';
+import { AuditService } from './audit.service';
+import { SaasService } from './saas.service';
 import { tenantUserToPersonal } from './helpers';
 
 @Injectable({ providedIn: 'root' })
@@ -13,6 +16,9 @@ export class ApiService {
   readonly incidents = inject(IncidentsService);
   readonly horarios = inject(HorariosService);
   readonly corehr = inject(CorehrService);
+  readonly org = inject(OrgService);
+  readonly audit = inject(AuditService);
+  readonly saas = inject(SaasService);
 
   /** @deprecated Use `api.auth.login()` */
   login = this.auth.login.bind(this.auth);

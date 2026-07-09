@@ -44,9 +44,9 @@ class DataSeederTest {
         when(userRepository.findByEmail("admin@trazzo.pe")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("admin123")).thenReturn("encoded");
         when(jdbc.queryForObject("SELECT LASTVAL()", Integer.class)).thenReturn(1);
-        when(jdbc.queryForObject("SELECT COUNT(*) FROM roles_master WHERE name = ?", Integer.class, "ADMIN"))
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM roles_master WHERE name = ?", Integer.class, "admin_trazzo"))
                 .thenReturn(0);
-        when(jdbc.queryForObject("SELECT id FROM roles_master WHERE name = ?", Integer.class, "ADMIN"))
+        when(jdbc.queryForObject("SELECT id FROM roles_master WHERE name = ?", Integer.class, "admin_trazzo"))
                 .thenReturn(1);
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.<User>getArgument(0));
 
@@ -56,7 +56,7 @@ class DataSeederTest {
         verify(userRepository).save(userCaptor.capture());
         assertNotNull(userCaptor.getValue().getId());
         verify(jdbc).update(contains("INSERT INTO persons"));
-        verify(jdbc).update(contains("INSERT INTO roles_master"), eq("ADMIN"), eq("Administrator with full access"));
+        verify(jdbc).update(contains("INSERT INTO roles_master"), eq("admin_trazzo"), eq("Administrator with full access"));
         verify(jdbc).update(contains("INSERT INTO user_roles_master"), eq(userCaptor.getValue().getId()), eq(1));
     }
 
@@ -66,9 +66,9 @@ class DataSeederTest {
         when(userRepository.findByEmail("admin@trazzo.pe")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("admin123")).thenReturn("encoded");
         when(jdbc.queryForObject("SELECT LASTVAL()", Integer.class)).thenReturn(1);
-        when(jdbc.queryForObject("SELECT COUNT(*) FROM roles_master WHERE name = ?", Integer.class, "ADMIN"))
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM roles_master WHERE name = ?", Integer.class, "admin_trazzo"))
                 .thenReturn(1);
-        when(jdbc.queryForObject("SELECT id FROM roles_master WHERE name = ?", Integer.class, "ADMIN"))
+        when(jdbc.queryForObject("SELECT id FROM roles_master WHERE name = ?", Integer.class, "admin_trazzo"))
                 .thenReturn(1);
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.<User>getArgument(0));
 

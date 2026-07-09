@@ -88,33 +88,39 @@ export class Solicitudes {
   selectedSolicitud = signal<Solicitud | null>(null);
   confirmAction = signal<{ id: number; action: 'aprobar' | 'rechazar' | 'reconsiderar'; label: string } | null>(null);
 
+  private static daysAgo(offset: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() - offset);
+    return d.toISOString().slice(0, 10);
+  }
+
   readonly allSolicitudes: Solicitud[] = [
-    { id: 1, institucion: 'Universidad Nacional de Ingeniería', contacto: 'Carlos Mendoza', plan: 'Plan Premium', fecha: '2026-06-04', estado: 'pendiente' },
-    { id: 2, institucion: 'Colegio San Agustín', contacto: 'María López', plan: 'Plan Básico', fecha: '2026-06-04', estado: 'aprobado' },
-    { id: 3, institucion: 'Instituto Tecnológico del Sur', contacto: 'Pedro García', plan: 'Plan Empresarial', fecha: '2026-06-03', estado: 'rechazado' },
-    { id: 4, institucion: 'Universidad Católica de Santa María', contacto: 'Ana Torres', plan: 'Plan Premium', fecha: '2026-06-03', estado: 'pendiente' },
-    { id: 5, institucion: 'Colegio La Salle', contacto: 'Luis Fernández', plan: 'Plan Básico', fecha: '2026-06-02', estado: 'aprobado' },
-    { id: 6, institucion: 'Universidad San Martín', contacto: 'Rosa Díaz', plan: 'Plan Empresarial', fecha: '2026-06-02', estado: 'pendiente' },
-    { id: 7, institucion: 'Colegio Santa María', contacto: 'José Ramírez', plan: 'Plan Premium', fecha: '2026-06-01', estado: 'rechazado' },
-    { id: 8, institucion: 'Instituto Peruano de Marketing', contacto: 'Patricia Vega', plan: 'Plan Básico', fecha: '2026-06-01', estado: 'pendiente' },
-    { id: 9, institucion: 'Universidad del Pacífico', contacto: 'Diego Castillo', plan: 'Plan Empresarial', fecha: '2026-05-30', estado: 'aprobado' },
-    { id: 10, institucion: 'Colegio San José', contacto: 'Gabriela Ríos', plan: 'Plan Premium', fecha: '2026-05-30', estado: 'pendiente' },
-    { id: 11, institucion: 'Universidad de Lima', contacto: 'Fernando Paredes', plan: 'Plan Básico', fecha: '2026-05-29', estado: 'rechazado' },
-    { id: 12, institucion: 'Colegio Santo Domingo', contacto: 'Carmen Flores', plan: 'Plan Empresarial', fecha: '2026-05-29', estado: 'aprobado' },
-    { id: 13, institucion: 'Instituto Gauss', contacto: 'Miguel Ángel', plan: 'Plan Premium', fecha: '2026-05-28', estado: 'pendiente' },
-    { id: 14, institucion: 'Universidad Científica del Sur', contacto: 'Valeria Castro', plan: 'Plan Básico', fecha: '2026-05-28', estado: 'aprobado' },
-    { id: 15, institucion: 'Colegio Champagnat', contacto: 'Ricardo Guerra', plan: 'Plan Empresarial', fecha: '2026-05-27', estado: 'pendiente' },
-    { id: 16, institucion: 'Universidad Tecnológica del Perú', contacto: 'Jose Alata', plan: 'Plan Premium', fecha: '2026-05-27', estado: 'aprobado' },
-    { id: 17, institucion: 'Colegio San Ignacio', contacto: 'Sofía Delgado', plan: 'Plan Básico', fecha: '2026-05-26', estado: 'pendiente' },
-    { id: 18, institucion: 'Instituto Peruano de Negocios', contacto: 'Andrés Núñez', plan: 'Plan Empresarial', fecha: '2026-05-26', estado: 'rechazado' },
-    { id: 19, institucion: 'Universidad Ricardo Palma', contacto: 'Mónica Salazar', plan: 'Plan Premium', fecha: '2026-05-25', estado: 'pendiente' },
-    { id: 20, institucion: 'Colegio San Antonio', contacto: 'Jorge Campos', plan: 'Plan Básico', fecha: '2026-05-25', estado: 'aprobado' },
-    { id: 21, institucion: 'Universidad Nacional Mayor de San Marcos', contacto: 'Luisa Huertas', plan: 'Plan Empresarial', fecha: '2026-05-24', estado: 'aprobado' },
-    { id: 22, institucion: 'Colegio Mater Admirabilis', contacto: 'Raúl Zúñiga', plan: 'Plan Premium', fecha: '2026-05-24', estado: 'rechazado' },
-    { id: 23, institucion: 'Instituto Tecnológico del Norte', contacto: 'Cecilia Maldonado', plan: 'Plan Básico', fecha: '2026-05-23', estado: 'pendiente' },
-    { id: 24, institucion: 'Universidad Nacional de Trujillo', contacto: 'Héctor Bravo', plan: 'Plan Empresarial', fecha: '2026-05-23', estado: 'pendiente' },
-    { id: 25, institucion: 'Colegio San Pablo', contacto: 'Diana Quispe', plan: 'Plan Premium', fecha: '2026-05-22', estado: 'rechazado' },
-    { id: 26, institucion: 'Universidad Nacional del Altiplano', contacto: 'Pablo Huamán', plan: 'Plan Básico', fecha: '2026-05-22', estado: 'aprobado' },
+    { id: 1, institucion: 'Universidad Nacional de Ingeniería', contacto: 'Carlos Mendoza', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(0), estado: 'pendiente' },
+    { id: 2, institucion: 'Colegio San Agustín', contacto: 'María López', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(0), estado: 'aprobado' },
+    { id: 3, institucion: 'Instituto Tecnológico del Sur', contacto: 'Pedro García', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(1), estado: 'rechazado' },
+    { id: 4, institucion: 'Universidad Católica de Santa María', contacto: 'Ana Torres', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(1), estado: 'pendiente' },
+    { id: 5, institucion: 'Colegio La Salle', contacto: 'Luis Fernández', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(2), estado: 'aprobado' },
+    { id: 6, institucion: 'Universidad San Martín', contacto: 'Rosa Díaz', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(2), estado: 'pendiente' },
+    { id: 7, institucion: 'Colegio Santa María', contacto: 'José Ramírez', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(3), estado: 'rechazado' },
+    { id: 8, institucion: 'Instituto Peruano de Marketing', contacto: 'Patricia Vega', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(3), estado: 'pendiente' },
+    { id: 9, institucion: 'Universidad del Pacífico', contacto: 'Diego Castillo', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(5), estado: 'aprobado' },
+    { id: 10, institucion: 'Colegio San José', contacto: 'Gabriela Ríos', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(5), estado: 'pendiente' },
+    { id: 11, institucion: 'Universidad de Lima', contacto: 'Fernando Paredes', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(6), estado: 'rechazado' },
+    { id: 12, institucion: 'Colegio Santo Domingo', contacto: 'Carmen Flores', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(6), estado: 'aprobado' },
+    { id: 13, institucion: 'Instituto Gauss', contacto: 'Miguel Ángel', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(7), estado: 'pendiente' },
+    { id: 14, institucion: 'Universidad Científica del Sur', contacto: 'Valeria Castro', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(7), estado: 'aprobado' },
+    { id: 15, institucion: 'Colegio Champagnat', contacto: 'Ricardo Guerra', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(8), estado: 'pendiente' },
+    { id: 16, institucion: 'Universidad Tecnológica del Perú', contacto: 'Jose Alata', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(8), estado: 'aprobado' },
+    { id: 17, institucion: 'Colegio San Ignacio', contacto: 'Sofía Delgado', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(9), estado: 'pendiente' },
+    { id: 18, institucion: 'Instituto Peruano de Negocios', contacto: 'Andrés Núñez', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(9), estado: 'rechazado' },
+    { id: 19, institucion: 'Universidad Ricardo Palma', contacto: 'Mónica Salazar', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(10), estado: 'pendiente' },
+    { id: 20, institucion: 'Colegio San Antonio', contacto: 'Jorge Campos', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(10), estado: 'aprobado' },
+    { id: 21, institucion: 'Universidad Nacional Mayor de San Marcos', contacto: 'Luisa Huertas', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(11), estado: 'aprobado' },
+    { id: 22, institucion: 'Colegio Mater Admirabilis', contacto: 'Raúl Zúñiga', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(11), estado: 'rechazado' },
+    { id: 23, institucion: 'Instituto Tecnológico del Norte', contacto: 'Cecilia Maldonado', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(12), estado: 'pendiente' },
+    { id: 24, institucion: 'Universidad Nacional de Trujillo', contacto: 'Héctor Bravo', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(12), estado: 'pendiente' },
+    { id: 25, institucion: 'Colegio San Pablo', contacto: 'Diana Quispe', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(13), estado: 'rechazado' },
+    { id: 26, institucion: 'Universidad Nacional del Altiplano', contacto: 'Pablo Huamán', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(13), estado: 'aprobado' },
   ];
 
   readonly pendientes = computed(() => this.filtered().filter(s => s.estado === 'pendiente'));

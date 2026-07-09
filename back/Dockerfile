@@ -6,8 +6,8 @@ WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
-# Asegurar permisos de ejecución para el wrapper
-RUN chmod +x ./mvnw
+# Asegurar permisos de ejecución y eliminar CRLF (checkout Windows)
+RUN sed -i 's/\r$//' mvnw && chmod +x ./mvnw
 
 # 2. Descargar las dependencias (optimización de caché de Docker)
 RUN ./mvnw dependency:go-offline
@@ -20,7 +20,11 @@ RUN ./mvnw clean package -DskipTests
 
 # 5. Extraer el JAR en capas (Layered JAR) usando jarmode (Spring Boot 3.3+)
 WORKDIR /build/extracted
-RUN java -Djarmode=tools -jar /build/target/*.jar extract --launcher --layers --destination .
+# Sin --launcher, "extract --layers" reescribe el jar de application/ como un jar
+# delgado: Main-Class apunta directo a la app y Class-Path referencia "lib/*.jar"
+# de forma relativa (no usa BOOT-INF ni el loader de Spring Boot). Por eso no se
+# copia la capa spring-boot-loader/: queda vacía en este modo, no hace falta.
+RUN java -Djarmode=tools -jar /build/target/app.jar extract --layers --destination .
 
 # Etapa 2: Imagen de Ejecución Ligera (Runtime)
 FROM eclipse-temurin:21-jre
@@ -29,9 +33,8 @@ WORKDIR /app
 # 6. Crear y usar un usuario sin privilegios (Seguridad)
 RUN groupadd -r trazzo && useradd -r -g trazzo trazzo
 
-# 7. Copiar las capas extraídas (ordenado por frecuencia de cambio)
+# 7. Copiar capas: dependencies/ trae lib/*.jar, application/ trae el jar delgado (app.jar)
 COPY --from=builder /build/extracted/dependencies/ ./
-COPY --from=builder /build/extracted/spring-boot-loader/ ./
 COPY --from=builder /build/extracted/snapshot-dependencies/ ./
 COPY --from=builder /build/extracted/application/ ./
 
@@ -41,5 +44,6 @@ USER trazzo
 # Exponer el puerto estándar del backend
 EXPOSE 8080
 
-# 8. Punto de entrada utilizando el JarLauncher optimizado
-ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
+# 8. finalName=app fijado en pom.xml: el nombre no depende de project.version,
+# así un bump de versión no puede romper este ENTRYPOINT silenciosamente.
+ENTRYPOINT ["java", "-jar", "app.jar"]

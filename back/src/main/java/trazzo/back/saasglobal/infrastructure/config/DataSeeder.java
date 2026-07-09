@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -12,14 +13,12 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 @Component
-// @Profile("local")
-// TODO: This profile restriction has been removed temporarily so the seeder runs in production.
-//       Disable it (re-add @Profile("local") or set trazzo.seed.admin.enabled=false) before the next push.
+@Profile("local")
 @ConditionalOnProperty(name = "trazzo.seed.admin.enabled", havingValue = "true", matchIfMissing = false)
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
-    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String ADMIN_ROLE = "admin_trazzo";
 
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
