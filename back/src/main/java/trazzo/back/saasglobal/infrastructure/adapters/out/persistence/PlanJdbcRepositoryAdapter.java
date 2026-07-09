@@ -23,7 +23,7 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
             Integer id = jdbc.queryForObject(
                     """
                     INSERT INTO plans (name, price, currency, billing_period, is_active, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?::currency_enum, ?, ?, ?, ?)
                     RETURNING id
                     """,
                     Integer.class,
@@ -42,7 +42,7 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
                 UPDATE plans
                 SET name           = ?,
                     price          = ?,
-                    currency       = ?,
+                    currency       = ?::currency_enum,
                     billing_period = ?,
                     is_active      = ?,
                     updated_at     = ?,
