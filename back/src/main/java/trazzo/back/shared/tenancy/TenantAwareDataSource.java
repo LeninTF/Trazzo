@@ -35,6 +35,13 @@ public class TenantAwareDataSource extends DelegatingDataSource {
     }
 
     private Connection withSchema(Connection connection) throws SQLException {
+        // SET search_path is PostgreSQL-specific syntax; other engines (e.g. the H2
+        // in-memory database used by tests) don't support it and don't need tenant
+        // schema routing in the first place, so skip it for non-PostgreSQL connections.
+        if (!"PostgreSQL".equals(connection.getMetaData().getDatabaseProductName())) {
+            return connection;
+        }
+
         String schema = TenantContext.get();
         if (!VALID_SCHEMA.matcher(schema).matches()) {
             connection.close();

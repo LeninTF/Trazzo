@@ -32,6 +32,10 @@ class TenantSchemaProvisioningAdapterTest {
     private void wireHappyPathConnection() throws SQLException {
         when(rawDataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
+        // ScriptUtils.executeSqlScript loops on getMoreResults()/getUpdateCount() after each
+        // statement until getUpdateCount() reports -1 (JDBC's "no more results" sentinel); an
+        // unstubbed mock defaults to 0, which never satisfies that check and spins forever.
+        when(statement.getUpdateCount()).thenReturn(-1);
         adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
     }
 
