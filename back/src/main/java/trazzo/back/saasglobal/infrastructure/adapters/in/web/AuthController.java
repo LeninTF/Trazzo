@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.Person;
 import trazzo.back.saasglobal.domain.model.iam.User;
+import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
+import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.LoginRequest;
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.LoginResponse;
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.RoleProfileResponse;
@@ -32,16 +35,19 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserRepositoryPort userRepository;
     private final PersonRepositoryPort personRepository;
+    private final TenantRepositoryPort tenantRepository;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
         AuthenticatedUser principal = (AuthenticatedUser) auth.getPrincipal();
-        String token = jwtService.generateToken(principal);
 
         User user = userRepository.findByEmail(principal.email())
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + principal.email()));
+
+        String tenantSchema = resolveTenantSchema(user.getTenantId());
+        String token = jwtService.generateToken(principal, tenantSchema);
 
         Person person = personRepository.findById(user.getPersonId())
                 .orElseThrow(() -> new IllegalStateException("Person not found for user: " + user.getId()));
@@ -72,5 +78,16 @@ public class AuthController {
                         .map(a -> a.getAuthority())
                         .toList()
         ));
+    }
+
+    /** SaaS-admin users have no tenant (tenantId is null) — their token carries no tenant claim. */
+    private String resolveTenantSchema(String tenantId) {
+        if (tenantId == null) {
+            return null;
+        }
+        return tenantRepository.findById(tenantId)
+                .map(Tenant::getSettings)
+                .map(TenantSettings::getSchemaName)
+                .orElse(null);
     }
 }

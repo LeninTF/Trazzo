@@ -12,7 +12,6 @@ import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantBranding;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
-import trazzo.back.shared.security.EncryptionService;
 
 @Repository
 @RequiredArgsConstructor
@@ -28,11 +27,7 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
                 t.created_at       AS t_created_at,
                 t.updated_at       AS t_updated_at,
                 t.deleted_at       AS t_deleted_at,
-                ts.db_name         AS ts_db_name,
-                ts.db_host         AS ts_db_host,
-                ts.db_port         AS ts_db_port,
-                ts.db_user         AS ts_db_user,
-                ts.db_password     AS ts_db_password,
+                ts.schema_name     AS ts_schema_name,
                 ts.created_at      AS ts_created_at,
                 ts.updated_at      AS ts_updated_at,
                 tb.logo_url        AS tb_logo_url,
@@ -47,7 +42,6 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
             """;
 
     private final JdbcTemplate jdbc;
-    private final EncryptionService encryptionService;
 
     @Override
     public Tenant save(Tenant tenant) {
@@ -105,19 +99,14 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
         TenantSettings s = tenant.getSettings();
         jdbc.update("""
                 INSERT INTO tenant_settings
-                    (tenant_id, db_name, db_host, db_port, db_user, db_password, created_at, updated_at)
-                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)
+                    (tenant_id, schema_name, created_at, updated_at)
+                VALUES (?::uuid, ?, ?, ?)
                 ON CONFLICT (tenant_id) DO UPDATE SET
-                    db_name     = EXCLUDED.db_name,
-                    db_host     = EXCLUDED.db_host,
-                    db_port     = EXCLUDED.db_port,
-                    db_user     = EXCLUDED.db_user,
-                    db_password = EXCLUDED.db_password,
+                    schema_name = EXCLUDED.schema_name,
                     updated_at  = EXCLUDED.updated_at
                 """,
                 tenant.getId(),
-                s.getDbName(), s.getDbHost(), s.getDbPort(), s.getDbUser(),
-                encryptionService.encrypt(s.getDbPassword()),
+                s.getSchemaName(),
                 s.getCreatedAt(),
                 s.getUpdatedAt());
     }
@@ -145,14 +134,10 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
         String tenantId = rs.getString("t_id");
 
         TenantSettings settings = null;
-        if (rs.getString("ts_db_name") != null) {
+        if (rs.getString("ts_schema_name") != null) {
             settings = TenantSettings.restore(
                     tenantId,
-                    rs.getString("ts_db_name"),
-                    rs.getString("ts_db_host"),
-                    rs.getString("ts_db_port"),
-                    rs.getString("ts_db_user"),
-                    encryptionService.decrypt(rs.getString("ts_db_password")),
+                    rs.getString("ts_schema_name"),
                     rs.getObject("ts_created_at", LocalDateTime.class),
                     rs.getObject("ts_updated_at", LocalDateTime.class));
         }

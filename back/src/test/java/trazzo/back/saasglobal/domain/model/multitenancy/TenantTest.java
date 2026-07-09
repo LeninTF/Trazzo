@@ -14,7 +14,7 @@ import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 class TenantTest {
 
     private static TenantSettings validSettings() {
-        return TenantSettings.of(null, "localhost", "5432", "testdb", "user", "pass");
+        return TenantSettings.of(null, "tenant_testdb");
     }
 
     /* == createTrial == */

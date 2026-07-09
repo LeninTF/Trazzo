@@ -86,7 +86,7 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
             tenant.activate();
             return toResult(tenantRepository.save(tenant));
         } catch (Exception e) {
-            schemaProvisioning.deprovision(settings.getDbName(), settings.getDbUser());
+            schemaProvisioning.deprovision(settings.getSchemaName());
             throw e;
         }
     }
@@ -105,7 +105,7 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
     }
 
     private TenantSettings buildSettings(CreateTrialTenantCommand cmd) {
-        return TenantSettings.of(null, cmd.dbHost(), cmd.dbPort(), cmd.dbName(), cmd.dbUser(), cmd.dbPassword());
+        return TenantSettings.of(null, TenantSettings.deriveSchemaName(cmd.subDomain()));
     }
 
     private TenantBranding buildBranding(CreateTrialTenantCommand cmd) {

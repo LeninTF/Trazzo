@@ -36,13 +36,12 @@ class TenantProvisioningServiceTest {
     private static CreateTrialTenantCommand trialCmd() {
         return new CreateTrialTenantCommand(
                 "acme", 1, 10,
-                "localhost", "5432", "testdb", "user", "pass",
                 null, null, null, null
         );
     }
 
     private static TenantSettings someSettings() {
-        return TenantSettings.of("t-1", "localhost", "5432", "db", "usr", "pwd");
+        return TenantSettings.of("t-1", "tenant_acme");
     }
 
     /* == createTrial == */

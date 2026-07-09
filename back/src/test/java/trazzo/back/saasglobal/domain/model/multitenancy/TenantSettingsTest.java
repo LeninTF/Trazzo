@@ -13,89 +13,50 @@ class TenantSettingsTest {
     @Test
     void of_setsAllFields() {
         var before = LocalDateTime.now();
-        var s = TenantSettings.of("t-1", "localhost", "5432", "mydb", "user", "pass");
+        var s = TenantSettings.of("t-1", "tenant_demo");
         var after = LocalDateTime.now();
 
         assertEquals("t-1", s.getTenantId());
-        assertEquals("localhost", s.getDbHost());
-        assertEquals("5432", s.getDbPort());
-        assertEquals("mydb", s.getDbName());
-        assertEquals("user", s.getDbUser());
-        assertEquals("pass", s.getDbPassword());
+        assertEquals("tenant_demo", s.getSchemaName());
         assertFalse(s.getCreatedAt().isBefore(before));
         assertFalse(s.getCreatedAt().isAfter(after));
     }
 
     @Test
     void of_nullTenantIdIsAllowed() {
-        assertDoesNotThrow(() -> TenantSettings.of(null, "host", "5432", "db", "u", "p"));
+        assertDoesNotThrow(() -> TenantSettings.of(null, "tenant_demo"));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" "})
-    void of_throwsWhenDbHostBlank(String host) {
+    void of_throwsWhenSchemaNameBlank(String schemaName) {
         assertThrows(IllegalArgumentException.class,
-                () -> TenantSettings.of("t-1", host, "5432", "db", "u", "p"));
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void of_throwsWhenDbPortBlank(String port) {
-        assertThrows(IllegalArgumentException.class,
-                () -> TenantSettings.of("t-1", "host", port, "db", "u", "p"));
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void of_throwsWhenDbNameBlank(String name) {
-        assertThrows(IllegalArgumentException.class,
-                () -> TenantSettings.of("t-1", "host", "5432", name, "u", "p"));
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void of_throwsWhenDbUserBlank(String user) {
-        assertThrows(IllegalArgumentException.class,
-                () -> TenantSettings.of("t-1", "host", "5432", "db", user, "p"));
-    }
-
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void of_throwsWhenDbPasswordBlank(String pass) {
-        assertThrows(IllegalArgumentException.class,
-                () -> TenantSettings.of("t-1", "host", "5432", "db", "u", pass));
+                () -> TenantSettings.of("t-1", schemaName));
     }
 
     @Test
     void restore_setsAllFields() {
         var now = LocalDateTime.now();
-        var s = TenantSettings.restore("t-2", "mydb", "remotehost", "5433", "admin", "secret", now, now);
+        var s = TenantSettings.restore("t-2", "tenant_demo", now, now);
 
         assertEquals("t-2", s.getTenantId());
-        assertEquals("mydb", s.getDbName());
-        assertEquals("remotehost", s.getDbHost());
-        assertEquals("5433", s.getDbPort());
-        assertEquals("admin", s.getDbUser());
-        assertEquals("secret", s.getDbPassword());
+        assertEquals("tenant_demo", s.getSchemaName());
         assertEquals(now, s.getCreatedAt());
         assertEquals(now, s.getUpdatedAt());
     }
 
     @Test
-    void rotatePassword_updatesPassword() {
-        var s = TenantSettings.of("t-1", "host", "5432", "db", "user", "oldpass");
-        s.rotatePassword("newpass");
-        assertEquals("newpass", s.getDbPassword());
+    void deriveSchemaName_sanitizesAndPrefixes() {
+        assertEquals("tenant_universidad_abc", TenantSettings.deriveSchemaName("Universidad-ABC"));
     }
 
     @Test
-    void rotatePassword_throwsWhenBlank() {
-        var s = TenantSettings.of("t-1", "host", "5432", "db", "user", "pass");
-        assertThrows(IllegalArgumentException.class, () -> s.rotatePassword("  "));
+    void deriveSchemaName_truncatesLongSubDomains() {
+        String longSubDomain = "a".repeat(100);
+        String schemaName = TenantSettings.deriveSchemaName(longSubDomain);
+
+        assertTrue(schemaName.length() <= 62);
+        assertTrue(schemaName.startsWith("tenant_"));
     }
 }
