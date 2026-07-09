@@ -7,6 +7,7 @@ import { CorehrService } from './corehr.service';
 import { OrgService } from './org.service';
 import { AuditService } from './audit.service';
 import { SaasService } from './saas.service';
+import { RequestsService } from './requests.service';
 import { tenantUserToPersonal } from './helpers';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,7 @@ export class ApiService {
   readonly org = inject(OrgService);
   readonly audit = inject(AuditService);
   readonly saas = inject(SaasService);
+  readonly requests = inject(RequestsService);
 
   /** @deprecated Use `api.auth.login()` */
   login = this.auth.login.bind(this.auth);

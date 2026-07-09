@@ -799,3 +799,68 @@ export interface AuditMetricsResult {
   crecimiento: number;
   porcentaje_sesiones: number;
 }
+
+// ==========================================
+// SECCIÓN: SOLICITUDES (formulario público de contacto)
+// ==========================================
+
+export type RequestType = 'TRIAL' | 'INFO';
+export type RequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
+
+export interface RequestContactProfile {
+  name: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  taxId: string;
+  companyName: string;
+}
+
+export interface RequestSummary {
+  id: number;
+  type: RequestType;
+  title: string;
+  message: string;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  contact: RequestContactProfile | null;
+}
+
+export interface RequestCommentProfile {
+  id: number;
+  comment: string;
+  authorUserId: string | null;
+  createdAt: string;
+}
+
+export interface RequestHistoryEntry {
+  id: number;
+  status: string;
+  userId: string | null;
+  changeReason: string | null;
+  createdAt: string;
+}
+
+export interface RequestDetail extends RequestSummary {
+  comments: RequestCommentProfile[];
+  history: RequestHistoryEntry[];
+}
+
+export interface RequestListResponse extends PageResponse<RequestSummary> {}
+
+export interface SubmitRequestPayload {
+  type: 'trial' | 'info';
+  name: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  taxId: string;
+  companyName: string;
+  message: string;
+}
+
+export interface ChangeRequestStatusPayload {
+  status: RequestStatus;
+  comment?: string;
+}

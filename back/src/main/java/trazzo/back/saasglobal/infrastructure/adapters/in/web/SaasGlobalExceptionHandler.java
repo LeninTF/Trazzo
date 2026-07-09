@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import trazzo.back.saasglobal.domain.exception.InvalidSubscriptionTransitionException;
+import trazzo.back.saasglobal.domain.exception.RequestRateLimitException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.exception.UserValidationException;
@@ -22,7 +23,9 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
         PlanController.class,
         TenantController.class,
         HoldingController.class,
-        FeatureController.class
+        FeatureController.class,
+        RequestController.class,
+        SaasRequestController.class
 })
 public class SaasGlobalExceptionHandler {
 
@@ -68,6 +71,13 @@ public class SaasGlobalExceptionHandler {
         log.warn("Invalid subscription transition: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RequestRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleRequestRateLimit(RequestRateLimitException ex) {
+        log.warn("Request rate limit: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ErrorResponse(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", ex.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
