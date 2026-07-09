@@ -34,6 +34,9 @@ public class TenantAwareDataSource extends DelegatingDataSource {
         return withSchema(super.getConnection(username, password));
     }
 
+    // Schema is validated against VALID_SCHEMA immediately below before being concatenated;
+    // SET search_path cannot use a JDBC bind parameter for the identifier.
+    @SuppressWarnings("java:S2077")
     private Connection withSchema(Connection connection) throws SQLException {
         // SET search_path is PostgreSQL-specific syntax; other engines (e.g. the H2
         // in-memory database used by tests) don't support it and don't need tenant

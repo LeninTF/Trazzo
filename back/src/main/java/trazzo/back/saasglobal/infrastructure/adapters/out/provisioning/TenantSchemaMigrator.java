@@ -65,6 +65,9 @@ public class TenantSchemaMigrator implements ApplicationRunner {
         }
     }
 
+    // Schema is validated against VALID_SCHEMA immediately below before being concatenated;
+    // SET search_path cannot use a JDBC bind parameter for the identifier.
+    @SuppressWarnings("java:S2077")
     private void migrateTenant(String tenantId, String schemaName) {
         if (schemaName == null || !VALID_SCHEMA.matcher(schemaName).matches()) {
             throw new TenantProvisioningException("Invalid schema name for tenant " + tenantId + ": " + schemaName, null);
