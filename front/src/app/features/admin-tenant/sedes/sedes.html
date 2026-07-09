@@ -40,13 +40,6 @@
 
       <div class="stat-card">
         <div class="stat-card__body">
-          <small class="stat-card__label">TOTAL USUARIOS</small>
-          <h2 class="stat-card__value">{{ totalUsuarios }}</h2>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-card__body">
           <small class="stat-card__label">TOTAL DEPARTAMENTOS</small>
           <h2 class="stat-card__value">{{ totalDepartamentos }}</h2>
         </div>
@@ -91,10 +84,6 @@
             <div class="metric">
               <h4 class="metric__value">{{ sede.areas.length }}</h4>
               <small class="metric__label">ÁREAS</small>
-            </div>
-            <div class="metric">
-              <h4 class="metric__value">{{ sede.usuarios }}</h4>
-              <small class="metric__label">USUARIOS</small>
             </div>
             <div class="metric">
               <h4 class="metric__value">{{ totalDepartamentosPorSede(sede) }}</h4>
@@ -175,13 +164,6 @@
         <div>
           <span class="footer-item__label">ÁREAS</span>
           <span class="footer-item__value">{{ totalAreas }} áreas</span>
-        </div>
-      </div>
-      <div class="footer-item">
-        <i class="bi bi-people"></i>
-        <div>
-          <span class="footer-item__label">USUARIOS</span>
-          <span class="footer-item__value">{{ totalUsuarios }} usuarios</span>
         </div>
       </div>
       <div class="footer-item">

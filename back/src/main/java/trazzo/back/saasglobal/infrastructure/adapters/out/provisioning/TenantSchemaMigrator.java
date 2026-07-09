@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 import trazzo.back.saasglobal.infrastructure.config.ProvisioningProperties;
-import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
+import trazzo.back.shared.security.EncryptionService;
 
 @Slf4j
 @Component

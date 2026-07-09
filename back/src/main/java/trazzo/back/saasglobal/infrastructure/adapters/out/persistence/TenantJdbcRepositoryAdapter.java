@@ -12,7 +12,7 @@ import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantBranding;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
-import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
+import trazzo.back.shared.security.EncryptionService;
 
 @Repository
 @RequiredArgsConstructor

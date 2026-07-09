@@ -22,7 +22,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.saasglobal.infrastructure.config.ProvisioningProperties;
-import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
+import trazzo.back.shared.security.EncryptionService;
 
 @ExtendWith(MockitoExtension.class)
 class TenantSchemaMigratorTest {

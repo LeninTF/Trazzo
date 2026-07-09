@@ -31,13 +31,13 @@ public class DepartmentRepositoryAdapter implements DepartmentRepositoryPort {
     @Override
     public List<Department> findAll(Long areaId, Boolean state, String search, int page, int size, String sort) {
         var pageable = PageRequest.of(page, size, OrgPersistenceUtils.parseSort(sort));
-        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.blankToNull(search), pageable)
+        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.likePattern(search), pageable)
                 .stream().map(OrgMapper::toDomain).toList();
     }
 
     @Override
     public long count(Long areaId, Boolean state, String search) {
-        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.blankToNull(search), PageRequest.of(0, 1))
+        return departmentRepo.findByFilters(areaId, state, OrgPersistenceUtils.likePattern(search), PageRequest.of(0, 1))
                 .getTotalElements();
     }
 

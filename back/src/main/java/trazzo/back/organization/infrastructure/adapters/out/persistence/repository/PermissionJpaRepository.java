@@ -18,9 +18,9 @@ public interface PermissionJpaRepository extends JpaRepository<PermissionEntity,
     boolean existsByNameAndIdNot(String name, UUID id);
 
     @Query("SELECT p FROM PermissionEntity p WHERE " +
-           "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(:searchPattern IS NULL OR LOWER(p.name) LIKE :searchPattern)")
     Page<PermissionEntity> findByFilters(
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }

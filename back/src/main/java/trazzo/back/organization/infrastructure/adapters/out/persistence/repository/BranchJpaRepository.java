@@ -17,10 +17,10 @@ public interface BranchJpaRepository extends JpaRepository<BranchEntity, Long> {
 
     @Query("SELECT b FROM BranchEntity b WHERE " +
            "(:state IS NULL OR b.state = :state) AND " +
-           "(:search IS NULL OR LOWER(b.name) LIKE LOWER(CONCAT('%', :search, '%')))")
+           "(:searchPattern IS NULL OR LOWER(b.name) LIKE :searchPattern)")
     Page<BranchEntity> findByFilters(
             @Param("state") Boolean state,
-            @Param("search") String search,
+            @Param("searchPattern") String searchPattern,
             Pageable pageable
     );
 }

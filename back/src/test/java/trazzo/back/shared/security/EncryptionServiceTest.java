@@ -1,4 +1,4 @@
-package trazzo.back.saasglobal.infrastructure.security;
+package trazzo.back.shared.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,6 +44,22 @@ class EncryptionServiceTest {
     @Test
     void decrypt_throwsOnDataTooShort() {
         assertThatThrownBy(() -> service.decrypt("AAAA"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Decryption failed");
+    }
+
+    @Test
+    void decrypt_throwsOnInvalidBase64Input() {
+        assertThatThrownBy(() -> service.decrypt("!!!not-base64!!!"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Decryption failed");
+    }
+
+    @Test
+    void decrypt_throwsOnCorruptedCiphertext() {
+        byte[] raw = new byte[28];
+        String fakeEncoded = Base64.getEncoder().encodeToString(raw);
+        assertThatThrownBy(() -> service.decrypt(fakeEncoded))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Decryption failed");
     }

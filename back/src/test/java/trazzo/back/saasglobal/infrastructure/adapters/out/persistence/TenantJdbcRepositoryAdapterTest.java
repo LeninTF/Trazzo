@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
-import trazzo.back.saasglobal.infrastructure.security.EncryptionService;
+import trazzo.back.shared.security.EncryptionService;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)

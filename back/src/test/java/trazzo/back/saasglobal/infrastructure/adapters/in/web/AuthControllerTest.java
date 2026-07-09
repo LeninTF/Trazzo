@@ -12,11 +12,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import trazzo.back.saasglobal.infrastructure.security.JwtService;
+import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
+import trazzo.back.saasglobal.domain.model.iam.Person;
+import trazzo.back.saasglobal.domain.model.iam.User;
+import trazzo.back.shared.security.JwtService;
 import trazzo.back.shared.security.AuthenticatedUser;
 import trazzo.back.shared.security.SecurityConfig;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,6 +39,8 @@ class AuthControllerTest {
     @Autowired ObjectMapper objectMapper;
     @MockitoBean JwtService jwtService;
     @MockitoBean AuthenticationManager authenticationManager;
+    @MockitoBean UserRepositoryPort userRepository;
+    @MockitoBean PersonRepositoryPort personRepository;
 
     @Test
     @WithMockUser(username = "admin@test.com", roles = {"ADMIN"})
@@ -46,18 +53,37 @@ class AuthControllerTest {
 
     @Test
     void login_validCredentials_returns200WithToken() throws Exception {
-        var user = new AuthenticatedUser(UUID.randomUUID(), "user@test.com", "pass", List.of(), true);
-        var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
+        var authUser = new AuthenticatedUser(UUID.randomUUID(), "user@test.com", "pass", List.of(), true);
+        var auth = new UsernamePasswordAuthenticationToken(authUser, null, List.of());
         when(authenticationManager.authenticate(any())).thenReturn(auth);
-        when(jwtService.generateToken(user)).thenReturn("jwt.token.here");
-        when(jwtService.getExpirationMs()).thenReturn(86_400_000L);
+        when(jwtService.generateToken(authUser)).thenReturn("jwt.token.here");
+
+        var user = User.restore(
+                UUID.randomUUID().toString(), 1, null,
+                "user@test.com", "999999999", "encodedPass",
+                List.of("admin_trazzo"), null, null, null
+        );
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+
+        var person = Person.restore(
+                1, null, trazzo.back.saasglobal.domain.model.iam.DocumentType.DNI, "00000000",
+                "Admin", "Trazzo", "Sistema",
+                null, null, null
+        );
+        when(personRepository.findById(1)).thenReturn(Optional.of(person));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"user@test.com\",\"password\":\"pass\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt.token.here"))
-                .andExpect(jsonPath("$.expiresIn").value(86_400_000));
+                .andExpect(jsonPath("$.accessToken").value("jwt.token.here"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.usuario.nombre").value("Admin"))
+                .andExpect(jsonPath("$.usuario.apellido_paterno").value("Trazzo"))
+                .andExpect(jsonPath("$.usuario.apellido_materno").value("Sistema"))
+                .andExpect(jsonPath("$.usuario.email").value("user@test.com"))
+                .andExpect(jsonPath("$.usuario.status").value("ACTIVO"))
+                .andExpect(jsonPath("$.usuario.rol[0].name").value("admin_trazzo"));
     }
 
     @Test
@@ -78,4 +104,5 @@ class AuthControllerTest {
                         .content("{\"email\":\"\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest());
     }
+
 }
