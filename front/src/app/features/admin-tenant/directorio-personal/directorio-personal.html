@@ -1,4 +1,3 @@
-<!-- directorio-personal.html -->
 @if (error()) {
 <div class="personal-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
     <div class="text-center">
@@ -147,6 +146,9 @@
                 <button class="btn-action" title="Editar" (click)="abrirModalEditar(persona)">
                   <i class="bi bi-pencil"></i>
                 </button>
+                <button class="btn-action btn-action--enroll" title="Enrolar huella" (click)="abrirModalEnrolar(persona)">
+                  <i class="bi bi-fingerprint"></i>
+                </button>
                 <button class="btn-action" title="Eliminar" (click)="eliminarPersonal(persona.id)">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -194,7 +196,7 @@
       </div>
       <div class="modal-body">
         <div class="form-grid--with-image">
-          
+
           <!-- SECCIÓN DE IMAGEN -->
           <div class="image-upload-section">
             <label class="form-label" for="personal-file-input">Foto del Personal</label>
@@ -209,20 +211,20 @@
               }
             </div>
             <input type="file" id="personal-file-input" accept="image/*" style="display: none" (change)="onFileSelected($event)">
-            
+
             <div class="image-mode-toggle">
               <div class="btn-group w-100">
                 <button type="button" class="btn-toggle" [class.active]="modoImagenUrl" (click)="cambiarModoImagen(true)">URL</button>
                 <button type="button" class="btn-toggle" [class.active]="!modoImagenUrl" (click)="cambiarModoImagen(false)">Subir Archivo</button>
               </div>
             </div>
-            
+
             @if (modoImagenUrl) {
               <label for="personal-imagen-url" class="visually-hidden">URL de imagen</label>
               <input type="text" id="personal-imagen-url" class="form-control mt-2" [(ngModel)]="personalForm.imagenUrl" placeholder="https://ejemplo.com/imagen.jpg" (input)="actualizarPreviewUrl()">
             }
           </div>
-          
+
           <!-- RESTO DEL FORMULARIO -->
           <div class="form-fields">
             <div class="form-grid-2cols">
@@ -333,7 +335,7 @@
             </span>
           </div>
         </div>
-        
+
         <div class="detail-grid">
           <div class="detail-field">
             <span class="detail-label">ID de Personal</span>
@@ -372,6 +374,179 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="cerrarModalDetalle()">Cerrar</button>
         <button class="btn btn-primary" (click)="editarDesdeDetalle()">Editar</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ========================================== -->
+<!-- MODAL: ENROLAR HUELLA                      -->
+<!-- ========================================== -->
+@if (modalEnrolarOpen && personaEnrolar) {
+  <div class="modal-overlay" (click)="cerrarModalEnrolar()" (keydown.enter)="cerrarModalEnrolar()" role="button" tabindex="0">
+    <div class="modal-container modal-container--enroll" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" role="button" tabindex="0">
+      
+      <!-- HEADER -->
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon modal-icon--enroll">
+            <i class="bi bi-fingerprint"></i>
+          </div>
+          <div>
+            <h2 class="modal-title">Enrolar Huella</h2>
+            <span class="modal-id">{{ personaEnrolar.nombre }} · {{ personaEnrolar.idPersonal }}</span>
+          </div>
+        </div>
+        <button class="modal-close" (click)="cerrarModalEnrolar()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Persona info -->
+        <div class="enroll-persona-info">
+          <div class="enroll-avatar">
+            @if (personaEnrolar.imagenUrl) {
+              <img [src]="personaEnrolar.imagenUrl" alt="" class="enroll-avatar__img">
+            } @else {
+              <div class="enroll-avatar__placeholder">
+                <i class="bi bi-person-fill"></i>
+              </div>
+            }
+          </div>
+          <div>
+            <strong>{{ personaEnrolar.nombre }}</strong>
+            <span class="estado-badge mt-1" [class.estado-activo]="personaEnrolar.estado === 'ACTIVO'" [class.estado-prueba]="personaEnrolar.estado === 'PRUEBA'" [class.estado-suspendido]="personaEnrolar.estado === 'SUSPENDIDO'">
+              <span class="estado-dot"></span>
+              {{ personaEnrolar.estado }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Status grid -->
+        <div class="enroll-status-grid">
+          <div class="enroll-status-box">
+            <span class="label">Conexión WS</span>
+            <span class="value" [class.ok]="enrolConnectionState() === 'connected'"
+                  [class.err]="enrolConnectionState() === 'disconnected'"
+                  [class.warn]="enrolConnectionState() === 'connecting' || enrolConnectionState() === 'reconnecting'">
+              {{ enrolConnectionState() === 'connected' ? 'Conectado' :
+                 enrolConnectionState() === 'connecting' ? 'Conectando...' :
+                 enrolConnectionState() === 'reconnecting' ? 'Reconectando...' : 'Desconectado' }}
+            </span>
+          </div>
+          <div class="enroll-status-box">
+            <span class="label">Operación</span>
+            <span class="value">{{ enrolOperationLabel() || '—' }}</span>
+          </div>
+          <div class="enroll-status-box">
+            <span class="label">Progreso</span>
+            <span class="value">{{ enrolProgress() || '—' }}</span>
+          </div>
+          <div class="enroll-status-box">
+            <span class="label">Lector ZK9500</span>
+            <span class="value" [class.ok]="enrolConnectionState() === 'connected'">Conectado</span>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="enroll-toolbar">
+          @if (!enrolCompleted()) {
+            <button class="btn-enroll primary" (click)="iniciarEnrolamiento()"
+                    [disabled]="enrolConnectionState() !== 'connected' || enrolInProgress()">
+              <i class="bi bi-play-fill"></i> Iniciar enrolamiento
+            </button>
+            <button class="btn-enroll danger" (click)="cancelarEnrolamiento()"
+                    [disabled]="!enrolInProgress()">
+              <i class="bi bi-stop-fill"></i> Cancelar
+            </button>
+          } @else {
+            <div class="enroll-result-badge" [class.success]="enrolSuccess()" [class.fail]="!enrolSuccess()">
+              <i class="bi" [class.bi-check-circle-fill]="enrolSuccess()" [class.bi-x-circle-fill]="!enrolSuccess()"></i>
+              {{ enrolSuccess() ? 'Enrolamiento exitoso' : 'Enrolamiento fallido' }}
+            </div>
+            <button class="btn-enroll primary" (click)="reintentarEnrolamiento()">
+              <i class="bi bi-arrow-clockwise"></i> Reintentar
+            </button>
+          }
+        </div>
+
+        <!-- Main content: preview + log -->
+        <div class="enroll-content">
+          <!-- Fingerprint preview -->
+          <div class="enroll-fp-section">
+            <div class="enroll-fp-status">{{ enrolFpStatus() || 'Esperando instrucción...' }}</div>
+            <div class="enroll-fp-preview">
+              @if (enrolFpImageUrl(); as imgUrl) {
+                <img [src]="imgUrl" alt="Huella" class="enroll-fp-image" />
+              } @else {
+                <div class="enroll-fp-empty">
+                  <i class="bi bi-hand-index-thumb"></i>
+                  <span>Sin captura</span>
+                </div>
+              }
+            </div>
+            <div class="enroll-quality">
+              @if (enrolQuality(); as q) {
+                <div class="quality-row">
+                  <span class="label">Calidad</span>
+                  <strong>{{ q.isAcceptable ? 'Aceptable' : 'No aceptable' }}</strong>
+                </div>
+                <div class="quality-row">
+                  <span class="label">Cobertura</span>
+                  <strong>{{ q.foregroundCoveragePercent.toFixed(1) }}%</strong>
+                </div>
+                <div class="quality-row">
+                  <span class="label">Contraste</span>
+                  <strong>{{ q.contrastScore.toFixed(1) }}</strong>
+                </div>
+                <div class="quality-row">
+                  <span class="label">Centrada</span>
+                  <strong>{{ q.isCentered ? 'Sí' : 'No' }}</strong>
+                </div>
+                <div class="quality-row">
+                  <span class="label">Mensaje</span>
+                  <strong>{{ q.message }}</strong>
+                </div>
+              } @else {
+                <div class="quality-row">
+                  <span class="label">Tamaño de template</span>
+                  <strong>{{ enrolTemplateSize() > 0 ? enrolTemplateSize() + ' bytes' : '—' }}</strong>
+                </div>
+                <div class="quality-row">
+                  <span class="label">Vista del template</span>
+                  <strong>{{ enrolTemplatePreview() || '—' }}</strong>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Log console -->
+          <div class="enroll-log">
+            <div class="enroll-log-header">Consola</div>
+            <div class="enroll-log-body">
+              @if (enrolLogs().length === 0) {
+                <div class="enroll-log-empty">Sin eventos.</div>
+              }
+              @for (entry of enrolLogs(); track entry.timestamp + entry.message) {
+                <div class="enroll-log-line"
+                     [class.log-info]="entry.type === 'info'"
+                     [class.log-success]="entry.type === 'success'"
+                     [class.log-error]="entry.type === 'error'"
+                     [class.log-warn]="entry.type === 'warn'">
+                  <span class="log-ts">[{{ entry.timestamp }}]</span>
+                  <span class="log-msg">{{ entry.message }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="cerrarModalEnrolar()">Cerrar</button>
       </div>
     </div>
   </div>

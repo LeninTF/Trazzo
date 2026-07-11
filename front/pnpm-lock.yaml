@@ -74,6 +74,9 @@ importers:
       '@angular/compiler-cli':
         specifier: 21.2.17
         version: 21.2.17(@angular/compiler@21.2.17)(typescript@6.0.3)
+      '@types/bootstrap':
+        specifier: ^5.2.11
+        version: 5.2.11
       '@types/jasmine':
         specifier: ^6.0.0
         version: 6.0.0
@@ -2230,6 +2233,9 @@ packages:
 
   '@types/bonjour@3.5.13':
     resolution: {integrity: sha512-z9fJ5Im06zvUL548KvYNecEVlA7cVDkGUi6kZusb04mpyEFKCIZJvloCcmpmLaIahDpOQGHaHmG6imtPMmPXGQ==}
+
+  '@types/bootstrap@5.2.11':
+    resolution: {integrity: sha512-69ykbLiNzQxi6Q/y/aYJLrlzI5QkLQjhIYW2U+cxujBxAmaBtmXKtxnFes59Ttfpt936as6xJU0dYnmVpcwIwg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -7313,6 +7319,10 @@ snapshots:
   '@types/bonjour@3.5.13':
     dependencies:
       '@types/node': 26.0.1
+
+  '@types/bootstrap@5.2.11':
+    dependencies:
+      '@popperjs/core': 2.11.8
 
   '@types/chai@5.2.3':
     dependencies:
