@@ -49,7 +49,7 @@ describe('SaasService', () => {
   });
 
   it('should create plan', () => {
-    const body = { name: 'Plan Pro', price: 100, currency: 'SOLES', billingPeriod: 'MONTHLY' };
+    const body = { name: 'Plan Pro', price: 100, priceAnnual: 1000, currency: 'SOLES', billingPeriod: 'MONTHLY', features: {} };
     service.createPlan(body).subscribe();
     const req = httpMock.expectOne(`${apiBase}/saas/plans`);
     expect(req.request.method).toBe('POST');
@@ -58,7 +58,7 @@ describe('SaasService', () => {
   });
 
   it('should update plan', () => {
-    const body = { id: 1, name: 'Plan Pro+', price: 120, currency: 'SOLES', billingPeriod: 'MONTHLY' };
+    const body = { id: 1, name: 'Plan Pro+', price: 120, priceAnnual: 1200, currency: 'SOLES', billingPeriod: 'MONTHLY', features: {} };
     service.updatePlan(1, body).subscribe();
     const req = httpMock.expectOne(`${apiBase}/saas/plans/1`);
     expect(req.request.method).toBe('PUT');

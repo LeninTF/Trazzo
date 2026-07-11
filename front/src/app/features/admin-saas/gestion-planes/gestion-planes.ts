@@ -162,26 +162,29 @@ export class GestionPlanes implements OnInit {
     this.loading.set(true);
     this.saasService.listPlans().subscribe({
       next: plans => {
-        this.planes.set(plans.map(p => ({
-          id: p.id,
-          nombre: p.name,
-          sku: `PLAN-${String(p.id).padStart(3, '0')}`,
-          precio: Number(p.price),
-          precioMensual: p.billingPeriod === 'MONTHLY' ? Number(p.price) : Number(p.price) / 12,
-          precioAnual: p.billingPeriod === 'ANNUAL' ? Number(p.price) : Number(p.price) * 12,
-          descripcion: '',
-          maxTrabajadores: 100,
-          maxSedes: 1,
-          almacenamiento: 5,
-          sincronizacionNube: false,
-          modulos: [],
-          reglas: [],
-          moneda: p.currency,
-          periodo: p.billingPeriod,
-          activo: p.active,
-          creadoEn: p.createdAt,
-          ultimaModificacion: { usuario: 'Sistema', fecha: p.createdAt },
-        })));
+        this.planes.set(plans.map(p => {
+          const f = p.features ?? {};
+          return {
+            id: p.id,
+            nombre: p.name,
+            sku: `PLAN-${String(p.id).padStart(3, '0')}`,
+            precio: Number(p.price),
+            precioMensual: Number(p.price),
+            precioAnual: Number(p.priceAnnual ?? 0),
+            descripcion: '',
+            maxTrabajadores: Number(f['max_trabajadores'] ?? 100),
+            maxSedes: Number(f['max_sedes'] ?? 1),
+            almacenamiento: Number(f['almacenamiento_gb'] ?? 5),
+            sincronizacionNube: false,
+            modulos: this.modulosDisponibles.map(m => m.id).filter(id => !!f[id]),
+            reglas: this.reglasDisponibles.map(r => r.id).filter(id => !!f[id]),
+            moneda: p.currency,
+            periodo: p.billingPeriod,
+            activo: p.active,
+            creadoEn: p.createdAt,
+            ultimaModificacion: { usuario: 'Sistema', fecha: p.createdAt },
+          };
+        }));
         this.loading.set(false);
       },
       error: () => {
@@ -208,6 +211,8 @@ export class GestionPlanes implements OnInit {
       maxSedes:        plan.maxSedes,
       almacenamiento:  plan.almacenamiento,
       sincronizacionNube: plan.sincronizacionNube,
+      modulos: Object.fromEntries(this.modulosDisponibles.map(m => [m.id, plan.modulos.includes(m.id)])),
+      reglas: Object.fromEntries(this.reglasDisponibles.map(r => [r.id, plan.reglas.includes(r.id)])),
     });
   }
 
@@ -235,11 +240,20 @@ export class GestionPlanes implements OnInit {
     const v = this.planForm.value;
     const isMonthly = v.periodo === 'MONTHLY';
     const price = isMonthly ? (v.precioMensual ?? 0) : (v.precioAnual ?? 0);
+    const features: Record<string, number | boolean> = {
+      max_trabajadores: v.maxTrabajadores ?? 0,
+      max_sedes: v.maxSedes ?? 0,
+      almacenamiento_gb: v.almacenamiento ?? 0,
+      ...Object.fromEntries(this.modulosDisponibles.map(m => [m.id, !!(v.modulos as Record<string, boolean> | undefined)?.[m.id]])),
+      ...Object.fromEntries(this.reglasDisponibles.map(r => [r.id, !!(v.reglas as Record<string, boolean> | undefined)?.[r.id]])),
+    };
     const body = {
       name: v.nombre!,
       price,
+      priceAnnual: v.precioAnual ?? 0,
       currency: v.moneda ?? 'SOLES',
       billingPeriod: v.periodo ?? 'MONTHLY',
+      features,
     };
 
     this.loading.set(true);

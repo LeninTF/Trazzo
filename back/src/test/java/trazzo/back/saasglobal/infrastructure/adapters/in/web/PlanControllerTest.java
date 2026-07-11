@@ -33,8 +33,8 @@ class PlanControllerTest {
     @MockitoBean PlanUseCase planUseCase;
 
     private static PlanResult result(boolean active) {
-        return new PlanResult(1, "Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY",
-                active, LocalDateTime.now());
+        return new PlanResult(1, "Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999), "SOLES", "MONTHLY",
+                active, LocalDateTime.now(), java.util.Map.of());
     }
 
     @Test

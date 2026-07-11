@@ -741,25 +741,31 @@ export interface SaasPlanResult {
   id: number;
   name: string;
   price: number;
+  priceAnnual: number | null;
   currency: string;
   billingPeriod: string;
   active: boolean;
   createdAt: string;
+  features: Record<string, number | boolean>;
 }
 
 export interface CreateSaasPlanRequest {
   name: string;
   price: number;
+  priceAnnual: number;
   currency: string;
   billingPeriod: string;
+  features: Record<string, number | boolean>;
 }
 
 export interface UpdateSaasPlanRequest {
   id: number;
   name: string;
   price: number;
+  priceAnnual: number;
   currency: string;
   billingPeriod: string;
+  features: Record<string, number | boolean>;
 }
 
 // ==========================================

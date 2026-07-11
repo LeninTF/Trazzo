@@ -10,9 +10,9 @@ describe('GestionPlanes', () => {
   let fixture: ComponentFixture<GestionPlanes>;
 
   const mockPlans = [
-    { id: 1, name: 'Plan Básico', price: 50, currency: 'SOLES', billingPeriod: 'MONTHLY', active: true, createdAt: '2025-01-01T00:00:00' },
-    { id: 2, name: 'Plan Pro', price: 100, currency: 'SOLES', billingPeriod: 'MONTHLY', active: true, createdAt: '2025-01-01T00:00:00' },
-    { id: 3, name: 'Plan Enterprise', price: 1000, currency: 'SOLES', billingPeriod: 'ANNUAL', active: false, createdAt: '2025-01-01T00:00:00' },
+    { id: 1, name: 'Plan Básico', price: 50, priceAnnual: 500, currency: 'SOLES', billingPeriod: 'MONTHLY', active: true, createdAt: '2025-01-01T00:00:00', features: { max_trabajadores: 100, max_sedes: 1, almacenamiento_gb: 5 } },
+    { id: 2, name: 'Plan Pro', price: 100, priceAnnual: 1000, currency: 'SOLES', billingPeriod: 'MONTHLY', active: true, createdAt: '2025-01-01T00:00:00', features: { max_trabajadores: 200, max_sedes: 2, almacenamiento_gb: 10 } },
+    { id: 3, name: 'Plan Enterprise', price: 1000, priceAnnual: 10000, currency: 'SOLES', billingPeriod: 'ANNUAL', active: false, createdAt: '2025-01-01T00:00:00', features: { max_trabajadores: 500, max_sedes: 5, almacenamiento_gb: 50 } },
   ];
 
   const mockSaas = {
@@ -97,9 +97,12 @@ describe('GestionPlanes', () => {
       maxTrabajadores: 100, maxSedes: 5, almacenamiento: 30,
     });
     component.guardarPlan();
-    expect(mockSaas.createPlan).toHaveBeenCalledWith({
-      name: 'Plan Test', price: 50, currency: 'SOLES', billingPeriod: 'MONTHLY',
-    });
+    expect(mockSaas.createPlan).toHaveBeenCalledWith(jasmine.objectContaining({
+      name: 'Plan Test', price: 50, priceAnnual: 500, currency: 'SOLES', billingPeriod: 'MONTHLY',
+      features: jasmine.objectContaining({
+        max_trabajadores: 100, max_sedes: 5, almacenamiento_gb: 30,
+      }),
+    }));
   });
 
   it('should guardarPlan update existing plan', () => {
