@@ -12,6 +12,7 @@ import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 import trazzo.back.incidents.domain.model.IncidentType;
 
 import java.time.LocalDate;
@@ -28,6 +29,7 @@ public class IncidentService implements IncidentUseCase {
     private final IncidentTypeRepositoryPort typeRepository;
     private final TenantUserPort tenantUserPort;
     private final EventPublisherPort eventPublisher;
+    private final FileStoragePort fileStoragePort;
 
     @Override
     public IncidentResult create(CreateIncidentCommand command) {
@@ -150,7 +152,8 @@ public class IncidentService implements IncidentUseCase {
         List<IncidentEvidenceResult> evidenciasResult = incident.getEvidences().stream()
                 .filter(e -> !e.isDeleted())
                 .map(e -> new IncidentEvidenceResult(e.getId(), e.getIncidentId(),
-                        e.getFileName(), e.getFileUrl(), e.getMimeType(), e.getFileSize(),
+                        e.getFileName(), e.getFileKey(), fileStoragePort.buildPublicUrl(e.getFileKey()),
+                        e.getMimeType(), e.getFileSize(),
                         e.getCreatedAt(), e.getUpdatedAt()))
                 .toList();
 

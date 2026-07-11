@@ -12,6 +12,7 @@ import trazzo.back.reports.application.ports.out.EventPublisherPort;
 import trazzo.back.reports.application.ports.out.MonthlyClosureDetailRepositoryPort;
 import trazzo.back.reports.application.ports.out.MonthlyClosureRepositoryPort;
 import trazzo.back.reports.application.ports.out.ReportGenerationPort;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -27,6 +28,7 @@ class ReportsBeanConfigurationTest {
     @Mock private MonthlyClosureDetailRepositoryPort detailRepo;
     @Mock private ReportGenerationPort reportGenerationPort;
     @Mock private EmployeeAttendanceSummaryPort attendanceSummaryPort;
+    @Mock private FileStoragePort fileStoragePort;
     @Mock private EventPublisherPort eventPublisher;
 
     @Test
@@ -46,7 +48,7 @@ class ReportsBeanConfigurationTest {
 
     @Test
     void shouldCreateReportGenerationPort() {
-        assertNotNull(config.reportGenerationPort());
+        assertNotNull(config.reportGenerationPort(fileStoragePort));
     }
 
     @Test

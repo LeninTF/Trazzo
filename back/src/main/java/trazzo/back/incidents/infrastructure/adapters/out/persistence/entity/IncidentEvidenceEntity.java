@@ -27,7 +27,7 @@ public class IncidentEvidenceEntity {
     private String fileName;
 
     @Column(name = "file_url", nullable = false, length = 500)
-    private String fileUrl;
+    private String fileKey;
 
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;

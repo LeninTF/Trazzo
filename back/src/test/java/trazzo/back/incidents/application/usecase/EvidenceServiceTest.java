@@ -10,6 +10,7 @@ import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,13 +20,16 @@ class EvidenceServiceTest {
 
     private IncidentRepositoryPort incidentRepo;
     private EventPublisherPort eventPublisher;
+    private FileStoragePort fileStoragePort;
     private EvidenceService service;
 
     @BeforeEach
     void setUp() {
         incidentRepo = mock(IncidentRepositoryPort.class);
         eventPublisher = mock(EventPublisherPort.class);
-        service = new EvidenceService(incidentRepo, eventPublisher);
+        fileStoragePort = mock(FileStoragePort.class);
+        when(fileStoragePort.buildPublicUrl(any())).thenReturn("http://public-url/test");
+        service = new EvidenceService(incidentRepo, eventPublisher, fileStoragePort);
     }
 
     @Test
@@ -40,7 +44,7 @@ class EvidenceServiceTest {
         var result = service.create("inc-1", command);
 
         assertEquals("doc.pdf", result.fileName());
-        assertEquals("http://url", result.fileUrl());
+        assertEquals("http://public-url/test", result.fileUrl());
         assertEquals("pdf", result.mimeType());
         assertEquals(100, result.fileSize());
         verify(eventPublisher).publish(any());

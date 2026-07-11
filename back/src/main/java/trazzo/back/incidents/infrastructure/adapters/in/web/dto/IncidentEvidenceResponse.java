@@ -10,6 +10,7 @@ public record IncidentEvidenceResponse(
         @JsonProperty("incidencia_id") String incidenciaId,
         @JsonProperty("file_name") String fileName,
         @JsonProperty("file_url") String fileUrl,
+        @JsonProperty("file_key") String fileKey,
         @JsonProperty("mime_type") String mimeType,
         @JsonProperty("file_size") int fileSize,
         @JsonProperty("created_at") LocalDateTime createdAt,
@@ -17,6 +18,6 @@ public record IncidentEvidenceResponse(
 ) {
     public static IncidentEvidenceResponse from(IncidentEvidenceResult result) {
         return new IncidentEvidenceResponse(result.id(), result.incidenciaId(), result.fileName(),
-                result.fileUrl(), result.mimeType(), result.fileSize(), result.createdAt(), result.updatedAt());
+                result.fileUrl(), result.fileKey(), result.mimeType(), result.fileSize(), result.createdAt(), result.updatedAt());
     }
 }

@@ -17,7 +17,7 @@ class IncidentResponseTest {
         var now = LocalDateTime.now();
         var typeResult = new IncidentTypeResult("t-1", "Permiso", "Desc", true, now, now);
         var evidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
-                "http://url", "pdf", 100, now, now);
+                "file-key", "http://url", "pdf", 100, now, now);
         var permissionResult = new IncidentPermissionResult("perm-1", "inc-1",
                 LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now);
         var userResult = new IncidentResult.TenantUserBasicInfoResult(1L, "Juan",

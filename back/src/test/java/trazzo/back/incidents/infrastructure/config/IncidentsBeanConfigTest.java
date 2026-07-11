@@ -8,6 +8,7 @@ import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -20,15 +21,16 @@ class IncidentsBeanConfigTest {
     @Mock private IncidentTypeRepositoryPort typeRepo;
     @Mock private TenantUserPort tenantUserPort;
     @Mock private EventPublisherPort eventPublisher;
+    @Mock private FileStoragePort fileStoragePort;
 
     @Test
     void shouldCreateIncidentUseCase() {
-        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher));
+        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher, fileStoragePort));
     }
 
     @Test
     void shouldCreateEvidenceUseCase() {
-        assertNotNull(config.evidenceUseCase(incidentRepo, eventPublisher));
+        assertNotNull(config.evidenceUseCase(incidentRepo, eventPublisher, fileStoragePort));
     }
 
     @Test

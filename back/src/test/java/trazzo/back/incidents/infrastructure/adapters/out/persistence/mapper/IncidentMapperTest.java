@@ -77,7 +77,7 @@ class IncidentMapperTest {
 
         assertEquals(ev.getIncidentId(), restored.getIncidentId());
         assertEquals(ev.getFileName(), restored.getFileName());
-        assertEquals(ev.getFileUrl(), restored.getFileUrl());
+        assertEquals(ev.getFileKey(), restored.getFileKey());
         assertEquals(ev.getFileSize(), restored.getFileSize());
     }
 
