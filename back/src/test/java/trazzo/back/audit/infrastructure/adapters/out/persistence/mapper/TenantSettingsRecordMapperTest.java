@@ -103,4 +103,90 @@ class TenantSettingsRecordMapperTest {
         assertThrows(IllegalArgumentException.class,
                 () -> TenantSettingsRecordMapper.toDomain(entity));
     }
+
+    @Test
+    void shouldReturnNullForInvalidTenantSettingId() {
+        var now = LocalDateTime.now();
+        var domain = new TenantSettingsRecord(1L, "not-a-uuid", "db", "host",
+                "user", "pass", TEST_USER_ID_1.toString(), "reason", now);
+
+        var entity = TenantSettingsRecordMapper.toEntity(domain);
+
+        assertNull(entity.getTenantSettingId());
+        assertEquals(TEST_USER_ID_1, entity.getUserId());
+    }
+
+    @Test
+    void shouldReturnNullForInvalidUserId() {
+        var now = LocalDateTime.now();
+        var domain = new TenantSettingsRecord(1L, TEST_TENANT_SETTING_ID_1.toString(), "db", "host",
+                "user", "pass", "invalid-user-id", "reason", now);
+
+        var entity = TenantSettingsRecordMapper.toEntity(domain);
+
+        assertEquals(TEST_TENANT_SETTING_ID_1, entity.getTenantSettingId());
+        assertNull(entity.getUserId());
+    }
+
+    @Test
+    void shouldReturnNullForBlankTenantSettingId() {
+        var now = LocalDateTime.now();
+        var domain = new TenantSettingsRecord(1L, "  ", "db", "host",
+                "user", "pass", TEST_USER_ID_1.toString(), "reason", now);
+
+        var entity = TenantSettingsRecordMapper.toEntity(domain);
+
+        assertNull(entity.getTenantSettingId());
+    }
+
+    @Test
+    void shouldReturnNullForNullTenantSettingId() {
+        var now = LocalDateTime.now();
+        var domain = new TenantSettingsRecord(1L, null, "db", "host",
+                "user", "pass", TEST_USER_ID_1.toString(), "reason", now);
+
+        var entity = TenantSettingsRecordMapper.toEntity(domain);
+
+        assertNull(entity.getTenantSettingId());
+    }
+
+    @Test
+    void shouldMapToDomainWithNullTenantSettingId() {
+        var now = LocalDateTime.now();
+        var entity = new TenantSettingsRecordEntity();
+        entity.setId(5L);
+        entity.setTenantSettingId(null);
+        entity.setDbName("db");
+        entity.setDbHost("host");
+        entity.setDbUser("user");
+        entity.setDbPassword("pass");
+        entity.setUserId(TEST_USER_ID_1);
+        entity.setChangeReason("reason");
+        entity.setCreatedAt(now);
+
+        var domain = TenantSettingsRecordMapper.toDomain(entity);
+
+        assertNull(domain.getTenantSettingId());
+        assertEquals(TEST_USER_ID_1.toString(), domain.getUserId());
+        assertEquals("db", domain.getDbName());
+        assertEquals(now, domain.getCreatedAt());
+    }
+
+    @Test
+    void shouldMapToDomainWithNullUserId() {
+        var now = LocalDateTime.now();
+        var entity = new TenantSettingsRecordEntity();
+        entity.setId(6L);
+        entity.setTenantSettingId(TEST_TENANT_SETTING_ID_1);
+        entity.setDbName("db");
+        entity.setDbHost("host");
+        entity.setDbUser("user");
+        entity.setDbPassword("pass");
+        entity.setUserId(null);
+        entity.setChangeReason("reason");
+        entity.setCreatedAt(now);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> TenantSettingsRecordMapper.toDomain(entity));
+    }
 }

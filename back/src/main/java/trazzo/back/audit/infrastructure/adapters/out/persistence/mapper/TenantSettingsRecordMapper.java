@@ -10,15 +10,26 @@ public final class TenantSettingsRecordMapper {
     private TenantSettingsRecordMapper() {
     }
 
+    private static UUID toUUID(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     public static TenantSettingsRecordEntity toEntity(TenantSettingsRecord domain) {
         var entity = new TenantSettingsRecordEntity();
         entity.setId(domain.getId());
-        entity.setTenantSettingId(domain.getTenantSettingId() != null ? UUID.fromString(domain.getTenantSettingId()) : null);
+        entity.setTenantSettingId(toUUID(domain.getTenantSettingId()));
         entity.setDbName(domain.getDbName());
         entity.setDbHost(domain.getDbHost());
         entity.setDbUser(domain.getDbUser());
         entity.setDbPassword(domain.getDbPassword());
-        entity.setUserId(domain.getUserId() != null ? UUID.fromString(domain.getUserId()) : null);
+        entity.setUserId(toUUID(domain.getUserId()));
         entity.setChangeReason(domain.getChangeReason());
         entity.setCreatedAt(domain.getCreatedAt());
         return entity;

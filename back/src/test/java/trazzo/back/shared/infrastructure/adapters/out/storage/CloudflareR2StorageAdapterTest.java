@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -17,12 +18,14 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import trazzo.back.shared.domain.exception.StorageException;
 import trazzo.back.shared.infrastructure.config.CloudflareR2Properties;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.time.Duration;
 import java.util.function.Consumer;
@@ -131,5 +134,61 @@ class CloudflareR2StorageAdapterTest {
         String publicUrl = adapter.buildPublicUrl("evidences/uuid/doc.pdf");
 
         assertEquals("http://localhost:9000/test-bucket/evidences/uuid/doc.pdf", publicUrl);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void shouldInvokePresignerConsumerWithCorrectBuilder() throws Exception {
+        var presignedRequest = mock(PresignedPutObjectRequest.class);
+        when(presignedRequest.url()).thenReturn(URI.create("https://r2.example.com/upload").toURL());
+
+        var putObjBuilder = mock(PutObjectRequest.Builder.class);
+        when(putObjBuilder.bucket(anyString())).thenReturn(putObjBuilder);
+        when(putObjBuilder.key(anyString())).thenReturn(putObjBuilder);
+        when(putObjBuilder.contentType(anyString())).thenReturn(putObjBuilder);
+
+        var presignBuilderMock = mock(PutObjectPresignRequest.Builder.class);
+        when(presignBuilderMock.signatureDuration(any(Duration.class))).thenReturn(presignBuilderMock);
+        doAnswer(inv -> {
+            ((Consumer<PutObjectRequest.Builder>) inv.getArgument(0)).accept(putObjBuilder);
+            return presignBuilderMock;
+        }).when(presignBuilderMock).putObjectRequest(any(Consumer.class));
+
+        ArgumentCaptor<Consumer<PutObjectPresignRequest.Builder>> captor =
+                ArgumentCaptor.forClass(Consumer.class);
+        when(s3Presigner.presignPutObject(captor.capture())).thenReturn(presignedRequest);
+
+        adapter.generatePresignedPutUrl(OBJECT_KEY, CONTENT_TYPE, EXPIRATION);
+
+        Consumer<PutObjectPresignRequest.Builder> captured = captor.getValue();
+        captured.accept(presignBuilderMock);
+
+        verify(presignBuilderMock).signatureDuration(EXPIRATION);
+        verify(presignBuilderMock).putObjectRequest(any(Consumer.class));
+        verify(putObjBuilder).bucket(BUCKET);
+        verify(putObjBuilder).key(OBJECT_KEY);
+        verify(putObjBuilder).contentType(CONTENT_TYPE);
+    }
+
+    @Test
+    void shouldBuildPublicUrlWhenTrailingSlash() {
+        properties.setPublicUrl("http://localhost:9000/test-bucket/");
+        String publicUrl = adapter.buildPublicUrl("evidences/doc.pdf");
+
+        assertEquals("http://localhost:9000/test-bucket/evidences/doc.pdf", publicUrl);
+    }
+
+    @Test
+    void buildPublicUrlShouldThrowWhenPublicUrlIsNull() {
+        properties.setPublicUrl(null);
+
+        assertThrows(StorageException.class, () -> adapter.buildPublicUrl("key"));
+    }
+
+    @Test
+    void buildPublicUrlShouldThrowWhenPublicUrlIsBlank() {
+        properties.setPublicUrl("  ");
+
+        assertThrows(StorageException.class, () -> adapter.buildPublicUrl("key"));
     }
 }
