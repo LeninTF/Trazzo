@@ -6,6 +6,7 @@ import type {
   UserBiometriaProfile, AttendanceProfile, NonWorkingDayProfile,
   TenantContactProfile, TenantUserDepartmentProfile, UserScheduleProfile,
   MasterRoleProfile, PageResponse, PersonaBase, PublicKeyResponse,
+  MonthlyClosure, MonthlyClosureDetail, MonthlyClosureWithDetails,
 } from './types';
 
 const now = new Date().toISOString();
@@ -625,6 +626,99 @@ mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock
 -----END RSA PUBLIC KEY-----`,
   kid: 'pubkey-abc123',
 };
+
+// ==========================================
+// CIERRES MENSUALES (REPORTS)
+// ==========================================
+
+export const mockMonthlyClosures: MonthlyClosure[] = [
+  {
+    id: 'a1b2c3d4-0000-0000-0000-000000000001',
+    month: 6,
+    year: 2026,
+    totalEmployees: 45,
+    excelReportUrl: '/reports/excel/a1b2c3d4-0000-0000-0000-000000000001.xlsx',
+    pdfReportUrl: '/reports/pdf/a1b2c3d4-0000-0000-0000-000000000001.pdf',
+    createdAt: '2026-06-27T10:00:00',
+  },
+  {
+    id: 'c3d4e5f6-0000-0000-0000-000000000003',
+    month: 5,
+    year: 2026,
+    totalEmployees: 42,
+    excelReportUrl: '/reports/excel/c3d4e5f6-0000-0000-0000-000000000003.xlsx',
+    pdfReportUrl: '/reports/pdf/c3d4e5f6-0000-0000-0000-000000000003.pdf',
+    createdAt: '2026-05-28T09:00:00',
+  },
+  {
+    id: 'e5f6a7b8-0000-0000-0000-000000000005',
+    month: 4,
+    year: 2026,
+    totalEmployees: 40,
+    excelReportUrl: '/reports/excel/e5f6a7b8-0000-0000-0000-000000000005.xlsx',
+    pdfReportUrl: '/reports/pdf/e5f6a7b8-0000-0000-0000-000000000005.pdf',
+    createdAt: '2026-04-29T11:30:00',
+  },
+];
+
+export const mockMonthlyClosureDetails: MonthlyClosureDetail[] = [
+  {
+    id: 'b2c3d4e5-0000-0000-0000-000000000002',
+    monthClosureId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    tenantUserId: 1,
+    tenantUserFullName: 'Josselin Anais Rojas Luque',
+    tenantUserDocument: '76543210',
+    departmentName: 'Matemáticas',
+    roleName: 'Super Administrador',
+    totalWorkedHours: 160.5,
+    totalTardinessMinutes: 15,
+    totalAbsences: 0,
+    totalOvertimeHours: 8.0,
+    createdAt: '2026-06-27T10:00:00',
+  },
+  {
+    id: 'c3d4e5f6-0000-0000-0000-000000000004',
+    monthClosureId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    tenantUserId: 2,
+    tenantUserFullName: 'Carlos Alberto Mendoza González',
+    tenantUserDocument: '87654321',
+    departmentName: 'Comunicación',
+    roleName: 'Administrador',
+    totalWorkedHours: 168.0,
+    totalTardinessMinutes: 30,
+    totalAbsences: 1,
+    totalOvertimeHours: 4.5,
+    createdAt: '2026-06-27T10:00:00',
+  },
+  {
+    id: 'd4e5f6a7-0000-0000-0000-000000000006',
+    monthClosureId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    tenantUserId: 3,
+    tenantUserFullName: 'María Fernanda López Torres',
+    tenantUserDocument: '98765432',
+    departmentName: 'Arte y Cultura',
+    roleName: 'Supervisor',
+    totalWorkedHours: 152.0,
+    totalTardinessMinutes: 0,
+    totalAbsences: 2,
+    totalOvertimeHours: 0,
+    createdAt: '2026-06-27T10:00:00',
+  },
+  {
+    id: 'f6a7b8c9-0000-0000-0000-000000000008',
+    monthClosureId: 'a1b2c3d4-0000-0000-0000-000000000001',
+    tenantUserId: 4,
+    tenantUserFullName: 'Roberto Castro Díaz',
+    tenantUserDocument: '12345678',
+    departmentName: 'Ciencias',
+    roleName: 'Trabajador',
+    totalWorkedHours: 172.0,
+    totalTardinessMinutes: 45,
+    totalAbsences: 0,
+    totalOvertimeHours: 12.0,
+    createdAt: '2026-06-27T10:00:00',
+  },
+];
 
 // ==========================================
 // HELPER: PAGINAR RESPUESTAS

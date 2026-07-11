@@ -8,11 +8,18 @@ import {
   mockUserSchedules, mockDevices, mockBiometria, mockAttendance,
   mockNonWorkingDays, mockTenantContacts, mockUserDepartments,
   mockPublicKey, paginate,
+  mockMonthlyClosures, mockMonthlyClosureDetails,
 } from './mock-data';
 import type { AuthResponse, MessageResponse, SoftDeleteResponse } from './types';
 import { API_BASE_URL } from './services/helpers';
 
 const MOCK_DELAY = 200;
+
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
 
 /** @internal used in tests to provide apiBase without injection context */
 let _testApiBase: string | undefined;
@@ -92,6 +99,7 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
   if (!url.startsWith('/auth/') && !url.startsWith('/usuarios') && !url.startsWith('/saas/')
     && !url.startsWith('/incidentes') && !url.startsWith('/corehr/')
     && !url.startsWith('/asistencia/') && !url.startsWith('/security/')
+    && !url.startsWith('/audit/') && !url.startsWith('/reports/')
     && !url.startsWith('/ws/')) {
     return next(req);
   }
@@ -147,6 +155,11 @@ function handleRoute(
     handleCorehrNonWorkingDays(method, u, req, page, size, qp) ??
     handleCorehrTenantContacts(method, u, req, page, size, qp) ??
     handleCorehrUserDepartments(method, u, req, page, size, qp) ??
+    handleAuditLogs(method, u, req, page, size, qp) ??
+    handleAuditMetrics(method, u, req, page, size, qp) ??
+    handleReportsClosures(method, u, req, page, size, qp) ??
+    handleReportsClosureDetails(method, u, req, page, size, qp) ??
+    handleReportsMonthlyReports(method, u, req, page, size, qp) ??
     handleWebsocket(method, u, req, page, size, qp) ??
     null
   );
@@ -1107,6 +1120,133 @@ function handleWebsocket(
         { channel: '/topic/tenant/{tenantId}/incidents', description: 'Nuevas incidencias' },
       ],
     });
+  }
+  return null;
+}
+
+// ==========================================
+// AUDIT MOCK HANDLERS
+// ==========================================
+
+const mockAuditLogs = [
+  { id: '1', eventId: 'EVT-98234-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Josselin Rojas', userEmail: 'josselin.rojas@colegio.edu.pe', accion: 'CREATE', tipo: 'exito', entidad: 'Usuario', entidadId: 'TU-0001', ipAddress: '192.168.1.10', userAgent: 'Mozilla/5.0', oldValue: null, newValue: { name: 'Nuevo usuario' } },
+  { id: '2', eventId: 'EVT-98235-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Carlos Mendoza', userEmail: 'carlos.mendoza@colegio.edu.pe', accion: 'UPDATE', tipo: 'exito', entidad: 'Horario', entidadId: 'SH-0003', ipAddress: '192.168.1.15', userAgent: 'Mozilla/5.0', oldValue: { entry_time: '08:00' }, newValue: { entry_time: '07:30' } },
+  { id: '3', eventId: 'EVT-98236-X', fecha: daysAgo(2), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Admin Trazzo', userEmail: 'admin@trazzo.pe', accion: 'DELETE', tipo: 'advertencia', entidad: 'Dispositivo', entidadId: 'DEV-0005', ipAddress: '10.0.0.1', userAgent: 'Chrome/120', oldValue: { code: 'ZK-OLD-001' }, newValue: null },
+  { id: '4', eventId: 'EVT-98237-X', fecha: daysAgo(3), tenant: 'Instituto Norte', tenantId: 'b2c3d4e5-0000-0000-0000-000000000002', userName: 'María López', userEmail: 'maria.lopez@instituto.edu.pe', accion: 'LOGIN', tipo: 'exito', entidad: 'Sesion', entidadId: 'SES-0042', ipAddress: '192.168.2.50', userAgent: 'Firefox/121', oldValue: null, newValue: null },
+  { id: '5', eventId: 'EVT-98238-X', fecha: daysAgo(3), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Roberto Castro', userEmail: 'roberto.castro@colegio.edu.pe', accion: 'CREATE', tipo: 'error', entidad: 'Incidencia', entidadId: 'INC-0012', ipAddress: '192.168.1.22', userAgent: 'Safari/17', oldValue: null, newValue: { error: 'Timeout de conexion' } },
+];
+
+const mockAuditMetrics = {
+  totalEventos: 1247,
+  errores: 23,
+  sesionesActivas: 34,
+  crecimiento: 12.5,
+  porcentajeSesiones: 8.2,
+};
+
+function handleAuditLogs(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/audit/logs')) return null;
+  if (u !== '/audit/logs' || method !== 'GET') return null;
+
+  let filtered = [...mockAuditLogs];
+  if (qp['searchTerm']) {
+    const s = qp['searchTerm'].toLowerCase();
+    filtered = filtered.filter(l =>
+      l.accion.toLowerCase().includes(s) ||
+      l.entidad.toLowerCase().includes(s) ||
+      l.userName.toLowerCase().includes(s) ||
+      l.tenant.toLowerCase().includes(s)
+    );
+  }
+  if (qp['tenant_id']) filtered = filtered.filter(l => l.tenantId === qp['tenant_id']);
+  if (qp['action']) filtered = filtered.filter(l => l.accion === qp['action']);
+  if (qp['entity']) filtered = filtered.filter(l => l.entidad === qp['entity']);
+
+  return ok(paginate(filtered, page, size));
+}
+
+function handleAuditMetrics(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u === '/audit/metrics' && method === 'GET') {
+    return ok(mockAuditMetrics);
+  }
+  return null;
+}
+
+// ==========================================
+// REPORTS MOCK HANDLERS
+// ==========================================
+
+function handleReportsClosures(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/reports/monthly-closures')) return null;
+
+  if (u === '/reports/monthly-closures' && method === 'GET') {
+    let filtered = [...mockMonthlyClosures];
+    if (qp['year']) filtered = filtered.filter(c => c.year === Number.parseInt(qp['year'], 10));
+    if (qp['month']) filtered = filtered.filter(c => c.month === Number.parseInt(qp['month'], 10));
+    return ok(filtered);
+  }
+
+  if (u === '/reports/monthly-closures' && method === 'POST') {
+    const body = req.body as { month: number; year: number };
+    const exists = mockMonthlyClosures.find(c => c.month === body.month && c.year === body.year);
+    if (exists) {
+      return _error(409, `Monthly closure already exists for ${body.month}/${body.year}`);
+    }
+    const newId = crypto.randomUUID();
+    const newClosure = {
+      id: newId,
+      month: body.month,
+      year: body.year,
+      totalEmployees: 45,
+      excelReportUrl: `/reports/excel/${newId}.xlsx`,
+      pdfReportUrl: `/reports/pdf/${newId}.pdf`,
+      createdAt: new Date().toISOString(),
+    };
+    return created(newClosure);
+  }
+
+  const closureMatch = /^\/reports\/monthly-closures\/([a-f0-9-]+)$/.exec(u);
+  if (closureMatch && method === 'GET') {
+    const closure = mockMonthlyClosures.find(c => c.id === closureMatch[1]);
+    if (!closure) return _error(404, 'Monthly closure not found');
+    return ok(closure);
+  }
+
+  return null;
+}
+
+function handleReportsClosureDetails(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const detailMatch = /^\/reports\/monthly-closure-details\/([a-f0-9-]+)$/.exec(u);
+  if (detailMatch && method === 'GET') {
+    const detail = mockMonthlyClosureDetails.find(d => d.id === detailMatch[1]);
+    if (!detail) return _error(404, 'Monthly closure detail not found');
+    return ok(detail);
+  }
+  return null;
+}
+
+function handleReportsMonthlyReports(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const reportMatch = /^\/reports\/monthly-reports\/([a-f0-9-]+)$/.exec(u);
+  if (reportMatch && method === 'GET') {
+    const closure = mockMonthlyClosures.find(c => c.id === reportMatch[1]);
+    if (!closure) return _error(404, 'Monthly closure not found');
+    const details = mockMonthlyClosureDetails.filter(d => d.monthClosureId === closure.id);
+    return ok({ ...closure, details });
   }
   return null;
 }

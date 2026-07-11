@@ -6,6 +6,7 @@ import { HorariosService } from './horarios.service';
 import { CorehrService } from './corehr.service';
 import { OrgService } from './org.service';
 import { AuditService } from './audit.service';
+import { ReportsService } from './reports.service';
 import { SaasService } from './saas.service';
 import { tenantUserToPersonal } from './helpers';
 
@@ -18,6 +19,7 @@ export class ApiService {
   readonly corehr = inject(CorehrService);
   readonly org = inject(OrgService);
   readonly audit = inject(AuditService);
+  readonly reports = inject(ReportsService);
   readonly saas = inject(SaasService);
 
   /** @deprecated Use `api.auth.login()` */

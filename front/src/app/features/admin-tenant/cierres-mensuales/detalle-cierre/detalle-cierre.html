@@ -1,0 +1,168 @@
+@if (error()) {
+<div class="dc-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+  <div class="text-center">
+    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+    <p class="mt-3 text-muted">{{ error() }}</p>
+    <button class="btn btn-primary mt-3" (click)="volver()">
+      <i class="bi bi-arrow-left me-2"></i> Volver
+    </button>
+  </div>
+</div>
+} @else if (loading()) {
+<div class="dc-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+  <div class="text-center">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="mt-3 text-muted">Cargando reporte...</p>
+  </div>
+</div>
+} @else if (report) {
+<div class="dc-wrapper">
+
+  <!-- HEADER -->
+  <header class="dc-header">
+    <div class="dc-header__left">
+      <button class="btn-back" (click)="volver()">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div>
+        <h1 class="dc-title">{{ getMonthName(report.month) }} {{ report.year }}</h1>
+        <p class="dc-subtitle">Reporte mensual de asistencia — {{ report.totalEmployees }} empleados</p>
+      </div>
+    </div>
+    <div class="dc-header__actions">
+      @if (report.excelReportUrl) {
+        <a class="btn btn-outline-secondary" [href]="report.excelReportUrl" target="_blank">
+          <i class="bi bi-file-earmark-excel me-2"></i> Excel
+        </a>
+      }
+      @if (report.pdfReportUrl) {
+        <a class="btn btn-outline-secondary" [href]="report.pdfReportUrl" target="_blank">
+          <i class="bi bi-file-earmark-pdf me-2"></i> PDF
+        </a>
+      }
+    </div>
+  </header>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics-grid">
+    <div class="metric-card metric-card--primary">
+      <div class="metric-card__icon"><i class="bi bi-people-fill"></i></div>
+      <div class="metric-card__content">
+        <small class="metric-card__label">Empleados</small>
+        <h3 class="metric-card__value">{{ report.totalEmployees }}</h3>
+      </div>
+    </div>
+    <div class="metric-card metric-card--success">
+      <div class="metric-card__icon"><i class="bi bi-clock-fill"></i></div>
+      <div class="metric-card__content">
+        <small class="metric-card__label">Total Horas Trabajadas</small>
+        <h3 class="metric-card__value">{{ totalHorasTrabajadas | number:'1.1-1' }}</h3>
+      </div>
+    </div>
+    <div class="metric-card metric-card--warning">
+      <div class="metric-card__icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+      <div class="metric-card__content">
+        <small class="metric-card__label">Total Tardanzas (min)</small>
+        <h3 class="metric-card__value">{{ totalTardanzas }}</h3>
+      </div>
+    </div>
+    <div class="metric-card metric-card--danger">
+      <div class="metric-card__icon"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="metric-card__content">
+        <small class="metric-card__label">Total Ausencias</small>
+        <h3 class="metric-card__value">{{ totalAusencias }}</h3>
+      </div>
+    </div>
+    <div class="metric-card metric-card--info">
+      <div class="metric-card__icon"><i class="bi bi-lightning-fill"></i></div>
+      <div class="metric-card__content">
+        <small class="metric-card__label">Total Horas Extras</small>
+        <h3 class="metric-card__value">{{ totalHorasExtras | number:'1.1-1' }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE DETALLES -->
+  <div class="table-card">
+    <div class="table-card__header">
+      <h3 class="table-card__title">
+        <i class="bi bi-list-check me-2"></i> Detalle por Empleado
+      </h3>
+      <span class="text-muted">{{ report.details.length }} registros</span>
+    </div>
+    <div class="table-responsive">
+      <table class="dc-table">
+        <thead>
+          <tr>
+            <th>EMPLEADO</th>
+            <th>DOCUMENTO</th>
+            <th>DEPARTAMENTO</th>
+            <th>HORAS TRABAJADAS</th>
+            <th>TARDANZAS (min)</th>
+            <th>AUSENCIAS</th>
+            <th>HORAS EXTRAS</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of report.details; track d.id) {
+            <tr>
+              <td>
+                <div class="employee-info">
+                  <div class="employee-avatar">{{ d.tenantUserFullName.charAt(0) }}</div>
+                  <div>
+                    <strong>{{ d.tenantUserFullName }}</strong>
+                    @if (d.roleName) {
+                      <div class="small text-muted">{{ d.roleName }}</div>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td>{{ d.tenantUserDocument }}</td>
+              <td>{{ d.departmentName ?? '—' }}</td>
+              <td>
+                <span class="stat-value stat-value--success">{{ d.totalWorkedHours | number:'1.1-1' }}h</span>
+              </td>
+              <td>
+                @if (d.totalTardinessMinutes > 0) {
+                  <span class="stat-value stat-value--warning">{{ d.totalTardinessMinutes }} min</span>
+                } @else {
+                  <span class="stat-value stat-value--neutral">0</span>
+                }
+              </td>
+              <td>
+                @if (d.totalAbsences > 0) {
+                  <span class="stat-value stat-value--danger">{{ d.totalAbsences }}</span>
+                } @else {
+                  <span class="stat-value stat-value--neutral">0</span>
+                }
+              </td>
+              <td>
+                @if (d.totalOvertimeHours > 0) {
+                  <span class="stat-value stat-value--info">{{ d.totalOvertimeHours | number:'1.1-1' }}h</span>
+                } @else {
+                  <span class="stat-value stat-value--neutral">0</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7" class="empty-state">
+                <i class="bi bi-inbox" style="font-size: 2rem; color: var(--text-muted);"></i>
+                <p class="mt-2 text-muted">No hay detalles para este cierre</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FOOTER INFO -->
+  <div class="dc-footer">
+    <span class="text-muted">
+      <i class="bi bi-info-circle me-1"></i>
+      Creado el {{ report.createdAt | date:'dd/MM/yyyy HH:mm' }}
+    </span>
+  </div>
+</div>
+}
