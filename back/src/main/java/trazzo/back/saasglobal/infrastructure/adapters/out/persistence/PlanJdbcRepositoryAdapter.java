@@ -69,12 +69,13 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
 
     @Override
     public List<Plan> findAll() {
-        return jdbc.query("SELECT * FROM plans ORDER BY id", this::mapRow);
+        return jdbc.query("SELECT * FROM plans WHERE deleted_at IS NULL ORDER BY id", this::mapRow);
     }
 
     @Override
     public List<Plan> findAllActive() {
-        return jdbc.query("SELECT * FROM plans WHERE is_active = TRUE ORDER BY id", this::mapRow);
+        return jdbc.query(
+                "SELECT * FROM plans WHERE is_active = TRUE AND deleted_at IS NULL ORDER BY id", this::mapRow);
     }
 
     private Plan mapRow(ResultSet rs, int rowNum) throws SQLException {

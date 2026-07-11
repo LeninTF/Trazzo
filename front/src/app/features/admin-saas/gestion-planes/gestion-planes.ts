@@ -122,18 +122,24 @@ export class GestionPlanes implements OnInit {
 
   get modulosForm(): AbstractControl { return this.planForm.get('modulos')!; }
 
-  readonly precioFinal = computed(() => ({
-    mensual: this.planForm.get('precioMensual')?.value ?? 0,
-    anual:   this.planForm.get('precioAnual')?.value ?? 0,
-  }));
+  // Plain methods, not computed(): they read plain AbstractControl.value (not a signal),
+  // so a computed() here would track no dependency, memoize once at construction, and never
+  // update again. The template already invokes these as functions on every change-detection
+  // cycle, so a plain method re-evaluates correctly without any template changes.
+  precioFinal(): { mensual: number; anual: number } {
+    return {
+      mensual: this.planForm.get('precioMensual')?.value ?? 0,
+      anual:   this.planForm.get('precioAnual')?.value ?? 0,
+    };
+  }
 
-  readonly modulosActivos = computed(() =>
-    this.modulosDisponibles.filter(m => this.planForm.get('modulos.' + m.id)?.value)
-  );
+  modulosActivos(): Modulo[] {
+    return this.modulosDisponibles.filter(m => this.planForm.get('modulos.' + m.id)?.value);
+  }
 
-  readonly reglasActivas = computed(() =>
-    this.reglasDisponibles.filter(r => this.planForm.get('reglas.' + r.id)?.value)
-  );
+  reglasActivas(): Regla[] {
+    return this.reglasDisponibles.filter(r => this.planForm.get('reglas.' + r.id)?.value);
+  }
 
   readonly suscripcionesPaginadas = computed(() => {
     const start = (this.suscripcionPagina() - 1) * this.suscripcionPageSize;
