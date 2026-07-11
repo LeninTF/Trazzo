@@ -45,6 +45,9 @@ interface LogEntry {
 })
 export class ConfiguracionTenant {
 
+  readonly loading = signal(false);
+  readonly error = signal('');
+
   private readonly toastService = inject(ToastService);
   
   // ==========================================

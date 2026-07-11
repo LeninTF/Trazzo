@@ -16,9 +16,10 @@ public sealed class WorkerTests
         WorkerWebSocketServer webSocket = new();
         IConfiguration configuration = CreateConfiguration(new Dictionary<string, string?>
         {
-            ["Queue:BackendUrl"] = "https://backend.example/events",
+            ["Backend:BaseUrl"] = "https://backend.example/api/v1",
             ["Agent:AllowedOrigins:0"] = "https://app.example",
             ["Agent:TenantId"] = "tenant-1",
+            ["Agent:DeviceCode"] = "ZK9500-1",
             ["AutoUpdate:Enabled"] = "true",
             ["AutoUpdate:ManifestUrl"] = "https://updates.example/manifest.json",
             ["AutoUpdate:CheckIntervalMinutes"] = "15"

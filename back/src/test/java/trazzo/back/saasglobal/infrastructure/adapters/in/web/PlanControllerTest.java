@@ -36,7 +36,7 @@ class PlanControllerTest {
     void listAll_returns200WithArray() throws Exception {
         when(planUseCase.listAll()).thenReturn(List.of(result(true)));
 
-        mockMvc.perform(get("/api/v1/saas/plans"))
+        mockMvc.perform(get("/saas/plans"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Basic"));
@@ -47,7 +47,7 @@ class PlanControllerTest {
     void listActive_returns200WithArray() throws Exception {
         when(planUseCase.listActive()).thenReturn(List.of(result(true)));
 
-        mockMvc.perform(get("/api/v1/saas/plans/active"))
+        mockMvc.perform(get("/saas/plans/active"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].active").value(true));
     }
@@ -57,7 +57,7 @@ class PlanControllerTest {
     void create_returns201WithBody() throws Exception {
         when(planUseCase.create(any())).thenReturn(result(true));
 
-        mockMvc.perform(post("/api/v1/saas/plans")
+        mockMvc.perform(post("/saas/plans")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -71,7 +71,7 @@ class PlanControllerTest {
     @Test
     @WithMockUser
     void create_returns400WhenRequiredFieldMissing() throws Exception {
-        mockMvc.perform(post("/api/v1/saas/plans")
+        mockMvc.perform(post("/saas/plans")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -85,7 +85,7 @@ class PlanControllerTest {
     void getById_returns200() throws Exception {
         when(planUseCase.getById(1)).thenReturn(result(true));
 
-        mockMvc.perform(get("/api/v1/saas/plans/1"))
+        mockMvc.perform(get("/saas/plans/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
@@ -95,7 +95,7 @@ class PlanControllerTest {
     void update_returns200WithBody() throws Exception {
         when(planUseCase.update(any())).thenReturn(result(true));
 
-        mockMvc.perform(put("/api/v1/saas/plans/1")
+        mockMvc.perform(put("/saas/plans/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -108,7 +108,7 @@ class PlanControllerTest {
     @Test
     @WithMockUser
     void update_returns400WhenRequiredFieldMissing() throws Exception {
-        mockMvc.perform(put("/api/v1/saas/plans/1")
+        mockMvc.perform(put("/saas/plans/1")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -122,7 +122,7 @@ class PlanControllerTest {
     void activate_returns200() throws Exception {
         when(planUseCase.activate(1)).thenReturn(result(true));
 
-        mockMvc.perform(put("/api/v1/saas/plans/1/activate").with(csrf()))
+        mockMvc.perform(put("/saas/plans/1/activate").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
     }
@@ -132,7 +132,7 @@ class PlanControllerTest {
     void deactivate_returns200() throws Exception {
         when(planUseCase.deactivate(1)).thenReturn(result(false));
 
-        mockMvc.perform(put("/api/v1/saas/plans/1/deactivate").with(csrf()))
+        mockMvc.perform(put("/saas/plans/1/deactivate").with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
     }
@@ -142,7 +142,7 @@ class PlanControllerTest {
     void delete_returns204() throws Exception {
         doNothing().when(planUseCase).deleteById(1);
 
-        mockMvc.perform(delete("/api/v1/saas/plans/1").with(csrf()))
+        mockMvc.perform(delete("/saas/plans/1").with(csrf()))
                 .andExpect(status().isNoContent());
     }
 }

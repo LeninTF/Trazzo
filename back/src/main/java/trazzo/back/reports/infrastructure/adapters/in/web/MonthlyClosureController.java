@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/reports/monthly-closures")
+@RequestMapping("/reports/monthly-closures")
 public class MonthlyClosureController {
 
     private final CreateMonthlyClosureUseCase createUseCase;

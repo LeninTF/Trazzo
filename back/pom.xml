@@ -92,6 +92,25 @@
             <artifactId>spring-modulith-observability</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- JWT: token generation and validation -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
@@ -152,6 +171,9 @@
     </dependencyManagement>
 
     <build>
+        <!-- Nombre de artefacto estable, independiente de la versión, para que el
+             Dockerfile pueda referenciar el jar sin acoplarse a project.version -->
+        <finalName>app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -201,10 +223,23 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>get-classpath-files</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version> <configuration>
-                <argLine>-XX:+EnableDynamicAgentLoading @{argLine}</argLine>
-            </configuration>
+                <version>3.5.2</version>
+                <configuration>
+                    <argLine>-XX:+EnableDynamicAgentLoading @{argLine}</argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -39,6 +39,8 @@ interface DiaSemana {
   styleUrl: './calendario.css',
 })
 export class Calendario {
+  readonly loading = signal(false);
+  readonly error = signal('');
   vista = signal<'mensual' | 'semanal'>('mensual');
   fechaActual = signal(new Date(2026, 9, 1));
 

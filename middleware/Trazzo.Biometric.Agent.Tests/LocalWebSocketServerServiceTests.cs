@@ -58,13 +58,40 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task OriginAuth_CuandoListaVacia_AceptaCualquierOrigen()
+    public async Task OriginAuth_CuandoListaVacia_RechazaOrigenExterno()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         Start(allowedOrigins: []);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", "http://cualquier-dominio.com");
+
+        await Assert.ThrowsAnyAsync<WebSocketException>(
+            () => client.ConnectAsync(new Uri(_wsUrl), cts.Token));
+    }
+
+    [Fact]
+    public async Task OriginAuth_CuandoListaVacia_AceptaOrigenLoopback()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(allowedOrigins: []);
+
+        using ClientWebSocket client = new();
+        client.Options.SetRequestHeader("Origin", _httpUrl.TrimEnd('/'));
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        Assert.Equal(WebSocketState.Open, client.State);
+        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "ok", cts.Token);
+    }
+
+    [Fact]
+    public async Task OriginAuth_CuandoListaVacia_AceptaOriginNullDesdeLoopback()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(allowedOrigins: []);
+
+        using ClientWebSocket client = new();
+        client.Options.SetRequestHeader("Origin", "null");
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
 
         Assert.Equal(WebSocketState.Open, client.State);
@@ -175,20 +202,23 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task WebSocket_CuandoRepiteOperacionBiometrica_AplicaRateLimit()
+    public async Task WebSocket_CuandoRepiteOperacionBiometrica_ProcesaAmbasSolicitudes()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        Start(rateLimitSeconds: 30);
+        Start();
         using ClientWebSocket client = new();
         await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
         byte[] request = Encoding.UTF8.GetBytes("""{"type":"fingerprint.capture"}""");
 
         await client.SendAsync(request, WebSocketMessageType.Text, true, cts.Token);
-        await ReceiveStringAsync(client, cts.Token);
+        string firstResponse = await ReceiveStringAsync(client, cts.Token);
         await client.SendAsync(request, WebSocketMessageType.Text, true, cts.Token);
-        string response = await ReceiveStringAsync(client, cts.Token);
+        string secondResponse = await ReceiveStringAsync(client, cts.Token);
 
-        Assert.Contains("Demasiadas solicitudes", response);
+        Assert.DoesNotContain("Demasiadas solicitudes", firstResponse);
+        Assert.DoesNotContain("Demasiadas solicitudes", secondResponse);
+        Assert.Contains("fingerprint.capture.result", firstResponse);
+        Assert.Contains("fingerprint.capture.result", secondResponse);
     }
 
     [Fact]
@@ -357,7 +387,6 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     private void Start(
         string[]? allowedOrigins = null,
         bool includeTrailingSlash = true,
-        int rateLimitSeconds = 5,
         int deviceMonitorIntervalSeconds = 3,
         FakeBiometricScannerService? scanner = null,
         FakeAgentHealthService? healthService = null)
@@ -369,7 +398,6 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         var settings = new Dictionary<string, string?>
         {
             ["Agent:WebSocketUrl"] = includeTrailingSlash ? _httpUrl : _httpUrl.TrimEnd('/'),
-            ["Agent:RateLimitSeconds"] = rateLimitSeconds.ToString(),
             ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString()
         };
 

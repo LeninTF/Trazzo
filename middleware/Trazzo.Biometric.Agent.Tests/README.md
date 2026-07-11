@@ -2,7 +2,7 @@
 
 Suite de pruebas xUnit para el **Trazzo Biometric Agent**. Cubre toda la lógica de negocio sin necesitar hardware real ni base de datos externa.
 
-**218 pruebas** — todas unitarias o de integración in-process. No requieren el lector ZK9500, la DLL nativa ni conexión al backend.
+**262 pruebas**. No requieren lector ZK9500, DLL nativa ni conexión al backend. En entornos restringidos pueden fallar las 22 pruebas que abren `HttpListener`; las 240 restantes son unitarias o de integración in-process.
 
 ---
 
@@ -18,6 +18,12 @@ O desde la raíz del middleware:
 dotnet test .\Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj
 ```
 
+En runners/sandboxes donde `HttpListener` devuelve `System.Net.HttpListenerException: Controlador no válido`, ejecutar la suite sin listener local:
+
+```powershell
+dotnet test .\Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"
+```
+
 ---
 
 ## Estructura de Archivos
@@ -28,12 +34,22 @@ dotnet test .\Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj
 | `ZKTecoErrorMapperTests.cs` | Traducción de códigos de error del SDK a mensajes legibles |
 | `FingerprintQualityAnalyzerTests.cs` | Análisis de calidad de huella: cobertura, contraste, centrado, tamaño |
 | `HybridCryptographyServiceTests.cs` | Cifrado AES-256-GCM + RSA-2048-OAEP, caché de clave pública |
+| `AgentTokenProtectorTests.cs` | Cifrado DPAPI del token del agente y fallback legacy |
+| `AttendanceMarkingClientTests.cs` | Contrato `POST /asistencia/marcar`, headers y fallback cuando falta `device_code` |
 | `SqliteEventQueueTests.cs` | Cola SQLite: encolar, obtener pendientes, marcar enviados/fallidos, limpieza |
-| `EventForwarderServiceTests.cs` | Reenvío al backend, cabecera `X-Tenant-ID`, backoff exponencial, multi-tenant |
-| `LocalWebSocketServerServiceTests.cs` | Manejo de mensajes WebSocket, rate limiting, tipos de operación |
+| `EventForwarderServiceTests.cs` | Reenvío `POST /asistencia/sync`, cabecera `X-Tenant-ID`, backoff exponencial, multi-tenant |
+| `RemoteEnrollmentServiceTests.cs` | Polling `GET /corehr/biometria/enroll/pendiente` y `POST /corehr/biometria/enroll/completar` |
+| `LocalWebSocketServerServiceTests.cs` | Listener WebSocket real, seguridad de origen, health endpoint, mensajes multi-frame |
 | `FingerprintCaptureResultTests.cs` | Serialización y estructura de respuestas de captura |
+| `FingerprintIdentifyResultTests.cs` | Serialización y estructura de respuestas de identificación |
+| `FingerprintEnrollResultTests.cs` | Serialización y estructura de respuestas de enrolamiento |
+| `FingerprintEnrollProgressTests.cs` | Estructura de mensajes de progreso de enrolamiento |
+| `CapturedSampleTests.cs` | Representación interna de muestras capturadas |
 | `FingerprintImageConverterTests.cs` | Conversión de imagen de huella a Base64 |
 | `WebSocketResponseTests.cs` | Estructura de respuestas JSON del protocolo WebSocket |
+| `AgentHealthServiceTests.cs` | Respuesta local de health check |
+| `WorkerTests.cs` | Inicialización del worker y reporte de arranque |
+| `AutoUpdateServiceTests.cs` | Manifiesto, descarga, SHA-256 obligatorio y aplicación segura del MSI |
 | `Fakes.cs` | Implementaciones falsas compartidas: `FakeBiometricScanner`, `FakeEventQueue`, etc. |
 
 ---

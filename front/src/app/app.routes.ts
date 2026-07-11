@@ -16,14 +16,14 @@ import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenan
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
 import { Perfil } from './features/admin-tenant/perfil/perfil';
-import { Perfil as PerfilSass } from './features/admin-sass/perfil/perfil';
-import { Tenants } from './features/admin-sass/tenants/tenants';
-import { GestionPlanes } from './features/admin-sass/gestion-planes/gestion-planes';
-import { Solicitudes } from './features/admin-sass/solicitudes/solicitudes';
-import { LogAuditoria } from './features/admin-sass/log-auditoria/log-auditoria';
-import { Facturas } from './features/admin-sass/facturas/facturas';
-import { GestionUsuarios } from './features/admin-sass/gestion-usuarios/gestion-usuarios';
-import { GestionRoles as GestionRolesSass} from './features/admin-sass/gestion-roles/gestion-roles';
+import { Perfil as PerfilSass } from './features/admin-saas/perfil/perfil';
+import { Tenants } from './features/admin-saas/tenants/tenants';
+import { GestionPlanes } from './features/admin-saas/gestion-planes/gestion-planes';
+import { Solicitudes } from './features/admin-saas/solicitudes/solicitudes';
+import { LogAuditoria } from './features/admin-saas/log-auditoria/log-auditoria';
+import { Facturas } from './features/admin-saas/facturas/facturas';
+import { GestionUsuarios } from './features/admin-saas/gestion-usuarios/gestion-usuarios';
+import { GestionRoles as GestionRolesSaas} from './features/admin-saas/gestion-roles/gestion-roles';
 import { Dashboard as DashboardUsuario } from './features/usuario/dashboard/dashboard';
 import { Calendario as CalendarioUsuario } from './features/usuario/calendario/calendario';
 import { HistorialAsistencia as HistorialAsistenciaUsuario } from './features/usuario/historial-asistencia/historial-asistencia';
@@ -127,7 +127,7 @@ export const routes: Routes = [
     {
         path: 'sass',
         pathMatch: 'full',
-        redirectTo: 'sass/dashboard'
+        redirectTo: 'sass/tenants'
     },
     
     {
@@ -156,7 +156,7 @@ export const routes: Routes = [
     },
     {
         path: 'sass/gestion-roles',
-        component: GestionRolesSass
+        component: GestionRolesSaas
     },
     {
         path: 'sass/perfil',

@@ -4,17 +4,50 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
 
+permissions:
+  contents: read
+  pull-requests: write # Permiso estricto necesario para dejar el comentario en el PR
+
 jobs:
   commitlint:
     runs-on: ubuntu-latest
     name: Revisar historial de commits
+    # REGLA 1: Ignorar cualquier PR abierto por Dependabot
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0 # Crítico: Necesita el historial del PR para validar todos los commits nuevos
+        uses: actions/checkout@v6
 
       - name: Ejecutar Commitlint
+        id: lint
         uses: wagoid/commitlint-github-action@v6
         with:
           configFile: commitlint.config.mjs
+
+      # REGLA 2: Comentar en el PR si Commitlint falla
+      - name: Dejar comentario de error y solución
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const message = `
+            ### ❌ Error en el Formato del Commit
+            ¡Hola, @${context.actor}! El mensaje de tus commits no sigue nuestra convención estándar (Conventional Commits) para el proyecto Trazzo.
+
+            **💡 Cómo solucionarlo localmente:**
+            Abre tu terminal, corrige el mensaje y fuerza la subida:
+            \`\`\`bash
+            git commit --amend -m "tipo(modulo): tu mensaje corregido"
+            git push --force
+            \`\`\`
+            *Ejemplos válidos:* \`feat(corehr): agregar registro de asistencia\` o \`fix(frontend): resolver bug de login\`.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

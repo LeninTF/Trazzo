@@ -1,0 +1,219 @@
+@if (error()) {
+<div class="page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
+<div class="page">
+	<header class="page__header">
+		<div>
+			<h1 class="page__title">Control Financiero</h1>
+			<p class="page__desc">Métricas globales, evolución de ingresos y transacciones del SaaS.</p>
+		</div>
+	</header>
+
+	<section class="metrics">
+		<article class="metric metric--green">
+			<div class="metric__icon"><i class="bi bi-graph-up-arrow"></i></div>
+			<div class="metric__body">
+				<span class="metric__label">Ingresos Mensuales (MRR)</span>
+				<strong class="metric__value">{{ mrr }}</strong>
+				<span class="metric__change metric__change--up">{{ cambioMrr }} <span class="metric__change-label">vs
+						mes anterior</span></span>
+			</div>
+		</article>
+		<article class="metric metric--red">
+			<div class="metric__icon"><i class="bi bi-person-fill-slash"></i></div>
+			<div class="metric__body">
+				<span class="metric__label">Churn Rate</span>
+				<strong class="metric__value">{{ churn }}</strong>
+				<span class="metric__change metric__change--down">{{ cambioChurn }} <span
+						class="metric__change-label">vs mes anterior</span></span>
+			</div>
+		</article>
+		<article class="metric metric--orange">
+			<div class="metric__icon"><i class="bi bi-exclamation-circle"></i></div>
+			<div class="metric__body">
+				<span class="metric__label">Pendiente de Cobro</span>
+				<strong class="metric__value">{{ pendienteCobro }}</strong>
+				<span class="metric__change">{{ facturasVencidas }} facturas vencidas</span>
+			</div>
+		</article>
+		<article class="metric metric--blue">
+			<div class="metric__icon"><i class="bi bi-person-badge"></i></div>
+			<div class="metric__body">
+				<span class="metric__label">Promedio por Tenant (ARPU)</span>
+				<strong class="metric__value">{{ arpu }}</strong>
+				<span class="metric__change">por tenant / mes</span>
+			</div>
+		</article>
+	</section>
+
+	<section class="card chart-card">
+		<div class="card__header">
+			<div class="card__header-left">
+				<h2 class="card__title">Evolución de Ingresos</h2>
+				<span class="card__subtitle">Facturación bruta mensual</span>
+			</div>
+			<span class="card__badge">Últimos 6 meses</span>
+		</div>
+		<div class="card__body card__body--chart">
+			<apx-chart [chart]="chartConfig.chart" [series]="chartConfig.series" [colors]="chartConfig.colors"
+				[plotOptions]="chartConfig.plotOptions" [xaxis]="chartConfig.xaxis" [yaxis]="chartConfig.yaxis"
+				[grid]="chartConfig.grid" [dataLabels]="chartConfig.dataLabels" [tooltip]="chartConfig.tooltip"
+				[fill]="chartConfig.fill" [stroke]="chartConfig.stroke"></apx-chart>
+		</div>
+	</section>
+
+	<section class="transactions">
+		<div class="transactions__header">
+			<div>
+				<h2 class="transactions__title">Transacciones Recientes</h2>
+				<p class="transactions__desc">Filtra y exporta el historial de pagos de todos los tenants.</p>
+			</div>
+			<button type="button" class="btn btn--export" (click)="exportarCSV()">
+				<i class="bi bi-download"></i> Exportar CSV
+			</button>
+		</div>
+
+		<div class="filters" [formGroup]="filterForm">
+			<div class="filters__group">
+				<label class="filters__label" for="facturas-filtro-estado">Estado</label>
+				<select id="facturas-filtro-estado" class="filters__control" formControlName="estado" (change)="onEstadoChange()">
+					<option value="todos">Todos</option>
+					<option value="pagado">Pagado</option>
+					<option value="pendiente">Pendiente</option>
+					<option value="vencido">Vencido</option>
+				</select>
+			</div>
+			<div class="filters__group">
+				<label class="filters__label" for="facturas-filtro-rango">Rango de fechas</label>
+				<select id="facturas-filtro-rango" class="filters__control" formControlName="rango" (change)="onRangoChange()">
+					<option value="ultimos-30">Últimos 30 días</option>
+					<option value="personalizado">Personalizado</option>
+				</select>
+			</div>
+			@if (filterForm.value.rango === 'personalizado') {
+			<div class="filters__group">
+				<label class="filters__label" for="facturas-fecha-desde">Desde</label>
+				<input id="facturas-fecha-desde" type="date" class="filters__control" formControlName="fechaDesde" (change)="onRangoChange()">
+			</div>
+			<div class="filters__group">
+				<label class="filters__label" for="facturas-fecha-hasta">Hasta</label>
+				<input id="facturas-fecha-hasta" type="date" class="filters__control" formControlName="fechaHasta" (change)="onRangoChange()">
+			</div>
+			}
+			<div class="filters__spacer"></div>
+			<div class="filters__count">
+				<span class="count-badge">{{ totalTransacciones() }}</span>
+				transacciones
+			</div>
+		</div>
+
+		<div class="table-wrap">
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Tenant</th>
+						<th>Plan</th>
+						<th>ID</th>
+						<th>Fecha</th>
+						<th class="col-monto">Monto</th>
+						<th>Estado</th>
+						<th class="col-acciones">Acciones</th>
+					</tr>
+				</thead>
+				<tbody>
+					@for (t of transaccionesPaginadas(); track t.id) {
+					<tr>
+						<td class="td-primary" data-label="Tenant">{{ t.tenant }}</td>
+						<td data-label="Plan">{{ t.plan }}</td>
+						<td class="td-mono" data-label="ID">{{ t.idTransaccion }}</td>
+						<td data-label="Fecha">{{ t.fecha }}</td>
+						<td class="td-monto" data-label="Monto">S/{{ t.monto.toFixed(2) }}</td>
+						<td data-label="Estado">
+							<span class="badge" [class.badge--green]="t.estado === 'pagado'"
+								[class.badge--yellow]="t.estado === 'pendiente'"
+								[class.badge--red]="t.estado === 'vencido'">
+								<span class="badge__dot"></span>
+								{{ t.estado === 'pagado' ? 'Pagado' : t.estado === 'pendiente' ? 'Pendiente' : 'Vencido'
+								}}
+							</span>
+						</td>
+						<td class="td-actions" data-label="Acciones">
+							<button type="button" class="btn-icon" title="Ver detalle" (click)="verDetalle(t)"><i
+									class="bi bi-eye"></i></button>
+						</td>
+					</tr>
+					} @empty {
+					<tr>
+						<td colspan="7" class="td-empty">No se encontraron transacciones con los filtros seleccionados
+						</td>
+					</tr>
+					}
+				</tbody>
+			</table>
+
+			<span class="pagination__info">{{ rangoInfo() }}</span>
+			<app-pagination [currentPage]="pagina()" [totalPages]="totalPaginas()" (pageChange)="irPagina($event)"/>
+		</div>
+	</section>
+
+	<div class="modal fade" id="modalDetalleTransaccion" tabindex="-1" data-bs-backdrop="static">
+		<div class="modal-dialog modal-dialog-centered modal-sm">
+			<div class="modal-content modal-content--custom">
+				<div class="modal__header">
+					<h5 class="modal__title">Detalle de Transacción</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
+						<i class="bi bi-x-lg"></i>
+					</button>
+				</div>
+				<div class="modal__body">
+					@if (transaccionSeleccionada(); as t) {
+					<div class="detail">
+						<div class="detail__row">
+							<span class="detail__label">Tenant</span>
+							<span class="detail__value">{{ t.tenant }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">Plan</span>
+							<span class="detail__value">{{ t.plan }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">ID Transacción</span>
+							<span class="detail__value detail__value--mono">{{ t.idTransaccion }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">Fecha</span>
+							<span class="detail__value">{{ t.fecha }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">Monto</span>
+							<span class="detail__value detail__value--bold">S/{{ t.monto.toFixed(2) }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">Estado</span>
+							<span class="badge" [class.badge--green]="t.estado === 'pagado'"
+								[class.badge--yellow]="t.estado === 'pendiente'"
+								[class.badge--red]="t.estado === 'vencido'">
+								<span class="badge__dot"></span>
+								{{ t.estado === 'pagado' ? 'Pagado' : t.estado === 'pendiente' ? 'Pendiente' : 'Vencido'
+								}}
+							</span>
+						</div>
+					</div>
+					}
+				</div>
+				<div class="modal__footer">
+					<button type="button" class="btn btn--primary" data-bs-dismiss="modal">
+						<i class="bi bi-check-lg"></i> Cerrar
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</div>
+}

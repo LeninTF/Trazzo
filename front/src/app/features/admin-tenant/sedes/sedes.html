@@ -1,3 +1,11 @@
+@if (error()) {
+<div class="sedes-wrapper" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else {
 <div class="sedes-wrapper">
 
   <!-- HEADER -->
@@ -27,13 +35,6 @@
         <div class="stat-card__body">
           <small class="stat-card__label">TOTAL ÁREAS</small>
           <h2 class="stat-card__value">{{ totalAreas }}</h2>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-card__body">
-          <small class="stat-card__label">TOTAL USUARIOS</small>
-          <h2 class="stat-card__value">{{ totalUsuarios }}</h2>
         </div>
       </div>
 
@@ -83,10 +84,6 @@
             <div class="metric">
               <h4 class="metric__value">{{ sede.areas.length }}</h4>
               <small class="metric__label">ÁREAS</small>
-            </div>
-            <div class="metric">
-              <h4 class="metric__value">{{ sede.usuarios }}</h4>
-              <small class="metric__label">USUARIOS</small>
             </div>
             <div class="metric">
               <h4 class="metric__value">{{ totalDepartamentosPorSede(sede) }}</h4>
@@ -170,13 +167,6 @@
         </div>
       </div>
       <div class="footer-item">
-        <i class="bi bi-people"></i>
-        <div>
-          <span class="footer-item__label">USUARIOS</span>
-          <span class="footer-item__value">{{ totalUsuarios }} usuarios</span>
-        </div>
-      </div>
-      <div class="footer-item">
         <i class="bi bi-diagram-3"></i>
         <div>
           <span class="footer-item__label">DEPARTAMENTOS</span>
@@ -190,6 +180,7 @@
     </p>
   </footer>
 </div>
+}
 
 <!-- MODAL: REGISTRAR/EDITAR SEDE -->
 <div class="modal fade" id="modalSede" data-bs-backdrop="static" tabindex="-1" aria-labelledby="modalSedeLabel" aria-hidden="true">

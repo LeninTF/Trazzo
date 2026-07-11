@@ -18,7 +18,7 @@ import trazzo.back.saasglobal.domain.model.iam.User;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
-    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String ADMIN_ROLE = "admin_trazzo";
 
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
