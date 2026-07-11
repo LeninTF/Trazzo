@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Positive;
 
 public record CreateEvidenceRequest(
         @NotBlank @JsonProperty("file_name") String fileName,
-        @NotBlank @JsonProperty("file_url") String fileUrl,
+        @NotBlank @JsonProperty("file_key") String fileKey,
         @NotBlank @JsonProperty("mime_type") String mimeType,
         @Positive @JsonProperty("file_size") int fileSize
 ) {

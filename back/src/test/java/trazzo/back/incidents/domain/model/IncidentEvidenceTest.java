@@ -26,7 +26,7 @@ class IncidentEvidenceTest {
         assertNotNull(evidence.getId());
         assertEquals("inc-1", evidence.getIncidentId());
         assertEquals("documento.pdf", evidence.getFileName());
-        assertEquals("http://files/doc.pdf", evidence.getFileUrl());
+        assertEquals("http://files/doc.pdf", evidence.getFileKey());
         assertEquals("application/pdf", evidence.getMimeType());
         assertEquals(1024, evidence.getFileSize());
         assertFalse(evidence.isDeleted());
@@ -69,11 +69,11 @@ class IncidentEvidenceTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" "})
-    void createWithBlankFileUrlThrowsException(String fileUrl) {
+    void createWithBlankFileKeyThrowsException(String fileKey) {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentEvidence.create(
-                        "inc-1", "doc.pdf", fileUrl, "pdf", 100
+                        "inc-1", "doc.pdf", fileKey, "pdf", 100
                 )
         );
     }
@@ -139,7 +139,7 @@ class IncidentEvidenceTest {
         assertEquals("ev-1", evidence.getId());
         assertEquals("inc-1", evidence.getIncidentId());
         assertEquals("doc.pdf", evidence.getFileName());
-        assertEquals("http://url", evidence.getFileUrl());
+        assertEquals("http://url", evidence.getFileKey());
         assertEquals("pdf", evidence.getMimeType());
         assertEquals(1024, evidence.getFileSize());
         assertFalse(evidence.isDeleted());
@@ -336,11 +336,11 @@ class IncidentEvidenceTest {
     }
 
     @Test
-    void createTrimsWhitespaceFromFileUrl() {
+    void createTrimsWhitespaceFromFileKey() {
         var evidence = IncidentEvidence.create(
                 "inc-1", "doc.pdf", "  http://url  ", "pdf", 100
         );
-        assertEquals("http://url", evidence.getFileUrl());
+        assertEquals("http://url", evidence.getFileKey());
     }
 
     @Test

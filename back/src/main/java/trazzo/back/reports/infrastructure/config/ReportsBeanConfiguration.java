@@ -25,6 +25,7 @@ import trazzo.back.reports.infrastructure.adapters.out.messaging.SpringEventPubl
 import trazzo.back.reports.infrastructure.adapters.out.persistence.repository.MonthlyClosureDetailJdbcRepository;
 import trazzo.back.reports.infrastructure.adapters.out.persistence.repository.MonthlyClosureJdbcRepository;
 import trazzo.back.reports.infrastructure.adapters.out.reporting.ReportGenerationAdapter;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 @Configuration
 public class ReportsBeanConfiguration {
@@ -45,8 +46,8 @@ public class ReportsBeanConfiguration {
     }
 
     @Bean
-    public ReportGenerationPort reportGenerationPort() {
-        return new ReportGenerationAdapter();
+    public ReportGenerationPort reportGenerationPort(FileStoragePort fileStoragePort) {
+        return new ReportGenerationAdapter(fileStoragePort);
     }
 
     @Bean

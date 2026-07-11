@@ -14,6 +14,7 @@ import trazzo.back.incidents.application.usecase.EvidenceService;
 import trazzo.back.incidents.application.usecase.IncidentService;
 import trazzo.back.incidents.application.usecase.IncidentTypeService;
 import trazzo.back.incidents.application.usecase.NotificationService;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 @Configuration
 public class IncidentsBeanConfig {
@@ -22,14 +23,16 @@ public class IncidentsBeanConfig {
     public IncidentUseCase incidentUseCase(IncidentRepositoryPort incidentRepository,
                                            IncidentTypeRepositoryPort typeRepository,
                                            TenantUserPort tenantUserPort,
-                                           EventPublisherPort eventPublisher) {
-        return new IncidentService(incidentRepository, typeRepository, tenantUserPort, eventPublisher);
+                                           EventPublisherPort eventPublisher,
+                                           FileStoragePort fileStoragePort) {
+        return new IncidentService(incidentRepository, typeRepository, tenantUserPort, eventPublisher, fileStoragePort);
     }
 
     @Bean
     public EvidenceUseCase evidenceUseCase(IncidentRepositoryPort incidentRepository,
-                                           EventPublisherPort eventPublisher) {
-        return new EvidenceService(incidentRepository, eventPublisher);
+                                           EventPublisherPort eventPublisher,
+                                           FileStoragePort fileStoragePort) {
+        return new EvidenceService(incidentRepository, eventPublisher, fileStoragePort);
     }
 
     @Bean

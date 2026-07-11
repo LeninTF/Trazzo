@@ -12,6 +12,7 @@ import trazzo.back.incidents.application.port.in.EvidenceUseCase;
 import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDate;
 
@@ -23,6 +24,11 @@ public class IncidentController {
     private final IncidentUseCase incidentUseCase;
     private final EvidenceUseCase evidenceUseCase;
     private final NotificationUseCase notificationUseCase;
+    private final FileStoragePort fileStoragePort;
+
+    private String buildPublicUrl(String fileKey) {
+        return fileStoragePort.buildPublicUrl(fileKey);
+    }
 
     @GetMapping
     public ResponseEntity<IncidentListResponse> list(
@@ -84,7 +90,7 @@ public class IncidentController {
             @Valid @RequestBody CreateEvidenceRequest request
     ) {
         var command = new trazzo.back.incidents.application.dto.command.CreateEvidenceCommand(
-                request.fileName(), request.fileUrl(), request.mimeType(), request.fileSize());
+                request.fileName(), request.fileKey(), request.mimeType(), request.fileSize());
         var result = evidenceUseCase.create(id, command);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentEvidenceResponse.from(result));
     }
