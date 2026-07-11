@@ -47,11 +47,24 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     // Serial por defecto que simula un ZK9500 real
     public int DeviceSerial { get; init; } = 12345;
 
+    // Si se establece, se devuelve como serial string (permite probar seriales con prefijo "ZK")
+    public string? DeviceSerialString { get; init; }
+
     public bool SerialAvailable { get; init; } = true;
+
+    // Hace que TryGetParameterString falle para 1103, pero TryGetParameter sigue usando DeviceSerial
+    public bool StringSerialUnavailable { get; init; }
 
     public bool ImageDataSizeAvailable { get; init; } = true;
 
+    // Controla si los parámetros de dimensión de imagen están disponibles
+    public bool WidthParameterAvailable { get; init; } = true;
+    public bool HeightParameterAvailable { get; init; } = true;
+
     public Exception? GetDeviceCountException { get; init; }
+
+    // Si se establece, CloseDevice lanza esta excepción
+    public Exception? CloseDeviceException { get; init; }
 
     public int InitCalls { get; private set; }
 
@@ -89,7 +102,12 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
         return DeviceHandle;
     }
 
-    public int CloseDevice(IntPtr deviceHandle) => 0;
+    public int CloseDevice(IntPtr deviceHandle)
+    {
+        if (CloseDeviceException is not null)
+            throw CloseDeviceException;
+        return 0;
+    }
 
     public int AcquireFingerprint(IntPtr deviceHandle, byte[] imageBuffer, byte[] template, ref int size)
     {
@@ -121,8 +139,8 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
         // ZK9500: 300×400 px (FAP20) según hardware selection guide
         value = parameterCode switch
         {
-            1 => 300,
-            2 => 400,
+            1 => WidthParameterAvailable ? 300 : 0,
+            2 => HeightParameterAvailable ? 400 : 0,
             106 => ImageDataSizeAvailable ? 300 * 400 : 0,
             1103 => SerialAvailable ? DeviceSerial : 0,
             _ => 0
@@ -133,14 +151,20 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public bool TryGetParameterString(IntPtr deviceHandle, int parameterCode, out string value)
     {
-        if (!SerialAvailable && parameterCode == 1103)
+        if (parameterCode == 1103)
         {
-            value = string.Empty;
-            return false;
+            if (!SerialAvailable || StringSerialUnavailable)
+            {
+                value = string.Empty;
+                return false;
+            }
+
+            value = DeviceSerialString ?? DeviceSerial.ToString();
+            return value.Length > 0;
         }
 
-        value = parameterCode == 1103 ? DeviceSerial.ToString() : string.Empty;
-        return value.Length > 0;
+        value = string.Empty;
+        return false;
     }
 
     public IntPtr DBInit()
@@ -151,7 +175,9 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public int DBFree(IntPtr databaseHandle) => 0;
 
-    public int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2) => 0;
+    public int DBMatchResult { get; init; } = 0;
+
+    public int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2) => DBMatchResult;
 
     public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score) => 0;
 
@@ -219,9 +245,13 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
     public FingerprintEnrollResult EnrollResult { get; init; } =
         FingerprintEnrollResult.Failed("No se pudo enrolar la huella. Intente nuevamente.");
 
+    public FingerprintMatchResult MatchResult { get; init; } =
+        FingerprintMatchResult.Failed("No se encontró ningún lector biométrico.");
+
     public Exception? StatusException { get; set; }
     public Exception? CaptureException { get; set; }
     public FingerprintEnrollProgress? EnrollmentProgress { get; init; }
+    public int CaptureDelayMilliseconds { get; init; }
 
     public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
@@ -233,12 +263,15 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
         return Task.FromResult(Status);
     }
 
-    public Task<FingerprintCaptureResult> CaptureFingerprintAsync(CancellationToken cancellationToken)
+    public async Task<FingerprintCaptureResult> CaptureFingerprintAsync(CancellationToken cancellationToken)
     {
         if (CaptureException is not null)
-            return Task.FromException<FingerprintCaptureResult>(CaptureException);
+            return await Task.FromException<FingerprintCaptureResult>(CaptureException);
 
-        return Task.FromResult(CaptureResult);
+        if (CaptureDelayMilliseconds > 0)
+            await Task.Delay(CaptureDelayMilliseconds, cancellationToken);
+
+        return CaptureResult;
     }
 
     public Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken)
@@ -261,6 +294,13 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
         return FingerprintEnrollResult.Failed("Enrolamiento cancelado.");
     }
 
+    public Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+        IReadOnlyList<(int Index, byte[] Template)> templates,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(MatchResult);
+    }
+
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
 
@@ -271,9 +311,12 @@ internal sealed class FakeEventQueue : IEventQueue
     public List<long> FailedIds { get; } = [];
     public IReadOnlyList<BiometricEvent> PendingToReturn { get; init; } = [];
     public int PendingCount { get; init; }
+    public Exception? EnqueueException { get; init; }
 
     public Task EnqueueAsync(BiometricEvent biometricEvent, CancellationToken cancellationToken = default)
     {
+        if (EnqueueException is not null)
+            return Task.FromException(EnqueueException);
         Enqueued.Add(biometricEvent);
         return Task.CompletedTask;
     }

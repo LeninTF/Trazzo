@@ -12,6 +12,10 @@ public interface IBiometricScannerService : IAsyncDisposable
 
     Task<FingerprintIdentifyResult> IdentifyFingerprintAsync(CancellationToken cancellationToken);
 
+    Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+        IReadOnlyList<(int Index, byte[] Template)> templates,
+        CancellationToken cancellationToken);
+
     Task<FingerprintEnrollResult> EnrollFingerprintAsync(
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
         CancellationToken cancellationToken);

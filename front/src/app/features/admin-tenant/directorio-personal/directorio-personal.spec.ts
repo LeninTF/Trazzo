@@ -4,12 +4,16 @@ import { DirectorioPersonal } from './directorio-personal';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
+import { MiddlewareWebSocketService } from '../../../services/middleware-websocket.service';
+import { FingerprintStoreService } from '../../../services/fingerprint-store.service';
 import { of, throwError } from 'rxjs';
 import { fakeAsync, tick } from '@angular/core/testing';
 
 describe('DirectorioPersonal', () => {
   let component: DirectorioPersonal;
   let fixture: ComponentFixture<DirectorioPersonal>;
+  let middlewareWs: MiddlewareWebSocketService;
+  let fingerprintStore: FingerprintStoreService;
 
   const mockUsersResponse = {
     content: [
@@ -48,8 +52,22 @@ describe('DirectorioPersonal', () => {
     },
   };
 
-  const mockToast = jasmine.createSpyObj('ToastService', ['info']);
-  const mockModal = jasmine.createSpyObj('ModalService', ['open', 'close']);
+  const mockToast = jasmine.createSpyObj('ToastService', ['info', 'success', 'error']);
+  const mockModal = jasmine.createSpyObj('ModalService', ['show', 'hide']);
+
+  function setMockPersonal() {
+    component.personal.set(mockUsersResponse.content.map(u => ({
+      id: u.id,
+      nombre: u.persona.name + ' ' + u.persona.father_surname,
+      idPersonal: u.persona.document_value,
+      sede: u.sedes[0]?.nombre ?? '',
+      area: u.areas[0]?.nombre ?? '',
+      departamento: u.departamentos[0]?.nombre ?? '',
+      cargo: '',
+      estado: u.estado as any,
+      email: u.email,
+    })));
+  }
 
   beforeEach(async () => {
     mockApi.users.list.calls.reset();
@@ -68,7 +86,13 @@ describe('DirectorioPersonal', () => {
 
     fixture = TestBed.createComponent(DirectorioPersonal);
     component = fixture.componentInstance;
+    middlewareWs = TestBed.inject(MiddlewareWebSocketService);
+    fingerprintStore = TestBed.inject(FingerprintStoreService);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fingerprintStore.clear();
   });
 
   it('should create', () => {
@@ -79,186 +103,467 @@ describe('DirectorioPersonal', () => {
     expect(mockApi.users.list).toHaveBeenCalled();
   });
 
-  it('should filter personal by search term', () => {
-    component.personal.set(mockUsersResponse.content.map(u => ({
-      id: u.id,
-      nombre: u.persona.name + ' ' + u.persona.father_surname,
-      idPersonal: u.persona.document_value,
-      sede: u.sedes[0]?.nombre ?? '',
-      area: u.areas[0]?.nombre ?? '',
-      departamento: u.departamentos[0]?.nombre ?? '',
-      cargo: '',
-      estado: u.estado as any,
-      email: u.email,
-    })));
-    component.searchTerm = 'José';
-    expect(component.personalFiltrado.length).toBe(1);
-    component.searchTerm = '';
-    expect(component.personalFiltrado.length).toBe(2);
+  describe('filtering', () => {
+    beforeEach(() => {
+      setMockPersonal();
+    });
+
+    it('should filter personal by search term', () => {
+      component.searchTerm = 'José';
+      expect(component.personalFiltrado.length).toBe(1);
+      component.searchTerm = '';
+      expect(component.personalFiltrado.length).toBe(2);
+    });
+
+    it('should filter by sede', () => {
+      component.filtroSede = 'Sede San Isidro';
+      expect(component.personalFiltrado.length).toBe(1);
+      expect(component.personalFiltrado[0].nombre).toContain('José');
+      component.filtroSede = '';
+      expect(component.personalFiltrado.length).toBe(2);
+    });
+
+    it('should filter by area', () => {
+      component.filtroArea = 'Administración';
+      expect(component.personalFiltrado.length).toBe(1);
+      expect(component.personalFiltrado[0].nombre).toContain('Ana');
+      component.filtroArea = '';
+    });
+
+    it('should filter by departamento', () => {
+      component.filtroDepartamento = 'Matemáticas';
+      expect(component.personalFiltrado.length).toBe(1);
+      component.filtroDepartamento = '';
+    });
+
+    it('should search by idPersonal', () => {
+      component.searchTerm = '76543210';
+      expect(component.personalFiltrado.length).toBe(1);
+    });
+
+    it('should combine multiple filters', () => {
+      component.searchTerm = 'José';
+      component.filtroSede = 'Sede San Isidro';
+      component.filtroArea = 'Dirección Académica';
+      expect(component.personalFiltrado.length).toBe(1);
+    });
   });
 
-  it('should paginate personal', () => {
-    component.personal.set(mockUsersResponse.content.map(u => ({
-      id: u.id, nombre: u.persona.name, idPersonal: u.persona.document_value,
-      sede: u.sedes[0]?.nombre ?? '', area: '', departamento: '',
-      cargo: '', estado: u.estado as any, email: u.email,
-    })));
-    component.itemsPerPage = 1;
-    expect(component.totalPaginas).toBe(2);
-    expect(component.personalPaginado.length).toBe(1);
+  describe('pagination', () => {
+    beforeEach(() => {
+      setMockPersonal();
+    });
+
+    it('should paginate personal', () => {
+      component.itemsPerPage = 1;
+      expect(component.totalPaginas).toBe(2);
+      expect(component.personalPaginado.length).toBe(1);
+    });
+
+    it('should change page within bounds', () => {
+      component.itemsPerPage = 1;
+      component.cambiarPagina(2);
+      expect(component.paginaActual).toBe(2);
+      component.cambiarPagina(0);
+      expect(component.paginaActual).toBe(2);
+    });
+
+    it('should not change page beyond totalPaginas', () => {
+      component.itemsPerPage = 1;
+      component.cambiarPagina(99);
+      expect(component.paginaActual).toBe(1);
+    });
+
+    it('should return 0 totalPaginas and finRegistro when filtered list is empty', () => {
+      component.searchTerm = 'NONEXISTENT';
+      expect(component.totalPaginas).toBe(0);
+      expect(component.finRegistro).toBe(0);
+    });
+
+    it('should compute inicioRegistro and finRegistro', () => {
+      component.itemsPerPage = 1;
+      expect(component.inicioRegistro).toBe(1);
+      expect(component.finRegistro).toBe(1);
+      component.cambiarPagina(2);
+      expect(component.inicioRegistro).toBe(2);
+      expect(component.finRegistro).toBe(2);
+    });
   });
 
-  it('should change page within bounds', () => {
-    component.personal.set(mockUsersResponse.content.map(u => ({
-      id: u.id, nombre: u.persona.name, idPersonal: u.persona.document_value,
-      sede: '', area: '', departamento: '', cargo: '',
-      estado: 'ACTIVO' as any, email: '',
-    })));
-    component.itemsPerPage = 1;
-    component.cambiarPagina(2);
-    expect(component.paginaActual).toBe(2);
-    component.cambiarPagina(0);
-    expect(component.paginaActual).toBe(2);
+  describe('modal lifecycle', () => {
+    it('should open and close add modal', () => {
+      component.abrirModalAgregar();
+      expect(component.modalPersonalOpen).toBeTrue();
+      expect(component.editandoPersonal).toBeFalse();
+      expect(component.personalForm.estado).toBe('ACTIVO');
+      component.cerrarModalPersonal();
+      expect(component.modalPersonalOpen).toBeFalse();
+    });
+
+    it('should set default sede/area/departamento from available options in add modal', () => {
+      setMockPersonal();
+      component.abrirModalAgregar();
+      expect(component.sedesDisponibles).toContain(component.personalForm.sede);
+      expect(component.areasDisponibles).toContain(component.personalForm.area);
+      expect(component.departamentosDisponibles).toContain(component.personalForm.departamento);
+    });
+
+    it('should open and close edit modal', () => {
+      setMockPersonal();
+      const persona = component.personal()[0];
+      component.abrirModalEditar(persona);
+      expect(component.modalPersonalOpen).toBeTrue();
+      expect(component.editandoPersonal).toBeTrue();
+      expect(component.personalForm.nombre).toBe(persona.nombre);
+      component.cerrarModalPersonal();
+      expect(component.modalPersonalOpen).toBeFalse();
+      expect(component.imagenPreviewUrl).toBeNull();
+    });
+
+    it('should open and close detail modal', () => {
+      const persona = { id: 1, nombre: 'Test', idPersonal: '123', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as any };
+      component.abrirModalDetalle(persona);
+      expect(component.modalDetalleOpen).toBeTrue();
+      expect(component.personalSeleccionado).toBe(persona);
+      component.cerrarModalDetalle();
+      expect(component.modalDetalleOpen).toBeFalse();
+      expect(component.personalSeleccionado).toBeNull();
+    });
+
+    it('should edit from detail modal', () => {
+      setMockPersonal();
+      component.abrirModalDetalle(component.personal()[0]);
+      component.editarDesdeDetalle();
+      expect(component.modalDetalleOpen).toBeFalse();
+      expect(component.modalPersonalOpen).toBeTrue();
+      component.cerrarModalPersonal();
+    });
   });
 
-  it('should open and close add modal', () => {
-    component.abrirModalAgregar();
-    expect(component.modalPersonalOpen).toBeTrue();
-    expect(component.editandoPersonal).toBeFalse();
-    component.cerrarModalPersonal();
-    expect(component.modalPersonalOpen).toBeFalse();
+  describe('image handling', () => {
+    it('should handle image file selection', () => {
+      const file = new File([''], 'test.jpg', { type: 'image/jpeg' });
+      const event = { target: { files: [file] } } as any;
+      component.onFileSelected(event);
+      expect(component.imagenPreviewUrl).toBeDefined();
+    });
+
+    it('should reject files over 2MB', () => {
+      const largeFile = new File(['x'.repeat(3 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+      const event = { target: { files: [largeFile] } } as any;
+      component.onFileSelected(event);
+      expect(mockToast.info).toHaveBeenCalled();
+    });
+
+    it('should do nothing when no file selected', () => {
+      const event = { target: { files: null } } as any;
+      component.onFileSelected(event);
+      expect(component.imagenPreviewUrl).toBeNull();
+    });
+
+    it('should toggle image mode to URL', () => {
+      component.cambiarModoImagen(true);
+      expect(component.modoImagenUrl).toBeTrue();
+    });
+
+    it('should toggle image mode to file', () => {
+      component.cambiarModoImagen(false);
+      expect(component.modoImagenUrl).toBeFalse();
+    });
+
+    it('should update preview URL from form', () => {
+      component.personalForm.imagenUrl = 'http://example.com/img.jpg';
+      component.actualizarPreviewUrl();
+      expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
+    });
+
+    it('should set preview to null when imagenUrl is empty', () => {
+      component.personalForm.imagenUrl = '';
+      component.actualizarPreviewUrl();
+      expect(component.imagenPreviewUrl).toBeNull();
+    });
+
+    it('should abrirSelectorArchivo trigger file input click', () => {
+      const clickSpy = jasmine.createSpy('click');
+      const mockInput = { click: clickSpy } as any;
+      spyOn(document, 'getElementById').and.returnValue(mockInput);
+      component.abrirSelectorArchivo();
+      expect(document.getElementById).toHaveBeenCalledWith('fileInput');
+      expect(clickSpy).toHaveBeenCalled();
+    });
   });
 
-  it('should open and close edit modal', () => {
-    component.personal.set([{
-      id: 1, nombre: 'José Pérez', idPersonal: '76543210',
-      sede: 'Sede San Isidro', area: 'Dirección Académica',
-      departamento: 'Matemáticas', cargo: '', estado: 'ACTIVO',
-      email: 'jose@colegio.edu.pe',
-    }]);
-    const persona = component.personal()[0];
-    component.abrirModalEditar(persona);
-    expect(component.modalPersonalOpen).toBeTrue();
-    expect(component.editandoPersonal).toBeTrue();
-    expect(component.personalForm.nombre).toBe(persona.nombre);
-    component.cerrarModalPersonal();
-    expect(component.modalPersonalOpen).toBeFalse();
+  describe('guardarPersonal', () => {
+    it('should create new user', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'Nuevo Usuario';
+      component.personalForm.idPersonal = '12345';
+      component.personalForm.email = 'nuevo@colegio.edu.pe';
+      await component.guardarPersonal();
+      expect(mockApi.users.create).toHaveBeenCalled();
+      expect(component.modalPersonalOpen).toBeFalse();
+    });
+
+    it('should edit existing user', async () => {
+      component.editandoPersonal = true;
+      component.personalForm.id = 1;
+      component.personalForm.nombre = 'Editado Nombre';
+      component.personalForm.idPersonal = '12345';
+      await component.guardarPersonal();
+      expect(mockApi.users.patch).toHaveBeenCalled();
+      expect(component.modalPersonalOpen).toBeFalse();
+    });
+
+    it('should not save with empty name', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = '';
+      component.personalForm.idPersonal = '';
+      await component.guardarPersonal();
+      expect(mockApi.users.create).not.toHaveBeenCalled();
+      expect(mockToast.info).toHaveBeenCalled();
+    });
+
+    it('should handle create error', async () => {
+      mockApi.users.create.and.returnValue(throwError(() => new Error('fail')));
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'Test User';
+      component.personalForm.idPersonal = '99999';
+      await component.guardarPersonal();
+      expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
+      mockApi.users.create.and.returnValue(of(mockUsersResponse.content[0]));
+    });
+
+    it('should handle edit error', async () => {
+      mockApi.users.patch.and.returnValue(throwError(() => new Error('fail')));
+      component.editandoPersonal = true;
+      component.personalForm.nombre = 'Test';
+      component.personalForm.idPersonal = '99999';
+      await component.guardarPersonal();
+      expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
+      mockApi.users.patch.and.returnValue(of(mockUsersResponse.content[0]));
+    });
+
+    it('should create user with single-word name', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'SoloNombre';
+      component.personalForm.idPersonal = '11111';
+      await component.guardarPersonal();
+      expect(mockApi.users.create).toHaveBeenCalled();
+      expect(component.modalPersonalOpen).toBeFalse();
+    });
   });
 
-  it('should open and close detail modal', () => {
-    const persona = { id: 1, nombre: 'Test', idPersonal: '123', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as any };
-    component.abrirModalDetalle(persona);
-    expect(component.modalDetalleOpen).toBeTrue();
-    expect(component.personalSeleccionado).toBe(persona);
-    component.cerrarModalDetalle();
-    expect(component.modalDetalleOpen).toBeFalse();
-    expect(component.personalSeleccionado).toBeNull();
+  describe('eliminarPersonal', () => {
+    it('should delete user', async () => {
+      await component.eliminarPersonal(1);
+      expect(mockApi.users.delete).toHaveBeenCalledWith(1);
+      expect(mockToast.info).toHaveBeenCalled();
+    });
+
+    it('should handle delete error', async () => {
+      mockApi.users.delete.and.returnValue(throwError(() => new Error('fail')));
+      await component.eliminarPersonal(1);
+      expect(mockToast.info).toHaveBeenCalledWith('Error al eliminar');
+      mockApi.users.delete.and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 }));
+    });
   });
 
-  it('should edit from detail modal', () => {
-    component.personal.set([{ id: 1, nombre: 'Test', idPersonal: '123', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' }] as any);
-    component.abrirModalDetalle(component.personal()[0]);
-    component.editarDesdeDetalle();
-    expect(component.modalDetalleOpen).toBeFalse();
-    expect(component.modalPersonalOpen).toBeTrue();
-    component.cerrarModalPersonal();
+  describe('enrollment modal', () => {
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    it('should open enrollment modal and connect middleware', () => {
+      const connectSpy = spyOn(middlewareWs, 'connect');
+      component.abrirModalEnrolar(mockPersona);
+      expect(component.modalEnrolarOpen).toBeTrue();
+      expect(component.personaEnrolar).toBe(mockPersona);
+      expect(component.enrolCompleted()).toBeFalse();
+      expect(component.enrolSuccess()).toBeFalse();
+      expect(component.enrolFpStatus()).toBe('Preparando conexión...');
+      expect(connectSpy).toHaveBeenCalled();
+    });
+
+    it('should close enrollment modal and cancel ongoing enrollment', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cerrarModalEnrolar();
+      expect(component.modalEnrolarOpen).toBeFalse();
+      expect(component.personaEnrolar).toBeNull();
+      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
+    });
+
+    it('should close enrollment modal without cancel if not in progress', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cerrarModalEnrolar();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
   });
 
-  it('should handle image file selection', () => {
-    const file = new File([''], 'test.jpg', { type: 'image/jpeg' });
-    const event = { target: { files: [file] } } as any;
-    component.onFileSelected(event);
-    expect(component.imagenPreviewUrl).toBeDefined();
+  describe('iniciarEnrolamiento', () => {
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    it('should send fingerprint.capture when starting enrollment', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.iniciarEnrolamiento();
+      expect(component.enrolInProgress()).toBeTrue();
+      expect(component.enrolAwaitingReference()).toBeTrue();
+      expect(component.enrolOperationLabel()).toBe('Capturando referencia...');
+      expect(sendSpy).toHaveBeenCalledWith('fingerprint.capture');
+    });
+
+    it('should not start if already in progress', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.iniciarEnrolamiento();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
   });
 
-  it('should reject files over 2MB', () => {
-    const largeFile = new File(['x'.repeat(3 * 1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
-    const event = { target: { files: [largeFile] } } as any;
-    component.onFileSelected(event);
-    expect(mockToast.info).toHaveBeenCalled();
+  describe('cancelarEnrolamiento', () => {
+    it('should cancel enrollment and reset state', () => {
+      component.enrolInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cancelarEnrolamiento();
+      expect(component.enrolInProgress()).toBeFalse();
+      expect(component.enrolOperationLabel()).toBe('Cancelado');
+      expect(component.enrolFpStatus()).toBe('Enrolamiento cancelado.');
+      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
+    });
+
+    it('should not cancel if not in progress', () => {
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cancelarEnrolamiento();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
   });
 
-  it('should toggle image mode', () => {
-    component.cambiarModoImagen(false);
-    expect(component.modoImagenUrl).toBeFalse();
-    component.cambiarModoImagen(true);
-    expect(component.modoImagenUrl).toBeTrue();
+  describe('addEnrolLog', () => {
+    it('should add log entries', () => {
+      (component as any).addEnrolLog('test message', 'info');
+      expect(component.enrolLogs().length).toBe(1);
+      expect(component.enrolLogs()[0].message).toBe('test message');
+      expect(component.enrolLogs()[0].type).toBe('info');
+    });
+
+    it('should keep max 100 logs', () => {
+      for (let i = 0; i < 150; i++) {
+        (component as any).addEnrolLog(`msg ${i}`, 'info');
+      }
+      expect(component.enrolLogs().length).toBe(100);
+    });
+
+    it('should default to info type when not specified', () => {
+      (component as any).addEnrolLog('no type');
+      expect(component.enrolLogs().length).toBe(1);
+      expect(component.enrolLogs()[0].type).toBe('info');
+    });
   });
 
-  it('should guardarPersonal create new user', async () => {
-    component.editandoPersonal = false;
-    component.personalForm.nombre = 'Nuevo Usuario';
-    component.personalForm.idPersonal = '12345';
-    component.personalForm.email = 'nuevo@colegio.edu.pe';
-    await component.guardarPersonal();
-    expect(mockApi.users.create).toHaveBeenCalled();
-    expect(component.modalPersonalOpen).toBeFalse();
+  describe('ngOnDestroy', () => {
+    it('should cleanup enrollment subscriptions', () => {
+      const cleanupSpy = spyOn(component as any, 'cleanupEnrollmentSubscriptions');
+      component.ngOnDestroy();
+      expect(cleanupSpy).toHaveBeenCalled();
+    });
   });
 
-  it('should guardarPersonal edit existing user', async () => {
-    component.editandoPersonal = true;
-    component.personalForm.id = 1;
-    component.personalForm.nombre = 'Editado Nombre';
-    component.personalForm.idPersonal = '12345';
-    await component.guardarPersonal();
-    expect(mockApi.users.patch).toHaveBeenCalled();
-    expect(component.modalPersonalOpen).toBeFalse();
+  describe('initial state (before ngOnInit)', () => {
+    let freshComponent: DirectorioPersonal;
+    let freshFixture: ComponentFixture<DirectorioPersonal>;
+
+    beforeEach(() => {
+      freshFixture = TestBed.createComponent(DirectorioPersonal);
+      freshComponent = freshFixture.componentInstance;
+    });
+
+    it('should have loading and error signals', () => {
+      expect(freshComponent.loading()).toBeFalse();
+      expect(freshComponent.error()).toBe('');
+    });
+
+    it('should have initial metricas at zero', () => {
+      expect(freshComponent.metricas.personalTotal).toBe(0);
+      expect(freshComponent.metricas.activosHoy).toBe(0);
+    });
+
+    it('should have empty filter options', () => {
+      expect(freshComponent.sedesDisponibles).toEqual([]);
+      expect(freshComponent.areasDisponibles).toEqual([]);
+      expect(freshComponent.departamentosDisponibles).toEqual([]);
+    });
+
+    it('should have enrollment state initialized', () => {
+      expect(freshComponent.modalEnrolarOpen).toBeFalse();
+      expect(freshComponent.personaEnrolar).toBeNull();
+      expect(freshComponent.enrolConnectionState()).toBe('disconnected');
+      expect(freshComponent.enrolOperationLabel()).toBe('');
+      expect(freshComponent.enrolInProgress()).toBeFalse();
+      expect(freshComponent.enrolProgress()).toBe('');
+      expect(freshComponent.enrolFpImageUrl()).toBeNull();
+      expect(freshComponent.enrolFpStatus()).toBe('');
+      expect(freshComponent.enrolQuality()).toBeNull();
+      expect(freshComponent.enrolTemplateSize()).toBe(0);
+      expect(freshComponent.enrolTemplatePreview()).toBe('');
+      expect(freshComponent.enrolLogs()).toEqual([]);
+      expect(freshComponent.enrolCompleted()).toBeFalse();
+      expect(freshComponent.enrolSuccess()).toBeFalse();
+      expect(freshComponent.enrolAwaitingReference()).toBeFalse();
+    });
+
+    afterEach(() => {
+      freshFixture.destroy();
+    });
   });
 
-  it('should not guardarPersonal with empty name', async () => {
-    component.editandoPersonal = false;
-    component.personalForm.nombre = '';
-    component.personalForm.idPersonal = '';
-    await component.guardarPersonal();
-    expect(mockApi.users.create).not.toHaveBeenCalled();
-    expect(mockToast.info).toHaveBeenCalled();
+  describe('cargarPersonal', () => {
+    it('should load personal, populate filters, and compute metricas', async () => {
+      expect(component.sedesDisponibles).toContain('Sede San Isidro');
+      expect(component.areasDisponibles).toContain('Dirección Académica');
+      expect(component.departamentosDisponibles).toContain('Matemáticas');
+      expect(component.metricas.personalTotal).toBe(2);
+      expect(component.metricas.activosHoy).toBe(1);
+      expect(component.metricas.deLicencia).toBe(1);
+    });
+
+    it('should set error on failure', async () => {
+      mockApi.users.list.and.returnValue(throwError(() => new Error('fail')));
+      await component.cargarPersonal();
+      expect(component.error()).toBe('Error al cargar personal. Verifica tu conexión e intenta nuevamente.');
+      mockApi.users.list.and.returnValue(of(mockUsersResponse));
+    });
   });
 
-  it('should eliminarPersonal', async () => {
-    await component.eliminarPersonal(1);
-    expect(mockApi.users.delete).toHaveBeenCalledWith(1);
-    expect(mockToast.info).toHaveBeenCalled();
+  describe('filtrarPersonal', () => {
+    it('should reset page to 1', () => {
+      component.paginaActual = 3;
+      component.filtrarPersonal();
+      expect(component.paginaActual).toBe(1);
+    });
   });
 
-  it('should handle guardarPersonal error', async () => {
-    mockApi.users.create.and.returnValue(throwError(() => new Error('fail')));
-    component.editandoPersonal = false;
-    component.personalForm.nombre = 'Test User';
-    component.personalForm.idPersonal = '99999';
-    await component.guardarPersonal();
-    expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
-    mockApi.users.create.and.returnValue(of(mockUsersResponse.content[0]));
+  describe('cambiarModoImagen', () => {
+    it('should show imagenUrl preview when switching to URL mode', () => {
+      component.personalForm.imagenUrl = 'http://example.com/img.jpg';
+      component.cambiarModoImagen(true);
+      expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
+    });
+
+    it('should set preview to null when switching to URL mode with empty form', () => {
+      component.personalForm.imagenUrl = '';
+      component.cambiarModoImagen(true);
+      expect(component.imagenPreviewUrl).toBeNull();
+    });
   });
 
-  it('should handle eliminarPersonal error', async () => {
-    mockApi.users.delete.and.returnValue(throwError(() => new Error('fail')));
-    await component.eliminarPersonal(1);
-    expect(mockToast.info).toHaveBeenCalledWith('Error al eliminar');
-    mockApi.users.delete.and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 }));
-  });
-
-  it('should abrirSelectorArchivo trigger file input click', () => {
-    const clickSpy = jasmine.createSpy('click');
-    const mockInput = { click: clickSpy } as any;
-    spyOn(document, 'getElementById').and.returnValue(mockInput);
-    component.abrirSelectorArchivo();
-    expect(document.getElementById).toHaveBeenCalledWith('fileInput');
-    expect(clickSpy).toHaveBeenCalled();
-  });
-
-  it('should update preview URL on url change', () => {
-    component.personalForm.imagenUrl = 'http://example.com/img.jpg';
-    component.actualizarPreviewUrl();
-    expect(component.imagenPreviewUrl).toBe('http://example.com/img.jpg');
-  });
-
-  it('should handle guardarPersonal error in edit mode', async () => {
-    mockApi.users.patch.and.returnValue(throwError(() => new Error('fail')));
-    component.editandoPersonal = true;
-    component.personalForm.nombre = 'Test';
-    component.personalForm.idPersonal = '99999';
-    await component.guardarPersonal();
-    expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
-    mockApi.users.patch.and.returnValue(of(mockUsersResponse.content[0]));
+  describe('paginaActual guard', () => {
+    it('should not change to page 0', () => {
+      setMockPersonal();
+      component.itemsPerPage = 1;
+      component.cambiarPagina(0);
+      expect(component.paginaActual).toBe(1);
+    });
   });
 });

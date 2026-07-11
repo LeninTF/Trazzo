@@ -2,7 +2,7 @@ name: CI/CD Middleware Biométrico
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches: [main]
     paths:
       - 'middleware/**'
       - '.github/workflows/middleware-ci.yml'
