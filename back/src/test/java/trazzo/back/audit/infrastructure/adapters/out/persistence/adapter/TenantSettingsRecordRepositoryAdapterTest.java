@@ -13,6 +13,7 @@ import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.Tena
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -32,12 +33,12 @@ class TenantSettingsRecordRepositoryAdapterTest {
     private TenantSettingsRecordEntity createEntity() {
         var e = new TenantSettingsRecordEntity();
         e.setId(1L);
-        e.setTenantSettingId("setting-1");
+        e.setTenantSettingId(UUID.fromString("11111111-1111-1111-1111-111111111111"));
         e.setDbName("mydb");
         e.setDbHost("localhost");
         e.setDbUser("admin");
         e.setDbPassword("pass123");
-        e.setUserId("user-1");
+        e.setUserId(UUID.fromString("22222222-2222-2222-2222-222222222222"));
         e.setChangeReason("Schema update");
         e.setCreatedAt(now);
         return e;

@@ -1,5 +1,6 @@
 package trazzo.back.shared.infrastructure.adapters.out.storage;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -17,6 +18,7 @@ import java.net.URL;
 import java.time.Duration;
 
 @Component
+@ConditionalOnExpression("'${cloudflare.r2.endpoint:}'.length() > 0")
 public class CloudflareR2StorageAdapter implements FileStoragePort {
 
     private final S3Client s3Client;

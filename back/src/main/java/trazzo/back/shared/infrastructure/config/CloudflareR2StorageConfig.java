@@ -1,5 +1,6 @@
 package trazzo.back.shared.infrastructure.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +15,7 @@ import java.net.URI;
 
 @Configuration
 @EnableConfigurationProperties(CloudflareR2Properties.class)
+@ConditionalOnExpression("'${cloudflare.r2.endpoint:}'.length() > 0")
 public class CloudflareR2StorageConfig {
 
     @Bean
