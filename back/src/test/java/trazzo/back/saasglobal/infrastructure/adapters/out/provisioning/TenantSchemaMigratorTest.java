@@ -78,4 +78,31 @@ class TenantSchemaMigratorTest {
         verify(statement).execute("SET search_path TO \"tenant_demo\"");
         verify(resourceResolver).getResources(contains("db/tenant/migration/"));
     }
+
+    @Test
+    void shouldAttemptRemainingScriptsWhenAnEarlierScriptFailsToRead() throws Exception {
+        UUID tenantId = UUID.randomUUID();
+        Map<String, Object> row = new HashMap<>();
+        row.put("id", tenantId);
+        row.put("schema_name", "tenant_demo");
+
+        Resource brokenScript = mock(Resource.class);
+        when(brokenScript.getFilename()).thenReturn("V2__broken.sql");
+        when(brokenScript.getInputStream()).thenThrow(new java.io.IOException("boom"));
+
+        Resource laterScript = mock(Resource.class);
+        when(laterScript.getFilename()).thenReturn("V3__later.sql");
+        when(laterScript.getInputStream()).thenThrow(new java.io.IOException("also broken, but reached"));
+
+        when(jdbc.queryForList(anyString())).thenReturn(List.of(row));
+        when(rawDataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(resourceResolver.getResources(anyString())).thenReturn(new Resource[]{brokenScript, laterScript});
+
+        assertDoesNotThrow(() -> migrator.run(mock(ApplicationArguments.class)));
+
+        // The key behavior under test: a failure reading V2 must not stop the loop from
+        // reaching V3 — proven by V3's resource being touched at all despite also failing.
+        verify(laterScript, atLeastOnce()).getInputStream();
+    }
 }

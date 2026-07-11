@@ -30,7 +30,8 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
         SaasRequestController.class,
         SaasRoleController.class,
         SaasUserController.class,
-        SaasInvoiceController.class
+        SaasInvoiceController.class,
+        TenantBillingController.class
 })
 public class SaasGlobalExceptionHandler {
 

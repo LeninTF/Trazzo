@@ -77,6 +77,9 @@ public class TenantSchemaMigrator implements ApplicationRunner {
                 stmt.execute("SET search_path TO \"" + schemaName + "\"");
             }
             Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
+            // Each script runs independently: this migrator has no per-tenant applied-migration
+            // tracking (every script re-runs on every startup), so one broken/non-idempotent
+            // script must not prevent unrelated later scripts from ever being applied.
             List.of(resources).stream()
                     .sorted(Comparator.comparing(Resource::getFilename))
                     .forEach(script -> {
@@ -84,7 +87,8 @@ public class TenantSchemaMigrator implements ApplicationRunner {
                             ScriptUtils.executeSqlScript(conn, script);
                             log.info("Executed {} on tenant {} (schema {})", script.getFilename(), tenantId, schemaName);
                         } catch (Exception e) {
-                            throw new RuntimeException("Failed to execute " + script.getFilename(), e);
+                            log.error("Failed to execute {} on tenant {} (schema {}): {}",
+                                    script.getFilename(), tenantId, schemaName, e.getMessage());
                         }
                     });
             log.info("Migrated tenant {} (schema {})", tenantId, schemaName);

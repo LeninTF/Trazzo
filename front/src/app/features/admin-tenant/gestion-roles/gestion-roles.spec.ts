@@ -1,114 +1,148 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 import { GestionRoles } from './gestion-roles';
+import { OrgService } from '../../../api/services/org.service';
+import { ToastService } from '../../../services/toast.service';
+import type { OrgRoleResult, OrgPermissionResult, OrgRolePermissionResult } from '../../../api/types';
 
-describe('GestionRoles', () => {
+describe('GestionRoles (tenant)', () => {
   let component: GestionRoles;
   let fixture: ComponentFixture<GestionRoles>;
 
+  const mockRoles: OrgRoleResult[] = [
+    { id: 'role-admin', name: 'administrador', description: 'desc admin', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+    { id: 'role-docente', name: 'docente', description: 'desc docente', createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  ];
+
+  const mockPermissions: OrgPermissionResult[] = [
+    { id: 'perm-crear', name: 'gestion-trabajadores.crear', description: null, masterFeaturesCode: null, createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+    { id: 'perm-editar', name: 'gestion-trabajadores.editar', description: null, masterFeaturesCode: null, createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+    { id: 'perm-perfil', name: 'perfil.ver-actualizar-datos', description: null, masterFeaturesCode: null, createdAt: '2026-01-01', updatedAt: '2026-01-01' },
+  ];
+
+  const grantsFor = (roleId: string, permissionIds: string[]): OrgRolePermissionResult[] =>
+    permissionIds.map(permissionId => ({ roleId, permissionId, createdAt: '2026-01-01' }));
+
+  let mockOrg: {
+    listRoles: jasmine.Spy; createRole: jasmine.Spy; updateRole: jasmine.Spy; deleteRole: jasmine.Spy;
+    listRolePermissions: jasmine.Spy; assignPermissionToRole: jasmine.Spy; removePermissionFromRole: jasmine.Spy;
+    listPermissions: jasmine.Spy;
+  };
+  let mockToast: jasmine.SpyObj<ToastService>;
+
   beforeEach(async () => {
+    mockOrg = {
+      listRoles: jasmine.createSpy('listRoles').and.returnValue(of({ content: mockRoles, page: 0, size: 100, total: 2, totalPages: 1 })),
+      createRole: jasmine.createSpy('createRole').and.returnValue(of(mockRoles[0])),
+      updateRole: jasmine.createSpy('updateRole').and.returnValue(of(mockRoles[0])),
+      deleteRole: jasmine.createSpy('deleteRole').and.returnValue(of(undefined)),
+      listRolePermissions: jasmine.createSpy('listRolePermissions').and.callFake((roleId: string) => {
+        if (roleId === 'role-admin') return of(grantsFor('role-admin', ['perm-crear', 'perm-editar']));
+        return of(grantsFor('role-docente', ['perm-perfil']));
+      }),
+      assignPermissionToRole: jasmine.createSpy('assignPermissionToRole').and.returnValue(of({ roleId: 'role-admin', permissionId: 'perm-perfil', createdAt: '2026-01-01' })),
+      removePermissionFromRole: jasmine.createSpy('removePermissionFromRole').and.returnValue(of(undefined)),
+      listPermissions: jasmine.createSpy('listPermissions').and.returnValue(of({ content: mockPermissions, page: 0, size: 200, total: 3, totalPages: 1 })),
+    };
+    mockToast = jasmine.createSpyObj('ToastService', ['show', 'success', 'error', 'info']);
+
     await TestBed.configureTestingModule({
       imports: [GestionRoles, FormsModule],
+      providers: [
+        { provide: OrgService, useValue: mockOrg },
+        { provide: ToastService, useValue: mockToast },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GestionRoles);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have 5 initial roles', () => {
-    expect(component.roles.length).toBe(5);
+  it('should load roles and permissions from the backend', () => {
+    expect(mockOrg.listRoles).toHaveBeenCalled();
+    expect(mockOrg.listPermissions).toHaveBeenCalled();
+    expect(component.roles).toHaveSize(2);
   });
 
-  it('should have modulos', () => {
-    expect(component.modulos.length).toBeGreaterThan(0);
+  it('should have the 14 predefined modulos', () => {
+    expect(component.modulos).toHaveSize(14);
   });
 
-  it('should have default role selected', () => {
-    expect(component.rolSeleccionado).toBe('administrador');
-  });
-
-  it('should get rolActual', () => {
+  it('should select the first role by default', () => {
+    expect(component.rolSeleccionado).toBe('role-admin');
     expect(component.rolActual.nombre).toBe('Administrador');
   });
 
-  it('should get permisosActuales for selected role', () => {
-    const permisos = component.permisosActuales;
-    expect(permisos['gestion-trabajadores.crear']).toBeTrue();
+  it('should mark granted permissions as active from listRolePermissions', () => {
+    expect(component.permisosActuales['gestion-trabajadores.crear']).toBeTrue();
+    expect(component.permisosActuales['gestion-trabajadores.editar']).toBeTrue();
+    expect(component.permisosActuales['gestion-trabajadores.eliminar']).toBeFalse();
   });
 
-  it('should togglePermiso', () => {
+  it('should filter modulosVisibles to admin modules by default', () => {
+    const ids = component.modulosVisibles().map(m => m.id);
+    expect(ids).toContain('gestion-trabajadores');
+    expect(ids).not.toContain('asistencia-docente');
+  });
+
+  it('should filter modulosVisibles to docente modules when docente role is selected', () => {
+    component.seleccionarRol('role-docente');
+    const ids = component.modulosVisibles().map(m => m.id);
+    expect(ids).toContain('asistencia-docente');
+    expect(ids).not.toContain('gestion-trabajadores');
+  });
+
+  it('should togglePermiso locally without calling backend', () => {
     component.togglePermiso('gestion-trabajadores', 'crear');
     expect(component.permisosActuales['gestion-trabajadores.crear']).toBeFalse();
-    component.togglePermiso('gestion-trabajadores', 'crear');
-    expect(component.permisosActuales['gestion-trabajadores.crear']).toBeTrue();
+    expect(mockOrg.assignPermissionToRole).not.toHaveBeenCalled();
+    expect(mockOrg.removePermissionFromRole).not.toHaveBeenCalled();
   });
 
-  it('should toggleModulo enable all', () => {
-    component.toggleModulo('gestion-trabajadores', true);
-    const modulo = component.modulos.find(m => m.id === 'gestion-trabajadores')!;
-    for (const accion of modulo.acciones) {
-      expect(component.permisosActuales[`gestion-trabajadores.${accion.id}`]).toBeTrue();
-    }
-  });
-
-  it('should toggleModulo disable all', () => {
-    component.toggleModulo('gestion-trabajadores', false);
-    const modulo = component.modulos.find(m => m.id === 'gestion-trabajadores')!;
-    for (const accion of modulo.acciones) {
-      expect(component.permisosActuales[`gestion-trabajadores.${accion.id}`]).toBeFalse();
-    }
-  });
-
-  it('should getEstadoModulo', () => {
-    expect(component.getEstadoModulo('gestion-trabajadores')).toBe('completo');
-    component.togglePermiso('gestion-trabajadores', 'crear');
-    expect(component.getEstadoModulo('gestion-trabajadores')).toBe('parcial');
-    component.toggleModulo('gestion-trabajadores', false);
-    expect(component.getEstadoModulo('gestion-trabajadores')).toBe('vacio');
-  });
-
-  it('should getResumenModulo', () => {
-    expect(component.getResumenModulo('gestion-trabajadores')).toBe('4/4');
-  });
-
-  it('should modulosVisibles for docente', () => {
-    component.seleccionarRol('docente');
-    const visibles = component.modulosVisibles();
-    expect(visibles.every(m =>
-      ['asistencia-docente', 'horarios-docente', 'solicitudes', 'notificaciones-docente', 'perfil'].includes(m.id)
-    )).toBeTrue();
-  });
-
-  it('should modulosVisibles for admin', () => {
-    const visibles = component.modulosVisibles();
-    expect(visibles.every(m =>
-      !['asistencia-docente', 'horarios-docente', 'solicitudes', 'notificaciones-docente', 'perfil'].includes(m.id)
-    )).toBeTrue();
-  });
-
-  it('should seleccionarRol', () => {
-    component.seleccionarRol('director');
-    expect(component.rolSeleccionado).toBe('director');
-  });
-
-  it('should restablecer permisos', () => {
+  it('should restablecer revert unsaved changes', () => {
     component.togglePermiso('gestion-trabajadores', 'crear');
     component.restablecer();
     expect(component.permisosActuales['gestion-trabajadores.crear']).toBeTrue();
   });
 
-  it('should guardarCambios', () => {
-    component.togglePermiso('gestion-trabajadores', 'crear');
+  it('should guardarCambios assign newly-checked permissions', () => {
+    component.togglePermiso('perfil', 'ver-actualizar-datos');
+
     component.guardarCambios();
+
+    expect(mockOrg.assignPermissionToRole).toHaveBeenCalledWith('role-admin', 'perm-perfil');
     expect(component.mensajeGuardado).toBeTrue();
   });
 
-  it('should abrirModalNuevoRol', () => {
+  it('should guardarCambios remove newly-unchecked permissions', () => {
+    component.togglePermiso('gestion-trabajadores', 'crear');
+
+    component.guardarCambios();
+
+    expect(mockOrg.removePermissionFromRole).toHaveBeenCalledWith('role-admin', 'perm-crear');
+  });
+
+  it('should do nothing when guardarCambios has no changes', () => {
+    component.guardarCambios();
+    expect(mockOrg.assignPermissionToRole).not.toHaveBeenCalled();
+    expect(mockOrg.removePermissionFromRole).not.toHaveBeenCalled();
+    expect(component.mensajeGuardado).toBeTrue();
+  });
+
+  it('should show error toast when guardarCambios fails', () => {
+    mockOrg.assignPermissionToRole.and.returnValue(throwError(() => new Error('fail')));
+    component.togglePermiso('perfil', 'ver-actualizar-datos');
+    component.guardarCambios();
+    expect(mockToast.error).toHaveBeenCalled();
+  });
+
+  it('should abrirModalNuevoRol reset the form', () => {
     component.abrirModalNuevoRol();
     expect(component.mostrarModalRol).toBeTrue();
     expect(component.editandoRol).toBeNull();
@@ -120,31 +154,52 @@ describe('GestionRoles', () => {
     expect(component.mostrarModalRol).toBeFalse();
   });
 
-  it('should guardarRol create new', () => {
+  it('should guardarRol create a new role via backend', () => {
     component.abrirModalNuevoRol();
-    component.nuevoRolNombre = 'Test Rol';
+    component.nuevoRolNombre = 'Supervisor de piso';
+
     component.guardarRol();
-    expect(component.roles.length).toBe(6);
-    expect(component.roles.find(r => r.nombre === 'Test Rol')).toBeTruthy();
-    expect(component.rolSeleccionado).toBe('test-rol');
+
+    expect(mockOrg.createRole).toHaveBeenCalledWith({ name: 'Supervisor de piso', description: undefined });
+    expect(component.mostrarModalRol).toBeFalse();
   });
 
-  it('should not agregarRol with empty name', () => {
+  it('should not guardarRol with an empty name', () => {
     component.abrirModalNuevoRol();
     component.guardarRol();
-    expect(component.roles.length).toBe(5);
+    expect(mockOrg.createRole).not.toHaveBeenCalled();
   });
 
-  it('should guardarEdicionRol', () => {
+  it('should guardarRol update an existing role', () => {
     component.abrirModalEditarRol(component.roles[0]);
-    component.nuevoRolNombre = 'Rol Editado';
+    component.nuevoRolNombre = 'Administrador General';
+
     component.guardarRol();
-    expect(component.roles[0].nombre).toBe('Rol Editado');
+
+    expect(mockOrg.updateRole).toHaveBeenCalledWith('role-admin', { name: 'Administrador General', description: 'desc admin' });
   });
 
-  it('should eliminarRol', () => {
-    const lenBefore = component.roles.length;
-    component.eliminarRol(component.roles[0].id);
-    expect(component.roles.length).toBe(lenBefore - 1);
+  it('should eliminarRol call backend delete', () => {
+    component.eliminarRol('role-docente');
+    expect(mockOrg.deleteRole).toHaveBeenCalledWith('role-docente');
+  });
+
+  it('should show error toast when eliminarRol fails', () => {
+    mockOrg.deleteRole.and.returnValue(throwError(() => new Error('409')));
+    component.eliminarRol('role-docente');
+    expect(mockToast.error).toHaveBeenCalled();
+  });
+
+  it('should handle an empty role list without error', () => {
+    mockOrg.listRoles.and.returnValue(of({ content: [], page: 0, size: 100, total: 0, totalPages: 0 }));
+    component['cargarRoles']();
+    expect(component.roles).toHaveSize(0);
+    expect(component.error()).toBe('');
+  });
+
+  it('should set error when loading roles fails', () => {
+    mockOrg.listRoles.and.returnValue(throwError(() => new Error('fail')));
+    component['cargarRoles']();
+    expect(component.error()).toBe('No se pudieron cargar los roles.');
   });
 });
