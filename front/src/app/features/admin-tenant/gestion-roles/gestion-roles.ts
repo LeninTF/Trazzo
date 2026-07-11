@@ -1,10 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import {
-  Modulo, Rol,
-  togglePermisoAccion, toggleModuloAcciones, estadoModulo, resumenModulo, restablecerPermisos,
-} from '../../../shared/role-management/role-management-base';
+import { Modulo, Rol, RoleMatrixComponent } from '../../../shared/role-management/role-management-base';
 import { OrgService } from '../../../api/services/org.service';
 import { ToastService } from '../../../services/toast.service';
 import type { OrgRoleResult, OrgRolePermissionResult } from '../../../api/types';
@@ -99,30 +96,18 @@ const MODULOS_JSON = `[
   templateUrl: './gestion-roles.html',
   styleUrl: '../../../shared/role-management/gestion-roles.css',
 })
-export class GestionRoles {
+export class GestionRoles extends RoleMatrixComponent {
   private readonly orgService = inject(OrgService);
   private readonly toastService = inject(ToastService);
 
-  readonly loading = signal(false);
-  readonly error = signal('');
-
-  roles: Rol[] = [];
   private rolesById = new Map<string, OrgRoleResult>();
   private readonly permissionIdByCode = new Map<string, string>();
   private readonly permissionCodeById = new Map<string, string>();
 
   readonly modulos: Modulo[] = JSON.parse(MODULOS_JSON);
 
-  permisos: Record<string, Record<string, boolean>> = {};
-  respaldoPermisos: Record<string, Record<string, boolean>> = {};
-  rolSeleccionado = '';
-  nuevoRolNombre = '';
-  nuevoRolDescripcion = '';
-  editandoRol: Rol | null = null;
-  mostrarModalRol = false;
-  mensajeGuardado = false;
-
   constructor() {
+    super();
     this.cargarRoles();
   }
 
@@ -211,43 +196,9 @@ export class GestionRoles {
     };
   }
 
-  get rolActual(): Rol {
-    return this.roles.find(r => r.id === this.rolSeleccionado) ?? this.roles[0];
-  }
-
-  get permisosActuales(): Record<string, boolean> {
-    return this.permisos[this.rolSeleccionado] ?? {};
-  }
-
-  modulosVisibles(): Modulo[] {
+  override modulosVisibles(): Modulo[] {
     const esDocente = this.rolesById.get(this.rolSeleccionado)?.name === 'docente';
     return this.modulos.filter(m => DOCENTE_MODULE_IDS.has(m.id) === esDocente);
-  }
-
-  togglePermiso(moduloId: string, accionId: string): void {
-    togglePermisoAccion(this.permisos, this.rolSeleccionado, moduloId, accionId);
-  }
-
-  toggleModulo(moduloId: string, value: boolean): void {
-    toggleModuloAcciones(this.modulos, this.permisos, this.rolSeleccionado, moduloId, value);
-  }
-
-  getEstadoModulo(moduloId: string): 'completo' | 'parcial' | 'vacio' {
-    return estadoModulo(this.modulos, this.permisos, this.rolSeleccionado, moduloId);
-  }
-
-  getResumenModulo(moduloId: string): string {
-    return resumenModulo(this.modulos, this.permisos, this.rolSeleccionado, moduloId);
-  }
-
-  seleccionarRol(rolId: string): void {
-    this.rolSeleccionado = rolId;
-    this.mensajeGuardado = false;
-  }
-
-  restablecer(): void {
-    restablecerPermisos(this.permisos, this.respaldoPermisos, this.rolSeleccionado);
-    this.mensajeGuardado = false;
   }
 
   guardarCambios(): void {
@@ -279,30 +230,6 @@ export class GestionRoles {
       },
       error: () => this.toastService.error('No se pudo guardar la configuración del rol.'),
     });
-  }
-
-  private mostrarGuardado(): void {
-    this.mensajeGuardado = true;
-    setTimeout(() => this.mensajeGuardado = false, 3000);
-  }
-
-  abrirModalNuevoRol(): void {
-    this.editandoRol = null;
-    this.nuevoRolNombre = '';
-    this.nuevoRolDescripcion = '';
-    this.mostrarModalRol = true;
-  }
-
-  abrirModalEditarRol(rol: Rol): void {
-    this.editandoRol = rol;
-    this.nuevoRolNombre = rol.nombre;
-    this.nuevoRolDescripcion = rol.descripcion;
-    this.mostrarModalRol = true;
-  }
-
-  cerrarModalNuevoRol(): void {
-    this.mostrarModalRol = false;
-    this.editandoRol = null;
   }
 
   guardarRol(): void {
