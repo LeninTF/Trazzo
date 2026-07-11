@@ -13,6 +13,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.RoleMasterRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.Person;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,6 +47,7 @@ class AuthControllerTest {
     @MockitoBean UserRepositoryPort userRepository;
     @MockitoBean PersonRepositoryPort personRepository;
     @MockitoBean TenantRepositoryPort tenantRepository;
+    @MockitoBean RoleMasterRepositoryPort roleRepository;
 
     @Test
     @WithMockUser(username = "admin@test.com", roles = {"ADMIN"})
@@ -65,9 +68,10 @@ class AuthControllerTest {
         var user = User.restore(
                 UUID.randomUUID().toString(), 1, null,
                 "user@test.com", "999999999", "encodedPass",
-                List.of("admin_trazzo"), null, null, null
+                List.of("admin_trazzo"), List.of(), false, null, null, null
         );
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(roleRepository.findByName(anyString())).thenReturn(Optional.empty());
 
         var person = Person.restore(
                 1, null, trazzo.back.saasglobal.domain.model.iam.DocumentType.DNI, "00000000",
@@ -100,9 +104,10 @@ class AuthControllerTest {
         var user = User.restore(
                 UUID.randomUUID().toString(), 1, "t-1",
                 "tenant.user@test.com", "999999999", "encodedPass",
-                List.of("empleado"), null, null, null
+                List.of("empleado"), List.of(), false, null, null, null
         );
         when(userRepository.findByEmail("tenant.user@test.com")).thenReturn(Optional.of(user));
+        when(roleRepository.findByName(anyString())).thenReturn(Optional.empty());
 
         var settings = TenantSettings.of("t-1", "tenant_acme");
         var tenant = Tenant.createTrial("acme", 1, null, settings, null);
@@ -132,10 +137,11 @@ class AuthControllerTest {
         var user = User.restore(
                 UUID.randomUUID().toString(), 1, "missing-tenant",
                 "orphan.user@test.com", "999999999", "encodedPass",
-                List.of("empleado"), null, null, null
+                List.of("empleado"), List.of(), false, null, null, null
         );
         when(userRepository.findByEmail("orphan.user@test.com")).thenReturn(Optional.of(user));
         when(tenantRepository.findById("missing-tenant")).thenReturn(Optional.empty());
+        when(roleRepository.findByName(anyString())).thenReturn(Optional.empty());
 
         var person = Person.restore(
                 1, null, trazzo.back.saasglobal.domain.model.iam.DocumentType.DNI, "00000000",

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.RoleMasterRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.Person;
@@ -36,6 +37,7 @@ public class AuthController {
     private final UserRepositoryPort userRepository;
     private final PersonRepositoryPort personRepository;
     private final TenantRepositoryPort tenantRepository;
+    private final RoleMasterRepositoryPort roleRepository;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -53,7 +55,9 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalStateException("Person not found for user: " + user.getId()));
 
         var roles = user.getRoles().stream()
-                .map(RoleProfileResponse::fromRoleName)
+                .map(roleName -> roleRepository.findByName(roleName)
+                        .map(RoleProfileResponse::from)
+                        .orElseGet(() -> RoleProfileResponse.fromRoleName(roleName)))
                 .toList();
 
         var usuario = new UsuarioResponse(

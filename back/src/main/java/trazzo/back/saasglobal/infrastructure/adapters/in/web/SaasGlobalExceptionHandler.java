@@ -5,11 +5,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import trazzo.back.saasglobal.domain.exception.InvalidSubscriptionTransitionException;
 import trazzo.back.saasglobal.domain.exception.RequestRateLimitException;
+import trazzo.back.saasglobal.domain.exception.RoleInUseException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.exception.UserValidationException;
@@ -25,7 +27,10 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
         HoldingController.class,
         FeatureController.class,
         RequestController.class,
-        SaasRequestController.class
+        SaasRequestController.class,
+        SaasRoleController.class,
+        SaasUserController.class,
+        SaasInvoiceController.class
 })
 public class SaasGlobalExceptionHandler {
 
@@ -78,6 +83,24 @@ public class SaasGlobalExceptionHandler {
         log.warn("Request rate limit: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(new ErrorResponse(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RoleInUseException.class)
+    public ResponseEntity<ErrorResponse> handleRoleInUse(RoleInUseException ex) {
+        log.warn("Role in use: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    // @PreAuthorize failures throw here (method security is AOP-based, invoked inside the
+    // controller call) rather than propagating out to Spring Security's own
+    // ExceptionTranslationFilter, so without this handler the generic Exception.class catch-all
+    // below would swallow it into a misleading 500 instead of the correct 403.
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+        log.warn("Authorization denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Forbidden", "No tienes permiso para esta acción"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

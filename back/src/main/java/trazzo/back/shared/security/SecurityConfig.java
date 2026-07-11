@@ -68,7 +68,11 @@ public class SecurityConfig {
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }
-                auth.requestMatchers("/saas/**", "/tenants/**").hasRole("admin_trazzo");
+                // Any admin SaaS role (not just admin_trazzo) reaches these paths; granular
+                // per-permission checks live on individual endpoints via @PreAuthorize.
+                // /audit/** was previously uncovered (fell through to the generic authenticated()
+                // rule below, reachable by tenant users too) — now correctly admin-gated.
+                auth.requestMatchers("/saas/**", "/tenants/**", "/audit/**").hasRole("SAAS_ADMIN");
                 auth.anyRequest().authenticated();
             })
             .headers(headers -> configureHeaders(headers, h2ConsoleEnabled, h2Console))

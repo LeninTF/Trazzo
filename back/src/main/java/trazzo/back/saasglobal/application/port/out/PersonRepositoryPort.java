@@ -5,4 +5,5 @@ import trazzo.back.saasglobal.domain.model.iam.Person;
 
 public interface PersonRepositoryPort {
     Optional<Person> findById(Integer id);
+    Person save(Person person);
 }

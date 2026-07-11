@@ -62,7 +62,7 @@ export interface TenantUserProfile {
 }
 
 export interface MasterUserProfile {
-  id: number;
+  id: string;
   email: string | null;
   phone: string | null;
   tenant_id: string | null;
@@ -144,6 +144,16 @@ export interface CrearMasterUsuarioRequest {
   mother_surname: string;
   email: string;
   phone?: string | null;
+  password?: string;
+  role_ids: number[];
+}
+
+export interface UpdateMasterUsuarioRequest {
+  email: string;
+  phone?: string | null;
+}
+
+export interface AssignMasterRoleRequest {
   role_ids: number[];
 }
 
@@ -162,6 +172,57 @@ export interface SoftDeleteResponse {
   deleted_at: string;
   deleted_by: number;
 }
+
+// ==========================================
+// SECCIÓN: ROLES Y PERMISOS SAAS
+// ==========================================
+
+export interface SaasRoleProfile {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  permissions: string[];
+  systemManaged: boolean;
+}
+
+export interface CreateSaasRoleRequest {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}
+
+export interface UpdateSaasRoleRequest {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}
+
+export interface UpdateSaasRolePermissionsRequest {
+  permissions: string[];
+}
+
+// ==========================================
+// SECCIÓN: FACTURAS
+// ==========================================
+
+export interface InvoiceProfile {
+  id: string;
+  tenantId: string | null;
+  invoiceSeries: string;
+  consecutiveNumber: string;
+  voucherType: string | null;
+  clientTaxId: string;
+  clientName: string;
+  subTotal: number;
+  taxAmount: number;
+  total: number;
+  paymentStatus: string;
+  expirationDate: string | null;
+  createdAt: string;
+}
+
+export interface InvoiceListResponse extends PageResponse<InvoiceProfile> {}
 
 // ==========================================
 // SECCIÓN: AUTENTICACIÓN

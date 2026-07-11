@@ -3,6 +3,8 @@ package trazzo.back.audit.infrastructure.adapters.in.web;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +36,8 @@ class AuditGlobalExceptionHandlerTest {
                 case "illegal-arg" -> throw new IllegalArgumentException("Bad argument");
                 case "illegal-state" -> throw new IllegalStateException("Bad state");
                 case "validation" -> throw new AuditValidationException("Validation failed");
+                case "auth-denied" -> throw new AuthorizationDeniedException(
+                        "Access Denied", new AuthorizationDecision(false));
                 default -> throw new RuntimeException("Unexpected error");
             }
         }
@@ -73,6 +77,14 @@ class AuditGlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Validation Error"))
                 .andExpect(jsonPath("$.message").value("Validation failed"));
+    }
+
+    @Test
+    void authorizationDenied_returns403Forbidden() throws Exception {
+        mockMvc.perform(get("/throw/auth-denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"));
     }
 
     @Test

@@ -10,7 +10,7 @@
 	<header class="page__header">
 		<div>
 			<h1 class="page__title">Control Financiero</h1>
-			<p class="page__desc">Métricas globales, evolución de ingresos y transacciones del SaaS.</p>
+			<p class="page__desc">Métricas, evolución de ingresos y facturas del SaaS.</p>
 		</div>
 	</header>
 
@@ -18,35 +18,33 @@
 		<article class="metric metric--green">
 			<div class="metric__icon"><i class="bi bi-graph-up-arrow"></i></div>
 			<div class="metric__body">
-				<span class="metric__label">Ingresos Mensuales (MRR)</span>
-				<strong class="metric__value">{{ mrr }}</strong>
-				<span class="metric__change metric__change--up">{{ cambioMrr }} <span class="metric__change-label">vs
-						mes anterior</span></span>
-			</div>
-		</article>
-		<article class="metric metric--red">
-			<div class="metric__icon"><i class="bi bi-person-fill-slash"></i></div>
-			<div class="metric__body">
-				<span class="metric__label">Churn Rate</span>
-				<strong class="metric__value">{{ churn }}</strong>
-				<span class="metric__change metric__change--down">{{ cambioChurn }} <span
-						class="metric__change-label">vs mes anterior</span></span>
+				<span class="metric__label">Total Facturado</span>
+				<strong class="metric__value">S/{{ totalFacturado().toFixed(2) }}</strong>
+				<span class="metric__change">página actual</span>
 			</div>
 		</article>
 		<article class="metric metric--orange">
 			<div class="metric__icon"><i class="bi bi-exclamation-circle"></i></div>
 			<div class="metric__body">
-				<span class="metric__label">Pendiente de Cobro</span>
-				<strong class="metric__value">{{ pendienteCobro }}</strong>
-				<span class="metric__change">{{ facturasVencidas }} facturas vencidas</span>
+				<span class="metric__label">Facturas Pendientes</span>
+				<strong class="metric__value">{{ totalPendientes() }}</strong>
+				<span class="metric__change">página actual</span>
+			</div>
+		</article>
+		<article class="metric metric--blue">
+			<div class="metric__icon"><i class="bi bi-check-circle"></i></div>
+			<div class="metric__body">
+				<span class="metric__label">Facturas Completadas</span>
+				<strong class="metric__value">{{ totalCompletadas() }}</strong>
+				<span class="metric__change">página actual</span>
 			</div>
 		</article>
 		<article class="metric metric--blue">
 			<div class="metric__icon"><i class="bi bi-person-badge"></i></div>
 			<div class="metric__body">
-				<span class="metric__label">Promedio por Tenant (ARPU)</span>
-				<strong class="metric__value">{{ arpu }}</strong>
-				<span class="metric__change">por tenant / mes</span>
+				<span class="metric__label">Promedio por Factura</span>
+				<strong class="metric__value">S/{{ promedioFactura().toFixed(2) }}</strong>
+				<span class="metric__change">página actual</span>
 			</div>
 		</article>
 	</section>
@@ -55,60 +53,59 @@
 		<div class="card__header">
 			<div class="card__header-left">
 				<h2 class="card__title">Evolución de Ingresos</h2>
-				<span class="card__subtitle">Facturación bruta mensual</span>
+				<span class="card__subtitle">Facturación por mes (página actual)</span>
 			</div>
-			<span class="card__badge">Últimos 6 meses</span>
 		</div>
 		<div class="card__body card__body--chart">
-			<apx-chart [chart]="chartConfig.chart" [series]="chartConfig.series" [colors]="chartConfig.colors"
-				[plotOptions]="chartConfig.plotOptions" [xaxis]="chartConfig.xaxis" [yaxis]="chartConfig.yaxis"
-				[grid]="chartConfig.grid" [dataLabels]="chartConfig.dataLabels" [tooltip]="chartConfig.tooltip"
-				[fill]="chartConfig.fill" [stroke]="chartConfig.stroke"></apx-chart>
+			<apx-chart [chart]="chartConfig().chart" [series]="chartConfig().series" [colors]="chartConfig().colors"
+				[plotOptions]="chartConfig().plotOptions" [xaxis]="chartConfig().xaxis" [yaxis]="chartConfig().yaxis"
+				[grid]="chartConfig().grid" [dataLabels]="chartConfig().dataLabels" [tooltip]="chartConfig().tooltip"
+				[fill]="chartConfig().fill" [stroke]="chartConfig().stroke"></apx-chart>
 		</div>
 	</section>
 
 	<section class="transactions">
 		<div class="transactions__header">
 			<div>
-				<h2 class="transactions__title">Transacciones Recientes</h2>
-				<p class="transactions__desc">Filtra y exporta el historial de pagos de todos los tenants.</p>
+				<h2 class="transactions__title">Facturas</h2>
+				<p class="transactions__desc">Filtra y exporta el historial de facturas de todos los tenants.</p>
 			</div>
-			<button type="button" class="btn btn--export" (click)="exportarCSV()">
-				<i class="bi bi-download"></i> Exportar CSV
-			</button>
+			<div class="transactions__header-actions">
+				<button type="button" class="btn btn--export" (click)="exportarCSV()">
+					<i class="bi bi-download"></i> Exportar CSV
+				</button>
+				<button type="button" class="btn btn--export" (click)="exportarExcel()">
+					<i class="bi bi-file-earmark-excel"></i> Exportar Excel
+				</button>
+				<button type="button" class="btn btn--export" (click)="exportarPDF()">
+					<i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+				</button>
+			</div>
 		</div>
 
 		<div class="filters" [formGroup]="filterForm">
 			<div class="filters__group">
 				<label class="filters__label" for="facturas-filtro-estado">Estado</label>
-				<select id="facturas-filtro-estado" class="filters__control" formControlName="estado" (change)="onEstadoChange()">
+				<select id="facturas-filtro-estado" class="filters__control" formControlName="paymentStatus" (change)="onFilterChange()">
 					<option value="todos">Todos</option>
-					<option value="pagado">Pagado</option>
-					<option value="pendiente">Pendiente</option>
-					<option value="vencido">Vencido</option>
+					<option value="PENDIENTE">Pendiente</option>
+					<option value="COMPLETADO">Completado</option>
+					<option value="FALLIDO">Fallido</option>
+					<option value="REEMBOLSADO">Reembolsado</option>
 				</select>
 			</div>
-			<div class="filters__group">
-				<label class="filters__label" for="facturas-filtro-rango">Rango de fechas</label>
-				<select id="facturas-filtro-rango" class="filters__control" formControlName="rango" (change)="onRangoChange()">
-					<option value="ultimos-30">Últimos 30 días</option>
-					<option value="personalizado">Personalizado</option>
-				</select>
-			</div>
-			@if (filterForm.value.rango === 'personalizado') {
 			<div class="filters__group">
 				<label class="filters__label" for="facturas-fecha-desde">Desde</label>
-				<input id="facturas-fecha-desde" type="date" class="filters__control" formControlName="fechaDesde" (change)="onRangoChange()">
+				<input id="facturas-fecha-desde" type="date" class="filters__control" formControlName="dateFrom" (change)="onFilterChange()">
 			</div>
 			<div class="filters__group">
 				<label class="filters__label" for="facturas-fecha-hasta">Hasta</label>
-				<input id="facturas-fecha-hasta" type="date" class="filters__control" formControlName="fechaHasta" (change)="onRangoChange()">
+				<input id="facturas-fecha-hasta" type="date" class="filters__control" formControlName="dateTo" (change)="onFilterChange()">
 			</div>
-			}
 			<div class="filters__spacer"></div>
 			<div class="filters__count">
-				<span class="count-badge">{{ totalTransacciones() }}</span>
-				transacciones
+				<span class="count-badge">{{ totalElements() }}</span>
+				facturas
 			</div>
 		</div>
 
@@ -116,9 +113,9 @@
 			<table class="table">
 				<thead>
 					<tr>
-						<th>Tenant</th>
-						<th>Plan</th>
-						<th>ID</th>
+						<th>Cliente</th>
+						<th>RUC</th>
+						<th>Comprobante</th>
 						<th>Fecha</th>
 						<th class="col-monto">Monto</th>
 						<th>Estado</th>
@@ -126,30 +123,29 @@
 					</tr>
 				</thead>
 				<tbody>
-					@for (t of transaccionesPaginadas(); track t.id) {
+					@for (f of items(); track f.id) {
 					<tr>
-						<td class="td-primary" data-label="Tenant">{{ t.tenant }}</td>
-						<td data-label="Plan">{{ t.plan }}</td>
-						<td class="td-mono" data-label="ID">{{ t.idTransaccion }}</td>
-						<td data-label="Fecha">{{ t.fecha }}</td>
-						<td class="td-monto" data-label="Monto">S/{{ t.monto.toFixed(2) }}</td>
+						<td class="td-primary" data-label="Cliente">{{ f.clientName }}</td>
+						<td class="td-mono" data-label="RUC">{{ f.clientTaxId }}</td>
+						<td class="td-mono" data-label="Comprobante">{{ f.invoiceSeries }}-{{ f.consecutiveNumber }}</td>
+						<td data-label="Fecha">{{ f.createdAt.slice(0, 10) }}</td>
+						<td class="td-monto" data-label="Monto">S/{{ f.total.toFixed(2) }}</td>
 						<td data-label="Estado">
-							<span class="badge" [class.badge--green]="t.estado === 'pagado'"
-								[class.badge--yellow]="t.estado === 'pendiente'"
-								[class.badge--red]="t.estado === 'vencido'">
+							<span class="badge" [class.badge--green]="f.paymentStatus === 'COMPLETADO'"
+								[class.badge--yellow]="f.paymentStatus === 'PENDIENTE'"
+								[class.badge--red]="f.paymentStatus === 'FALLIDO' || f.paymentStatus === 'REEMBOLSADO'">
 								<span class="badge__dot"></span>
-								{{ t.estado === 'pagado' ? 'Pagado' : t.estado === 'pendiente' ? 'Pendiente' : 'Vencido'
-								}}
+								{{ estadoLabels[f.paymentStatus] ?? f.paymentStatus }}
 							</span>
 						</td>
 						<td class="td-actions" data-label="Acciones">
-							<button type="button" class="btn-icon" title="Ver detalle" (click)="verDetalle(t)"><i
+							<button type="button" class="btn-icon" title="Ver detalle" (click)="verDetalle(f)"><i
 									class="bi bi-eye"></i></button>
 						</td>
 					</tr>
 					} @empty {
 					<tr>
-						<td colspan="7" class="td-empty">No se encontraron transacciones con los filtros seleccionados
+						<td colspan="7" class="td-empty">No se encontraron facturas con los filtros seleccionados
 						</td>
 					</tr>
 					}
@@ -165,42 +161,49 @@
 		<div class="modal-dialog modal-dialog-centered modal-sm">
 			<div class="modal-content modal-content--custom">
 				<div class="modal__header">
-					<h5 class="modal__title">Detalle de Transacción</h5>
+					<h5 class="modal__title">Detalle de Factura</h5>
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
 						<i class="bi bi-x-lg"></i>
 					</button>
 				</div>
 				<div class="modal__body">
-					@if (transaccionSeleccionada(); as t) {
+					@if (facturaSeleccionada(); as f) {
 					<div class="detail">
 						<div class="detail__row">
-							<span class="detail__label">Tenant</span>
-							<span class="detail__value">{{ t.tenant }}</span>
+							<span class="detail__label">Cliente</span>
+							<span class="detail__value">{{ f.clientName }}</span>
 						</div>
 						<div class="detail__row">
-							<span class="detail__label">Plan</span>
-							<span class="detail__value">{{ t.plan }}</span>
+							<span class="detail__label">RUC</span>
+							<span class="detail__value detail__value--mono">{{ f.clientTaxId }}</span>
 						</div>
 						<div class="detail__row">
-							<span class="detail__label">ID Transacción</span>
-							<span class="detail__value detail__value--mono">{{ t.idTransaccion }}</span>
+							<span class="detail__label">Comprobante</span>
+							<span class="detail__value detail__value--mono">{{ f.invoiceSeries }}-{{ f.consecutiveNumber }}</span>
 						</div>
 						<div class="detail__row">
 							<span class="detail__label">Fecha</span>
-							<span class="detail__value">{{ t.fecha }}</span>
+							<span class="detail__value">{{ f.createdAt.slice(0, 10) }}</span>
 						</div>
 						<div class="detail__row">
-							<span class="detail__label">Monto</span>
-							<span class="detail__value detail__value--bold">S/{{ t.monto.toFixed(2) }}</span>
+							<span class="detail__label">Subtotal</span>
+							<span class="detail__value">S/{{ f.subTotal.toFixed(2) }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">IGV</span>
+							<span class="detail__value">S/{{ f.taxAmount.toFixed(2) }}</span>
+						</div>
+						<div class="detail__row">
+							<span class="detail__label">Total</span>
+							<span class="detail__value detail__value--bold">S/{{ f.total.toFixed(2) }}</span>
 						</div>
 						<div class="detail__row">
 							<span class="detail__label">Estado</span>
-							<span class="badge" [class.badge--green]="t.estado === 'pagado'"
-								[class.badge--yellow]="t.estado === 'pendiente'"
-								[class.badge--red]="t.estado === 'vencido'">
+							<span class="badge" [class.badge--green]="f.paymentStatus === 'COMPLETADO'"
+								[class.badge--yellow]="f.paymentStatus === 'PENDIENTE'"
+								[class.badge--red]="f.paymentStatus === 'FALLIDO' || f.paymentStatus === 'REEMBOLSADO'">
 								<span class="badge__dot"></span>
-								{{ t.estado === 'pagado' ? 'Pagado' : t.estado === 'pendiente' ? 'Pendiente' : 'Vencido'
-								}}
+								{{ estadoLabels[f.paymentStatus] ?? f.paymentStatus }}
 							</span>
 						</div>
 					</div>
