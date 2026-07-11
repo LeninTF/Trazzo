@@ -45,6 +45,7 @@ build/
 
 ### Security ###
 .env
+back/src/test/resources/application-local.properties
 
 ### Frontend ###
 # Compiled output

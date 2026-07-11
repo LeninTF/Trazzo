@@ -1,0 +1,10 @@
+title = "Gitleaks Configuration"
+
+# Allowlist para findings ya remediados en commits posteriores.
+# No agregar aquí secrets activos — solo commits donde el secret
+# fue introducido Y removido en el commit inmediatamente siguiente.
+[allowlist]
+  description = "Secrets already removed in follow-up commits"
+  commits = [
+    "3d1d4df39abff57da86fa74258e79b2e0b5bec25", # app.jwt.secret removido en 21ac626
+  ]

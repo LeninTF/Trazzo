@@ -81,7 +81,7 @@ public final class IncidentMapper {
         entity.setId(domain.getId());
         entity.setIncidentId(domain.getIncidentId());
         entity.setFileName(domain.getFileName());
-        entity.setFileUrl(domain.getFileUrl());
+        entity.setFileKey(domain.getFileKey());
         entity.setMimeType(domain.getMimeType());
         entity.setFileSize(domain.getFileSize());
         entity.setDeleted(domain.isDeleted());
@@ -97,7 +97,7 @@ public final class IncidentMapper {
                 entity.getId(),
                 entity.getIncidentId(),
                 entity.getFileName(),
-                entity.getFileUrl(),
+                entity.getFileKey(),
                 entity.getMimeType(),
                 entity.getFileSize(),
                 entity.isDeleted(),

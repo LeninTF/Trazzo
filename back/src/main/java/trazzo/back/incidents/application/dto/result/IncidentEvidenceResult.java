@@ -6,6 +6,7 @@ public record IncidentEvidenceResult(
         String id,
         String incidenciaId,
         String fileName,
+        String fileKey,
         String fileUrl,
         String mimeType,
         int fileSize,

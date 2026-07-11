@@ -109,15 +109,26 @@ describe('Solicitudes', () => {
     });
 
     it('should filter by custom date range without default period restriction', () => {
+      const today = new Date();
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(today.getDate() - 3);
       component.filterPeriodo.setValue('personalizado');
-      component.filterFechaDesde.setValue('2026-06-01');
-      component.filterFechaHasta.setValue('2026-06-30');
+      component.filterFechaDesde.setValue(threeDaysAgo.toISOString().slice(0, 10));
+      component.filterFechaHasta.setValue(today.toISOString().slice(0, 10));
       fixture.detectChanges();
       expect(component.filtered().length).toBe(8);
     });
   });
 
   describe('computed totals', () => {
+    beforeEach(() => {
+      // Disable the default 30-day rolling window so pagination assertions
+      // below aren't coupled to which items the default period keeps.
+      component.filterPeriodo.setValue('personalizado');
+      component.filterFechaDesde.setValue('2020-01-01');
+      fixture.detectChanges();
+    });
+
     it('should compute totalPendientes', () => {
       expect(component.totalPendientes()).toBeGreaterThan(0);
     });

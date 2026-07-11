@@ -17,7 +17,7 @@ class IncidentEvidenceEntityTest {
         assertEquals("ev-1", entity.getId());
         assertEquals("inc-1", entity.getIncidentId());
         assertEquals("doc.pdf", entity.getFileName());
-        assertEquals("http://url", entity.getFileUrl());
+        assertEquals("http://url", entity.getFileKey());
         assertEquals("pdf", entity.getMimeType());
         assertEquals(100, entity.getFileSize());
         assertFalse(entity.isDeleted());

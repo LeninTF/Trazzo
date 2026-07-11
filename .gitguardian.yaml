@@ -1,0 +1,9 @@
+version: 2
+
+# Re-scan commits where secrets were already removed in a follow-up commit
+# won't re-alert if marked as resolved in the GitGuardian dashboard.
+ignore-known-secrets: true
+
+paths-ignore:
+  # Local properties files are gitignored; only appear in old commits already remediated
+  - 'back/src/main/resources/application-local.properties'

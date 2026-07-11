@@ -6,7 +6,7 @@ public record IncidentEvidenceRegisteredEvent(
         String incidentId,
         String evidenceId,
         String fileName,
-        String fileUrl,
+        String fileKey,
         LocalDateTime occurredAt
 ) implements IncidentDomainEvent {
 }

@@ -63,7 +63,7 @@ class IncidentDomainEventTest {
         assertEquals("inc-1", event.incidentId());
         assertEquals("ev-1", event.evidenceId());
         assertEquals("doc.pdf", event.fileName());
-        assertEquals("http://url", event.fileUrl());
+        assertEquals("http://url", event.fileKey());
     }
 
     @Test
@@ -81,7 +81,7 @@ class IncidentDomainEventTest {
         assertInstanceOf(IncidentDomainEvent.class, new IncidentCreatedEvent("i", "u", "t", now));
         assertInstanceOf(IncidentDomainEvent.class, new IncidentStateChangedEvent("i", "u", IncidentState.PENDIENTE, IncidentState.APROBADO, null, now));
         assertInstanceOf(IncidentDomainEvent.class, new IncidentJustificationRequestedEvent("i", "u", LocalDate.now(), LocalDate.now(), now));
-        assertInstanceOf(IncidentDomainEvent.class, new IncidentEvidenceRegisteredEvent("i", "e", "f", "u", now));
+        assertInstanceOf(IncidentDomainEvent.class, new IncidentEvidenceRegisteredEvent("i", "e", "f", "k", now));
         assertInstanceOf(IncidentDomainEvent.class, new IncidentEvidenceDeletedEvent("i", "e", now));
     }
 }
