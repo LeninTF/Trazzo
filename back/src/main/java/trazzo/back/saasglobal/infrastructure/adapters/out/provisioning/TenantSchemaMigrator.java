@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,9 +24,15 @@ import org.springframework.stereotype.Component;
  * On startup, applies any pending {@code db/tenant/migration/*.sql} scripts to every
  * activated tenant's schema, using the app's single physical database (schema-based
  * multi-tenancy) rather than a separate connection per tenant.
+ *
+ * Ordered after TenantDataSeeder (@Order(1)): without an explicit order, Spring's
+ * ApplicationRunner/CommandLineRunner execution order is not guaranteed, so this could
+ * run before the local-dev demo tenant is created — finding zero activated tenants and
+ * silently doing nothing (no log line, no error) instead of seeding its schema.
  */
 @Slf4j
 @Component
+@Order(2)
 public class TenantSchemaMigrator implements ApplicationRunner {
 
     private static final String MIGRATION_PATH = "db/tenant/migration/";
@@ -53,6 +60,11 @@ public class TenantSchemaMigrator implements ApplicationRunner {
                 JOIN tenant_settings ts ON ts.tenant_id = t.id
                 WHERE t.activated_at IS NOT NULL AND t.deleted_at IS NULL
                 """);
+
+        if (tenants.isEmpty()) {
+            log.info("No activated tenants found; nothing to migrate.");
+            return;
+        }
 
         for (Map<String, Object> row : tenants) {
             String tenantId = row.get("id") != null ? row.get("id").toString() : "unknown";

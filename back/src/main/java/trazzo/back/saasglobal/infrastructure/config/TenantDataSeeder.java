@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @Component
 @Profile("local")
 @ConditionalOnProperty(name = "trazzo.seed.tenant.enabled", havingValue = "true", matchIfMissing = false)
+@Order(1)
 @Slf4j
 public class TenantDataSeeder implements CommandLineRunner {
 
