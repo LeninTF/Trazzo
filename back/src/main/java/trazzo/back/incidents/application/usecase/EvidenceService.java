@@ -7,6 +7,7 @@ import trazzo.back.incidents.application.port.in.EvidenceUseCase;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.IncidentEvidence;
+import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.util.List;
 
@@ -15,13 +16,14 @@ public class EvidenceService implements EvidenceUseCase {
 
     private final IncidentRepositoryPort incidentRepository;
     private final EventPublisherPort eventPublisher;
+    private final FileStoragePort fileStoragePort;
 
     @Override
     public IncidentEvidenceResult create(String incidentId, CreateEvidenceCommand command) {
         var incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
 
-        var evidence = IncidentEvidence.create(incidentId, command.fileName(), command.fileUrl(),
+        var evidence = IncidentEvidence.create(incidentId, command.fileName(), command.fileKey(),
                 command.mimeType(), command.fileSize());
         incident.addEvidence(evidence);
 
@@ -61,7 +63,8 @@ public class EvidenceService implements EvidenceUseCase {
                 evidence.getId(),
                 evidence.getIncidentId(),
                 evidence.getFileName(),
-                evidence.getFileUrl(),
+                evidence.getFileKey(),
+                fileStoragePort.buildPublicUrl(evidence.getFileKey()),
                 evidence.getMimeType(),
                 evidence.getFileSize(),
                 evidence.getCreatedAt(),

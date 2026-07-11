@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tenant_settings_record")
@@ -21,7 +22,7 @@ public class TenantSettingsRecordEntity {
     private Long id;
 
     @Column(name = "tenant_setting_id")
-    private String tenantSettingId;
+    private UUID tenantSettingId;
 
     @Column(name = "db_name", length = 100)
     private String dbName;
@@ -39,7 +40,7 @@ public class TenantSettingsRecordEntity {
     private String dbPassword;
 
     @Column(name = "user_id")
-    private String userId;
+    private UUID userId;
 
     @Column(name = "change_reason")
     private String changeReason;

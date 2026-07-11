@@ -20,20 +20,20 @@ class CreateEvidenceRequestTest {
 
     @Test
     void validRequestPassesValidation() {
-        var request = new CreateEvidenceRequest("doc.pdf", "http://url", "pdf", 100);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", 100);
         var violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }
 
     @Test
     void blankFileNameFailsValidation() {
-        var request = new CreateEvidenceRequest(" ", "http://url", "pdf", 100);
+        var request = new CreateEvidenceRequest(" ", "file-key", "pdf", 100);
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
     }
 
     @Test
-    void blankFileUrlFailsValidation() {
+    void blankFileKeyFailsValidation() {
         var request = new CreateEvidenceRequest("doc.pdf", " ", "pdf", 100);
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
@@ -41,21 +41,21 @@ class CreateEvidenceRequestTest {
 
     @Test
     void blankMimeTypeFailsValidation() {
-        var request = new CreateEvidenceRequest("doc.pdf", "http://url", " ", 100);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", " ", 100);
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
     }
 
     @Test
     void zeroFileSizeFailsValidation() {
-        var request = new CreateEvidenceRequest("doc.pdf", "http://url", "pdf", 0);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", 0);
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
     }
 
     @Test
     void negativeFileSizeFailsValidation() {
-        var request = new CreateEvidenceRequest("doc.pdf", "http://url", "pdf", -1);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", -1);
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
     }

@@ -1686,6 +1686,10 @@ components:
           format: uri
           description: "URL pública del archivo en Cloudflare R2."
           example: "https://r2.trazzo.pe/evidencias/42/certificado_medico.pdf"
+        file_key:
+          type: string
+          description: "Clave (object key) del archivo en Cloudflare R2."
+          example: "evidences/42/certificado_medico.pdf"
         mime_type:
           type: string
           example: "application/pdf"
@@ -1902,17 +1906,16 @@ components:
       type: object
       required:
         - file_name
-        - file_url
+        - file_key
         - mime_type
         - file_size
       description: |
         Registra una evidencia asociada a una incidencia.
 
         **Flujo:**
-        1. El frontend verifica que el archivo no exceda 15MB.
-        2. El frontend sube el archivo directamente a Cloudflare R2 (bucket público).
-        3. Cloudflare R2 devuelve la URL pública del archivo.
-        4. El frontend envía la URL y metadatos al backend para su registro en BD.
+        1. El frontend solicita una presigned URL via `GET /storage/presigned-url`.
+        2. El frontend sube el archivo directamente a Cloudflare R2 usando la presigned URL.
+        3. El frontend envía el `file_key` retornado y metadatos al backend para su registro en BD.
 
         **Restricciones:**
         - Solo una evidencia por incidencia.
@@ -1924,11 +1927,10 @@ components:
           type: string
           description: "Nombre original del archivo."
           example: "certificado_medico.pdf"
-        file_url:
+        file_key:
           type: string
-          format: uri
-          description: "URL pública del archivo en Cloudflare R2."
-          example: "https://r2.trazzo.pe/evidencias/42/certificado_medico.pdf"
+          description: "Object key del archivo en Cloudflare R2, retornado por `GET /storage/presigned-url`."
+          example: "evidences/uuid/certificado_medico.pdf"
         mime_type:
           type: string
           description: "Tipo MIME del archivo."
@@ -4725,9 +4727,9 @@ paths:
 
         **Flujo desde el frontend:**
         1. El frontend verifica que el archivo no exceda 15MB.
-        2. El frontend sube el archivo directamente a Cloudflare R2.
-        3. Cloudflare R2 devuelve la URL pública.
-        4. El frontend envía esta solicitud con la URL y metadatos.
+        2. El frontend solicita una presigned URL via `GET /storage/presigned-url`.
+        3. El frontend sube el archivo directamente a Cloudflare R2 usando esa presigned URL.
+        4. El frontend envía esta solicitud con el `file_key` retornado y metadatos.
 
         **Restricciones:**
         - Solo una evidencia por incidencia.
@@ -4963,6 +4965,62 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         "404":
           description: Incidencia no encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ----------------------------------------
+  # MÓDULO: ALMACENAMIENTO (CLOUDFLARE R2)
+  # ----------------------------------------
+  /storage/presigned-url:
+    get:
+      tags:
+        - Almacenamiento
+      summary: Obtener presigned URL para subir archivo a Cloudflare R2
+      description: |
+        Genera una presigned URL PUT para que el frontend suba archivos
+        directamente a Cloudflare R2. La URL expira en 15 minutos.
+
+        **Flujo:**
+        1. Frontend solicita `GET /storage/presigned-url?fileName=...&contentType=...`
+        2. Backend genera una presigned URL con un `objectKey` único.
+        3. Frontend sube el archivo vía HTTP PUT a la presigned URL.
+        4. Frontend usa el `object_key` retornado en `POST /incidentes/{id}/evidencias`.
+      parameters:
+        - name: fileName
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Nombre del archivo a subir (incluyendo extensión)."
+          example: "certificado_medico.pdf"
+        - name: contentType
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Tipo MIME del archivo."
+          example: "application/pdf"
+      responses:
+        "200":
+          description: Presigned URL generada exitosamente.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  presigned_url:
+                    type: string
+                    format: uri
+                    description: "URL firmada para subir el archivo (vence en 15 min)."
+                    example: "https://r2.trazzo.pe/evidences/uuid/doc.pdf?X-Amz-Algorithm=..."
+                  object_key:
+                    type: string
+                    description: "Object key único que debe enviarse a `POST /incidentes/{id}/evidencias` como `file_key`."
+                    example: "evidences/uuid/certificado_medico.pdf"
+        "400":
+          description: Parámetros inválidos.
           content:
             application/json:
               schema:
