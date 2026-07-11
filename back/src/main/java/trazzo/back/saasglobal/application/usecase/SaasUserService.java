@@ -29,7 +29,7 @@ public class SaasUserService implements SaasUserUseCase {
 
     private static final String NOT_FOUND_MSG = "User not found: ";
     private static final int TEMP_PASSWORD_LENGTH = 16;
-    private static final String TEMP_PASSWORD_CHARS =
+    private static final String TEMP_SECRET_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
 
     private final UserRepositoryPort userRepository;
@@ -108,7 +108,7 @@ public class SaasUserService implements SaasUserUseCase {
     private String generateTempPassword() {
         StringBuilder sb = new StringBuilder(TEMP_PASSWORD_LENGTH);
         for (int i = 0; i < TEMP_PASSWORD_LENGTH; i++) {
-            sb.append(TEMP_PASSWORD_CHARS.charAt(random.nextInt(TEMP_PASSWORD_CHARS.length())));
+            sb.append(TEMP_SECRET_ALPHABET.charAt(random.nextInt(TEMP_SECRET_ALPHABET.length())));
         }
         return sb.toString();
     }

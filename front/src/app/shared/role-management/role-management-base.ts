@@ -21,6 +21,82 @@ export interface Rol {
   icono: string;
 }
 
+// Shared by BaseGestionRoles (tenant-level roles) and the SaaS-level GestionRoles
+// component, which reimplements this same permission-toggling logic against a
+// backend-driven role list instead of extending BaseGestionRoles directly.
+export function togglePermisoAccion(
+  permisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+  moduloId: string,
+  accionId: string,
+): void {
+  const key = `${moduloId}.${accionId}`;
+  permisos[rolSeleccionado][key] = !permisos[rolSeleccionado][key];
+}
+
+export function toggleModuloAcciones(
+  modulos: Modulo[],
+  permisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+  moduloId: string,
+  value: boolean,
+): void {
+  const modulo = modulos.find(m => m.id === moduloId);
+  if (!modulo) return;
+  for (const accion of modulo.acciones) {
+    permisos[rolSeleccionado][`${moduloId}.${accion.id}`] = value;
+  }
+}
+
+function contarActivos(
+  modulo: Modulo,
+  permisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+  moduloId: string,
+): number {
+  let activos = 0;
+  for (const accion of modulo.acciones) {
+    if (permisos[rolSeleccionado][`${moduloId}.${accion.id}`]) activos++;
+  }
+  return activos;
+}
+
+export function estadoModulo(
+  modulos: Modulo[],
+  permisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+  moduloId: string,
+): 'completo' | 'parcial' | 'vacio' {
+  const modulo = modulos.find(m => m.id === moduloId);
+  if (!modulo) return 'vacio';
+  const activos = contarActivos(modulo, permisos, rolSeleccionado, moduloId);
+  if (activos === 0) return 'vacio';
+  if (activos === modulo.acciones.length) return 'completo';
+  return 'parcial';
+}
+
+export function resumenModulo(
+  modulos: Modulo[],
+  permisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+  moduloId: string,
+): string {
+  const modulo = modulos.find(m => m.id === moduloId);
+  if (!modulo) return '0/0';
+  const activos = contarActivos(modulo, permisos, rolSeleccionado, moduloId);
+  return `${activos}/${modulo.acciones.length}`;
+}
+
+export function restablecerPermisos(
+  permisos: Record<string, Record<string, boolean>>,
+  respaldoPermisos: Record<string, Record<string, boolean>>,
+  rolSeleccionado: string,
+): void {
+  for (const key of Object.keys(permisos[rolSeleccionado])) {
+    permisos[rolSeleccionado][key] = respaldoPermisos[rolSeleccionado][key];
+  }
+}
+
 export abstract class BaseGestionRoles {
   readonly loading = signal(false);
   readonly error = signal('');
@@ -71,41 +147,19 @@ export abstract class BaseGestionRoles {
   }
 
   togglePermiso(moduloId: string, accionId: string): void {
-    const key = `${moduloId}.${accionId}`;
-    this.permisos[this.rolSeleccionado][key] = !this.permisos[this.rolSeleccionado][key];
+    togglePermisoAccion(this.permisos, this.rolSeleccionado, moduloId, accionId);
   }
 
   toggleModulo(moduloId: string, value: boolean): void {
-    const modulo = this.modulos.find(m => m.id === moduloId);
-    if (!modulo) return;
-    for (const accion of modulo.acciones) {
-      const key = `${moduloId}.${accion.id}`;
-      this.permisos[this.rolSeleccionado][key] = value;
-    }
+    toggleModuloAcciones(this.modulos, this.permisos, this.rolSeleccionado, moduloId, value);
   }
 
   getEstadoModulo(moduloId: string): 'completo' | 'parcial' | 'vacio' {
-    const modulo = this.modulos.find(m => m.id === moduloId);
-    if (!modulo) return 'vacio';
-    let activos = 0;
-    for (const accion of modulo.acciones) {
-      const key = `${moduloId}.${accion.id}`;
-      if (this.permisos[this.rolSeleccionado][key]) activos++;
-    }
-    if (activos === 0) return 'vacio';
-    if (activos === modulo.acciones.length) return 'completo';
-    return 'parcial';
+    return estadoModulo(this.modulos, this.permisos, this.rolSeleccionado, moduloId);
   }
 
   getResumenModulo(moduloId: string): string {
-    const modulo = this.modulos.find(m => m.id === moduloId);
-    if (!modulo) return '0/0';
-    let activos = 0;
-    for (const accion of modulo.acciones) {
-      const key = `${moduloId}.${accion.id}`;
-      if (this.permisos[this.rolSeleccionado][key]) activos++;
-    }
-    return `${activos}/${modulo.acciones.length}`;
+    return resumenModulo(this.modulos, this.permisos, this.rolSeleccionado, moduloId);
   }
 
   seleccionarRol(rolId: string): void {
@@ -114,9 +168,7 @@ export abstract class BaseGestionRoles {
   }
 
   restablecer(): void {
-    for (const key of Object.keys(this.permisos[this.rolSeleccionado])) {
-      this.permisos[this.rolSeleccionado][key] = this.respaldoPermisos[this.rolSeleccionado][key];
-    }
+    restablecerPermisos(this.permisos, this.respaldoPermisos, this.rolSeleccionado);
     this.mensajeGuardado = false;
   }
 

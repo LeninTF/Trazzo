@@ -34,22 +34,27 @@ ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE
 -- Permission catalog seed (15 rows)
 -- ==============================================================================
 
-INSERT INTO permissions_master (code, module_id, action_id, description) VALUES
-    ('gestion-tenants.crear',                       'gestion-tenants',        'crear',                 'Crear tenants'),
-    ('gestion-tenants.editar',                       'gestion-tenants',        'editar',                'Editar tenants'),
-    ('gestion-tenants.eliminar',                     'gestion-tenants',        'eliminar',               'Eliminar tenants'),
-    ('gestion-tenants.activar-suspender',            'gestion-tenants',        'activar-suspender',      'Activar / suspender tenants'),
-    ('gestion-tenants.configurar-identidad',         'gestion-tenants',        'configurar-identidad',   'Configurar identidad de tenant'),
-    ('gestion-tenants.zonas-horarias',                'gestion-tenants',        'zonas-horarias',         'Configurar zonas horarias'),
-    ('gestion-tenants.asignacion-planes',             'gestion-tenants',        'asignacion-planes',      'Asignar planes a tenants'),
-    ('gestion-tenants.tipos-marcacion',                'gestion-tenants',        'tipos-marcacion',        'Configurar tipos de marcación'),
-    ('billing-suscripciones.gestionar-pagos',          'billing-suscripciones', 'gestionar-pagos',        'Gestionar pagos'),
-    ('billing-suscripciones.historial-facturacion',    'billing-suscripciones', 'historial-facturacion',  'Ver historial de facturación'),
-    ('billing-suscripciones.bloqueo-impago',           'billing-suscripciones', 'bloqueo-impago',         'Bloquear tenants por impago'),
-    ('configuracion-global.modulos-por-plan',          'configuracion-global',  'modulos-por-plan',       'Gestión de módulos por plan'),
-    ('monitoreo-sistema.dashboard-global',             'monitoreo-sistema',     'dashboard-global',       'Ver dashboard global'),
-    ('monitoreo-sistema.logs-sistema',                 'monitoreo-sistema',     'logs-sistema',           'Ver logs del sistema'),
-    ('monitoreo-sistema.auditoria-acciones',           'monitoreo-sistema',     'auditoria-acciones',     'Ver auditoría de acciones')
+-- module_id/action_id are derived from code (split on the single '.' separator)
+-- instead of repeated as literals, since code already encodes "{moduloId}.{accionId}".
+INSERT INTO permissions_master (code, module_id, action_id, description)
+SELECT code, split_part(code, '.', 1), split_part(code, '.', 2), description
+FROM (VALUES
+    ('gestion-tenants.crear',                       'Crear tenants'),
+    ('gestion-tenants.editar',                       'Editar tenants'),
+    ('gestion-tenants.eliminar',                     'Eliminar tenants'),
+    ('gestion-tenants.activar-suspender',            'Activar / suspender tenants'),
+    ('gestion-tenants.configurar-identidad',         'Configurar identidad de tenant'),
+    ('gestion-tenants.zonas-horarias',                'Configurar zonas horarias'),
+    ('gestion-tenants.asignacion-planes',             'Asignar planes a tenants'),
+    ('gestion-tenants.tipos-marcacion',                'Configurar tipos de marcación'),
+    ('billing-suscripciones.gestionar-pagos',          'Gestionar pagos'),
+    ('billing-suscripciones.historial-facturacion',    'Ver historial de facturación'),
+    ('billing-suscripciones.bloqueo-impago',           'Bloquear tenants por impago'),
+    ('configuracion-global.modulos-por-plan',          'Gestión de módulos por plan'),
+    ('monitoreo-sistema.dashboard-global',             'Ver dashboard global'),
+    ('monitoreo-sistema.logs-sistema',                 'Ver logs del sistema'),
+    ('monitoreo-sistema.auditoria-acciones',           'Ver auditoría de acciones')
+) AS seed(code, description)
 ON CONFLICT (code) DO NOTHING;
 
 -- ==============================================================================
