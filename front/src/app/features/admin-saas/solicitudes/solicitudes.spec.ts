@@ -286,7 +286,13 @@ describe('Solicitudes', () => {
 
   describe('ejecutarAccion', () => {
     it('should do nothing if no confirmAction', () => {
+      component.confirmAction.set(null);
+      const estadoAntes = component.allSolicitudes.map(s => s.estado);
+
       component.ejecutarAccion();
+
+      expect(component.allSolicitudes.map(s => s.estado)).toEqual(estadoAntes);
+      expect(modalServiceSpy.hide).not.toHaveBeenCalled();
     });
 
     it('should aprobar', () => {
