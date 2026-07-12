@@ -1,8 +1,8 @@
 import { routes } from './app.routes';
 
 describe('app.routes', () => {
-  it('should have 35 route definitions', () => {
-    expect(routes.length).toBe(35);
+  it('should have 37 route definitions', () => {
+    expect(routes.length).toBe(37);
   });
 
   it('should define public routes', () => {
@@ -31,6 +31,8 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/directorio-personal');
     expect(paths).toContain('tenant/gestion-horarios');
     expect(paths).toContain('tenant/perfil');
+    expect(paths).toContain('tenant/cierres-mensuales');
+    expect(paths).toContain('tenant/cierres-mensuales/:id');
   });
 
   it('should define saas routes', () => {

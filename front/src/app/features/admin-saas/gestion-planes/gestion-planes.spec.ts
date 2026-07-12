@@ -4,6 +4,7 @@ import { GestionPlanes } from './gestion-planes';
 import { SaasService } from '../../../api/services/saas.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
+import { ExportService } from '../../../services/export.service';
 
 describe('GestionPlanes', () => {
   let component: GestionPlanes;
@@ -28,6 +29,7 @@ describe('GestionPlanes', () => {
 
   const mockToast = jasmine.createSpyObj('ToastService', ['show']);
   const mockModal = jasmine.createSpyObj('ModalService', ['show', 'hide']);
+  const mockExport = jasmine.createSpyObj('ExportService', ['exportCSV', 'escCSV', 'dateSuffix']);
 
   beforeEach(async () => {
     Object.values(mockSaas).forEach(spy => spy.calls.reset());
@@ -39,6 +41,7 @@ describe('GestionPlanes', () => {
         { provide: SaasService, useValue: mockSaas },
         { provide: ToastService, useValue: mockToast },
         { provide: ModalService, useValue: mockModal },
+        { provide: ExportService, useValue: mockExport },
       ],
     }).compileComponents();
 
@@ -182,7 +185,7 @@ describe('GestionPlanes', () => {
 
   it('should exportarCSV', () => {
     component.exportarCSV();
-    expect(component.planes().length).toBeGreaterThan(0);
+    expect(mockExport.exportCSV).toHaveBeenCalled();
   });
 
   it('should handle cargarPlanes error', () => {
