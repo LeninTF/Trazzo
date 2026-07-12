@@ -46,6 +46,7 @@ describe('CorehrService', () => {
     it('should get device', () => {
       service.getDevice(1).subscribe();
       const req = httpMock.expectOne(`${apiBase}/corehr/devices/1`);
+      expect(req.request.method).toBe('GET');
       req.flush({ id: 1 });
     });
 
@@ -93,6 +94,7 @@ describe('CorehrService', () => {
     it('should get attendance by id', () => {
       service.getAttendance('att-123').subscribe();
       const req = httpMock.expectOne(`${apiBase}/corehr/attendance/att-123`);
+      expect(req.request.method).toBe('GET');
       req.flush({ id: 'att-123' });
     });
 

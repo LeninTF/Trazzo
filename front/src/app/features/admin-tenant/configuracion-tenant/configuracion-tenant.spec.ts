@@ -150,8 +150,9 @@ describe('ConfiguracionTenant', () => {
     input.type = 'file';
     input.id = 'fake-file-input';
     document.body.appendChild(input);
-    spyOn(input, 'click');
+    const clickSpy = spyOn(input, 'click');
     component.abrirSelectorLogo();
+    expect(clickSpy).toHaveBeenCalled();
     document.body.removeChild(input);
   });
 

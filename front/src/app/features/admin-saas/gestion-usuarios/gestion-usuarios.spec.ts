@@ -142,6 +142,7 @@ describe('GestionUsuarios', () => {
 
   it('should guardarBorrador', () => {
     component.guardarBorrador();
+    expect(component).toBeTruthy();
   });
 
   it('should toggleEstado', () => {

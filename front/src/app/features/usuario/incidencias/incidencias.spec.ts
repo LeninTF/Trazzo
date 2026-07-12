@@ -175,7 +175,9 @@ describe('Incidencias', () => {
     it('should do nothing when no archivo', () => {
       const inc = component.incidencias()[1];
       inc.archivo = null;
+      const lengthBefore = component.incidencias().length;
       component.descargarArchivo(inc);
+      expect(component.incidencias().length).toBe(lengthBefore);
     });
 
     it('should create a download link', () => {

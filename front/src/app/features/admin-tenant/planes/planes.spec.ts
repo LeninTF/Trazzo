@@ -105,9 +105,11 @@ describe('Planes', () => {
 
   it('should exportarFacturas', () => {
     component.exportarFacturas();
+    expect(component.facturas().length).toBeGreaterThan(0);
   });
 
   it('should descargarFactura', () => {
     component.descargarFactura();
+    expect(component).toBeTruthy();
   });
 });

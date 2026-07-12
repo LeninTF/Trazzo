@@ -182,6 +182,7 @@ describe('GestionPlanes', () => {
 
   it('should exportarCSV', () => {
     component.exportarCSV();
+    expect(component.planes().length).toBeGreaterThan(0);
   });
 
   it('should handle cargarPlanes error', () => {

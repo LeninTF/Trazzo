@@ -135,7 +135,9 @@ describe('BaseGestionRoles', () => {
     });
 
     it('should do nothing for unknown module', () => {
+      const permisosBefore = JSON.stringify(component.permisos);
       component.toggleModulo('unknown', true);
+      expect(JSON.stringify(component.permisos)).toBe(permisosBefore);
     });
   });
 
