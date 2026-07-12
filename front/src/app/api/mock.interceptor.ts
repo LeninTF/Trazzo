@@ -1129,11 +1129,11 @@ function handleWebsocket(
 // ==========================================
 
 const mockAuditLogs = [
-  { id: '1', eventId: 'EVT-98234-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Josselin Rojas', userEmail: 'josselin.rojas@colegio.edu.pe', accion: 'CREATE', tipo: 'exito', entidad: 'Usuario', entidadId: 'TU-0001', ipAddress: '192.168.1.10', userAgent: 'Mozilla/5.0', oldValue: null, newValue: { name: 'Nuevo usuario' } },
-  { id: '2', eventId: 'EVT-98235-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Carlos Mendoza', userEmail: 'carlos.mendoza@colegio.edu.pe', accion: 'UPDATE', tipo: 'exito', entidad: 'Horario', entidadId: 'SH-0003', ipAddress: '192.168.1.15', userAgent: 'Mozilla/5.0', oldValue: { entry_time: '08:00' }, newValue: { entry_time: '07:30' } },
-  { id: '3', eventId: 'EVT-98236-X', fecha: daysAgo(2), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Admin Trazzo', userEmail: 'admin@trazzo.pe', accion: 'DELETE', tipo: 'advertencia', entidad: 'Dispositivo', entidadId: 'DEV-0005', ipAddress: '10.0.0.1', userAgent: 'Chrome/120', oldValue: { code: 'ZK-OLD-001' }, newValue: null },
-  { id: '4', eventId: 'EVT-98237-X', fecha: daysAgo(3), tenant: 'Instituto Norte', tenantId: 'b2c3d4e5-0000-0000-0000-000000000002', userName: 'María López', userEmail: 'maria.lopez@instituto.edu.pe', accion: 'LOGIN', tipo: 'exito', entidad: 'Sesion', entidadId: 'SES-0042', ipAddress: '192.168.2.50', userAgent: 'Firefox/121', oldValue: null, newValue: null },
-  { id: '5', eventId: 'EVT-98238-X', fecha: daysAgo(3), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Roberto Castro', userEmail: 'roberto.castro@colegio.edu.pe', accion: 'CREATE', tipo: 'error', entidad: 'Incidencia', entidadId: 'INC-0012', ipAddress: '192.168.1.22', userAgent: 'Safari/17', oldValue: null, newValue: { error: 'Timeout de conexion' } },
+  { id: '1', eventId: 'EVT-98234-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Josselin Rojas', userEmail: 'josselin.rojas@colegio.edu.pe', accion: 'CREATE', tipo: 'exito', entidad: 'Usuario', entidadId: 'TU-0001', ipAddress: '192.168.1.10', userAgent: 'Mozilla/5.0', oldValue: null, newValue: { name: 'Nuevo usuario' } }, // NOSONAR
+  { id: '2', eventId: 'EVT-98235-X', fecha: daysAgo(1), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Carlos Mendoza', userEmail: 'carlos.mendoza@colegio.edu.pe', accion: 'UPDATE', tipo: 'exito', entidad: 'Horario', entidadId: 'SH-0003', ipAddress: '192.168.1.15', userAgent: 'Mozilla/5.0', oldValue: { entry_time: '08:00' }, newValue: { entry_time: '07:30' } }, // NOSONAR
+  { id: '3', eventId: 'EVT-98236-X', fecha: daysAgo(2), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Admin Trazzo', userEmail: 'admin@trazzo.pe', accion: 'DELETE', tipo: 'advertencia', entidad: 'Dispositivo', entidadId: 'DEV-0005', ipAddress: '10.0.0.1', userAgent: 'Chrome/120', oldValue: { code: 'ZK-OLD-001' }, newValue: null }, // NOSONAR
+  { id: '4', eventId: 'EVT-98237-X', fecha: daysAgo(3), tenant: 'Instituto Norte', tenantId: 'b2c3d4e5-0000-0000-0000-000000000002', userName: 'María López', userEmail: 'maria.lopez@instituto.edu.pe', accion: 'LOGIN', tipo: 'exito', entidad: 'Sesion', entidadId: 'SES-0042', ipAddress: '192.168.2.50', userAgent: 'Firefox/121', oldValue: null, newValue: null }, // NOSONAR
+  { id: '5', eventId: 'EVT-98238-X', fecha: daysAgo(3), tenant: 'Colegio Santa Rosa', tenantId: 'a1b2c3d4-0000-0000-0000-000000000001', userName: 'Roberto Castro', userEmail: 'roberto.castro@colegio.edu.pe', accion: 'CREATE', tipo: 'error', entidad: 'Incidencia', entidadId: 'INC-0012', ipAddress: '192.168.1.22', userAgent: 'Safari/17', oldValue: null, newValue: { error: 'Timeout de conexion' } }, // NOSONAR
 ];
 
 const mockAuditMetrics = {
@@ -1197,7 +1197,7 @@ function handleReportsClosures(
 
   if (u === '/reports/monthly-closures' && method === 'POST') {
     const body = req.body as { month: number; year: number };
-    const exists = mockMonthlyClosures.find(c => c.month === body.month && c.year === body.year);
+    const exists = mockMonthlyClosures.some(c => c.month === body.month && c.year === body.year);
     if (exists) {
       return _error(409, `Monthly closure already exists for ${body.month}/${body.year}`);
     }

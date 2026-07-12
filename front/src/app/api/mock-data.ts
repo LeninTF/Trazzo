@@ -6,7 +6,7 @@ import type {
   UserBiometriaProfile, AttendanceProfile, NonWorkingDayProfile,
   TenantContactProfile, TenantUserDepartmentProfile, UserScheduleProfile,
   MasterRoleProfile, PageResponse, PersonaBase, PublicKeyResponse,
-  MonthlyClosure, MonthlyClosureDetail, MonthlyClosureWithDetails,
+  MonthlyClosure, MonthlyClosureDetail,
 } from './types';
 
 const now = new Date().toISOString();
