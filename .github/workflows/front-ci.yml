@@ -67,7 +67,7 @@ jobs:
             -Dsonar.projectKey=methodsync-trazzo-front
             -Dsonar.organization=methodsync
             -Dsonar.sources=src,Dockerfile
-            -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts
+            -Dsonar.exclusions=**/node_modules/**,**/*.spec.ts,**/mock-data.ts,**/mock.interceptor.ts
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
       - name: Verificar Quality Gate de SonarCloud
