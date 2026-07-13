@@ -103,8 +103,8 @@ export class Login {
         this.roleService.setUserInfo(res.usuario.nombre, res.usuario.email);
         const isMaster = res.usuario.rol.some(r => r.name === 'admin_trazzo');
         if (isMaster) {
-          this.roleService.switchRole('admin-sass');
-          this.router.navigate(['/sass/tenants']);
+          this.roleService.switchRole('admin-saas');
+          this.router.navigate(['/saas/tenants']);
         } else {
           this.roleService.switchRole('admin-tenant');
           this.router.navigate(['/tenant/dashboard']);

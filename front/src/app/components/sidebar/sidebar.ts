@@ -28,7 +28,7 @@ export class Sidebar implements OnDestroy {
 
   protected roleUrlPrefix = computed(() => {
     const role = this.roleService.role();
-    if (role === 'admin-sass') return 'sass';
+    if (role === 'admin-saas') return 'saas';
     if (role === 'usuario') return 'usuario';
     return 'tenant';
   });
@@ -36,7 +36,7 @@ export class Sidebar implements OnDestroy {
   protected roleLabel = computed(() => {
     const role = this.roleService.role();
     if (role === 'admin-tenant') return 'ADMINISTRADOR TENANT';
-    if (role === 'admin-sass') return 'ADMINISTRADOR SAAS';
+    if (role === 'admin-saas') return 'ADMINISTRADOR SAAS';
     return 'USUARIO';
   });
 }

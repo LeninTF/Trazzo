@@ -1,0 +1,62 @@
+<div class="modal fade" id="notificationsModal" tabindex="-1" aria-labelledby="notificationsModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="notificationsModalLabel">Notificaciones</h5>
+				<div class="modal-header-actions">
+					<button type="button" class="btn btn-sm btn-link mark-all-read" (click)="marcarTodasComoLeidas()">
+						<i class="bi bi-check2-all"></i>
+						Marcar todas como leídas
+					</button>
+					<button type="button" class="btn-close" (click)="cerrarModal()" aria-label="Cerrar"></button>
+				</div>
+			</div>
+
+			<div class="modal-body p-0">
+				<div class="notif-filtros">
+					<button type="button" class="notif-filtro-btn" [class.is-active]="filtroActual === 'todas'" (click)="setFiltro('todas')">
+						Todas
+						<span class="notif-filtro-count">{{ notificationService.notificaciones().length }}</span>
+					</button>
+					<button type="button" class="notif-filtro-btn" [class.is-active]="filtroActual === 'no-leidas'" (click)="setFiltro('no-leidas')">
+						No leídas
+						<span class="notif-filtro-count">{{ notificationService.noLeidas().length }}</span>
+					</button>
+					<button type="button" class="notif-filtro-btn" [class.is-active]="filtroActual === 'leidas'" (click)="setFiltro('leidas')">
+						Leídas
+						<span class="notif-filtro-count">{{ notificationService.notificaciones().length - notificationService.noLeidas().length }}</span>
+					</button>
+				</div>
+
+				<div class="notif-lista">
+					@if (notificacionesFiltradas.length === 0) {
+						<div class="notif-empty">
+							<i class="bi bi-bell-slash"></i>
+							<p>No hay notificaciones</p>
+						</div>
+					} @else {
+						@for (notif of notificacionesFiltradas; track notif.id) {
+							<button type="button" class="notif-item" [class.notif-item--unread]="!notif.leida" (click)="irANotificacion(notif)">
+								<div class="notif-item-icon" [style.--notif-color]="tipoColor[notif.tipo]">
+									<i class="bi" [class]="notif.icono"></i>
+								</div>
+								<div class="notif-item-body">
+									<span class="notif-item-titulo">{{ notif.titulo }}</span>
+									<span class="notif-item-desc">{{ notif.descripcion }}</span>
+									<span class="notif-item-hora">{{ notif.hora }}</span>
+								</div>
+								@if (!notif.leida) {
+									<span class="notif-item-dot"></span>
+								}
+							</button>
+						}
+					}
+				</div>
+			</div>
+
+			<div class="modal-footer">
+				<small class="text-muted">{{ notificationService.notificaciones().length }} notificaciones en total</small>
+			</div>
+		</div>
+	</div>
+</div>

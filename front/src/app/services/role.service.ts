@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Role = 'admin-tenant' | 'admin-sass' | 'usuario';
+export type Role = 'admin-tenant' | 'admin-saas' | 'usuario';
 
 const STORAGE_KEY = 'trazzo_role';
 
@@ -12,7 +12,7 @@ export class RoleService {
 
   readonly roleLabel: Record<Role, string> = {
     'admin-tenant': 'Administrador Tenant',
-    'admin-sass': 'Administrador SaaS',
+    'admin-saas': 'Administrador SaaS',
     'usuario': 'Usuario',
   };
 
@@ -46,7 +46,7 @@ export class RoleService {
 
   private loadRole(): Role {
     const stored = localStorage.getItem(STORAGE_KEY) as Role | null;
-    if (stored && ['admin-tenant', 'admin-sass', 'usuario'].includes(stored)) {
+    if (stored && ['admin-tenant', 'admin-saas', 'usuario'].includes(stored)) {
       return stored;
     }
     return 'admin-tenant';
