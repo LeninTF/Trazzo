@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import trazzo.back.saasglobal.domain.event.SaasGlobalDomainEvent;
 import trazzo.back.saasglobal.domain.event.TenantActivatedEvent;
+import trazzo.back.saasglobal.domain.exception.InvalidTenantTransitionException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 
@@ -25,6 +26,7 @@ public class Tenant {
     private TenantSettings settings;
     private TenantBranding branding;
     private LocalDateTime activatedAt;
+    private LocalDateTime suspendedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -40,6 +42,7 @@ public class Tenant {
             TenantSettings settings,
             TenantBranding branding,
             LocalDateTime activatedAt,
+            LocalDateTime suspendedAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             LocalDateTime deletedAt
@@ -51,6 +54,7 @@ public class Tenant {
         this.settings = settings;
         this.branding = branding;
         this.activatedAt = activatedAt;
+        this.suspendedAt = suspendedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
@@ -69,7 +73,7 @@ public class Tenant {
         String id = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now(Clock.systemDefaultZone());
         TenantSettings settingsWithId = requireNonNull(settings, "settings");
-        return new Tenant(id, holdingId, subDomain, planId, settingsWithId, branding, null, now, now, null);
+        return new Tenant(id, holdingId, subDomain, planId, settingsWithId, branding, null, null, now, now, null);
     }
 
     /**
@@ -77,7 +81,7 @@ public class Tenant {
      */
     public static Tenant createPending(String subDomain, Integer planId, Integer holdingId) {
         LocalDateTime now = LocalDateTime.now(Clock.systemDefaultZone());
-        return new Tenant(null, holdingId, subDomain, planId, null, null, null, now, now, null);
+        return new Tenant(null, holdingId, subDomain, planId, null, null, null, null, now, now, null);
     }
 
     @SuppressWarnings("java:S107")
@@ -89,11 +93,12 @@ public class Tenant {
             TenantSettings settings,
             TenantBranding branding,
             LocalDateTime activatedAt,
+            LocalDateTime suspendedAt,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             LocalDateTime deletedAt
     ) {
-        return new Tenant(id, holdingId, subDomain, planId, settings, branding, activatedAt, createdAt, updatedAt, deletedAt);
+        return new Tenant(id, holdingId, subDomain, planId, settings, branding, activatedAt, suspendedAt, createdAt, updatedAt, deletedAt);
     }
 
     public void assignSettings(TenantSettings settings) {
@@ -126,8 +131,31 @@ public class Tenant {
         this.updatedAt = this.deletedAt;
     }
 
+    public void suspend() {
+        if (!isActivated()) {
+            throw new InvalidTenantTransitionException("cannot suspend a tenant that is not activated");
+        }
+        if (isSuspended()) {
+            throw new InvalidTenantTransitionException("tenant is already suspended");
+        }
+        this.suspendedAt = LocalDateTime.now(clock);
+        this.updatedAt = this.suspendedAt;
+    }
+
+    public void reactivate() {
+        if (!isSuspended()) {
+            throw new InvalidTenantTransitionException("cannot reactivate a tenant that is not suspended");
+        }
+        this.suspendedAt = null;
+        this.updatedAt = LocalDateTime.now(clock);
+    }
+
     public boolean isActivated() {
         return activatedAt != null;
+    }
+
+    public boolean isSuspended() {
+        return suspendedAt != null;
     }
 
     public boolean hasSettings() {

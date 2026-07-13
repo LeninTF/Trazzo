@@ -26,7 +26,7 @@ describe('Solicitudes', () => {
 
   const listByStatus: Record<string, RequestSummary[]> = {
     PENDING: [mockSummary(1, 'PENDING'), mockSummary(2, 'PENDING')],
-    IN_REVIEW: [mockSummary(3, 'IN_REVIEW')],
+    OBSERVADO: [mockSummary(3, 'OBSERVADO')],
     APPROVED: [],
     REJECTED: [],
   };
@@ -87,7 +87,7 @@ describe('Solicitudes', () => {
   });
 
   it('computes counts per status tab', () => {
-    expect(component.counts()).toEqual({ PENDING: 2, IN_REVIEW: 1, APPROVED: 0, REJECTED: 0 });
+    expect(component.counts()).toEqual({ PENDING: 2, OBSERVADO: 1, APPROVED: 0, REJECTED: 0 });
   });
 
   it('has 4 status tabs', () => {
@@ -134,10 +134,10 @@ describe('Solicitudes', () => {
   describe('setTab', () => {
     it('should set active tab and refetch', () => {
       mockRequests.list.calls.reset();
-      component.setTab('IN_REVIEW');
+      component.setTab('OBSERVADO');
       fixture.detectChanges();
-      expect(component.activeTab()).toBe('IN_REVIEW');
-      expect(mockRequests.list).toHaveBeenCalledWith(jasmine.objectContaining({ status: 'IN_REVIEW' }));
+      expect(component.activeTab()).toBe('OBSERVADO');
+      expect(mockRequests.list).toHaveBeenCalledWith(jasmine.objectContaining({ status: 'OBSERVADO' }));
     });
   });
 
@@ -158,7 +158,7 @@ describe('Solicitudes', () => {
 
       expect(component.filterSearch.value).toBe('');
       expect(component.filterTipo.value).toBe('todos');
-      expect(component.currentPage()).toEqual({ PENDING: 1, IN_REVIEW: 1, APPROVED: 1, REJECTED: 1 });
+      expect(component.currentPage()).toEqual({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
     });
   });
 
@@ -182,6 +182,12 @@ describe('Solicitudes', () => {
       component.confirmarAprobar(1);
       expect(component.confirmAction()).toEqual({ id: 1, action: 'aprobar', label: jasmine.any(String) });
       expect(mockModal.show).toHaveBeenCalledWith('modalConfirmar');
+    });
+
+    it('confirmarAprobar resets any leftover motivo from a previous action', () => {
+      component.motivoAccion.set('texto anterior');
+      component.confirmarAprobar(1);
+      expect(component.motivoAccion()).toBe('');
     });
 
     it('confirmarRechazar sets confirm action', () => {
@@ -221,10 +227,10 @@ describe('Solicitudes', () => {
       expect(mockRequests.changeStatus).toHaveBeenCalledWith(1, { status: 'REJECTED' });
     });
 
-    it('should observar with IN_REVIEW status', () => {
+    it('should observar with OBSERVADO status', () => {
       component.confirmAction.set({ id: 1, action: 'observar', label: 'Observar?' });
       component.ejecutarAccion();
-      expect(mockRequests.changeStatus).toHaveBeenCalledWith(1, { status: 'IN_REVIEW' });
+      expect(mockRequests.changeStatus).toHaveBeenCalledWith(1, { status: 'OBSERVADO' });
     });
 
     it('should reconsiderar with PENDING status', () => {
@@ -238,6 +244,20 @@ describe('Solicitudes', () => {
       component.confirmAction.set({ id: 1, action: 'aprobar', label: 'Aprobar?' });
       component.ejecutarAccion();
       expect(mockToast.show).toHaveBeenCalledWith('No se pudo actualizar la solicitud.', 'error');
+    });
+
+    it('should include the motivo as comment when provided', () => {
+      component.confirmAction.set({ id: 1, action: 'rechazar', label: 'Rechazar?' });
+      component.motivoAccion.set('  No cumple los requisitos  ');
+      component.ejecutarAccion();
+      expect(mockRequests.changeStatus).toHaveBeenCalledWith(1, { status: 'REJECTED', comment: 'No cumple los requisitos' });
+    });
+
+    it('should reset motivoAccion after a successful action', () => {
+      component.confirmAction.set({ id: 1, action: 'aprobar', label: 'Aprobar?' });
+      component.motivoAccion.set('Todo en regla');
+      component.ejecutarAccion();
+      expect(component.motivoAccion()).toBe('');
     });
   });
 

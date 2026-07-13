@@ -65,7 +65,7 @@ class TenantBillingControllerTest {
     void getCurrentPlan_returns200_withTenantsPlan() throws Exception {
         when(userRepository.findById(USER_ID.toString())).thenReturn(Optional.of(tenantScopedUser()));
         when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(
-                Tenant.restore("tenant-1", null, "demo", 2, null, null, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), null)));
+                Tenant.restore("tenant-1", null, "demo", 2, null, null, LocalDateTime.now(), null, LocalDateTime.now(), LocalDateTime.now(), null)));
         when(planUseCase.getById(2)).thenReturn(planResult());
 
         mockMvc.perform(get("/org/billing/plan").with(authentication(authenticatedTenantUser())))

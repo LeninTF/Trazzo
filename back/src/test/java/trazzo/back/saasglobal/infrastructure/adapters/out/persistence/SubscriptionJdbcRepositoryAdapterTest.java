@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
 import trazzo.back.saasglobal.domain.model.multitenancy.SubscriptionStatus;
 
@@ -26,6 +28,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.SubscriptionStatus;
 class SubscriptionJdbcRepositoryAdapterTest {
 
     @Mock JdbcTemplate jdbc;
+    @Mock NamedParameterJdbcTemplate namedJdbc;
     @InjectMocks SubscriptionJdbcRepositoryAdapter adapter;
 
     private static Subscription trialSub() {
@@ -71,5 +74,30 @@ class SubscriptionJdbcRepositoryAdapterTest {
         Optional<Subscription> result = adapter.findActiveByTenantId("tenant-1");
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_returnsEmptyListWhenNoRows() {
+        when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+
+        List<Subscription> result = adapter.findAll(0, 20);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void countAll_returnsZeroWhenNull() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(null);
+
+        assertEquals(0L, adapter.countAll());
+    }
+
+    @Test
+    void countAll_returnsCount() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(5L);
+
+        assertEquals(5L, adapter.countAll());
     }
 }

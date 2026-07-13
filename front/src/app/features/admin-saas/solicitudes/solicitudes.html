@@ -31,7 +31,7 @@
 			</div>
 			<div class="metric-card__info">
 				<span class="metric-card__label">Observadas</span>
-				<strong class="metric-card__value">{{ counts().IN_REVIEW }}</strong>
+				<strong class="metric-card__value">{{ counts().OBSERVADO }}</strong>
 			</div>
 		</div>
 
@@ -126,7 +126,7 @@
 								<td data-label="Fecha">{{ s.createdAt | slice:0:10 }}</td>
 								<td class="td-actions" data-label="Acciones">
 									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s.id)" title="Ver"><i class="bi bi-eye"></i></button>
-									@if (s.status === 'PENDING' || s.status === 'IN_REVIEW') {
+									@if (s.status === 'PENDING' || s.status === 'OBSERVADO') {
 										<button type="button" class="btn-action btn-action--approve" (click)="confirmarAprobar(s.id)" title="Aprobar"><i class="bi bi-check-lg"></i></button>
 										<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
 									}
@@ -191,7 +191,7 @@
 							</div>
 							<div class="detail-field">
 								<span class="detail-label">Estado actual</span>
-								<span class="status-badge">{{ d.status }}</span>
+								<span class="status-badge">{{ statusLabel(d.status) }}</span>
 							</div>
 							<div class="detail-field">
 								<span class="detail-label">Mensaje</span>
@@ -219,7 +219,7 @@
 					</div>
 					<div class="modal-footer-custom">
 						<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cerrar</button>
-						@if (d.status === 'PENDING' || d.status === 'IN_REVIEW') {
+						@if (d.status === 'PENDING' || d.status === 'OBSERVADO') {
 							<button type="button" class="btn btn-approve-custom" data-bs-dismiss="modal" (click)="confirmarAprobar(d.id)"><i class="bi bi-check-lg me-1"></i>Aprobar</button>
 							<button type="button" class="btn btn-reject-custom" data-bs-dismiss="modal" (click)="confirmarRechazar(d.id)"><i class="bi bi-x-lg me-1"></i>Rechazar</button>
 						}
@@ -240,6 +240,8 @@
 				</div>
 				<div class="modal-body-custom">
 					<p class="confirm-text">{{ confirmAction()?.label }}</p>
+					<label for="motivo-accion" class="visually-hidden">Motivo (opcional)</label>
+					<textarea id="motivo-accion" rows="2" placeholder="Motivo (opcional)" [value]="motivoAccion()" (input)="motivoAccion.set($any($event.target).value)"></textarea>
 				</div>
 				<div class="modal-footer-custom">
 					<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>

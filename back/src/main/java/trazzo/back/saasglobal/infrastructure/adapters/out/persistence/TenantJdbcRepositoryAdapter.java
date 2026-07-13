@@ -2,11 +2,14 @@ package trazzo.back.saasglobal.infrastructure.adapters.out.persistence;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
@@ -24,6 +27,7 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
                 t.sub_domain       AS t_sub_domain,
                 t.plan_id          AS t_plan_id,
                 t.activated_at     AS t_activated_at,
+                t.suspended_at     AS t_suspended_at,
                 t.created_at       AS t_created_at,
                 t.updated_at       AS t_updated_at,
                 t.deleted_at       AS t_deleted_at,
@@ -41,7 +45,20 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
             LEFT JOIN tenant_branding  tb ON tb.tenant_id = t.id
             """;
 
+    private static final String LIST_FILTER_WHERE = """
+            WHERE t.deleted_at IS NULL
+              AND (:search IS NULL OR t.sub_domain ILIKE CONCAT('%', CAST(:search AS varchar), '%'))
+              AND (:planId IS NULL OR t.plan_id = :planId)
+              AND (
+                    CAST(:status AS varchar) IS NULL
+                    OR (:status = 'TRIAL' AND t.activated_at IS NULL)
+                    OR (:status = 'ACTIVE' AND t.activated_at IS NOT NULL AND t.suspended_at IS NULL)
+                    OR (:status = 'SUSPENDED' AND t.suspended_at IS NOT NULL)
+                  )
+            """;
+
     private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate namedJdbc;
 
     @Override
     public Tenant save(Tenant tenant) {
@@ -74,14 +91,82 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
         return count != null && count > 0;
     }
 
+    @Override
+    public List<Tenant> findAll(String search, Integer planId, String status, int page, int size) {
+        MapSqlParameterSource params = listFilterParams(search, planId, status)
+                .addValue("limit", size)
+                .addValue("offset", Math.max(page, 0) * size);
+        return namedJdbc.query(
+                SELECT_COLUMNS + LIST_FILTER_WHERE + " ORDER BY t.created_at DESC LIMIT :limit OFFSET :offset",
+                params, this::mapRow);
+    }
+
+    @Override
+    public long countAll(String search, Integer planId, String status) {
+        Long count = namedJdbc.queryForObject(
+                "SELECT COUNT(*) FROM tenants t " + LIST_FILTER_WHERE,
+                listFilterParams(search, planId, status), Long.class);
+        return count != null ? count : 0L;
+    }
+
+    @Override
+    public long countTotal() {
+        return countWhere("deleted_at IS NULL", new MapSqlParameterSource());
+    }
+
+    @Override
+    public long countActive() {
+        return countWhere("deleted_at IS NULL AND activated_at IS NOT NULL AND suspended_at IS NULL",
+                new MapSqlParameterSource());
+    }
+
+    @Override
+    public long countCreatedSince(LocalDateTime since) {
+        return countWhere("deleted_at IS NULL AND created_at >= :since",
+                new MapSqlParameterSource("since", since));
+    }
+
+    @Override
+    public long countTotalBefore(LocalDateTime cutoff) {
+        return countWhere("deleted_at IS NULL AND created_at < :cutoff",
+                new MapSqlParameterSource("cutoff", cutoff));
+    }
+
+    @Override
+    public long countExistedBefore(LocalDateTime cutoff) {
+        return countWhere("created_at < :cutoff", new MapSqlParameterSource("cutoff", cutoff));
+    }
+
+    @Override
+    public long countDeletedBetween(LocalDateTime from, LocalDateTime toExclusive) {
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("from", from)
+                .addValue("to", toExclusive, Types.TIMESTAMP);
+        return countWhere("deleted_at >= :from AND (CAST(:to AS timestamp) IS NULL OR deleted_at < :to)", params);
+    }
+
+    private long countWhere(String whereClause, MapSqlParameterSource params) {
+        Long count = namedJdbc.queryForObject(
+                "SELECT COUNT(*) FROM tenants WHERE " + whereClause, params, Long.class);
+        return count != null ? count : 0L;
+    }
+
+    private static MapSqlParameterSource listFilterParams(String search, Integer planId, String status) {
+        return new MapSqlParameterSource()
+                .addValue("search", search, Types.VARCHAR)
+                .addValue("planId", planId, Types.INTEGER)
+                .addValue("status", status, Types.VARCHAR);
+    }
+
     private void upsertTenant(Tenant tenant) {
         jdbc.update("""
                 INSERT INTO tenants
-                    (id, holding_id, sub_domain, plan_id, activated_at, created_at, updated_at, deleted_at)
-                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)
+                    (id, holding_id, sub_domain, plan_id, activated_at, suspended_at, created_at, updated_at, deleted_at)
+                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     plan_id      = EXCLUDED.plan_id,
                     activated_at = EXCLUDED.activated_at,
+                    suspended_at = EXCLUDED.suspended_at,
                     updated_at   = EXCLUDED.updated_at,
                     deleted_at   = EXCLUDED.deleted_at
                 """,
@@ -90,6 +175,7 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
                 tenant.getSubDomain(),
                 tenant.getPlanId(),
                 tenant.getActivatedAt(),
+                tenant.getSuspendedAt(),
                 tenant.getCreatedAt(),
                 tenant.getUpdatedAt(),
                 tenant.getDeletedAt());
@@ -162,6 +248,7 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
                 settings,
                 branding,
                 rs.getObject("t_activated_at", LocalDateTime.class),
+                rs.getObject("t_suspended_at", LocalDateTime.class),
                 rs.getObject("t_created_at", LocalDateTime.class),
                 rs.getObject("t_updated_at", LocalDateTime.class),
                 rs.getObject("t_deleted_at", LocalDateTime.class));

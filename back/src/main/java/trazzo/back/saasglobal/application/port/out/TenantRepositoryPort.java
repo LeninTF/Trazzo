@@ -1,5 +1,7 @@
 package trazzo.back.saasglobal.application.port.out;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 
@@ -8,4 +10,17 @@ public interface TenantRepositoryPort {
     Optional<Tenant> findById(String id);
     Optional<Tenant> findBySubDomain(String subDomain);
     boolean existsBySubDomain(String subDomain);
+
+    // status filter: "TRIAL" | "ACTIVE" | "SUSPENDED" (derived from activated_at/suspended_at, not a column)
+    List<Tenant> findAll(String search, Integer planId, String status, int page, int size);
+    long countAll(String search, Integer planId, String status);
+
+    // Metrics: each a single primitive count so SaasTenantService can compose the dashboard
+    // formulas (growth %, churn %, variance) without the port dictating the business math.
+    long countTotal();
+    long countActive();
+    long countCreatedSince(LocalDateTime since);
+    long countTotalBefore(LocalDateTime cutoff);
+    long countExistedBefore(LocalDateTime cutoff);
+    long countDeletedBetween(LocalDateTime from, LocalDateTime toExclusive);
 }

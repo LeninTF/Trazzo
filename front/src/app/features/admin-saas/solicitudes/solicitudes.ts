@@ -14,10 +14,17 @@ type ActionType = 'aprobar' | 'rechazar' | 'observar' | 'reconsiderar';
 
 const STATUS_TABS: { value: RequestStatus; label: string }[] = [
   { value: 'PENDING', label: 'Pendientes' },
-  { value: 'IN_REVIEW', label: 'Observadas' },
+  { value: 'OBSERVADO', label: 'Observadas' },
   { value: 'APPROVED', label: 'Aprobadas' },
   { value: 'REJECTED', label: 'Rechazadas' },
 ];
+
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  PENDING: 'Pendiente',
+  OBSERVADO: 'Observada',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+};
 
 @Component({
   selector: 'app-solicitudes',
@@ -67,16 +74,17 @@ export class Solicitudes {
 
   readonly pageSize = 5;
   activeTab = signal<RequestStatus>('PENDING');
-  currentPage = signal<Record<RequestStatus, number>>({ PENDING: 1, IN_REVIEW: 1, APPROVED: 1, REJECTED: 1 });
+  currentPage = signal<Record<RequestStatus, number>>({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
 
   readonly items = signal<import('../../../api/types').RequestSummary[]>([]);
   readonly totalElements = signal(0);
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalElements() / this.pageSize)));
 
-  readonly counts = signal<Record<RequestStatus, number>>({ PENDING: 0, IN_REVIEW: 0, APPROVED: 0, REJECTED: 0 });
+  readonly counts = signal<Record<RequestStatus, number>>({ PENDING: 0, OBSERVADO: 0, APPROVED: 0, REJECTED: 0 });
 
   selectedDetail = signal<RequestDetail | null>(null);
   confirmAction = signal<{ id: number; action: ActionType; label: string } | null>(null);
+  motivoAccion = signal('');
   newComment = signal('');
 
   constructor() {
@@ -112,13 +120,13 @@ export class Solicitudes {
   private fetchCounts(): void {
     forkJoin({
       PENDING: this.api.requests.list({ status: 'PENDING', page: 0, size: 1 }),
-      IN_REVIEW: this.api.requests.list({ status: 'IN_REVIEW', page: 0, size: 1 }),
+      OBSERVADO: this.api.requests.list({ status: 'OBSERVADO', page: 0, size: 1 }),
       APPROVED: this.api.requests.list({ status: 'APPROVED', page: 0, size: 1 }),
       REJECTED: this.api.requests.list({ status: 'REJECTED', page: 0, size: 1 }),
     }).subscribe(res => {
       this.counts.set({
         PENDING: res.PENDING.totalElements,
-        IN_REVIEW: res.IN_REVIEW.totalElements,
+        OBSERVADO: res.OBSERVADO.totalElements,
         APPROVED: res.APPROVED.totalElements,
         REJECTED: res.REJECTED.totalElements,
       });
@@ -141,7 +149,7 @@ export class Solicitudes {
   limpiarFiltros(): void {
     this.filterSearch.setValue('');
     this.filterTipo.setValue('todos');
-    this.currentPage.set({ PENDING: 1, IN_REVIEW: 1, APPROVED: 1, REJECTED: 1 });
+    this.currentPage.set({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
   }
 
   verDetalle(id: number): void {
@@ -155,21 +163,25 @@ export class Solicitudes {
   }
 
   confirmarAprobar(id: number): void {
+    this.motivoAccion.set('');
     this.confirmAction.set({ id, action: 'aprobar', label: '¿Aprobar esta solicitud?' });
     this.modalService.show('modalConfirmar');
   }
 
   confirmarRechazar(id: number): void {
+    this.motivoAccion.set('');
     this.confirmAction.set({ id, action: 'rechazar', label: '¿Rechazar esta solicitud?' });
     this.modalService.show('modalConfirmar');
   }
 
   confirmarObservar(id: number): void {
+    this.motivoAccion.set('');
     this.confirmAction.set({ id, action: 'observar', label: '¿Marcar esta solicitud como observada?' });
     this.modalService.show('modalConfirmar');
   }
 
   confirmarReconsiderar(id: number): void {
+    this.motivoAccion.set('');
     this.confirmAction.set({ id, action: 'reconsiderar', label: '¿Reconsiderar esta solicitud?' });
     this.modalService.show('modalConfirmar');
   }
@@ -178,7 +190,7 @@ export class Solicitudes {
     switch (action) {
       case 'aprobar': return 'APPROVED';
       case 'rechazar': return 'REJECTED';
-      case 'observar': return 'IN_REVIEW';
+      case 'observar': return 'OBSERVADO';
       case 'reconsiderar': return 'PENDING';
     }
   }
@@ -187,10 +199,14 @@ export class Solicitudes {
     const action = this.confirmAction();
     if (!action) return;
 
-    this.api.requests.changeStatus(action.id, { status: Solicitudes.targetStatus(action.action) }).subscribe({
+    const motivo = this.motivoAccion().trim();
+    const body = { status: Solicitudes.targetStatus(action.action), ...(motivo && { comment: motivo }) };
+
+    this.api.requests.changeStatus(action.id, body).subscribe({
       next: () => {
         this.modalService.hide('modalConfirmar');
         this.confirmAction.set(null);
+        this.motivoAccion.set('');
         this.refresh();
 
         const msgs: Record<ActionType, string> = {
@@ -222,6 +238,10 @@ export class Solicitudes {
 
   typeLabel(type: RequestType): string {
     return type === 'TRIAL' ? 'Trial' : 'Más información';
+  }
+
+  statusLabel(status: RequestStatus): string {
+    return STATUS_LABELS[status] ?? status;
   }
 
   private mostrarToast(message: string, type: ToastType): void {

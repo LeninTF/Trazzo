@@ -4,6 +4,7 @@ import { GestionPlanes } from './gestion-planes';
 import { SaasService } from '../../../api/services/saas.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
+import { ExportService } from '../../../services/export.service';
 
 describe('GestionPlanes', () => {
   let component: GestionPlanes;
@@ -15,6 +16,14 @@ describe('GestionPlanes', () => {
     { id: 3, name: 'Plan Enterprise', price: 1000, priceAnnual: 10000, currency: 'SOLES', billingPeriod: 'ANNUAL', active: false, createdAt: '2025-01-01T00:00:00', features: { max_trabajadores: 500, max_sedes: 5, almacenamiento_gb: 50 } },
   ];
 
+  const mockSubscriptions = {
+    content: [
+      { id: 'sub-1', tenantId: 'tenant-1', tenantName: 'demo', planId: 1, planName: 'Plan Demo',
+        dateStart: '2026-01-01', dateEnd: '2026-12-31', status: 'ACTIVE', purchasePrice: 29.99, createdAt: '2026-01-01T00:00:00' },
+    ],
+    page: 0, size: 100, totalElements: 1, totalPages: 1,
+  };
+
   const mockSaas = {
     listPlans: jasmine.createSpy('listPlans').and.returnValue(of(mockPlans)),
     listActivePlans: jasmine.createSpy('listActivePlans').and.returnValue(of(mockPlans)),
@@ -24,14 +33,16 @@ describe('GestionPlanes', () => {
     activatePlan: jasmine.createSpy('activatePlan').and.returnValue(of(mockPlans[0])),
     deactivatePlan: jasmine.createSpy('deactivatePlan').and.returnValue(of(mockPlans[0])),
     deletePlan: jasmine.createSpy('deletePlan').and.returnValue(of(undefined)),
+    listSubscriptions: jasmine.createSpy('listSubscriptions').and.returnValue(of(mockSubscriptions)),
   };
 
-  const mockToast = jasmine.createSpyObj('ToastService', ['show']);
+  const mockToast = jasmine.createSpyObj('ToastService', ['show', 'error']);
   const mockModal = jasmine.createSpyObj('ModalService', ['show', 'hide']);
 
   beforeEach(async () => {
     Object.values(mockSaas).forEach(spy => spy.calls.reset());
     mockSaas.listPlans.and.returnValue(of(mockPlans));
+    mockSaas.listSubscriptions.and.returnValue(of(mockSubscriptions));
 
     await TestBed.configureTestingModule({
       imports: [GestionPlanes],
@@ -163,8 +174,22 @@ describe('GestionPlanes', () => {
     expect(component.precioFinal().anual).toBe(1000);
   });
 
-  it('should paginate suscripciones (empty)', () => {
-    expect(component.suscripcionesPaginadas().length).toBe(0);
+  it('should load suscripciones on init', () => {
+    expect(mockSaas.listSubscriptions).toHaveBeenCalledWith({ page: 0, size: 100 });
+    expect(component.suscripciones().length).toBe(1);
+    expect(component.suscripciones()[0].tenant).toBe('demo');
+    expect(component.suscripciones()[0].plan).toBe('Plan Demo');
+    expect(component.suscripciones()[0].estado).toBe('activo');
+  });
+
+  it('should handle cargarSuscripciones error', () => {
+    mockSaas.listSubscriptions.and.returnValue(throwError(() => new Error('fail')));
+    component.cargarSuscripciones();
+    expect(mockToast.error).toHaveBeenCalledWith('No se pudieron cargar las suscripciones.');
+  });
+
+  it('should paginate suscripciones', () => {
+    expect(component.suscripcionesPaginadas().length).toBe(1);
   });
 
   it('should compute totalSuscripcionPaginas', () => {
@@ -183,8 +208,28 @@ describe('GestionPlanes', () => {
     expect(component.suscripcionPagina()).toBe(1);
   });
 
-  it('should exportarCSV', () => {
+  it('should exportarCSV using suscripciones, not planes', () => {
+    const exportService = TestBed.inject(ExportService);
+    const exportSpy = spyOn(exportService, 'exportCSV');
+
     component.exportarCSV();
+
+    expect(exportSpy).toHaveBeenCalled();
+    const [, headers, rows] = exportSpy.calls.mostRecent().args;
+    expect(headers).toEqual(['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado']);
+    expect(rows).toEqual([['demo', 'Plan Demo', '2026-01-01', '2026-12-31', '29.99', 'activo']]);
+  });
+
+  it('should exportarCSV with no rows when there are no suscripciones', () => {
+    mockSaas.listSubscriptions.and.returnValue(of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 }));
+    component.cargarSuscripciones();
+    const exportService = TestBed.inject(ExportService);
+    const exportSpy = spyOn(exportService, 'exportCSV');
+
+    component.exportarCSV();
+
+    const [, , rows] = exportSpy.calls.mostRecent().args;
+    expect(rows).toEqual([]);
   });
 
   it('should handle cargarPlanes error', () => {

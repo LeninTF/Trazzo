@@ -232,7 +232,7 @@ class RequestServiceTest {
             return RequestComments.restore(5, c.getRequestId(), c.getRequestContactId(), c.getComment(), c.getCreatedAt());
         });
 
-        var command = new ChangeRequestStatusCommand(1, "IN_REVIEW", "admin-1", "Falta información");
+        var command = new ChangeRequestStatusCommand(1, "OBSERVADO", "admin-1", "Falta información");
         service.changeStatus(command);
 
         verify(requestCommentRepository).save(any());
@@ -275,5 +275,34 @@ class RequestServiceTest {
         assertEquals("admin-1", result.authorUserId());
         verify(userRequestCommentRepository).save(any());
         verify(emailService).send(org.mockito.ArgumentMatchers.eq("ana@example.com"), anyString(), anyString());
+    }
+
+    @Test
+    void addComment_setsRequestContactIdWhenContactExists() {
+        when(requestContactRepository.findByRequestId(1)).thenReturn(Optional.of(contact(1)));
+        var captor = org.mockito.ArgumentCaptor.forClass(RequestComments.class);
+        when(requestCommentRepository.save(captor.capture())).thenAnswer(inv -> {
+            RequestComments c = inv.getArgument(0);
+            return RequestComments.restore(7, c.getRequestId(), c.getRequestContactId(), c.getComment(), c.getCreatedAt());
+        });
+
+        service.addComment(new AddCommentCommand(1, "admin-1", "Todo en orden"));
+
+        assertEquals(1, captor.getValue().getRequestContactId());
+    }
+
+    @Test
+    void addComment_leavesRequestContactIdNullWhenNoContact() {
+        when(requestContactRepository.findByRequestId(1)).thenReturn(Optional.empty());
+        var captor = org.mockito.ArgumentCaptor.forClass(RequestComments.class);
+        when(requestCommentRepository.save(captor.capture())).thenAnswer(inv -> {
+            RequestComments c = inv.getArgument(0);
+            return RequestComments.restore(7, c.getRequestId(), c.getRequestContactId(), c.getComment(), c.getCreatedAt());
+        });
+
+        service.addComment(new AddCommentCommand(1, "admin-1", "Todo en orden"));
+
+        assertNull(captor.getValue().getRequestContactId());
+        verifyNoInteractions(emailService);
     }
 }

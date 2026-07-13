@@ -9,6 +9,7 @@ import { AuditService } from './audit.service';
 import { SaasService } from './saas.service';
 import { RequestsService } from './requests.service';
 import { RolesService } from './roles.service';
+import { TenantsService } from './tenants.service';
 import { tenantUserToPersonal } from './helpers';
 
 @Injectable({ providedIn: 'root' })
@@ -23,6 +24,7 @@ export class ApiService {
   readonly saas = inject(SaasService);
   readonly requests = inject(RequestsService);
   readonly roles = inject(RolesService);
+  readonly tenants = inject(TenantsService);
 
   /** @deprecated Use `api.auth.login()` */
   login = this.auth.login.bind(this.auth);

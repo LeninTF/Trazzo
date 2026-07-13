@@ -225,6 +225,25 @@ export interface InvoiceProfile {
 export interface InvoiceListResponse extends PageResponse<InvoiceProfile> {}
 
 // ==========================================
+// SECCIÓN: SUSCRIPCIONES
+// ==========================================
+
+export interface SubscriptionProfile {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  planId: number;
+  planName: string | null;
+  dateStart: string;
+  dateEnd: string | null;
+  status: 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CANCELED';
+  purchasePrice: number;
+  createdAt: string;
+}
+
+export interface SubscriptionListResponse extends PageResponse<SubscriptionProfile> {}
+
+// ==========================================
 // SECCIÓN: AUTENTICACIÓN
 // ==========================================
 
@@ -830,6 +849,68 @@ export interface UpdateSaasPlanRequest {
 }
 
 // ==========================================
+// SECCIÓN: HOLDINGS
+// ==========================================
+
+export interface HoldingProfile {
+  id: number;
+  taxId: string;
+  legalName: string;
+  type: 'PUBLICO' | 'PRIVADO';
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// SECCIÓN: TENANTS (SaaS)
+// ==========================================
+
+export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED';
+
+export interface TenantSaasProfile {
+  id: string;
+  subDomain: string;
+  holdingId: number | null;
+  holdingName: string | null;
+  planId: number;
+  planName: string | null;
+  status: TenantStatus;
+  activatedAt: string | null;
+  createdAt: string;
+}
+
+export interface TenantListResponse extends PageResponse<TenantSaasProfile> {}
+
+export interface TenantMetrics {
+  total: number;
+  crecimientoPct: number;
+  activos: number;
+  porcentajeActivos: number;
+  nuevos30d: number;
+  nuevosMeta: number;
+  tasaChurnPct: number;
+  variacionChurnPct: number;
+}
+
+export interface CreateTrialTenantPayload {
+  subDomain: string;
+  planId: number;
+  holdingId: number;
+  logoUrl?: string;
+  slogan?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+}
+
+export interface UpdateTenantBrandingPayload {
+  logoUrl?: string;
+  slogan?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+}
+
+// ==========================================
 // SECCIÓN: AUDITORÍA
 // ==========================================
 
@@ -872,7 +953,7 @@ export interface AuditMetricsResult {
 // ==========================================
 
 export type RequestType = 'TRIAL' | 'INFO';
-export type RequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED';
+export type RequestStatus = 'PENDING' | 'OBSERVADO' | 'APPROVED' | 'REJECTED';
 
 export interface RequestContactProfile {
   name: string;

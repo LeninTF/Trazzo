@@ -39,7 +39,7 @@ interface Plan {
 }
 
 interface Suscripcion {
-  id: number;
+  id: string;
   tenant: string;
   plan: string;
   fechaInicio: string;
@@ -47,6 +47,13 @@ interface Suscripcion {
   monto: number;
   estado: 'activo' | 'vencido' | 'pendiente';
 }
+
+const SUBSCRIPTION_STATUS_MAP: Record<string, Suscripcion['estado']> = {
+  ACTIVE: 'activo',
+  TRIAL: 'pendiente',
+  SUSPENDED: 'vencido',
+  CANCELED: 'vencido',
+};
 
 @Component({
   selector: 'app-gestion-planes',
@@ -91,7 +98,7 @@ export class GestionPlanes implements OnInit {
 
   readonly planes = signal<Plan[]>([]);
 
-  readonly suscripciones: Suscripcion[] = [];
+  readonly suscripciones = signal<Suscripcion[]>([]);
 
   readonly planForm = this.fb.group({
     nombre:           ['', [Validators.required, Validators.minLength(3)]],
@@ -143,11 +150,11 @@ export class GestionPlanes implements OnInit {
 
   readonly suscripcionesPaginadas = computed(() => {
     const start = (this.suscripcionPagina() - 1) * this.suscripcionPageSize;
-    return this.suscripciones.slice(start, start + this.suscripcionPageSize);
+    return this.suscripciones().slice(start, start + this.suscripcionPageSize);
   });
 
   readonly totalSuscripcionPaginas = computed(() =>
-    Math.max(1, Math.ceil(this.suscripciones.length / this.suscripcionPageSize))
+    Math.max(1, Math.ceil(this.suscripciones().length / this.suscripcionPageSize))
   );
 
   readonly suscripcionPaginasNum = computed(() =>
@@ -156,6 +163,24 @@ export class GestionPlanes implements OnInit {
 
   ngOnInit(): void {
     this.cargarPlanes();
+    this.cargarSuscripciones();
+  }
+
+  cargarSuscripciones(): void {
+    this.saasService.listSubscriptions({ page: 0, size: 100 }).subscribe({
+      next: response => {
+        this.suscripciones.set(response.content.map(s => ({
+          id: s.id,
+          tenant: s.tenantName,
+          plan: s.planName ?? '—',
+          fechaInicio: s.dateStart,
+          fechaFin: s.dateEnd ?? '—',
+          monto: s.purchasePrice,
+          estado: SUBSCRIPTION_STATUS_MAP[s.status] ?? 'pendiente',
+        })));
+      },
+      error: () => this.toastService.error('No se pudieron cargar las suscripciones.'),
+    });
   }
 
   cargarPlanes(): void {
@@ -320,11 +345,11 @@ export class GestionPlanes implements OnInit {
   }
 
   exportarCSV(): void {
-    const headers = ['ID', 'Nombre', 'Precio', 'Moneda', 'Periodo', 'Activo', 'Creado'];
-    const rows = this.planes().map(p =>
-      [String(p.id), p.nombre, String(p.precio), p.moneda, p.periodo, p.activo ? 'Sí' : 'No', p.creadoEn]
+    const headers = ['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado'];
+    const rows = this.suscripciones().map(s =>
+      [s.tenant, s.plan, s.fechaInicio, s.fechaFin, String(s.monto), s.estado]
     );
-    this.exportService.exportCSV(`planes-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    this.exportService.exportCSV(`suscripciones-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
     this.toastService.show('CSV exportado.', 'info');
   }
 

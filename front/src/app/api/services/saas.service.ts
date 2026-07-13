@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { SaasPlanResult, CreateSaasPlanRequest, UpdateSaasPlanRequest, InvoiceProfile, InvoiceListResponse } from '../types';
+import type { SaasPlanResult, CreateSaasPlanRequest, UpdateSaasPlanRequest, InvoiceProfile, InvoiceListResponse, SubscriptionListResponse, HoldingProfile } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
 @Injectable({ providedIn: 'root' })
@@ -10,6 +10,11 @@ export class SaasService {
   private readonly apiBase = inject(API_BASE_URL);
 
   // ========== PLANS ==========
+
+  /** Public, unauthenticated: used by the marketing-site pricing section. */
+  listPublicPlans(): Observable<SaasPlanResult[]> {
+    return this.http.get<SaasPlanResult[]>(`${this.apiBase}/public/plans`);
+  }
 
   listPlans(): Observable<SaasPlanResult[]> {
     return this.http.get<SaasPlanResult[]>(`${this.apiBase}/saas/plans`);
@@ -68,5 +73,17 @@ export class SaasService {
   }): Observable<Blob> {
     return this.http.get(`${this.apiBase}/saas/invoices/export/pdf`,
         { params: params(opts), responseType: 'blob' });
+  }
+
+  // ========== SUBSCRIPTIONS ==========
+
+  listSubscriptions(opts?: { page?: number; size?: number }): Observable<SubscriptionListResponse> {
+    return this.http.get<SubscriptionListResponse>(`${this.apiBase}/saas/subscriptions`, { params: params(opts) });
+  }
+
+  // ========== HOLDINGS ==========
+
+  listHoldings(): Observable<HoldingProfile[]> {
+    return this.http.get<HoldingProfile[]>(`${this.apiBase}/saas/holdings`);
   }
 }

@@ -147,13 +147,17 @@ public class RequestService implements RequestUseCase {
     }
 
     private RequestComments addCommentInternal(Integer requestId, String adminUserId, String commentText) {
-        RequestComments comment = requestCommentRepository.save(RequestComments.create(requestId, null, commentText));
+        RequestContact contact = requestContactRepository.findByRequestId(requestId).orElse(null);
+        Integer contactId = contact != null ? contact.getRequestId() : null;
+
+        RequestComments comment = requestCommentRepository.save(RequestComments.create(requestId, contactId, commentText));
         userRequestCommentRepository.save(UserRequestComment.create(adminUserId, comment.getId()));
 
-        requestContactRepository.findByRequestId(requestId).ifPresent(contact ->
-                emailService.send(contact.getEmail(),
-                        "Nuevo comentario en tu solicitud",
-                        "Se agregó un comentario a tu solicitud:<br>" + commentText));
+        if (contact != null) {
+            emailService.send(contact.getEmail(),
+                    "Nuevo comentario en tu solicitud",
+                    "Se agregó un comentario a tu solicitud:<br>" + commentText);
+        }
 
         return comment;
     }

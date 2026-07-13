@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import trazzo.back.saasglobal.domain.exception.InvalidSubscriptionTransitionException;
+import trazzo.back.saasglobal.domain.exception.InvalidTenantTransitionException;
 import trazzo.back.saasglobal.domain.exception.RequestRateLimitException;
 import trazzo.back.saasglobal.domain.exception.RoleInUseException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
@@ -31,7 +32,10 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
         SaasRoleController.class,
         SaasUserController.class,
         SaasInvoiceController.class,
-        TenantBillingController.class
+        TenantBillingController.class,
+        SubscriptionController.class,
+        PublicPlanController.class,
+        SaasTenantController.class
 })
 public class SaasGlobalExceptionHandler {
 
@@ -75,6 +79,13 @@ public class SaasGlobalExceptionHandler {
     @ExceptionHandler(InvalidSubscriptionTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidSubscriptionTransition(InvalidSubscriptionTransitionException ex) {
         log.warn("Invalid subscription transition: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTenantTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTenantTransition(InvalidTenantTransitionException ex) {
+        log.warn("Invalid tenant transition: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage()));
     }

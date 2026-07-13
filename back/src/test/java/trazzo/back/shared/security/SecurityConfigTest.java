@@ -50,6 +50,13 @@ class SecurityConfigTest {
                     .andExpect(result ->
                             assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         }
+
+        @Test
+        void publicPlans_isAccessibleWithoutToken() throws Exception {
+            // /public/plans backs the marketing site's pricing section (permitAll).
+            mockMvc.perform(get("/public/plans"))
+                    .andExpect(status().isNotFound());
+        }
     }
 
     @Nested
