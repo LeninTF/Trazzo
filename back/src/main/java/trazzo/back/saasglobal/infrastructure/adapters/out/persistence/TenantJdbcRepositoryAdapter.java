@@ -145,6 +145,9 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
         return countWhere("deleted_at >= :from AND (CAST(:to AS timestamp) IS NULL OR deleted_at < :to)", params);
     }
 
+    // whereClause is always a compile-time string literal from the private count methods
+    // above in this class, never user input; actual values are bound via named parameters.
+    @SuppressWarnings("java:S2077")
     private long countWhere(String whereClause, MapSqlParameterSource params) {
         Long count = namedJdbc.queryForObject(
                 "SELECT COUNT(*) FROM tenants WHERE " + whereClause, params, Long.class);
