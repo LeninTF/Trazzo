@@ -1,10 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { GestionRoles } from './gestion-roles';
 import { OrgService } from '../../../api/services/org.service';
 import { ToastService } from '../../../services/toast.service';
-import type { OrgRoleResult, OrgPermissionResult, OrgRolePermissionResult } from '../../../api/types';
+import type { OrgRoleResult, OrgPaginatedResult, OrgPermissionResult, OrgRolePermissionResult } from '../../../api/types';
 
 describe('GestionRoles (tenant)', () => {
   let component: GestionRoles;
@@ -201,5 +201,63 @@ describe('GestionRoles (tenant)', () => {
     mockOrg.listRoles.and.returnValue(throwError(() => new Error('fail')));
     component['cargarRoles']();
     expect(component.error()).toBe('No se pudieron cargar los roles.');
+  });
+});
+
+// Regression test for a bug where the first render (before the backend responds)
+// threw "Cannot read properties of undefined (reading 'color')" from rolActual,
+// leaving the page blank until a second navigation happened to land after the
+// response arrived. of(...) above resolves synchronously on subscribe, so it never
+// exercises this race — a Subject that emits later reproduces the real timing.
+describe('GestionRoles (tenant, loading race)', () => {
+  let component: GestionRoles;
+  let fixture: ComponentFixture<GestionRoles>;
+  let rolesSubject: Subject<OrgPaginatedResult<OrgRoleResult>>;
+
+  beforeEach(async () => {
+    rolesSubject = new Subject<OrgPaginatedResult<OrgRoleResult>>();
+    const mockOrg = {
+      listRoles: jasmine.createSpy('listRoles').and.returnValue(rolesSubject.asObservable()),
+      createRole: jasmine.createSpy('createRole'),
+      updateRole: jasmine.createSpy('updateRole'),
+      deleteRole: jasmine.createSpy('deleteRole'),
+      listRolePermissions: jasmine.createSpy('listRolePermissions').and.returnValue(of([])),
+      assignPermissionToRole: jasmine.createSpy('assignPermissionToRole'),
+      removePermissionFromRole: jasmine.createSpy('removePermissionFromRole'),
+      listPermissions: jasmine.createSpy('listPermissions').and.returnValue(of({ content: [], page: 0, size: 200, total: 0, totalPages: 0 })),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [GestionRoles, FormsModule],
+      providers: [
+        { provide: OrgService, useValue: mockOrg },
+        { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'success', 'error', 'info']) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(GestionRoles);
+    component = fixture.componentInstance;
+  });
+
+  it('should not throw and should show the loading state before the backend responds', () => {
+    expect(() => fixture.detectChanges()).not.toThrow();
+    expect(component.loading()).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Cargando roles');
+  });
+
+  it('should render the matrix once the backend responds', () => {
+    fixture.detectChanges();
+    // forkJoin (used internally by cargarRoles) only emits once every source
+    // completes, not merely on next() — a bare Subject.next() never resolves it.
+    rolesSubject.next({
+      content: [{ id: 'role-admin', name: 'administrador', description: 'desc', createdAt: '2026-01-01', updatedAt: '2026-01-01' }],
+      page: 0, size: 100, total: 1, totalPages: 1,
+    });
+    rolesSubject.complete();
+    fixture.detectChanges();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.rolActual.nombre).toBe('Administrador');
+    expect(fixture.nativeElement.textContent).toContain('Administrador');
   });
 });

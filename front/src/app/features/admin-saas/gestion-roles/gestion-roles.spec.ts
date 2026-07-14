@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { GestionRoles } from './gestion-roles';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
@@ -184,5 +184,56 @@ describe('GestionRoles', () => {
     mockRolesService.delete.and.returnValue(throwError(() => new Error('409')));
     component.eliminarRol('2');
     expect(mockToast.error).toHaveBeenCalled();
+  });
+});
+
+// Regression test for a bug where the first render (before the backend responds)
+// threw "Cannot read properties of undefined (reading 'color')" from rolActual,
+// leaving the page blank until a second navigation happened to land after the
+// response arrived. of(mockRoles) above resolves synchronously on subscribe, so it
+// never exercises this race — a Subject that emits later reproduces the real timing.
+describe('GestionRoles (loading race)', () => {
+  let component: GestionRoles;
+  let fixture: ComponentFixture<GestionRoles>;
+  let rolesSubject: Subject<SaasRoleProfile[]>;
+
+  beforeEach(async () => {
+    rolesSubject = new Subject<SaasRoleProfile[]>();
+    const mockRolesService = {
+      list: jasmine.createSpy('list').and.returnValue(rolesSubject.asObservable()),
+      create: jasmine.createSpy('create'),
+      update: jasmine.createSpy('update'),
+      delete: jasmine.createSpy('delete'),
+      updatePermissions: jasmine.createSpy('updatePermissions'),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [GestionRoles, FormsModule],
+      providers: [
+        { provide: ApiService, useValue: { roles: mockRolesService } },
+        { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['show', 'success', 'error', 'info']) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(GestionRoles);
+    component = fixture.componentInstance;
+  });
+
+  it('should not throw and should show the loading state before the backend responds', () => {
+    expect(() => fixture.detectChanges()).not.toThrow();
+    expect(component.loading()).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('Cargando roles');
+  });
+
+  it('should render the matrix once the backend responds', () => {
+    fixture.detectChanges();
+    rolesSubject.next([
+      { id: 1, name: 'admin_trazzo', displayName: 'Administrador Trazzo', description: 'desc', permissions: [], systemManaged: true },
+    ]);
+    fixture.detectChanges();
+
+    expect(component.loading()).toBeFalse();
+    expect(component.rolActual.nombre).toBe('Administrador Trazzo');
+    expect(fixture.nativeElement.textContent).toContain('Administrador Trazzo');
   });
 });
