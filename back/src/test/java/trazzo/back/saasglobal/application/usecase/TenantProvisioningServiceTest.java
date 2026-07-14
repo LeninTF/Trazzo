@@ -62,6 +62,21 @@ class TenantProvisioningServiceTest {
     }
 
     @Test
+    void createTrial_deprovisionsSchemaWhenPersistenceFailsAfterProvisioning() {
+        // Schema provisioning uses a raw, non-Spring-managed connection, so a failure after
+        // it succeeded is not rolled back by @Transactional — the schema must be dropped
+        // explicitly, or the orphaned schema would block retrying the same subDomain.
+        when(tenantRepository.existsBySubDomain("acme")).thenReturn(false);
+        when(tenantRepository.save(any())).thenThrow(new RuntimeException("db down"));
+
+        assertThrows(RuntimeException.class, () -> service.createTrial(trialCmd()));
+
+        verify(schemaProvisioning).provisionExisting(any(TenantSettings.class));
+        verify(schemaProvisioning).deprovision("tenant_acme");
+        verifyNoInteractions(subscriptionRepository);
+    }
+
+    @Test
     void createTrial_throwsWhenSubDomainAlreadyInUse() {
         when(tenantRepository.existsBySubDomain("acme")).thenReturn(true);
         assertThrows(IllegalArgumentException.class, () -> service.createTrial(trialCmd()));

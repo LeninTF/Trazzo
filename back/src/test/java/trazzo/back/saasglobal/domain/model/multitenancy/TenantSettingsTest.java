@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 
 class TenantSettingsTest {
 
@@ -52,11 +53,19 @@ class TenantSettingsTest {
     }
 
     @Test
-    void deriveSchemaName_truncatesLongSubDomains() {
+    void deriveSchemaName_throwsWhenSubDomainTooLongToDeriveUniqueName() {
+        // Truncating would let two distinct, unique subdomains collide on the same schema
+        // name — reject instead of silently truncating.
         String longSubDomain = "a".repeat(100);
-        String schemaName = TenantSettings.deriveSchemaName(longSubDomain);
+        assertThrows(TenantValidationException.class,
+                () -> TenantSettings.deriveSchemaName(longSubDomain));
+    }
 
-        assertTrue(schemaName.length() <= 62);
-        assertTrue(schemaName.startsWith("tenant_"));
+    @Test
+    void deriveSchemaName_allowsSubDomainAtExactMaxLength() {
+        String subDomain = "a".repeat(55);
+        String schemaName = TenantSettings.deriveSchemaName(subDomain);
+
+        assertEquals("tenant_" + subDomain, schemaName);
     }
 }

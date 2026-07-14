@@ -128,11 +128,13 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_tenantNotFound_generatesTokenWithoutTenantClaim() throws Exception {
+    void login_tenantUserWithMissingTenant_failsInsteadOfIssuingClaimlessToken() throws Exception {
+        // A tenant-scoped user (non-null tenantId) whose tenant/settings can't be resolved
+        // must never silently receive a token without a tenant claim — JwtAuthFilter would
+        // default that claim-less token to the "public" schema, breaking tenant isolation.
         var authUser = new AuthenticatedUser(UUID.randomUUID(), "orphan.user@test.com", "pass", List.of(), true);
         var auth = new UsernamePasswordAuthenticationToken(authUser, null, List.of());
         when(authenticationManager.authenticate(any())).thenReturn(auth);
-        when(jwtService.generateToken(authUser, null)).thenReturn("jwt.token.here");
 
         var user = User.restore(
                 UUID.randomUUID().toString(), 1, "missing-tenant",
@@ -141,20 +143,12 @@ class AuthControllerTest {
         );
         when(userRepository.findByEmail("orphan.user@test.com")).thenReturn(Optional.of(user));
         when(tenantRepository.findById("missing-tenant")).thenReturn(Optional.empty());
-        when(roleRepository.findByName(anyString())).thenReturn(Optional.empty());
-
-        var person = Person.restore(
-                1, null, trazzo.back.saasglobal.domain.model.iam.DocumentType.DNI, "00000000",
-                "Orphan", "User", "Test",
-                null, null, null
-        );
-        when(personRepository.findById(1)).thenReturn(Optional.of(person));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"orphan.user@test.com\",\"password\":\"pass\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("jwt.token.here"));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Tenant schema not found for tenant user (tenantId=missing-tenant)"));
     }
 
     @Test

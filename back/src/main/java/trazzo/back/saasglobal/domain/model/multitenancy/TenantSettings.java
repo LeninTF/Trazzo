@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -37,12 +38,19 @@ public class TenantSettings {
 
     /**
      * Derives a PostgreSQL-safe schema name from a subdomain. subDomain uniqueness is
-     * already enforced at the application level, so the derived schema name is unique too.
+     * already enforced at the application level, so the derived schema name is unique too —
+     * this only holds if the normalized name is never truncated, so a too-long subDomain is
+     * rejected instead of silently truncated (truncation could map two distinct, unique
+     * subdomains to the same schema name).
      */
     public static String deriveSchemaName(String subDomain) {
         String safe = subDomain.toLowerCase().replaceAll("[^a-z0-9]", "_");
-        String truncated = safe.length() > MAX_SCHEMA_SUFFIX_LENGTH ? safe.substring(0, MAX_SCHEMA_SUFFIX_LENGTH) : safe;
-        return "tenant_" + truncated;
+        if (safe.length() > MAX_SCHEMA_SUFFIX_LENGTH) {
+            throw new TenantValidationException(
+                    "subDomain is too long to derive a unique schema name (max "
+                            + MAX_SCHEMA_SUFFIX_LENGTH + " normalized characters): " + subDomain);
+        }
+        return "tenant_" + safe;
     }
 
     public static TenantSettings restore(

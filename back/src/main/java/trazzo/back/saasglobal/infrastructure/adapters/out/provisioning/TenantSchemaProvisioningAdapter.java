@@ -63,13 +63,15 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         }
     }
 
-    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only
+    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only.
+    // No IF NOT EXISTS on CREATE SCHEMA: a name collision (e.g. two tenants deriving the same
+    // schema name) must fail loudly here rather than silently reusing another tenant's schema.
     @SuppressWarnings("java:S2077")
     private void provisionSchema(String schemaName) {
         validateIdentifier(schemaName);
         try (Connection conn = rawDataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + schemaName + "\"");
+                stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
                 stmt.execute("SET search_path TO \"" + schemaName + "\"");
             }
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));

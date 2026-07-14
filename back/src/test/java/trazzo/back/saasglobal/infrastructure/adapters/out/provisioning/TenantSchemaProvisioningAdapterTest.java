@@ -47,7 +47,7 @@ class TenantSchemaProvisioningAdapterTest {
 
         assertEquals("t-1", result.getTenantId());
         assertEquals("tenant_acme", result.getSchemaName());
-        verify(statement).execute("CREATE SCHEMA IF NOT EXISTS \"tenant_acme\"");
+        verify(statement).execute("CREATE SCHEMA \"tenant_acme\"");
         verify(statement).execute("SET search_path TO \"tenant_acme\"");
     }
 
@@ -57,7 +57,21 @@ class TenantSchemaProvisioningAdapterTest {
 
         adapter.provisionExisting(TenantSettings.of("t-1", "tenant_acme"));
 
-        verify(statement).execute("CREATE SCHEMA IF NOT EXISTS \"tenant_acme\"");
+        verify(statement).execute("CREATE SCHEMA \"tenant_acme\"");
+    }
+
+    @Test
+    void provisionExisting_failsLoudlyOnSchemaNameCollisionInsteadOfReusingIt() throws SQLException {
+        // No IF NOT EXISTS: if two tenants ever derive the same schema name, provisioning
+        // must fail instead of silently reusing (and sharing) the first tenant's schema.
+        when(rawDataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.execute("CREATE SCHEMA \"tenant_acme\""))
+                .thenThrow(new SQLException("schema \"tenant_acme\" already exists", "42P06"));
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        var settings = TenantSettings.of("t-1", "tenant_acme");
+
+        assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
     }
 
     @Test

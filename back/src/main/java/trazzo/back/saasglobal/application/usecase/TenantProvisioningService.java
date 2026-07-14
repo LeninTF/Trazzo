@@ -49,15 +49,23 @@ public class TenantProvisioningService implements CreateTrialTenantUseCase, Acti
         );
 
         schemaProvisioning.provisionExisting(tenant.getSettings());
+        try {
+            tenant.activate();
+            Tenant saved = tenantRepository.save(tenant);
 
-        tenant.activate();
-        Tenant saved = tenantRepository.save(tenant);
+            Subscription subscription = Subscription.createTrial(
+                    saved.getId(), saved.getPlanId(), BigDecimal.ZERO, LocalDate.now(Clock.systemDefaultZone()));
+            subscriptionRepository.save(subscription);
 
-        Subscription subscription = Subscription.createTrial(
-                saved.getId(), saved.getPlanId(), BigDecimal.ZERO, LocalDate.now(Clock.systemDefaultZone()));
-        subscriptionRepository.save(subscription);
-
-        return toResult(saved);
+            return toResult(saved);
+        } catch (Exception e) {
+            // Schema provisioning uses a raw, non-Spring-managed connection (see
+            // TenantSchemaProvisioningAdapter), so it is not rolled back by @Transactional —
+            // without this, a later failure here would leave an orphaned schema that blocks
+            // retrying the same subDomain (CREATE SCHEMA no longer tolerates a collision).
+            schemaProvisioning.deprovision(tenant.getSettings().getSchemaName());
+            throw e;
+        }
     }
 
     /**

@@ -84,7 +84,12 @@ public class AuthController {
         ));
     }
 
-    /** SaaS-admin users have no tenant (tenantId is null) — their token carries no tenant claim. */
+    /**
+     * SaaS-admin users have no tenant (tenantId is null) — their token carries no tenant
+     * claim. A tenant-scoped user must always resolve a schema: JwtAuthFilter defaults a
+     * missing claim to the "public" schema, so silently issuing a claim-less token here
+     * would route that tenant's requests to the master schema instead of failing loudly.
+     */
     private String resolveTenantSchema(String tenantId) {
         if (tenantId == null) {
             return null;
@@ -92,6 +97,7 @@ public class AuthController {
         return tenantRepository.findById(tenantId)
                 .map(Tenant::getSettings)
                 .map(TenantSettings::getSchemaName)
-                .orElse(null);
+                .orElseThrow(() -> new IllegalStateException(
+                        "Tenant schema not found for tenant user (tenantId=" + tenantId + ")"));
     }
 }
