@@ -1196,21 +1196,24 @@ function handleReportsClosures(
   }
 
   if (u === '/reports/monthly-closures' && method === 'POST') {
-    const body = req.body as { month: number; year: number };
-    const exists = mockMonthlyClosures.some(c => c.month === body.month && c.year === body.year);
+    const raw = req.body as { month: number | string; year: number | string };
+    const month = Number(raw.month);
+    const year = Number(raw.year);
+    const exists = mockMonthlyClosures.some(c => c.month === month && c.year === year);
     if (exists) {
-      return _error(409, `Monthly closure already exists for ${body.month}/${body.year}`);
+      return _error(409, `Monthly closure already exists for ${month}/${year}`);
     }
     const newId = crypto.randomUUID();
     const newClosure = {
       id: newId,
-      month: body.month,
-      year: body.year,
+      month,
+      year,
       totalEmployees: 45,
       excelReportUrl: `/reports/excel/${newId}.xlsx`,
       pdfReportUrl: `/reports/pdf/${newId}.pdf`,
       createdAt: new Date().toISOString(),
     };
+    mockMonthlyClosures.unshift(newClosure);
     return created(newClosure);
   }
 

@@ -3,6 +3,9 @@
   <div class="text-center">
     <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
     <p class="mt-3 text-muted">{{ error() }}</p>
+    <button class="btn btn-primary mt-3" (click)="cargarCierres()">
+      <i class="bi bi-arrow-clockwise me-2"></i> Reintentar
+    </button>
   </div>
 </div>
 } @else {
@@ -37,7 +40,7 @@
           <select id="filtroMonth" class="form-select" [(ngModel)]="filtroMonth">
             <option value="">Todos</option>
             @for (m of monthOptions; track m) {
-              <option [value]="m">{{ getMonthName(m) }}</option>
+              <option [ngValue]="m">{{ getMonthName(m) }}</option>
             }
           </select>
         </div>
@@ -92,18 +95,18 @@
                 </td>
                 <td>
                   @if (c.excelReportUrl) {
-                    <span class="report-link report-link--excel">
-                      <i class="bi bi-file-earmark-excel"></i> Disponible
-                    </span>
+                    <a class="btn btn-outline-secondary btn-sm" [href]="c.excelReportUrl" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()">
+                      <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                    </a>
                   } @else {
                     <span class="text-muted">No generado</span>
                   }
                 </td>
                 <td>
                   @if (c.pdfReportUrl) {
-                    <span class="report-link report-link--pdf">
-                      <i class="bi bi-file-earmark-pdf"></i> Disponible
-                    </span>
+                    <a class="btn btn-outline-secondary btn-sm" [href]="c.pdfReportUrl" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()">
+                      <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                    </a>
                   } @else {
                     <span class="text-muted">No generado</span>
                   }
@@ -157,7 +160,7 @@
           <label class="form-label" for="nuevoMes">Mes</label>
           <select id="nuevoMes" class="form-select" [(ngModel)]="nuevoMes">
             @for (m of monthOptions; track m) {
-              <option [value]="m">{{ getMonthName(m) }}</option>
+              <option [ngValue]="m">{{ getMonthName(m) }}</option>
             }
           </select>
         </div>

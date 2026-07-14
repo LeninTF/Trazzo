@@ -64,6 +64,7 @@ export class CierresMensuales implements OnInit {
 
   cargarCierres(): void {
     this.loading.set(true);
+    this.error.set('');
     const opts: { year?: number; month?: number } = {};
     if (this.filtroYear) opts.year = Number.parseInt(this.filtroYear, 10);
     if (this.filtroMonth) opts.month = Number.parseInt(this.filtroMonth, 10);
@@ -71,6 +72,8 @@ export class CierresMensuales implements OnInit {
     this.reportsService.listClosures(opts).subscribe({
       next: data => {
         this.closures = data;
+        this.error.set('');
+        this.paginaActual = Math.min(this.paginaActual, this.totalPaginas);
         this.loading.set(false);
       },
       error: () => {

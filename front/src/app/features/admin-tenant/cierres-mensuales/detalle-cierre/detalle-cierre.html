@@ -31,12 +31,12 @@
     </div>
     <div class="dc-header__actions">
       @if (report.excelReportUrl) {
-        <a class="btn btn-outline-secondary" [href]="report.excelReportUrl" target="_blank">
+        <a class="btn btn-outline-secondary" [href]="report.excelReportUrl" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-file-earmark-excel me-2"></i> Excel
         </a>
       }
       @if (report.pdfReportUrl) {
-        <a class="btn btn-outline-secondary" [href]="report.pdfReportUrl" target="_blank">
+        <a class="btn btn-outline-secondary" [href]="report.pdfReportUrl" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-file-earmark-pdf me-2"></i> PDF
         </a>
       }
