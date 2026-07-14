@@ -49,7 +49,7 @@ public class AuditLogService implements AuditLogUseCase {
 
     private AuditLogResult toResult(Audit audit) {
         String userId = audit.getUserId();
-        Optional<TenantInfoPort.TenantInfo> tenantInfo = tenantInfoPort.findByTenantId(userId);
+        Optional<TenantInfoPort.TenantInfo> tenantInfo = userId != null ? tenantInfoPort.findByUserId(userId) : Optional.empty();
         Optional<UserInfoPort.UserInfo> userInfo = userId != null ? userInfoPort.findByUserId(userId) : Optional.empty();
         String eventId = "EVT-" + (audit.getId() != null ? audit.getId() : "0") + "-X";
         String tipo = switch (audit.getAction()) {

@@ -51,7 +51,7 @@ class AuditRepositoryAdapterTest {
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any()))
                 .thenReturn(List.of(audit));
 
-        var result = adapter.findAll("search", Action.CREATE, "User",
+        var result = adapter.findAll(null, "search", Action.CREATE, "User",
                 now, now.plusDays(1), org.springframework.data.domain.PageRequest.of(0, 10));
 
         assertThat(result).hasSize(1);
@@ -64,7 +64,7 @@ class AuditRepositoryAdapterTest {
         when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any()))
                 .thenReturn(5L);
 
-        var result = adapter.count("search", Action.CREATE, "User",
+        var result = adapter.count(null, "search", Action.CREATE, "User",
                 now, now.plusDays(1));
 
         assertThat(result).isEqualTo(5L);

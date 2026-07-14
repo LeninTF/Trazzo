@@ -130,7 +130,7 @@ export class LogAuditoria implements OnInit {
             newValue: e.newValue,
           };
         });
-        this.paginaActual = Math.min(this.paginaActual, this.totalPaginas);
+        this.paginaActual = Math.max(1, Math.min(this.paginaActual, this.totalPaginas));
         this.error.set('');
         this.loading.set(false);
       },

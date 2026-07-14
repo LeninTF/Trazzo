@@ -15,21 +15,22 @@ public class TenantInfoAdapter implements TenantInfoPort {
     private final JdbcTemplate jdbcTemplate;
 
     @Override
-    public Optional<TenantInfo> findByTenantId(String tenantId) {
-        if (tenantId == null || tenantId.isBlank()) {
+    public Optional<TenantInfo> findByUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
             return Optional.empty();
         }
         try {
             TenantInfo info = jdbcTemplate.queryForObject("""
-                    SELECT id AS tenant_id, sub_domain AS tenant_name
-                    FROM tenants
-                    WHERE id = ?::uuid AND deleted_at IS NULL
+                    SELECT t.id AS tenant_id, t.sub_domain AS tenant_name
+                    FROM users u
+                    JOIN tenants t ON t.id = u.tenant_id
+                    WHERE u.id = ?::uuid AND u.deleted_at IS NULL AND t.deleted_at IS NULL
                     """,
                     (rs, rowNum) -> new TenantInfo(
                             rs.getString("tenant_id"),
                             rs.getString("tenant_name")
                     ),
-                    tenantId
+                    userId
             );
             return Optional.ofNullable(info);
         } catch (EmptyResultDataAccessException e) {

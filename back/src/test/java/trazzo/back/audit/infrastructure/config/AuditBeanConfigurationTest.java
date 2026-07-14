@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
 import trazzo.back.audit.application.port.out.LogInHistoryRepositoryPort;
 import trazzo.back.audit.application.port.out.SessionRepositoryPort;
@@ -26,6 +27,7 @@ class AuditBeanConfigurationTest {
     @Mock private LogInHistoryRepositoryPort logInHistoryRepositoryPort;
     @Mock private SessionRepositoryPort sessionRepositoryPort;
     @Mock private TenantSettingsRecordRepositoryPort tenantSettingsRecordRepositoryPort;
+    @Mock private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldCreateAuditLogUseCase() {
@@ -54,6 +56,6 @@ class AuditBeanConfigurationTest {
 
     @Test
     void shouldCreateAuditMetricsUseCase() {
-        assertNotNull(config.auditMetricsUseCase());
+        assertNotNull(config.auditMetricsUseCase(jdbcTemplate));
     }
 }

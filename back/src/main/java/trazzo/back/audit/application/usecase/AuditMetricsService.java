@@ -16,8 +16,6 @@ public class AuditMetricsService implements AuditMetricsUseCase {
     public AuditMetricsResult getMetrics() {
         Long totalEventos = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit", Long.class);
-        Long errores = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM audit WHERE action = 'DELETE'", Long.class);
 
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
         LocalDateTime sixtyDaysAgo = LocalDateTime.now().minusDays(60);
@@ -33,7 +31,7 @@ public class AuditMetricsService implements AuditMetricsUseCase {
 
         return new AuditMetricsResult(
                 totalEventos != null ? totalEventos : 0,
-                errores != null ? errores : 0,
+                0,
                 0,
                 Math.round(crecimiento * 10.0) / 10.0,
                 0.0

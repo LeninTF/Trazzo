@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -31,6 +32,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+    private static final Set<String> SORT_WHITELIST = Set.of("created_at", "entity", "action", "id");
 
     private static final RowMapper<Audit> ROW_MAPPER = (rs, rowNum) -> Audit.restore(
             rs.getString("id"),
@@ -59,7 +61,18 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
         appendDateClauses(sql, params, fechaDesde, fechaHasta);
 
         int offset = pageable.getPageNumber() * pageable.getPageSize();
-        sql.append(" ORDER BY a.created_at DESC LIMIT ? OFFSET ?");
+
+        String sortField = "created_at";
+        String sortDirection = "DESC";
+        if (!pageable.getSort().isEmpty()) {
+            var order = pageable.getSort().stream().findFirst().orElse(null);
+            if (order != null && SORT_WHITELIST.contains(order.getProperty())) {
+                sortField = order.getProperty();
+                sortDirection = order.isAscending() ? "ASC" : "DESC";
+            }
+        }
+        sql.append(" ORDER BY a.").append(sortField).append(" ").append(sortDirection);
+        sql.append(" LIMIT ? OFFSET ?");
         params.add(new SqlParameterValue(Types.INTEGER, pageable.getPageSize()));
         params.add(new SqlParameterValue(Types.INTEGER, offset));
 
@@ -79,7 +92,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
         appendDateClauses(sql, params, fechaDesde, fechaHasta);
 
         Long result = jdbcTemplate.queryForObject(sql.toString(), Long.class,
-                params.stream().map(p -> p.getValue()).toArray());
+                params.toArray());
         return result != null ? result : 0;
     }
 
