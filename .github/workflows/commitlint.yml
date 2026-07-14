@@ -17,7 +17,7 @@ jobs:
     
     steps:
       - name: Checkout del código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Ejecutar Commitlint
         id: lint
@@ -28,7 +28,7 @@ jobs:
       # REGLA 2: Comentar en el PR si Commitlint falla
       - name: Dejar comentario de error y solución
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
