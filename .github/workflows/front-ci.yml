@@ -19,7 +19,7 @@ jobs:
       - name: Instalar pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11
+          version: 11.7.0
       - name: Checkout del código
         uses: actions/checkout@v7
 
