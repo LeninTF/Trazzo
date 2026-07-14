@@ -33,8 +33,8 @@ public class AuditLogService implements AuditLogUseCase {
         LocalDateTime desde = fechaDesde != null ? LocalDate.parse(fechaDesde).atStartOfDay() : null;
         LocalDateTime hasta = fechaHasta != null ? LocalDate.parse(fechaHasta).atTime(LocalTime.MAX) : null;
         var pageable = PageRequest.of(page, size, SortUtils.parseSort(sort, f -> f));
-        var audits = auditRepository.findAll(searchTerm, action, entity, desde, hasta, pageable);
-        var total = auditRepository.count(searchTerm, action, entity, desde, hasta);
+        var audits = auditRepository.findAll(searchTerm, tenantId, action, entity, desde, hasta, pageable);
+        var total = auditRepository.count(searchTerm, tenantId, action, entity, desde, hasta);
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
         var results = audits.stream().map(this::toResult).toList();
         return new PaginatedResult<>(results, page, size, total, totalPages);

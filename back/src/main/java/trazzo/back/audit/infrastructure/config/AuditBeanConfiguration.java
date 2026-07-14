@@ -2,6 +2,7 @@ package trazzo.back.audit.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.port.in.AuditLogUseCase;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 import trazzo.back.audit.application.port.in.LoginHistoryUseCase;
@@ -55,7 +56,7 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
-    public AuditMetricsUseCase auditMetricsUseCase() {
-        return new AuditMetricsService();
+    public AuditMetricsUseCase auditMetricsUseCase(JdbcTemplate jdbcTemplate) {
+        return new AuditMetricsService(jdbcTemplate);
     }
 }

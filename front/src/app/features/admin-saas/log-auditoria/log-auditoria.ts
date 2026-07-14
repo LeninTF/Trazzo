@@ -50,6 +50,7 @@ function colorForUser(email: string): string {
 }
 
 function initialsFor(name: string): string {
+  if (!name) return '?';
   return name.split(' ').slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
 }
 
@@ -71,7 +72,8 @@ export class LogAuditoria implements OnInit {
   logs: LogEvento[] = [];
 
   searchTerm = '';
-  filtroFecha = '';
+  filtroFechaDesde = '';
+  filtroFechaHasta = '';
   paginaActual = 1;
   itemsPerPage = 5;
   totalElementos = 0;
@@ -94,10 +96,11 @@ export class LogAuditoria implements OnInit {
 
   cargarLogs(): void {
     this.loading.set(true);
+    this.error.set('');
     this.auditService.listLogs({
       searchTerm: this.searchTerm || undefined,
-      fecha_desde: this.filtroFecha || undefined,
-      fecha_hasta: this.filtroFecha || undefined,
+      fecha_desde: this.filtroFechaDesde || undefined,
+      fecha_hasta: this.filtroFechaHasta || undefined,
       page: this.paginaActual - 1,
       size: this.itemsPerPage,
     }).subscribe({
@@ -110,27 +113,29 @@ export class LogAuditoria implements OnInit {
             id: e.id,
             fecha,
             hora: fecha.toLocaleTimeString('es-PE', { hour12: false }),
-            tenant: e.tenant,
-            tenantId: e.tenantId,
+            tenant: e.tenant ?? '',
+            tenantId: e.tenantId ?? '',
             userInitials: initialsFor(e.userName),
-            userName: e.userName,
-            userEmail: e.userEmail,
-            userColor: colorForUser(e.userEmail),
-            accion: e.accion,
+            userName: e.userName ?? '',
+            userEmail: e.userEmail ?? '',
+            userColor: colorForUser(e.userEmail ?? ''),
+            accion: e.accion ?? '',
             tipo: TIPO_MAP[e.tipo?.toLowerCase()] ?? 'exito',
-            entidad: e.entidad,
-            entidadId: e.entidadId,
-            eventId: e.eventId,
-            ipAddress: e.ipAddress,
-            userAgent: e.userAgent,
+            entidad: e.entidad ?? '',
+            entidadId: e.entidadId ?? '',
+            eventId: e.eventId ?? '',
+            ipAddress: e.ipAddress ?? '',
+            userAgent: e.userAgent ?? '',
             oldValue: e.oldValue,
             newValue: e.newValue,
           };
         });
+        this.paginaActual = Math.min(this.paginaActual, this.totalPaginas);
+        this.error.set('');
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Error al cargar los logs');
+        this.error.set('Error al cargar los logs de auditoría');
         this.loading.set(false);
       },
     });
@@ -184,7 +189,8 @@ export class LogAuditoria implements OnInit {
 
   limpiarFiltros(): void {
     this.searchTerm = '';
-    this.filtroFecha = '';
+    this.filtroFechaDesde = '';
+    this.filtroFechaHasta = '';
     this.filtrarLogs();
     this.mostrarToast('Filtros limpiados');
   }

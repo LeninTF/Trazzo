@@ -1,10 +1,11 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.SqlParameterValue;
-import org.springframework.jdbc.core.SqlTypeValue;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
@@ -16,6 +17,7 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,6 +29,9 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private final AuditJpaRepository jpaRepository;
     private final JdbcTemplate jdbcTemplate;
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+
     private static final RowMapper<Audit> ROW_MAPPER = (rs, rowNum) -> Audit.restore(
             rs.getString("id"),
             rs.getString("entity"),
@@ -36,18 +41,19 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
             rs.getString("endpoint"),
             rs.getString("ip_address"),
             rs.getString("user_agent"),
-            null,
-            null,
+            deserializeJson(rs.getString("old_value")),
+            deserializeJson(rs.getString("new_value")),
             rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null
     );
 
     @Override
-    public List<Audit> findAll(String searchTerm, Action action, String entity,
+    public List<Audit> findAll(String searchTerm, String tenantId, Action action, String entity,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta, org.springframework.data.domain.Pageable pageable) {
         var sql = new StringBuilder("SELECT a.* FROM audit a WHERE 1=1");
         var params = new ArrayList<SqlParameterValue>();
 
         appendSearchClause(sql, params, searchTerm);
+        appendTenantClause(sql, params, tenantId);
         appendActionClause(sql, params, action);
         appendEntityClause(sql, params, entity);
         appendDateClauses(sql, params, fechaDesde, fechaHasta);
@@ -61,12 +67,13 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     }
 
     @Override
-    public long count(String searchTerm, Action action, String entity,
+    public long count(String searchTerm, String tenantId, Action action, String entity,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         var sql = new StringBuilder("SELECT COUNT(*) FROM audit a WHERE 1=1");
         var params = new ArrayList<SqlParameterValue>();
 
         appendSearchClause(sql, params, searchTerm);
+        appendTenantClause(sql, params, tenantId);
         appendActionClause(sql, params, action);
         appendEntityClause(sql, params, entity);
         appendDateClauses(sql, params, fechaDesde, fechaHasta);
@@ -88,16 +95,26 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
                         e.getEndpoint(),
                         e.getIpAdress(),
                         e.getUserAgent(),
-                        null, null,
+                        deserializeJson(e.getOldValue()),
+                        deserializeJson(e.getNewValue()),
                         e.getCreatedAt()));
     }
 
     private void appendSearchClause(StringBuilder sql, List<SqlParameterValue> params, String searchTerm) {
         if (searchTerm != null && !searchTerm.isBlank()) {
             String pattern = "%" + searchTerm.toLowerCase() + "%";
-            sql.append(" AND (LOWER(a.entity) LIKE ? OR LOWER(a.ip_address) LIKE ?)");
+            sql.append(" AND (LOWER(a.entity) LIKE ? OR LOWER(a.ip_address) LIKE ? OR LOWER(a.user_id::text) LIKE ? OR LOWER(a.endpoint) LIKE ?)");
             params.add(new SqlParameterValue(Types.VARCHAR, pattern));
             params.add(new SqlParameterValue(Types.VARCHAR, pattern));
+            params.add(new SqlParameterValue(Types.VARCHAR, pattern));
+            params.add(new SqlParameterValue(Types.VARCHAR, pattern));
+        }
+    }
+
+    private void appendTenantClause(StringBuilder sql, List<SqlParameterValue> params, String tenantId) {
+        if (tenantId != null && !tenantId.isBlank()) {
+            sql.append(" AND a.user_id IN (SELECT id FROM users WHERE tenant_id = ?::uuid)");
+            params.add(new SqlParameterValue(Types.VARCHAR, tenantId));
         }
     }
 
@@ -124,6 +141,17 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
         if (fechaHasta != null) {
             sql.append(" AND a.created_at <= ?");
             params.add(new SqlParameterValue(Types.TIMESTAMP, fechaHasta));
+        }
+    }
+
+    static Map<String, Object> deserializeJson(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return MAPPER.readValue(json, MAP_TYPE);
+        } catch (Exception e) {
+            return Map.of();
         }
     }
 }

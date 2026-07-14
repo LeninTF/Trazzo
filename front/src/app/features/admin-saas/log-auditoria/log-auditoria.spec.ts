@@ -123,10 +123,12 @@ describe('LogAuditoria', () => {
 
   it('should limpiarFiltros', () => {
     component.searchTerm = 'test';
-    component.filtroFecha = '2026-01-01';
+    component.filtroFechaDesde = '2026-01-01';
+    component.filtroFechaHasta = '2026-01-31';
     component.limpiarFiltros();
     expect(component.searchTerm).toBe('');
-    expect(component.filtroFecha).toBe('');
+    expect(component.filtroFechaDesde).toBe('');
+    expect(component.filtroFechaHasta).toBe('');
     expect(component.paginaActual).toBe(1);
   });
 
