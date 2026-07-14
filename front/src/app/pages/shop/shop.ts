@@ -1,5 +1,8 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { SaasService } from '../../api/services/saas.service';
+import type { SaasPlanResult } from '../../api/types';
 
 type PaymentFormState = {
   firstName: string;
@@ -31,8 +34,21 @@ type PaymentFormState = {
   styleUrl: './shop.css',
 })
 export class Shop {
-  constructor(private readonly location: Location) {}
+  private readonly route = inject(ActivatedRoute);
+  private readonly saasService = inject(SaasService);
 
+  constructor(private readonly location: Location) {
+    const planIdParam = this.route.snapshot.queryParamMap.get('planId');
+    const planId = planIdParam ? Number(planIdParam) : null;
+    this.saasService.listPublicPlans().subscribe({
+      next: (plans) => {
+        const match = planId != null ? plans.find((p) => p.id === planId) : undefined;
+        this.plan.set(match ?? plans[0] ?? null);
+      },
+    });
+  }
+
+  protected readonly plan = signal<SaasPlanResult | null>(null);
   protected readonly activeSection = signal(1);
 
   protected readonly formState = signal<PaymentFormState>({

@@ -1,22 +1,60 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
 import { Shop } from './shop';
+import { SaasService } from '../../api/services/saas.service';
+import type { SaasPlanResult } from '../../api/types';
 
 describe('Shop', () => {
   let component: Shop;
   let fixture: ComponentFixture<Shop>;
 
-  beforeEach(async () => {
+  const plan = (id: number, name: string, price: number): SaasPlanResult => ({
+    id, name, price, priceAnnual: price * 10, currency: 'SOLES', billingPeriod: 'MONTHLY',
+    active: true, createdAt: '2026-01-01T00:00:00', features: {},
+  });
+
+  const mockSaas = {
+    listPublicPlans: jasmine.createSpy('listPublicPlans').and.returnValue(of([])),
+  };
+
+  const activatedRoute = (planId: string | null) => ({
+    snapshot: { queryParamMap: { get: (_key: string) => planId } },
+  });
+
+  async function setup(planId: string | null = '2', plans: SaasPlanResult[] = [plan(2, 'Plan Demo', 29.99)]) {
+    TestBed.resetTestingModule();
+    mockSaas.listPublicPlans.calls.reset();
+    mockSaas.listPublicPlans.and.returnValue(of(plans));
+
     await TestBed.configureTestingModule({
       imports: [Shop],
+      providers: [
+        { provide: SaasService, useValue: mockSaas },
+        { provide: ActivatedRoute, useValue: activatedRoute(planId) },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Shop);
     component = fixture.componentInstance;
     await fixture.whenStable();
+  }
+
+  beforeEach(async () => {
+    await setup();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should load the plan matching the planId query param', () => {
+    expect(component['plan']()?.id).toBe(2);
+  });
+
+  it('should fall back to the first plan when planId is missing', async () => {
+    await setup(null, [plan(3, 'Plan Pro', 59.99)]);
+    expect(component['plan']()?.id).toBe(3);
   });
 
   it('should start at section 1', () => {

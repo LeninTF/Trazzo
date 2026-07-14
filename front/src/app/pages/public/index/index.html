@@ -208,7 +208,7 @@
 									[class.btn-outline-primary]="!card.destacado"
 									[class.btn-light]="card.destacado"
 									[class.pricing-cta-light]="card.destacado"
-									href="/shop">{{ card.destacado ? 'Comprar' : 'Seleccionar Plan' }}</a>
+									[href]="'/shop?planId=' + card.plan.id">{{ card.destacado ? 'Comprar' : 'Seleccionar Plan' }}</a>
 							</article>
 						</div>
 					} @empty {
