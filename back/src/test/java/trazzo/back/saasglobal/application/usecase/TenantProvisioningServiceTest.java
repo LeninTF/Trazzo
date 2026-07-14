@@ -105,7 +105,7 @@ class TenantProvisioningServiceTest {
         var subId = "sub-1";
         var dateEnd = LocalDate.now().plusMonths(1);
         var sub = Subscription.restore(subId, 1, tenantId,
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
         var tenant = Tenant.createPending("acme", 1, null);
         var settings = someSettings();
 
@@ -133,7 +133,7 @@ class TenantProvisioningServiceTest {
     @Test
     void activate_throwsWhenTenantNotFound() {
         var sub = Subscription.restore("sub-1", 1, "t-1",
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
         when(subscriptionRepository.findById(any())).thenReturn(Optional.of(sub));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(tenantRepository.findById(any())).thenReturn(Optional.empty());

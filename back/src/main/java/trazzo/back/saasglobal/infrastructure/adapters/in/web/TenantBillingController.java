@@ -1,23 +1,30 @@
 package trazzo.back.saasglobal.infrastructure.adapters.in.web;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import trazzo.back.saasglobal.application.dto.command.SubscribeToPlanCommand;
 import trazzo.back.saasglobal.application.dto.result.InvoiceResult;
 import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.PlanResult;
 import trazzo.back.saasglobal.application.port.in.InvoiceUseCase;
 import trazzo.back.saasglobal.application.port.in.PlanUseCase;
+import trazzo.back.saasglobal.application.port.in.SubscribeToPlanUseCase;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.shared.security.AuthenticatedUser;
+import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.SubscribeRequest;
+import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.SubscribeResponse;
 
 /**
  * Tenant-facing billing endpoints, deliberately outside "/saas/**" (which requires
@@ -33,6 +40,7 @@ public class TenantBillingController {
     private final InvoiceUseCase invoiceUseCase;
     private final TenantRepositoryPort tenantRepository;
     private final UserRepositoryPort userRepository;
+    private final SubscribeToPlanUseCase subscribeToPlanUseCase;
 
     @GetMapping("/plan")
     public ResponseEntity<PlanResult> getCurrentPlan(@AuthenticationPrincipal AuthenticatedUser principal) {
@@ -44,6 +52,17 @@ public class TenantBillingController {
     @GetMapping("/plans")
     public ResponseEntity<List<PlanResult>> listAvailablePlans() {
         return ResponseEntity.ok(planUseCase.listActive());
+    }
+
+    @PostMapping("/subscribe")
+    public ResponseEntity<SubscribeResponse> subscribe(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @Valid @RequestBody SubscribeRequest request
+    ) {
+        User user = userRepository.findById(principal.id().toString())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + principal.id()));
+        var command = new SubscribeToPlanCommand(resolveTenantId(principal), user.getEmail(), request.planId());
+        return ResponseEntity.ok(SubscribeResponse.from(subscribeToPlanUseCase.subscribe(command)));
     }
 
     @GetMapping("/invoices")

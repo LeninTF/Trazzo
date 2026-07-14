@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { ToastService } from '../../../services/toast.service';
+import { RedirectService } from '../../../services/redirect.service';
 import { ApiService } from '../../../api/services/api.service';
 import type { SaasPlanResult, InvoiceProfile } from '../../../api/types';
 
@@ -26,6 +27,7 @@ export class Planes {
 
   private readonly toastService = inject(ToastService);
   private readonly api = inject(ApiService);
+  private readonly redirectService = inject(RedirectService);
 
   planActual = signal<SaasPlanResult | null>(null);
   planes = signal<SaasPlanResult[]>([]);
@@ -120,7 +122,18 @@ export class Planes {
   }
 
   confirmarActualizarPlan(): void {
-    this.toastService.info('El cambio de plan aún no está disponible en autoservicio. Contacta a soporte para actualizar tu suscripción.');
+    const planId = this.planSeleccionadoId;
+    if (planId === null) {
+      return;
+    }
+    this.api.org.subscribeToPlan(planId).subscribe({
+      next: (response) => {
+        this.redirectService.redirectTo(response.initPoint);
+      },
+      error: () => {
+        this.toastService.error('No se pudo iniciar el pago para el nuevo plan. Inténtalo nuevamente.');
+      },
+    });
     this.cerrarModalActualizar();
   }
 

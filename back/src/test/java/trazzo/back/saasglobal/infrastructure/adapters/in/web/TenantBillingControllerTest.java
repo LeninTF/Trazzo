@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,15 +20,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import trazzo.back.saasglobal.application.dto.command.SubscribeToPlanCommand;
 import trazzo.back.saasglobal.application.dto.result.InvoiceResult;
 import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.PlanResult;
+import trazzo.back.saasglobal.application.dto.result.SubscribeToPlanResult;
 import trazzo.back.saasglobal.application.port.in.InvoiceUseCase;
 import trazzo.back.saasglobal.application.port.in.PlanUseCase;
+import trazzo.back.saasglobal.application.port.in.SubscribeToPlanUseCase;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
@@ -46,6 +51,7 @@ class TenantBillingControllerTest {
     @MockitoBean InvoiceUseCase invoiceUseCase;
     @MockitoBean TenantRepositoryPort tenantRepository;
     @MockitoBean UserRepositoryPort userRepository;
+    @MockitoBean SubscribeToPlanUseCase subscribeToPlanUseCase;
 
     private static UsernamePasswordAuthenticationToken authenticatedTenantUser() {
         var authUser = new AuthenticatedUser(USER_ID, "tenant.admin@demo.pe", "pass", List.of(), true);
@@ -102,5 +108,28 @@ class TenantBillingControllerTest {
         return new InvoiceResult("inv-1", "tenant-1", "F001", "001", "01_FACTURA",
                 "20222222222", "Cliente SAC", BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN,
                 "PENDIENTE", null, LocalDateTime.now());
+    }
+
+    @Test
+    void subscribe_returns200_withInitPoint() throws Exception {
+        when(userRepository.findById(USER_ID.toString())).thenReturn(Optional.of(tenantScopedUser()));
+        when(subscribeToPlanUseCase.subscribe(new SubscribeToPlanCommand("tenant-1", "tenant.admin@demo.pe", 3)))
+                .thenReturn(new SubscribeToPlanResult("sub-1", "https://www.mercadopago.com/init-point"));
+
+        mockMvc.perform(post("/org/billing/subscribe")
+                        .with(authentication(authenticatedTenantUser()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planId\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subscriptionId").value("sub-1"))
+                .andExpect(jsonPath("$.initPoint").value("https://www.mercadopago.com/init-point"));
+    }
+
+    @Test
+    void subscribe_returns401_whenUnauthenticated() throws Exception {
+        mockMvc.perform(post("/org/billing/subscribe")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planId\":3}"))
+                .andExpect(status().isUnauthorized());
     }
 }

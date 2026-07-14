@@ -3,6 +3,7 @@ import { of, throwError } from 'rxjs';
 import { Planes } from './planes';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
+import { RedirectService } from '../../../services/redirect.service';
 import type { SaasPlanResult, InvoiceProfile } from '../../../api/types';
 
 describe('Planes (tenant)', () => {
@@ -24,9 +25,10 @@ describe('Planes (tenant)', () => {
     subTotal: 100, taxAmount: 18, total: 118, paymentStatus, expirationDate: null, createdAt: '2026-05-01',
   });
 
-  let mockOrg: { getMyPlan: jasmine.Spy; listAvailablePlans: jasmine.Spy; listMyInvoices: jasmine.Spy };
+  let mockOrg: { getMyPlan: jasmine.Spy; listAvailablePlans: jasmine.Spy; listMyInvoices: jasmine.Spy; subscribeToPlan: jasmine.Spy };
   let mockUsers: { list: jasmine.Spy };
   let mockToast: jasmine.SpyObj<ToastService>;
+  let mockRedirect: { redirectTo: jasmine.Spy };
 
   beforeEach(async () => {
     mockOrg = {
@@ -36,15 +38,18 @@ describe('Planes (tenant)', () => {
         content: [mockFactura('inv-1', 'COMPLETADO'), mockFactura('inv-2', 'PENDIENTE')],
         page: 0, size: 10, totalElements: 2, totalPages: 1,
       })),
+      subscribeToPlan: jasmine.createSpy('subscribeToPlan').and.returnValue(of({ subscriptionId: 'sub-1', initPoint: 'https://mp/init' })),
     };
     mockUsers = { list: jasmine.createSpy('list').and.returnValue(of({ content: [], page: 1, size: 1, totalElements: 42, totalPages: 42 })) };
     mockToast = jasmine.createSpyObj('ToastService', ['show', 'success', 'error', 'info']);
+    mockRedirect = { redirectTo: jasmine.createSpy('redirectTo') };
 
     await TestBed.configureTestingModule({
       imports: [Planes],
       providers: [
         { provide: ApiService, useValue: { org: mockOrg, users: mockUsers } },
         { provide: ToastService, useValue: mockToast },
+        { provide: RedirectService, useValue: mockRedirect },
       ],
     }).compileComponents();
 
@@ -122,12 +127,23 @@ describe('Planes (tenant)', () => {
     expect(component.modalActualizarOpen).toBeFalse();
   });
 
-  it('should confirmarActualizarPlan show an informational toast without mutating state', () => {
+  it('should confirmarActualizarPlan call subscribeToPlan and redirect to the initPoint', () => {
     component.abrirModalActualizarPlan();
     component.confirmarActualizarPlan();
-    expect(mockToast.info).toHaveBeenCalled();
+
+    expect(mockOrg.subscribeToPlan).toHaveBeenCalledWith(component.planSeleccionadoId);
+    expect(mockRedirect.redirectTo).toHaveBeenCalledWith('https://mp/init');
     expect(component.modalActualizarOpen).toBeFalse();
-    expect(component.planActual()?.name).toBe('Professional');
+  });
+
+  it('should confirmarActualizarPlan show an error toast when subscribeToPlan fails', () => {
+    mockOrg.subscribeToPlan.and.returnValue(throwError(() => new Error('fail')));
+
+    component.abrirModalActualizarPlan();
+    component.confirmarActualizarPlan();
+
+    expect(mockToast.error).toHaveBeenCalled();
+    expect(component.modalActualizarOpen).toBeFalse();
   });
 
   it('should cerrarModalFactura', () => {

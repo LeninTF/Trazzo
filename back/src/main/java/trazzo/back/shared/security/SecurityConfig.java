@@ -37,6 +37,11 @@ public class SecurityConfig {
     private static final String SUBMIT_REQUEST_URL = "/requests";
     // Public marketing-site pricing section (PublicPlanController) — unauthenticated by design.
     private static final String PUBLIC_PLANS_URL = "/public/plans";
+    // Public self-signup checkout (ShopCheckoutController) — unauthenticated by design.
+    private static final String SHOP_CHECKOUT_URL = "/shop/checkout";
+    // Mercado Pago webhook receiver — unauthenticated (verified via WebhookSignatureValidator
+    // inside the controller instead, since Mercado Pago cannot present a Bearer token).
+    private static final String MERCADOPAGO_WEBHOOK_URL = "/webhooks/mercadopago";
 
     // CSRF is intentionally disabled: stateless REST API authenticated via JWT Bearer tokens.
     // Cookie-based CSRF attacks do not apply when no session cookies are used.
@@ -66,7 +71,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // codeql[java/spring-disabled-csrf-protection] - stateless JWT API, no session cookies
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
-                auth.requestMatchers(LOGIN_URL, PUBLIC_KEY_URL, ERROR_URL, SUBMIT_REQUEST_URL, PUBLIC_PLANS_URL).permitAll();
+                auth.requestMatchers(LOGIN_URL, PUBLIC_KEY_URL, ERROR_URL, SUBMIT_REQUEST_URL, PUBLIC_PLANS_URL,
+                        SHOP_CHECKOUT_URL, MERCADOPAGO_WEBHOOK_URL).permitAll();
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }

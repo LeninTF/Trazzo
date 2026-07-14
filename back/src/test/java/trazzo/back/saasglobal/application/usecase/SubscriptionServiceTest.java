@@ -33,7 +33,7 @@ class SubscriptionServiceTest {
 
     private static Subscription subscription() {
         return Subscription.restore("sub-1", 1, "tenant-1", LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 12, 31), SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), LocalDateTime.now());
+                LocalDate.of(2026, 12, 31), SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), null, LocalDateTime.now());
     }
 
     private static Tenant tenant() {

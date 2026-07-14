@@ -33,7 +33,7 @@ class SubscriptionJdbcRepositoryAdapterTest {
 
     private static Subscription trialSub() {
         return Subscription.restore("sub-1", 1, "tenant-1",
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
     }
 
     @Test
@@ -49,7 +49,7 @@ class SubscriptionJdbcRepositoryAdapterTest {
     void save_withDateEndReturnsSameSubscription() {
         var sub = Subscription.restore("sub-2", 1, "tenant-1",
                 LocalDate.now(), LocalDate.now().plusMonths(1),
-                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), LocalDateTime.now());
+                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), "mp-preapproval-1", LocalDateTime.now());
 
         var result = adapter.save(sub);
 

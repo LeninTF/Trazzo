@@ -849,6 +849,44 @@ export interface UpdateSaasPlanRequest {
 }
 
 // ==========================================
+// SECCIÓN: SHOP CHECKOUT (alta de cliente / Mercado Pago)
+// ==========================================
+
+export interface ShopCheckoutRequest {
+  planId: number;
+  firstName: string;
+  lastNamePaterno: string;
+  lastNameMaterno: string;
+  documentType: string;
+  documentNumber: string;
+  email: string;
+  phone: string;
+  ruc: string;
+  companyName: string;
+  businessName: string;
+  address: string;
+  anotherAdmin: boolean;
+  adminFirstName?: string;
+  adminLastNamePaterno?: string;
+  adminLastNameMaterno?: string;
+  adminDocumentType?: string;
+  adminDocumentNumber?: string;
+  adminEmail?: string;
+  adminPhone?: string;
+}
+
+export interface ShopCheckoutResponse {
+  tenantId: string;
+  subDomain: string;
+  initPoint: string;
+}
+
+export interface SubscribeResponse {
+  subscriptionId: string;
+  initPoint: string;
+}
+
+// ==========================================
 // SECCIÓN: HOLDINGS
 // ==========================================
 

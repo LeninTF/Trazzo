@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Shop } from './shop';
 import { SaasService } from '../../api/services/saas.service';
+import { RedirectService } from '../../services/redirect.service';
 import type { SaasPlanResult } from '../../api/types';
 
 describe('Shop', () => {
@@ -16,7 +17,9 @@ describe('Shop', () => {
 
   const mockSaas = {
     listPublicPlans: jasmine.createSpy('listPublicPlans').and.returnValue(of([])),
+    checkout: jasmine.createSpy('checkout').and.returnValue(of({ tenantId: 't-1', subDomain: 'acme', initPoint: 'https://mp/init' })),
   };
+  const mockRedirect = { redirectTo: jasmine.createSpy('redirectTo') };
 
   const activatedRoute = (planId: string | null) => ({
     snapshot: { queryParamMap: { get: (_key: string) => planId } },
@@ -25,13 +28,17 @@ describe('Shop', () => {
   async function setup(planId: string | null = '2', plans: SaasPlanResult[] = [plan(2, 'Plan Demo', 29.99)]) {
     TestBed.resetTestingModule();
     mockSaas.listPublicPlans.calls.reset();
+    mockSaas.checkout.calls.reset();
+    mockRedirect.redirectTo.calls.reset();
     mockSaas.listPublicPlans.and.returnValue(of(plans));
+    mockSaas.checkout.and.returnValue(of({ tenantId: 't-1', subDomain: 'acme', initPoint: 'https://mp/init' }));
 
     await TestBed.configureTestingModule({
       imports: [Shop],
       providers: [
         { provide: SaasService, useValue: mockSaas },
         { provide: ActivatedRoute, useValue: activatedRoute(planId) },
+        { provide: RedirectService, useValue: mockRedirect },
       ],
     }).compileComponents();
 
@@ -123,5 +130,35 @@ describe('Shop', () => {
     const event = { target: details } as unknown as Event;
     component['onSectionToggle'](2, event);
     expect(component['activeSection']()).toBe(0);
+  });
+
+  describe('submitCheckout', () => {
+    function submitEvent(): Event {
+      return { preventDefault: jasmine.createSpy('preventDefault') } as unknown as Event;
+    }
+
+    it('should reject submission when terms are not accepted', () => {
+      component['submitCheckout'](submitEvent());
+      expect(component['errorMessage']()).toContain('términos');
+      expect(mockSaas.checkout).not.toHaveBeenCalled();
+    });
+
+    it('should call checkout and redirect on success', () => {
+      component['formState'].update(s => ({ ...s, terms: true }));
+      component['submitCheckout'](submitEvent());
+
+      expect(mockSaas.checkout).toHaveBeenCalled();
+      expect(mockRedirect.redirectTo).toHaveBeenCalledWith('https://mp/init');
+    });
+
+    it('should show an error message when checkout fails', () => {
+      mockSaas.checkout.and.returnValue(throwError(() => new Error('fail')));
+      component['formState'].update(s => ({ ...s, terms: true }));
+
+      component['submitCheckout'](submitEvent());
+
+      expect(component['errorMessage']()).toContain('No se pudo iniciar el pago');
+      expect(component['submitting']()).toBeFalse();
+    });
   });
 });

@@ -62,7 +62,7 @@
 		</aside>
 	</section>
 
-	<form class="checkout-form" novalidate>
+	<form class="checkout-form" novalidate (submit)="submitCheckout($event)">
 		<details class="form-card accordion animate-fade-up" [open]="activeSection() === 1" (toggle)="onSectionToggle(1, $event)">
 			<summary (click)="setSection(1)">
 				<span class="section-number"><i class="bi bi-person-circle"></i></span>
@@ -225,10 +225,11 @@
 		</details>
 
 		<div class="checkout-actions animate-fade-up delay-3">
+			<p *ngIf="errorMessage()" class="text-danger" role="alert">{{ errorMessage() }}</p>
 			<p>Al pulsar continuar, revisaremos los datos antes de finalizar el alta.</p>
-			<button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+			<button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" [disabled]="submitting()">
 				<i class="bi bi-lock-fill me-2"></i>
-				Continuar con el pago
+				{{ submitting() ? 'Procesando…' : 'Continuar con el pago' }}
 			</button>
 		</div>
 	</form>

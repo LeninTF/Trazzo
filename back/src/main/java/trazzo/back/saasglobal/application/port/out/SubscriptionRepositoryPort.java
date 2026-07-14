@@ -8,6 +8,7 @@ public interface SubscriptionRepositoryPort {
     Subscription save(Subscription subscription);
     Optional<Subscription> findById(String id);
     Optional<Subscription> findActiveByTenantId(String tenantId);
+    Optional<Subscription> findByMpPreapprovalId(String mpPreapprovalId);
     List<Subscription> findAll(int page, int size);
     long countAll();
 }
