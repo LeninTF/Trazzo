@@ -22,12 +22,18 @@ class AuditMetricsServiceTest {
 
     @Test
     void getMetricsReturnsZerosForEmptyDb() {
-        when(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM audit", Long.class)).thenReturn(0L);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM audit WHERE created_at >= ?", Long.class, org.mockito.ArgumentMatchers.any()))
+                org.mockito.ArgumentMatchers.eq("SELECT COUNT(*) FROM audit"),
+                org.mockito.ArgumentMatchers.eq(Long.class)))
                 .thenReturn(0L);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM audit WHERE created_at >= ? AND created_at < ?", Long.class,
+                org.mockito.ArgumentMatchers.eq("SELECT COUNT(*) FROM audit WHERE created_at >= ?"),
+                org.mockito.ArgumentMatchers.eq(Long.class),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(0L);
+        when(jdbcTemplate.queryForObject(
+                org.mockito.ArgumentMatchers.eq("SELECT COUNT(*) FROM audit WHERE created_at >= ? AND created_at < ?"),
+                org.mockito.ArgumentMatchers.eq(Long.class),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(0L);
 

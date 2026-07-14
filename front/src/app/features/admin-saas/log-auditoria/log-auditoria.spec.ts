@@ -134,9 +134,12 @@ describe('LogAuditoria', () => {
 
   it('should cambiarPagina within range and refetch', () => {
     component.totalPaginasServidor = 3;
+    mockAudit.listLogs.and.returnValue(of({ ...mockLogs, totalPages: 3 }));
+    component.paginaActual = 1;
     mockAudit.listLogs.calls.reset();
     component.cambiarPagina(2);
     expect(component.paginaActual).toBe(2);
+    expect(component.logSeleccionado).toBeNull();
     expect(mockAudit.listLogs).toHaveBeenCalled();
   });
 
@@ -168,7 +171,7 @@ describe('LogAuditoria', () => {
   it('should handle cargarLogs error', () => {
     mockAudit.listLogs.and.returnValue(throwError(() => new Error('fail')));
     component.cargarLogs();
-    expect(component.error()).toBe('Error al cargar los logs');
+    expect(component.error()).toBe('Error al cargar los logs de auditoría');
   });
 
   it('should not fail when cargarMetricas errors', () => {

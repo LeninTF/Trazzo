@@ -48,7 +48,7 @@ class AuditRepositoryAdapterTest {
     void findAll_shouldQueryAndMap() {
         var audit = Audit.restore("id-1", "User", "1", Action.CREATE,
                 "u1", "/api", "127.0.0.1", "agent", null, null, now);
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any()))
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of(audit));
 
         var result = adapter.findAll(null, "search", Action.CREATE, "User",
@@ -56,12 +56,12 @@ class AuditRepositoryAdapterTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getEntity()).isEqualTo("User");
-        verify(jdbcTemplate).query(anyString(), any(RowMapper.class), any());
+        verify(jdbcTemplate).query(anyString(), any(RowMapper.class), any(Object[].class));
     }
 
     @Test
     void count_shouldReturnTotalElements() {
-        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any()))
+        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
                 .thenReturn(5L);
 
         var result = adapter.count(null, "search", Action.CREATE, "User",

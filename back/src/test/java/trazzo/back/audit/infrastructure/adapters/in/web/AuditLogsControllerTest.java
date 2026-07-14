@@ -54,7 +54,7 @@ class AuditLogsControllerTest {
         mockMvc.perform(get("/audit/logs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("1"))
-                .andExpect(jsonPath("$.content[0].event_id").value("evt-1"))
+                .andExpect(jsonPath("$.content[0].eventId").value("evt-1"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
