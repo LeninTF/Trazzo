@@ -1,5 +1,4 @@
 import { Component, computed, signal, inject, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
@@ -52,7 +51,6 @@ function toSolicitud(inc: IncidentProfile): IncidenciaSolicitud {
   styleUrl: './incidencias.css',
 })
 export class Incidencias implements OnInit {
-  private readonly http = inject(HttpClient);
   private readonly api = inject(ApiService);
   private readonly toastService = inject(ToastService);
   readonly loading = signal(false);
@@ -177,9 +175,8 @@ export class Incidencias implements OnInit {
   async descargarArchivo(solicitud: IncidenciaSolicitud): Promise<void> {
     if (!solicitud.archivo) return;
     try {
-      const blob = await firstValueFrom(
-        this.http.get(solicitud.archivo.url, { responseType: 'blob' })
-      );
+      const response = await fetch(solicitud.archivo.url);
+      const blob = await response.blob();
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = solicitud.archivo.nombre;

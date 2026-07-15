@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClient } from '@angular/common/http';
 import { provideHttpClient } from '@angular/common/http';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
+import { ToastService } from '../../../services/toast.service';
 import { Incidencias } from './incidencias';
 
 const makeIncident = (
@@ -31,6 +31,11 @@ const mockApi = {
   },
 };
 
+const mockToast = {
+  success: jasmine.createSpy('success'),
+  error: jasmine.createSpy('error'),
+};
+
 describe('Incidencias (admin-tenant)', () => {
   let component: Incidencias;
   let fixture: ComponentFixture<Incidencias>;
@@ -43,11 +48,15 @@ describe('Incidencias (admin-tenant)', () => {
     ];
     incidentsData[0].evidencias.push({ id: 1, incidencia_id: 1, file_name: 'doc.pdf', file_url: '#', mime_type: 'application/pdf', file_size: 2048, created_at: '', updated_at: '' });
 
+    mockToast.success.calls.reset();
+    mockToast.error.calls.reset();
+
     await TestBed.configureTestingModule({
       imports: [Incidencias],
       providers: [
         provideHttpClient(),
         { provide: ApiService, useValue: mockApi },
+        { provide: ToastService, useValue: mockToast },
       ],
     }).compileComponents();
 
@@ -152,11 +161,33 @@ describe('Incidencias (admin-tenant)', () => {
     expect(component.modalOpen).toBeFalse();
   });
 
+  it('should show toast on aprobar error', async () => {
+    mockApi.incidents.changeState = () => throwError(() => new Error('fail'));
+    const sol = component.solicitudes()[0];
+    await component.aprobar(sol);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al aprobar');
+  });
+
+  it('should show toast on rechazar error', async () => {
+    mockApi.incidents.changeState = () => throwError(() => new Error('fail'));
+    const sol = component.solicitudes()[0];
+    await component.rechazar(sol);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al rechazar');
+  });
+
   it('should descargarArchivo', async () => {
-    spyOn(HttpClient.prototype, 'get').and.returnValue(of(new Blob(['test'])));
     const createSpy = spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
+    spyOn(globalThis, 'fetch').and.returnValue(Promise.resolve(new Response(new Blob(['test']))));
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:test');
+    spyOn(URL, 'revokeObjectURL');
     await component.descargarArchivo(component.solicitudes()[0]);
     expect(createSpy).toHaveBeenCalledWith('a');
+  });
+
+  it('should not descargar when no archivo', async () => {
+    const sol = component.solicitudes()[2];
+    sol.archivo = null;
+    await component.descargarArchivo(sol);
   });
 
   it('should exportarCSV', () => {

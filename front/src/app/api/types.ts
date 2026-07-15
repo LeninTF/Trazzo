@@ -298,7 +298,7 @@ export interface IncidentStateChangeRequest {
 
 export interface CreateEvidenceRequest {
   file_name: string;
-  file_url: string;
+  file_key: string;
   mime_type: string;
   file_size: number;
 }

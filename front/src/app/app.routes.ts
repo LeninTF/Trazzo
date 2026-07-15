@@ -10,6 +10,7 @@ import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
 import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
 import { Incidencias } from './features/admin-tenant/incidencias/incidencias';
+import { TiposIncidencia } from './features/admin-tenant/tipos-incidencia/tipos-incidencia';
 import { ReglasAsistencia } from './features/admin-tenant/reglas-asistencia/reglas-asistencia';
 import { Sedes } from './features/admin-tenant/sedes/sedes';
 import { GestionRoles } from './features/admin-tenant/gestion-roles/gestion-roles';
@@ -71,6 +72,10 @@ export const routes: Routes = [
     {
         path: 'tenant/incidencias',
         component: Incidencias
+    },
+    {
+        path: 'tenant/tipos-incidencia',
+        component: TiposIncidencia
     },
     {
         path: 'tenant/reglas-asistencia',
