@@ -44,6 +44,7 @@ public sealed class WebSocketResponseTests
     [Fact]
     public async Task HandleMessageAsync_ForFingerprintCapture_ReturnsCaptureResultJson()
     {
+        using var _ = new PlaintextGateScope(open: true);
         FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded([9, 8, 7], 3);
         LocalWebSocketServerService server = CreateServer(captureResult: captureResult);
 

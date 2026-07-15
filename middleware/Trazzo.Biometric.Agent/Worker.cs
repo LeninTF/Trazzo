@@ -19,8 +19,12 @@ public sealed class Worker(
         {
             await cryptoService.InitializeAsync(stoppingToken);
             await scannerService.InitializeAsync(stoppingToken);
-            await webSocketServer.StartAsync(stoppingToken);
+
+            // StartAsync devuelve el task del loop del servidor (long-running).
+            // Lo mantenemos en una variable para no perder excepciones y esperarlo al final.
+            Task serverTask = webSocketServer.StartAsync(stoppingToken);
             await LogStartupReportAsync(stoppingToken);
+            await serverTask;
         }
         catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
         {

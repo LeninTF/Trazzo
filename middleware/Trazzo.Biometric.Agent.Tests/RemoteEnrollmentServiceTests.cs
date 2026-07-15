@@ -43,7 +43,14 @@ public sealed class RemoteEnrollmentServiceTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(pendingJson) },
             new HttpResponseMessage(HttpStatusCode.Created));
         using HttpClient httpClient = new(handler);
-        EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
+        byte[] iv = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        byte[] cipher = [50, 51, 52, 53];
+        byte[] tag = [70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85];
+        EncryptedPayload encrypted = new(
+            Convert.ToBase64String(cipher),
+            "aeskey",
+            Convert.ToBase64String(iv),
+            Convert.ToBase64String(tag));
         CountingScannerService scanner = new()
         {
             EnrollResult = FingerprintEnrollResult.Succeeded(
@@ -71,10 +78,16 @@ public sealed class RemoteEnrollmentServiceTests
         Assert.Equal("enroll-token", root.GetProperty("enroll_token").GetString());
         Assert.Equal("ZK9500-REMOTE", root.GetProperty("device_code").GetString());
         Assert.Equal(2, root.GetProperty("finger_index").GetInt32());
-        Assert.Equal("cipher", root.GetProperty("encrypted_template_base64").GetString());
-        Assert.Equal("key", root.GetProperty("encrypted_aes_key_base64").GetString());
-        Assert.Equal("iv", root.GetProperty("iv_base64").GetString());
-        Assert.Equal("tag", root.GetProperty("tag_base64").GetString());
+        // Nomenclatura del backend (CompleteEnrollRequest.java): llave_cifrado + template_cifrado + capturado_en.
+        Assert.Equal("aeskey", root.GetProperty("llave_cifrado").GetString());
+        byte[] packed = Convert.FromBase64String(root.GetProperty("template_cifrado").GetString()!);
+        Assert.Equal(iv.Length + cipher.Length + tag.Length, packed.Length);
+        Assert.Equal(iv, packed[..12]);
+        Assert.Equal(cipher, packed[12..(12 + cipher.Length)]);
+        Assert.Equal(tag, packed[^16..]);
+        // capturado_en: LocalDateTime ISO-8601 sin offset.
+        string capturado = root.GetProperty("capturado_en").GetString()!;
+        Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$", capturado);
     }
 
     [Fact]
@@ -147,7 +160,11 @@ public sealed class RemoteEnrollmentServiceTests
             new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(pendingJson) },
             new HttpResponseMessage(System.Net.HttpStatusCode.UnprocessableEntity));
         using HttpClient httpClient = new(handler);
-        EncryptedPayload encrypted = new("c", "k", "iv", "t");
+        EncryptedPayload encrypted = new(
+            Convert.ToBase64String([1, 2, 3]),
+            Convert.ToBase64String([4]),
+            Convert.ToBase64String(new byte[12]),
+            Convert.ToBase64String(new byte[16]));
         CountingScannerService scanner = new()
         {
             EnrollResult = FingerprintEnrollResult.Succeeded(

@@ -20,16 +20,18 @@ public sealed class ZKTecoScannerService(
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
     private const int DefaultTemplateBufferSize = 2048;
-    private const double DefaultCaptureTimeoutSeconds = 1.75;
-    private const int DefaultCapturePollingIntervalMilliseconds = 50;
-    private const int DefaultPostCaptureCooldownMilliseconds = 300;
+    // Alineado con el demo C# del SDK ZKTeco (ZKFinger Standard SDK 5.3.0.33 / Demo2 / Form1.cs):
+    // el loop DoCapture hace Thread.Sleep(200) sin cooldown ni espera de lift entre muestras.
+    private const double DefaultCaptureTimeoutSeconds = 15;
+    private const int DefaultCapturePollingIntervalMilliseconds = 200;
+    private const int DefaultPostCaptureCooldownMilliseconds = 200;
     private const int DefaultMinimumTemplateSize = 400;
     private const int DefaultEnrollmentSamples = 3;
-    private const double DefaultEnrollmentSampleTimeoutSeconds = 1.75;
-    private const double MaxCaptureTimeoutSeconds = 1.75;
-    private const int MaxCapturePollingIntervalMilliseconds = 80;
+    private const double DefaultEnrollmentSampleTimeoutSeconds = 15;
+    private const double MaxCaptureTimeoutSeconds = 15;
+    private const int MaxCapturePollingIntervalMilliseconds = 200;
     private const int MaxPostCaptureCooldownMilliseconds = 300;
-    private const double MaxEnrollmentSampleTimeoutSeconds = 1.75;
+    private const double MaxEnrollmentSampleTimeoutSeconds = 15;
     private const double DefaultMinimumForegroundCoveragePercent = 8;
     private const double DefaultMaximumForegroundCoveragePercent = 75;
     private const double DefaultMinimumContrastScore = 18;
@@ -47,7 +49,7 @@ public sealed class ZKTecoScannerService(
     private readonly int _minimumTemplateSize = GetPositiveConfigurationValue(configuration, "Biometric:Quality:MinimumTemplateSize", DefaultMinimumTemplateSize);
     private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
     private readonly double _enrollmentSampleTimeoutSeconds = GetStandardizedDoubleConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds, MaxEnrollmentSampleTimeoutSeconds);
-    private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", true);
+    private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", false);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MaximumForegroundCoveragePercent", DefaultMaximumForegroundCoveragePercent),

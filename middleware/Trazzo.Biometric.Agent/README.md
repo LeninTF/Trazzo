@@ -22,21 +22,25 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | WebSocket local | `ws://localhost:9001/`, heartbeat ping/pong cada 30 s |
 | ZKTeco ZK9500 | Captura, identificación y enrolamiento (3 muestras + DBMerge) |
 | Calidad de huella | Cobertura, contraste, centrado, tamaño mínimo de template |
-| Cifrado híbrido | AES-256-GCM + RSA-2048-OAEP, clave pública desde el backend |
-| Caché de clave RSA | `%PROGRAMDATA%\TrazzoAgent\public_key.cache` |
-| Cola offline | SQLite en `%PROGRAMDATA%\TrazzoAgent\events.db` |
+| Cifrado híbrido | AES-256-GCM + RSA-2048-OAEP (validación de KeySize ≥ 2048), clave pública desde el backend |
+| Caché de clave RSA | `%PROGRAMDATA%\TrazzoAgent\public_key.cache` cifrado con DPAPI-LocalMachine + marcador de integridad |
+| Cola offline | SQLite (WAL + connection pooling) en `%PROGRAMDATA%\TrazzoAgent\events.db` |
 | Marcación síncrona | `POST /asistencia/marcar` con `X-Tenant-ID` y `Authorization: Bearer` |
 | Reenvío offline al backend | `POST /asistencia/sync` con `X-Tenant-ID` y `Authorization: Bearer` |
 | Backoff exponencial | Reintento con jitter, hasta 5 minutos entre intentos |
 | Operaciones repetidas | Captura, identificación y enrolamiento pueden repetirse al terminar la operación anterior |
 | CORS WebSocket | Restricción por origen (`Agent:AllowedOrigins`) |
+| Rate-limit WebSocket | Cap por cliente: 256 KB por mensaje, 8 operaciones concurrentes máx. (configurable) |
 | Multi-tenant | `X-Tenant-ID` en cada request al backend (`Agent:TenantId`) |
-| Auto-updater | Descarga MSI desde manifiesto JSON, verifica SHA-256, instala silencioso |
+| HTTPS obligatorio | Todos los endpoints de backend deben ser HTTPS (loopback permitido para desarrollo) |
+| Guard plaintext template | Templates biométricos nunca viajan sin cifrar salvo `TRAZZO_ALLOW_PLAINTEXT_TEMPLATES=true` |
+| Auto-updater | Descarga MSI desde manifiesto JSON, verifica SHA-256 + firma Authenticode + publisher CN, cap de tamaño (200 MB), instala silencioso |
+| Cleanup de updates | Mantiene solo los últimos 3 MSIs descargados para evitar acumulación en disco |
 | Recuperación de fallos | Servicio se reinicia solo en 10 s tras crash (configurado en el MSI) |
 | Instalador visual | Bienvenida → Selección de ruta → Progreso → Finalizar |
 | Imágenes del instalador | Banner 493×58 px y panel 493×312 px personalizados |
 | CI/CD | GitHub Actions: 2 jobs — `build-test-analyze` (push y PR) + `package-msi` (solo push) |
-| Tests | 262 pruebas xUnit; 240 no abren listener local y 22 cubren `HttpListener`/WebSocket real, sin hardware biométrico |
+| Tests | 345 pruebas xUnit sin necesidad de hardware biométrico |
 | Reporte de inicio | Log completo del estado de todos los módulos al arrancar |
 
 ### Pendiente para funcionamiento al 100%
@@ -77,7 +81,7 @@ middleware/
 │   │   └── test-websocket.html          # Herramienta de prueba local
 │   ├── Worker.cs                        # Orquestador principal
 │   └── appsettings.json                 # Configuración
-├── Trazzo.Biometric.Agent.Tests/        # 262 pruebas xUnit
+├── Trazzo.Biometric.Agent.Tests/        # 345 pruebas xUnit
 └── Trazzo.Biometric.Agent.Installer/    # MSI con WiX Toolset v4
     ├── Resources/
     │   ├── banner.bmp                   # Franja superior del instalador (493×58 px)
@@ -122,7 +126,9 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     "KeepAliveIntervalSeconds": 30,
     "DeviceMonitorIntervalSeconds": 5,
     "TenantId": "",
-    "DeviceCode": ""
+    "DeviceCode": "",
+    "MaxIncomingMessageBytes": 262144,
+    "MaxPendingOperationsPerClient": 8
   },
   "Backend": {
     "BaseUrl": "",
@@ -137,9 +143,9 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     }
   },
   "Biometric": {
-    "CaptureTimeoutSeconds": 5,
-    "CapturePollingIntervalMilliseconds": 50,
-    "PostCaptureCooldownMilliseconds": 300,
+    "CaptureTimeoutSeconds": 15,
+    "CapturePollingIntervalMilliseconds": 200,
+    "PostCaptureCooldownMilliseconds": 200,
     "TemplateBufferSize": 2048,
     "IncludeFingerprintImageInResponses": false,
     "Quality": {
@@ -154,8 +160,8 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   },
   "Enrollment": {
     "RequiredSamples": 3,
-    "SampleTimeoutSeconds": 5,
-    "RequireFingerLiftBetweenSamples": true,
+    "SampleTimeoutSeconds": 15,
+    "RequireFingerLiftBetweenSamples": false,
     "RemotePollingEnabled": true,
     "RemotePollingIntervalSeconds": 5
   },
@@ -172,7 +178,9 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
   "AutoUpdate": {
     "Enabled": false,
     "CheckIntervalMinutes": 60,
-    "ManifestUrl": ""
+    "ManifestUrl": "",
+    "PublisherCommonName": "Trazzo",
+    "MaxMsiBytes": 209715200
   }
 }
 ```
@@ -185,7 +193,7 @@ Para dedos con poca huella, los umbrales por defecto son más tolerantes (`Minim
 
 ### Tiempo de respuesta ZK9500
 
-La captura e identificación esperan hasta 5 segundos para que el usuario coloque el dedo, con lectura cada 50 ms. No hay bloqueo artificial de 5 segundos entre botones: cuando una operación termina por éxito, error o timeout, el usuario puede volver a capturar, identificar o enrolar inmediatamente. El `PostCaptureCooldownMilliseconds` es solo drenado técnico interno del lector y no debe devolver error al WebSocket. El enrolamiento usa hasta 5 segundos por muestra.
+Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger Standard SDK 5.3.0.33, `Demo2/Form1.cs`): el loop `DoCapture` usa `Thread.Sleep(200)` sin cooldown ni espera de lift entre muestras. Por eso la captura e identificación esperan hasta 15 segundos para que el usuario coloque el dedo, con lectura cada 200 ms. No hay bloqueo artificial entre botones: cuando una operación termina por éxito, error o timeout, el usuario puede volver a capturar, identificar o enrolar inmediatamente. `PostCaptureCooldownMilliseconds` (200 ms) es solo drenado técnico interno del lector y no debe devolver error al WebSocket. Por defecto `RequireFingerLiftBetweenSamples = false` (igual que la demo): entre muestras del enrollment el sistema no espera activamente que se levante el dedo, ya que el SDK naturalmente solo devuelve éxito con una colocación nueva. El enrolamiento usa hasta 15 segundos por muestra.
 
 ### Valores obligatorios en producción
 
@@ -206,8 +214,12 @@ La captura e identificación esperan hasta 5 segundos para que el usuario coloqu
 | `Queue:AgentToken` | Token JWT legacy en claro. Evitar en producción; se mantiene por compatibilidad |
 | `AutoUpdate:Enabled` | `true` para habilitar actualizaciones automáticas |
 | `AutoUpdate:ManifestUrl` | URL HTTPS del manifiesto JSON de versiones |
+| `AutoUpdate:PublisherCommonName` | CN esperado en el certificado Authenticode del MSI. Default: `Trazzo`. Debe coincidir con el sujeto del certificado usado para firmar |
+| `AutoUpdate:MaxMsiBytes` | Tamaño máximo permitido del MSI descargado en bytes. Default: `209715200` (200 MB) |
+| `Agent:MaxIncomingMessageBytes` | Tamaño máximo de un mensaje WebSocket entrante. Default: `262144` (256 KB) — cliente que exceda cierra la conexión |
+| `Agent:MaxPendingOperationsPerClient` | Máximo de operaciones biométricas en vuelo por conexión WebSocket. Default: `8` — cliente que exceda recibe error, no OOM |
 
-`Security:BackendPublicKeyUrl` y `Queue:BackendUrl` siguen aceptándose como URLs absolutas legacy, pero para nuevas instalaciones se recomienda centralizar rutas en `Backend:BaseUrl` + `Backend:Endpoints`.
+`Security:BackendPublicKeyUrl` y `Queue:BackendUrl` siguen aceptándose como URLs absolutas legacy, pero para nuevas instalaciones se recomienda centralizar rutas en `Backend:BaseUrl` + `Backend:Endpoints`. **Todos los endpoints deben usar HTTPS**; los que no lo hagan se deshabilitan al arrancar (excepto loopback, permitido para desarrollo local).
 
 Para configurar una instalación sin editar `appsettings.json` manualmente, use prompt seguro para no dejar el JWT en historial de consola:
 
@@ -235,7 +247,16 @@ El auto-updater consume un JSON en `AutoUpdate:ManifestUrl` con este formato:
 }
 ```
 
-Solo se aplica la actualización si la versión del manifiesto es mayor a la instalada y la URL es HTTPS. El SHA-256 se verifica antes de ejecutar el instalador.
+**Cadena de verificación antes de instalar** (todo debe pasar; caso contrario el MSI se descarta):
+
+1. La URL del manifiesto y del MSI deben ser HTTPS.
+2. La versión del manifiesto debe ser **mayor** a la instalada (previene downgrade attacks).
+3. `Content-Length` del MSI debe estar presente y ≤ `AutoUpdate:MaxMsiBytes` (default 200 MB).
+4. SHA-256 del binario descargado debe coincidir con el declarado en el manifiesto.
+5. **Firma Authenticode**: el MSI debe estar firmado y el CN del certificado debe coincidir con `AutoUpdate:PublisherCommonName` (default `Trazzo`).
+6. La cadena de certificados debe validar contra el trust store de Windows (revocación online, root confiable).
+
+Sin firma válida no se ejecuta el `msiexec`. Adicionalmente, el directorio de updates conserva solo los últimos 3 MSIs; los anteriores se borran para no acumular espacio en disco.
 
 ---
 
@@ -246,7 +267,7 @@ dotnet build .\Trazzo.Middleware.slnx -c Release
 dotnet test
 ```
 
-Los 262 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico. En entornos restringidos, los 22 tests de `LocalWebSocketServerServiceTests` pueden fallar al abrir `HttpListener`; ejecutar `dotnet test --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"` valida los 240 tests que no dependen del listener local.
+Los 345 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico. En entornos restringidos, los tests de `LocalWebSocketServerServiceTests` pueden fallar al abrir `HttpListener`; ejecutar `dotnet test --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"` valida los que no dependen del listener local.
 
 ---
 
@@ -275,7 +296,7 @@ El pipeline `.github/workflows/middleware-ci.yml` se activa automáticamente en 
 
 | Job | Trigger | Runner | Descripción |
 |---|---|---|---|
-| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 262 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
+| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 345 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
 | `package-msi` | solo push | Windows | Descarga los binarios del job anterior y genera el MSI con WiX v4 (`-p:SkipAgentPublish=true`). No re-publica el agente. |
 
 El job `package-msi` depende de `build-test-analyze` y sólo corre en push, por lo que en pull requests sólo se ejecuta el primer job.
@@ -286,7 +307,7 @@ Actualmente el MSI generado por CI queda como artefacto interno de GitHub Action
 
 ```
 Push a master
-  → CI compila y ejecuta 262 tests
+  → CI compila y ejecuta 345 tests
   → CI genera MSI self-contained
   → CI publica GitHub Release con URL pública   ← pendiente de implementar
        ↓
@@ -397,11 +418,20 @@ Página HTML autocontenida para probar el agente sin escribir código. No requie
 
 **Tutorial integrado:** la primera vez que se abre la página aparece automáticamente un tutorial de 6 pasos. Se puede cerrar y volver a abrir desde el botón `? Tutorial` en la esquina superior derecha. La preferencia se guarda en `localStorage`.
 
-**Sobre `templateBase64: null`:** es el comportamiento correcto cuando el cifrado está activo. El agente encontró una clave RSA en caché (`%PROGRAMDATA%\TrazzoAgent\public_key.cache`) y cifró el template. Los datos reales están en el campo `encryptedTemplate`. En desarrollo local sin backend, se puede eliminar el caché para ver el template en plano:
+**Sobre `templateBase64: null`:** es el comportamiento correcto en producción. Hay dos escenarios que producen `null`:
+
+1. **Con clave RSA configurada (producción)**: el agente cifró el template. Los datos reales están en `encryptedTemplate`.
+2. **Sin clave RSA configurada**: el guard de seguridad bloquea la salida plaintext. Los datos NO se transmiten.
+
+Para desarrollo local sin backend, se puede reactivar el fallback plaintext con la env var y borrar el caché:
 
 ```powershell
+$env:TRAZZO_ALLOW_PLAINTEXT_TEMPLATES = "true"
 Remove-Item "$env:ProgramData\TrazzoAgent" -Recurse -Force
+dotnet run --project .\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj
 ```
+
+⚠️ **Nunca setees `TRAZZO_ALLOW_PLAINTEXT_TEMPLATES=true` en producción.** Es solo para debugging local sin backend.
 
 ---
 
@@ -517,8 +547,9 @@ El agente implementa **Privacidad por Diseño**:
 
 - La imagen cruda de la huella **nunca sale de la RAM**. El SDK la convierte a template y se descarta.
 - El template se cifra con AES-256-GCM antes de cualquier transmisión.
-- La clave AES se cifra con RSA-2048-OAEP usando la clave pública del backend.
-- Sin clave pública configurada, el agente arranca en modo sin cifrado y lo advierte en el log. No debe usarse en producción.
+- La clave AES se cifra con RSA-2048-OAEP-SHA256 usando la clave pública del backend.
+- **Por defecto**, si no hay clave RSA configurada, el agente NO transmite el template: los mensajes salen con `templateBase64: null`. Nunca se filtra plaintext biométrico por descuido operativo.
+- Para modo desarrollo local sin backend RSA, se puede reactivar el fallback plaintext con la variable de entorno `TRAZZO_ALLOW_PLAINTEXT_TEMPLATES=true`.
 
 **Flujo de cifrado por captura:**
 
@@ -526,10 +557,57 @@ El agente implementa **Privacidad por Diseño**:
 Huella física
   → SDK extrae template (binario, en RAM)
   → AES-256-GCM cifra el template (clave efímera por captura)
-  → RSA-2048-OAEP cifra la clave AES (con clave pública del backend)
+  → RSA-2048-OAEP-SHA256 cifra la clave AES (con clave pública del backend)
   → Se transmite: { encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64 }
   → Imagen cruda descartada
 ```
+
+---
+
+## Endurecimiento de Seguridad
+
+Además del cifrado híbrido, el agente aplica los siguientes controles defensivos:
+
+### Transporte
+
+- **HTTPS obligatorio** en todos los endpoints de backend. Cualquier URL HTTP no-loopback se rechaza al arrancar (`BackendEndpointResolver.EnsureSecureUrl`).
+- **Loopback aceptado** solo para desarrollo local (`http://localhost`, `http://127.0.0.1`).
+- **DPAPI LocalMachine** protege el token JWT en `Queue:AgentTokenProtected` (via `Configure-Agent.ps1`).
+
+### WebSocket local
+
+- **Cap de tamaño de mensaje** (256 KB por defecto) evita OOM ante clientes maliciosos que envíen fragmentos infinitos.
+- **Cap de operaciones concurrentes por cliente** (8 por defecto) evita flood attacks locales.
+- **Restricción por Origin** (`Agent:AllowedOrigins`) — sin lista configurada, solo se aceptan orígenes loopback.
+
+### Templates biométricos
+
+- **Guard plaintext** cerrado por defecto: `templateBase64: null` si el cifrado no está configurado (opt-in explícito con env var para dev).
+- **Validación de KeySize RSA ≥ 2048 bits**: claves más chicas se rechazan al importarse.
+- **Cache de clave pública** en `%PROGRAMDATA%\TrazzoAgent\public_key.cache` protegido con DPAPI-LocalMachine y marcador de integridad `TRAZZO_KEY_CACHE_V1`. Cache manipulado o de versión previa se descarta.
+- **Response size limits** en todos los HttpClients al backend (32 KB para public key, 8-16 KB para respuestas de API).
+
+### Auto-update
+
+- Verificación en cadena: HTTPS + versión mayor + `Content-Length` ≤ cap + SHA-256 + **firma Authenticode** con CN esperado + cadena de certificados válida.
+- Cap de tamaño del MSI (default 200 MB) previene llenar disco con descarga malformada.
+- Cleanup automático mantiene solo los últimos 3 MSIs descargados.
+
+### SDK ZKTeco
+
+- Carga de `libzkfpcsharp.dll` **solo desde** `AppContext.BaseDirectory\Native\x64\`. Ya no hay fallback a `Environment.CurrentDirectory` (mitiga DLL hijacking si un atacante controla el cwd del servicio SYSTEM).
+
+### Cola offline
+
+- SQLite con **WAL journal mode** y `synchronous=NORMAL` (mejor concurrencia + durabilidad).
+- **Connection pooling** habilitado.
+- **Batch UPDATE** (`WHERE id IN (...)`) para marcar eventos como enviados en una sola sentencia.
+- **Prune throttling**: la limpieza de eventos viejos corre máximo una vez cada 6 h (antes corría en cada ciclo del forwarder).
+- Eventos no soportados o sin `device_code` se marcan como **fallidos** (auditables), no descartados silenciosamente.
+
+### Enrolamiento remoto
+
+- Se valida `pending.ExpiresAt` antes de procesar la sesión — sesiones expiradas se ignoran.
 
 ---
 

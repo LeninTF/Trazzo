@@ -14,7 +14,12 @@ internal sealed record HttpSenderConfig(
 
 public sealed class EventForwarderService : BackgroundService
 {
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+    // 8 KB para respuesta de asistencia (ok/rejected).
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15),
+        MaxResponseContentBufferSize = 8 * 1024
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IEventQueue _queue;
@@ -67,7 +72,10 @@ public sealed class EventForwarderService : BackgroundService
         _logger = logger;
         _retryIntervalSeconds = configuration.GetValue<int>("Queue:RetryIntervalSeconds", 30);
 
-        string? backendUrl = BackendEndpointResolver.ResolveAttendanceSyncUrl(configuration);
+        string? backendUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolveAttendanceSyncUrl(configuration),
+            logger,
+            "Backend:Endpoints:AttendanceSync");
         string? agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         string? tenantId = configuration["Agent:TenantId"];
         string? deviceCode = configuration["Agent:DeviceCode"];
@@ -184,29 +192,44 @@ public sealed class EventForwarderService : BackgroundService
         {
             if (!string.Equals(evt.EventType, "identify", StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogWarning(
-                    "Evento Id={Id} de tipo '{EventType}' no es soportado por el forwarder de asistencia. Se descartará de la cola sin consumir reintentos.",
+                // Retornamos false para que MarkFailedAsync incremente retry_count. Tras MaxRetries pasa a Failed.
+                // Antes se marcaba como Sent silenciosamente → data loss oculto.
+                logger.LogError(
+                    "Evento Id={Id} de tipo '{EventType}' no es soportado por el forwarder de asistencia. Se marcará como fallido (no se descarta).",
                     evt.Id, evt.EventType);
-                return true;
+                return false;
             }
 
             string? resolvedDeviceCode = string.IsNullOrWhiteSpace(deviceCode) ? evt.DeviceId : deviceCode;
             if (string.IsNullOrWhiteSpace(resolvedDeviceCode))
             {
-                logger.LogWarning(
-                    "Evento Id={Id} (tipo '{EventType}') no tiene device_code ni en la configuración (Agent:DeviceCode) ni en el evento. Se descartará de la cola.",
+                logger.LogError(
+                    "Evento Id={Id} (tipo '{EventType}') no tiene device_code ni en la configuración (Agent:DeviceCode) ni en el evento. Se marcará como fallido.",
                     evt.Id, evt.EventType);
-                return true;
+                return false;
             }
+
+            // Nomenclatura alineada con el DTO real del backend (template_cifrado /
+            // llave_cifrado / capturado_en). Empaquetamos iv||cipher||tag dentro de
+            // template_cifrado. `offline_event_id`, `created_at_utc` y `retry_count`
+            // son campos de trazabilidad de la cola offline — el backend los ignora
+            // si no los conoce (Jackson default: FAIL_ON_UNKNOWN_PROPERTIES=false).
+            byte[] iv = Convert.FromBase64String(evt.IvBase64);
+            byte[] cipher = Convert.FromBase64String(evt.EncryptedTemplateBase64);
+            byte[] tag = Convert.FromBase64String(evt.TagBase64);
+            byte[] packed = new byte[iv.Length + cipher.Length + tag.Length];
+            Buffer.BlockCopy(iv, 0, packed, 0, iv.Length);
+            Buffer.BlockCopy(cipher, 0, packed, iv.Length, cipher.Length);
+            Buffer.BlockCopy(tag, 0, packed, iv.Length + cipher.Length, tag.Length);
 
             var payload = new
             {
                 event_type = "identify",
-                encrypted_template_base64 = evt.EncryptedTemplateBase64,
-                encrypted_aes_key_base64 = evt.EncryptedAesKeyBase64,
-                iv_base64 = evt.IvBase64,
-                tag_base64 = evt.TagBase64,
-                captured_at_utc = evt.CapturedAtUtc.ToString("O"),
+                template_cifrado = Convert.ToBase64String(packed),
+                llave_cifrado = evt.EncryptedAesKeyBase64,
+                capturado_en = evt.CapturedAtUtc.UtcDateTime.ToString(
+                    "yyyy-MM-ddTHH:mm:ss.fff",
+                    System.Globalization.CultureInfo.InvariantCulture),
                 device_code = resolvedDeviceCode,
                 offline_event_id = evt.Id,
                 retry_count = evt.RetryCount
@@ -224,7 +247,50 @@ public sealed class EventForwarderService : BackgroundService
                 request.Headers.Add("X-Tenant-ID", tenantId);
 
             using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
-            return response.IsSuccessStatusCode;
+            if (!response.IsSuccessStatusCode) return false;
+
+            await TryLogCorrelationIdAsync(response, evt.Id, logger, ct);
+            return true;
         };
+    }
+
+    // Extrae correlation_id de MarcacionSyncResponse para trazabilidad en soporte.
+    // Best-effort: si el body no es JSON válido o no está el campo, no rompe el envío.
+    private static async Task TryLogCorrelationIdAsync(
+        HttpResponseMessage response,
+        long eventId,
+        ILogger logger,
+        CancellationToken ct)
+    {
+        try
+        {
+            if (response.Content is null) return;
+            string body = await response.Content.ReadAsStringAsync(ct);
+            if (string.IsNullOrWhiteSpace(body)) return;
+
+            using JsonDocument doc = JsonDocument.Parse(body);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object) return;
+
+            string? correlationId = doc.RootElement.TryGetProperty("correlation_id", out JsonElement corr)
+                ? corr.GetString()
+                : null;
+            int? acceptedCount = doc.RootElement.TryGetProperty("accepted_count", out JsonElement acc)
+                                 && acc.ValueKind == JsonValueKind.Number
+                ? acc.GetInt32()
+                : null;
+
+            if (!string.IsNullOrWhiteSpace(correlationId) && logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation(
+                    "Sync aceptado por backend. EventId={EventId}, CorrelationId={CorrelationId}, AcceptedCount={AcceptedCount}.",
+                    eventId, correlationId, acceptedCount);
+        }
+        catch (JsonException)
+        {
+            // Backend puede responder cuerpo vacío en 202/200. Silencioso.
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "No se pudo leer el correlation_id de la respuesta de /asistencia/sync.");
+        }
     }
 }

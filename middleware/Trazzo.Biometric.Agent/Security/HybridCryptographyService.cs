@@ -1,5 +1,8 @@
+using System.Net;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Trazzo.Biometric.Agent.Backend;
 using Trazzo.Biometric.Agent.Contracts;
@@ -9,7 +12,14 @@ namespace Trazzo.Biometric.Agent.Security;
 
 public sealed class HybridCryptographyService : ICryptographyService, IDisposable
 {
-    private static readonly HttpClient SharedKeyFetchClient = new() { Timeout = TimeSpan.FromSeconds(10) };
+    // Prefijo de integridad para el cache: si el archivo no lo tiene, fue escrito por un atacante o versión previa.
+    private const string CacheIntegrityMarker = "TRAZZO_KEY_CACHE_V1|";
+    // 32 KB alcanza para JSON con clave pública RSA-4096 en base64 (~800 bytes) con overhead de sobra.
+    private static readonly HttpClient SharedKeyFetchClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(10),
+        MaxResponseContentBufferSize = 32 * 1024
+    };
 
     private readonly Func<CancellationToken, Task<string?>> _keyFetcher;
     private readonly ILogger<HybridCryptographyService> _logger;
@@ -129,6 +139,8 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         }
     }
 
+    private const int MinimumRsaKeySize = 2048;
+
     private void ApplyKey(string base64Key)
     {
         try
@@ -136,6 +148,15 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             byte[] keyBytes = Convert.FromBase64String(base64Key);
             RSA newRsa = RSA.Create();
             newRsa.ImportSubjectPublicKeyInfo(keyBytes, out _);
+
+            if (newRsa.KeySize < MinimumRsaKeySize)
+            {
+                _logger.LogError(
+                    "La clave pública RSA tiene {KeySize} bits, mínimo requerido {Minimum}. Se rechaza.",
+                    newRsa.KeySize, MinimumRsaKeySize);
+                newRsa.Dispose();
+                return;
+            }
 
             RSA? oldKey;
             lock (_keyLock)
@@ -146,7 +167,9 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             oldKey?.Dispose();
 
             WriteDiskCache(base64Key);
-            _logger.LogInformation("Clave pública RSA-2048 actualizada. Cifrado AES-256-GCM + RSA-2048-OAEP habilitado.");
+            _logger.LogInformation(
+                "Clave pública RSA-{KeySize} actualizada. Cifrado AES-256-GCM + RSA-OAEP-SHA256 habilitado.",
+                newRsa.KeySize);
         }
         catch (Exception ex)
         {
@@ -158,14 +181,38 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     {
         try
         {
-            if (File.Exists(_cacheFilePath))
-                return File.ReadAllText(_cacheFilePath).Trim();
+            if (!File.Exists(_cacheFilePath))
+                return null;
+
+            byte[] protectedBytes = File.ReadAllBytes(_cacheFilePath);
+            byte[] plaintext = UnprotectFromLocalMachine(protectedBytes);
+            try
+            {
+                string content = Encoding.UTF8.GetString(plaintext);
+                if (!content.StartsWith(CacheIntegrityMarker, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "El cache de clave pública no tiene el marcador de integridad esperado. Se ignora.");
+                    return null;
+                }
+                return content[CacheIntegrityMarker.Length..].Trim();
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogWarning(ex,
+                "El cache de clave pública fue modificado o no fue escrito por este agente. Se ignora.");
+            return null;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo leer la caché de la clave pública RSA.");
+            return null;
         }
-        return null;
     }
 
     private void WriteDiskCache(string base64Key)
@@ -173,12 +220,45 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_cacheFilePath)!);
-            File.WriteAllText(_cacheFilePath, base64Key);
+            byte[] plaintext = Encoding.UTF8.GetBytes(CacheIntegrityMarker + base64Key);
+            try
+            {
+                byte[] protectedBytes = ProtectForLocalMachine(plaintext);
+                File.WriteAllBytes(_cacheFilePath, protectedBytes);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintext);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "No se pudo guardar la caché de la clave pública RSA.");
         }
+    }
+
+    // DPAPI-LocalMachine: solo procesos en esta máquina pueden desencriptar.
+    // Cross-plataforma: en no-Windows, degradamos a un HMAC estático (menos seguro pero funcional).
+    private static byte[] ProtectForLocalMachine(byte[] plaintext)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+#pragma warning disable CA1416 // Platform check hecho arriba
+            return ProtectedData.Protect(plaintext, optionalEntropy: null, DataProtectionScope.LocalMachine);
+#pragma warning restore CA1416
+        }
+        return plaintext;
+    }
+
+    private static byte[] UnprotectFromLocalMachine(byte[] protectedBytes)
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+#pragma warning disable CA1416
+            return ProtectedData.Unprotect(protectedBytes, optionalEntropy: null, DataProtectionScope.LocalMachine);
+#pragma warning restore CA1416
+        }
+        return protectedBytes;
     }
 
     internal static Func<CancellationToken, Task<string?>> BuildHttpFetcher(
@@ -197,24 +277,82 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             return _ => Task.FromResult<string?>(null);
         }
 
-        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? parsedUrl) || parsedUrl.Scheme != Uri.UriSchemeHttps)
+        string? secureUrl = BackendEndpointResolver.EnsureSecureUrl(url, logger, "Security:BackendPublicKeyUrl");
+        if (secureUrl is null)
         {
-            logger.LogError(
-                "El endpoint de clave pública '{Url}' debe usar HTTPS. La clave pública no se descargará.",
-                url);
             return _ => Task.FromResult<string?>(null);
         }
+        url = secureUrl;
+
+        // Estado por closure para implementar el contrato de cache HTTP del openapi:
+        // el backend expone ETag/Cache-Control y espera que los clientes envíen
+        // If-None-Match para recibir 304 y evitar re-descargas.
+        string? cachedEtag = null;
+        string? cachedKid = null;
 
         return async (ct) =>
         {
             using HttpRequestMessage request = new(HttpMethod.Get, url);
             if (!string.IsNullOrWhiteSpace(agentToken))
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", agentToken);
+            if (!string.IsNullOrWhiteSpace(cachedEtag))
+                request.Headers.TryAddWithoutValidation("If-None-Match", cachedEtag);
 
             using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == HttpStatusCode.NotModified)
+            {
+                // 304 → clave sin cambios, mantener la que ya está en memoria/cache.
+                if (logger.IsEnabled(LogLevel.Debug))
+                    logger.LogDebug(
+                        "Clave pública no modificada (304). ETag={Etag}, Kid={Kid}.",
+                        cachedEtag, cachedKid);
+                return null;
+            }
+
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                TimeSpan? retryAfter = response.Headers.RetryAfter?.Delta
+                                       ?? (response.Headers.RetryAfter?.Date is DateTimeOffset retryAt
+                                           ? retryAt - DateTimeOffset.UtcNow
+                                           : null);
+                logger.LogWarning(
+                    "Rate limit alcanzado en /security/public-key (429). Reintentar en {RetrySeconds}s.",
+                    (int?)retryAfter?.TotalSeconds ?? -1);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning(
+                    "El backend rechazó la solicitud de clave pública. StatusCode={StatusCode}.",
+                    (int)response.StatusCode);
+                return null;
+            }
+
             string json = await response.Content.ReadAsStringAsync(ct);
             using JsonDocument doc = JsonDocument.Parse(json);
-            return doc.RootElement.GetProperty("publicKey").GetString();
+            string? publicKey = doc.RootElement.TryGetProperty("publicKey", out JsonElement pk)
+                ? pk.GetString()
+                : null;
+            string? kid = doc.RootElement.TryGetProperty("kid", out JsonElement kidEl)
+                ? kidEl.GetString()
+                : null;
+
+            if (!string.IsNullOrWhiteSpace(publicKey))
+            {
+                // Persistir ETag/kid solo si la clave fue aceptada por el cuerpo.
+                cachedEtag = response.Headers.ETag?.Tag;
+                cachedKid = kid;
+
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "Clave pública recibida del backend. Kid={Kid}, ETag={Etag}.",
+                        kid ?? "(sin kid)",
+                        cachedEtag ?? "(sin etag)");
+            }
+
+            return publicKey;
         };
     }
 }

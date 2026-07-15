@@ -6,19 +6,50 @@ namespace Trazzo.Biometric.Agent.Tests;
 public sealed class FingerprintCaptureResultTests
 {
     [Fact]
-    public void Succeeded_EncodesOnlyTemplateBytesWithinTemplateSize()
+    public void Succeeded_EncodesOnlyTemplateBytesWithinTemplateSize_WhenPlaintextGateOpen()
     {
         byte[] template = [1, 2, 3, 4, 5];
 
-        FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(template, 3);
+        bool previousGate = BiometricSecurityGates.AllowPlaintextTemplateFallback;
+        BiometricSecurityGates.AllowPlaintextTemplateFallback = true;
+        try
+        {
+            FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(template, 3);
 
-        Assert.Equal("fingerprint.capture.result", result.Type);
-        Assert.True(result.Success);
-        Assert.Equal("Huella capturada correctamente.", result.Message);
-        Assert.Equal(Convert.ToBase64String([1, 2, 3]), result.TemplateBase64);
-        Assert.Equal(3, result.TemplateSize);
-        Assert.Null(result.EncryptedTemplate);
-        Assert.Null(result.DeviceId);
+            Assert.Equal("fingerprint.capture.result", result.Type);
+            Assert.True(result.Success);
+            Assert.Equal("Huella capturada correctamente.", result.Message);
+            Assert.Equal(Convert.ToBase64String([1, 2, 3]), result.TemplateBase64);
+            Assert.Equal(3, result.TemplateSize);
+            Assert.Null(result.EncryptedTemplate);
+            Assert.Null(result.DeviceId);
+        }
+        finally
+        {
+            BiometricSecurityGates.AllowPlaintextTemplateFallback = previousGate;
+        }
+    }
+
+    [Fact]
+    public void Succeeded_WithoutEncryption_OmitsPlainTemplate_WhenGateClosed()
+    {
+        byte[] template = [1, 2, 3, 4, 5];
+
+        bool previousGate = BiometricSecurityGates.AllowPlaintextTemplateFallback;
+        BiometricSecurityGates.AllowPlaintextTemplateFallback = false;
+        try
+        {
+            FingerprintCaptureResult result = FingerprintCaptureResult.Succeeded(template, 3);
+
+            Assert.True(result.Success);
+            Assert.Null(result.TemplateBase64);
+            Assert.Null(result.EncryptedTemplate);
+            Assert.Equal(3, result.TemplateSize);
+        }
+        finally
+        {
+            BiometricSecurityGates.AllowPlaintextTemplateFallback = previousGate;
+        }
     }
 
     [Fact]

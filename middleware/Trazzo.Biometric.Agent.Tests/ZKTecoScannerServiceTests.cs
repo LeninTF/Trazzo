@@ -102,11 +102,12 @@ public sealed class ZKTecoScannerServiceTests
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
 
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.CaptureFingerprintAsync(CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal("Huella capturada correctamente.", result.Message);
-        // Sin crypto configurado, el template viaja en Base64 (modo desarrollo)
+        // Sin crypto configurado, el template viaja en Base64 solo si el gate plaintext está abierto (modo desarrollo)
         Assert.Equal(Convert.ToBase64String(capturedTemplate), result.TemplateBase64);
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
@@ -182,6 +183,7 @@ public sealed class ZKTecoScannerServiceTests
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
 
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
 
         Assert.True(result.Success);
@@ -221,6 +223,7 @@ public sealed class ZKTecoScannerServiceTests
         await service.InitializeAsync(CancellationToken.None);
 
         var progressMessages = new List<string>();
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.EnrollFingerprintAsync(
             (progress, _) => { progressMessages.Add(progress.Message); return Task.CompletedTask; },
             CancellationToken.None);

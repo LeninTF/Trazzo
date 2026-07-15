@@ -10,7 +10,12 @@ namespace Trazzo.Biometric.Agent.Backend;
 
 public sealed class RemoteEnrollmentService : BackgroundService
 {
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    // 16 KB para sesión pendiente (token + metadata).
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+        MaxResponseContentBufferSize = 16 * 1024
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IBiometricScannerService _scannerService;
@@ -45,8 +50,14 @@ public sealed class RemoteEnrollmentService : BackgroundService
         _httpClient = httpClient;
         _delay = delay ?? Task.Delay;
 
-        _pendingEnrollmentUrl = BackendEndpointResolver.ResolvePendingEnrollmentUrl(configuration);
-        _completeEnrollmentUrl = BackendEndpointResolver.ResolveCompleteEnrollmentUrl(configuration);
+        _pendingEnrollmentUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolvePendingEnrollmentUrl(configuration),
+            logger,
+            "Backend:Endpoints:PendingEnrollment");
+        _completeEnrollmentUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolveCompleteEnrollmentUrl(configuration),
+            logger,
+            "Backend:Endpoints:CompleteEnrollment");
         _tenantId = configuration["Agent:TenantId"];
         _agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         _deviceCode = configuration["Agent:DeviceCode"];
@@ -121,6 +132,14 @@ public sealed class RemoteEnrollmentService : BackgroundService
             return false;
         }
 
+        if (pending.ExpiresAt is not null && pending.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            _logger.LogWarning(
+                "Sesion de enrolamiento pendiente expirada (ExpiresAt={ExpiresAt}). Se ignora.",
+                pending.ExpiresAt.Value);
+            return false;
+        }
+
         FingerprintEnrollResult enrollResult = await _scannerService.EnrollFingerprintAsync(
             (progress, _) =>
             {
@@ -152,16 +171,20 @@ public sealed class RemoteEnrollmentService : BackgroundService
     {
         EncryptedPayload encrypted = enrollResult.EncryptedRegisteredTemplate!;
         string deviceCode = pending.DeviceCode ?? enrollResult.DeviceId ?? _deviceCode!;
+
+        // El backend (CompleteEnrollRequest.java) espera:
+        //   template_cifrado, llave_cifrado, capturado_en (LocalDateTime sin offset),
+        //   finger_index, device_code, enroll_token.
+        // Empaquetamos iv||cipher||tag dentro de `template_cifrado` para no perder
+        // los metadatos AES-GCM (Jackson en el backend lo recibe como string opaco).
         var payload = new
         {
             enroll_token = pending.EnrollToken,
             device_code = deviceCode,
             finger_index = pending.FingerIndex,
-            encrypted_template_base64 = encrypted.EncryptedTemplateBase64,
-            encrypted_aes_key_base64 = encrypted.EncryptedAesKeyBase64,
-            iv_base64 = encrypted.IvBase64,
-            tag_base64 = encrypted.TagBase64,
-            captured_at_utc = enrollResult.CapturedAtUtc.ToString("O")
+            template_cifrado = encrypted.ToPackedTemplateBase64(),
+            llave_cifrado = encrypted.EncryptedAesKeyBase64,
+            capturado_en = FormatAsLocalDateTime(enrollResult.CapturedAtUtc)
         };
 
         using StringContent content = new(
@@ -198,6 +221,11 @@ public sealed class RemoteEnrollmentService : BackgroundService
         string separator = endpointUrl.Contains('?') ? "&" : "?";
         return $"{endpointUrl}{separator}device_code={Uri.EscapeDataString(deviceCode)}";
     }
+
+    // Jackson en Spring parsea LocalDateTime sin offset. Convertimos a UTC y
+    // emitimos ISO 8601 sin zona (los milisegundos son opcionales pero útiles).
+    internal static string FormatAsLocalDateTime(DateTimeOffset value)
+        => value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
 
     private sealed class PendingEnrollSessionResponse
     {

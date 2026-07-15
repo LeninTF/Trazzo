@@ -254,7 +254,9 @@ public sealed class EventForwarderServiceTests
     public async Task BuildHttpSender_CuandoEnviaEvento_PayloadTieneFormatoCorrecto()
     {
         byte[] iv = new byte[12];
+        for (int i = 0; i < iv.Length; i++) iv[i] = (byte)(i + 1);
         byte[] tag = new byte[16];
+        for (int i = 0; i < tag.Length; i++) tag[i] = (byte)(0xA0 + i);
         byte[] ciphertext = [1, 2, 3];
         string llaveCifrada = Convert.ToBase64String([4, 5, 6]);
         DateTimeOffset capturedAt = new(2026, 5, 27, 10, 0, 0, TimeSpan.Zero);
@@ -286,13 +288,24 @@ public sealed class EventForwarderServiceTests
 
         JsonElement item = root.EnumerateArray().Single();
         Assert.Equal("identify", item.GetProperty("event_type").GetString());
-        Assert.Equal(Convert.ToBase64String(ciphertext), item.GetProperty("encrypted_template_base64").GetString());
-        Assert.Equal(llaveCifrada, item.GetProperty("encrypted_aes_key_base64").GetString());
-        Assert.Equal(Convert.ToBase64String(iv), item.GetProperty("iv_base64").GetString());
-        Assert.Equal(Convert.ToBase64String(tag), item.GetProperty("tag_base64").GetString());
+        // Nomenclatura del backend (misma que enroll/completar).
+        Assert.Equal(llaveCifrada, item.GetProperty("llave_cifrado").GetString());
         Assert.Equal("ZK9500-12345", item.GetProperty("device_code").GetString());
-        Assert.Equal(capturedAt.ToString("O"), item.GetProperty("captured_at_utc").GetString());
+        Assert.Equal("2026-05-27T10:00:00.000", item.GetProperty("capturado_en").GetString());
         Assert.Equal(1, item.GetProperty("offline_event_id").GetInt64());
+
+        // template_cifrado = base64(iv || cipher || tag) — formato AES-GCM estándar.
+        byte[] packed = Convert.FromBase64String(item.GetProperty("template_cifrado").GetString()!);
+        Assert.Equal(iv.Length + ciphertext.Length + tag.Length, packed.Length);
+        Assert.Equal(iv, packed[..12]);
+        Assert.Equal(ciphertext, packed[12..(12 + ciphertext.Length)]);
+        Assert.Equal(tag, packed[^16..]);
+
+        // Los campos del openapi que el backend no acepta ya no se envían.
+        Assert.False(item.TryGetProperty("encrypted_template_base64", out _));
+        Assert.False(item.TryGetProperty("iv_base64", out _));
+        Assert.False(item.TryGetProperty("tag_base64", out _));
+        Assert.False(item.TryGetProperty("captured_at_utc", out _));
     }
 
     [Fact]
@@ -388,16 +401,16 @@ public sealed class EventForwarderServiceTests
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
-        // No HTTP request must be made and the event must be removed from the queue (marked
-        // as sent) so it does not burn retry counts or cause permanent churn.
+        // Antes se marcaba como Sent silenciosamente (data loss). Ahora se marca como fallido
+        // para que MarkFailedAsync incremente retry_count y termine en estado 'failed' tras
+        // MaxRetries, dejando trazabilidad del evento no enviado.
         Assert.Null(handler.LastRequest);
-        Assert.Empty(queue.FailedIds);
-        Assert.Single(queue.SentIds);
-        Assert.Contains(5L, queue.SentIds[0]);
+        Assert.Empty(queue.SentIds);
+        Assert.Contains(5L, queue.FailedIds);
     }
 
     [Fact]
-    public async Task BuildHttpSender_CuandoEventoNoEsIdentify_DescartaSinConsumiReintentos()
+    public async Task BuildHttpSender_CuandoEventoNoEsIdentify_MarcaComoFallido()
     {
         BiometricEvent evt = new()
         {
@@ -419,12 +432,11 @@ public sealed class EventForwarderServiceTests
 
         await forwarder.TryForwardPendingAsync(CancellationToken.None);
 
-        // No HTTP request must be made; event is permanently skipped and marked as sent
-        // so it is pruned from the queue without burning retries.
+        // Antes se descartaba (Sent silencioso). Ahora se marca como fallido → después de
+        // MaxRetries pasa a Failed y queda visible en la cola para auditoría.
         Assert.Null(handler.LastRequest);
-        Assert.Empty(queue.FailedIds);
-        Assert.Single(queue.SentIds);
-        Assert.Contains(6L, queue.SentIds[0]);
+        Assert.Empty(queue.SentIds);
+        Assert.Contains(6L, queue.FailedIds);
     }
 
     private static EventForwarderService CreateForwarder(

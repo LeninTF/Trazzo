@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 namespace Trazzo.Biometric.Agent.AutoUpdate;
@@ -10,15 +11,22 @@ public sealed class AutoUpdateService : BackgroundService
 {
     private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    // Límite para el manifest (JSON con version + url + sha).
+    private const int MaxManifestBytes = 16 * 1024;
+    // Límite duro para el MSI (200 MB). Configurable via AutoUpdate:MaxMsiBytes.
+    private const long DefaultMaxMsiBytes = 200L * 1024 * 1024;
 
     private readonly bool _enabled;
     private readonly TimeSpan _checkInterval;
     private readonly string? _manifestUrl;
+    private readonly string _expectedPublisherCn;
+    private readonly long _maxMsiBytes;
     private readonly HttpClient _httpClient;
     private readonly ILogger<AutoUpdateService> _logger;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
     private readonly Func<Version> _getCurrentVersion;
     private readonly Action<string> _applyUpdate;
+    private readonly Func<string, string, bool> _verifyAuthenticode;
     private readonly string _updatesDirectory;
 
     public AutoUpdateService(IConfiguration configuration, ILogger<AutoUpdateService> logger)
@@ -33,7 +41,8 @@ public sealed class AutoUpdateService : BackgroundService
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<Version>? getCurrentVersion = null,
         Action<string>? applyUpdate = null,
-        string? updatesDirectory = null)
+        string? updatesDirectory = null,
+        Func<string, string, bool>? verifyAuthenticode = null)
     {
         _logger = logger;
         _httpClient = httpClient;
@@ -41,9 +50,12 @@ public sealed class AutoUpdateService : BackgroundService
         int intervalMinutes = Math.Max(5, configuration.GetValue("AutoUpdate:CheckIntervalMinutes", 60));
         _checkInterval = TimeSpan.FromMinutes(intervalMinutes);
         _manifestUrl = configuration["AutoUpdate:ManifestUrl"];
+        _expectedPublisherCn = configuration["AutoUpdate:PublisherCommonName"] ?? "Trazzo";
+        _maxMsiBytes = configuration.GetValue("AutoUpdate:MaxMsiBytes", DefaultMaxMsiBytes);
         _delay = delay ?? Task.Delay;
         _getCurrentVersion = getCurrentVersion ?? GetCurrentVersion;
         _applyUpdate = applyUpdate ?? ApplyUpdate;
+        _verifyAuthenticode = verifyAuthenticode ?? VerifyAuthenticodePublisher;
         _updatesDirectory = updatesDirectory ?? GetUpdatesDirectory();
     }
 
@@ -126,7 +138,8 @@ public sealed class AutoUpdateService : BackgroundService
     {
         try
         {
-            using HttpResponseMessage response = await _httpClient.GetAsync(_manifestUrl, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.GetAsync(
+                _manifestUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
@@ -135,7 +148,32 @@ public sealed class AutoUpdateService : BackgroundService
                 return null;
             }
 
-            string json = await response.Content.ReadAsStringAsync(cancellationToken);
+            long? contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is > MaxManifestBytes)
+            {
+                _logger.LogWarning(
+                    "Auto-Update: manifiesto excede el máximo permitido ({ActualBytes} > {MaxBytes} bytes).",
+                    contentLength.Value, MaxManifestBytes);
+                return null;
+            }
+
+            await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using MemoryStream buffer = new(capacity: 4096);
+            byte[] readBuf = new byte[4096];
+            int read;
+            while ((read = await body.ReadAsync(readBuf, cancellationToken)) > 0)
+            {
+                if (buffer.Length + read > MaxManifestBytes)
+                {
+                    _logger.LogWarning(
+                        "Auto-Update: manifiesto excede el máximo permitido ({MaxBytes} bytes) durante lectura.",
+                        MaxManifestBytes);
+                    return null;
+                }
+                buffer.Write(readBuf, 0, read);
+            }
+
+            string json = System.Text.Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
             return JsonSerializer.Deserialize<UpdateManifest>(json, JsonOptions);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -162,10 +200,12 @@ public sealed class AutoUpdateService : BackgroundService
 
         string updatesDir = _updatesDirectory;
         Directory.CreateDirectory(updatesDir);
+        CleanupOldMsiFiles(updatesDir);
         string tempPath = Path.Combine(updatesDir, $"TrazzoAgent-{version}-{Guid.NewGuid():N}.msi");
         try
         {
-            using HttpResponseMessage response = await _httpClient.GetAsync(downloadUri, cancellationToken);
+            using HttpResponseMessage response = await _httpClient.GetAsync(
+                downloadUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
@@ -174,9 +214,37 @@ public sealed class AutoUpdateService : BackgroundService
                 return null;
             }
 
-            await using (FileStream fs = new(tempPath, FileMode.Create, FileAccess.Write))
+            long? contentLength = response.Content.Headers.ContentLength;
+            if (contentLength is null)
             {
-                await response.Content.CopyToAsync(fs, cancellationToken);
+                _logger.LogWarning(
+                    "Auto-Update: la respuesta no incluye Content-Length. Se requiere para validar el tamaño del MSI.");
+                return null;
+            }
+            if (contentLength.Value > _maxMsiBytes)
+            {
+                _logger.LogWarning(
+                    "Auto-Update: MSI excede el máximo permitido ({ActualBytes} > {MaxBytes} bytes).",
+                    contentLength.Value, _maxMsiBytes);
+                return null;
+            }
+
+            await using Stream body = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using FileStream fs = new(tempPath, FileMode.Create, FileAccess.Write);
+            byte[] copyBuffer = new byte[81920];
+            long total = 0;
+            int read;
+            while ((read = await body.ReadAsync(copyBuffer, cancellationToken)) > 0)
+            {
+                total += read;
+                if (total > _maxMsiBytes)
+                {
+                    _logger.LogWarning(
+                        "Auto-Update: MSI excede el máximo permitido ({MaxBytes} bytes) durante lectura.",
+                        _maxMsiBytes);
+                    return null;
+                }
+                await fs.WriteAsync(copyBuffer.AsMemory(0, read), cancellationToken);
             }
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -194,8 +262,87 @@ public sealed class AutoUpdateService : BackgroundService
             return null;
         }
 
-        _logger.LogInformation("Auto-Update: instalador descargado y verificado correctamente.");
+        if (!_verifyAuthenticode(tempPath, _expectedPublisherCn))
+        {
+            _logger.LogError(
+                "Auto-Update: la firma Authenticode no coincide con el publisher esperado '{PublisherCn}'. Instalación abortada.",
+                _expectedPublisherCn);
+            TryDeleteFile(tempPath);
+            return null;
+        }
+
+        _logger.LogInformation("Auto-Update: instalador descargado y verificado correctamente (SHA-256 + Authenticode).");
         return tempPath;
+    }
+
+    [ExcludeFromCodeCoverage(Justification = "Requires signed MSI to test end-to-end.")]
+    private bool VerifyAuthenticodePublisher(string filePath, string expectedPublisherCn)
+    {
+        try
+        {
+            // X509Certificate.CreateFromSignedFile lee el certificado embebido del Authenticode.
+            // No es suficiente por sí solo (no valida cadena/CRL), pero comprobamos que el CN coincide.
+            // El warning SYSLIB0057 sugiere X509CertificateLoader, que aún no expone equivalente para signed files.
+#pragma warning disable SYSLIB0057
+            X509Certificate certificate = X509Certificate.CreateFromSignedFile(filePath);
+            using X509Certificate2 cert2 = new(certificate);
+#pragma warning restore SYSLIB0057
+
+            string subjectCn = ExtractCommonName(cert2.Subject);
+            if (!string.Equals(subjectCn, expectedPublisherCn, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Auto-Update: Publisher CN='{ActualCn}' no coincide con el esperado '{ExpectedCn}'.",
+                    subjectCn, expectedPublisherCn);
+                return false;
+            }
+
+            // Validación de cadena y confianza contra el trust store del sistema.
+            using X509Chain chain = new()
+            {
+                ChainPolicy =
+                {
+                    RevocationMode = X509RevocationMode.Online,
+                    RevocationFlag = X509RevocationFlag.ExcludeRoot,
+                    VerificationFlags = X509VerificationFlags.NoFlag
+                }
+            };
+            bool chainOk = chain.Build(cert2);
+            if (!chainOk)
+            {
+                foreach (X509ChainStatus status in chain.ChainStatus)
+                {
+                    _logger.LogWarning(
+                        "Auto-Update: cadena de certificados inválida. {Status}: {Info}",
+                        status.Status, status.StatusInformation);
+                }
+                return false;
+            }
+
+            return true;
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogError(ex, "Auto-Update: el archivo no está firmado o la firma es inválida.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auto-Update: error al validar la firma Authenticode.");
+            return false;
+        }
+    }
+
+    private static string ExtractCommonName(string subject)
+    {
+        // Subject viene como "CN=Trazzo, O=..., L=..."
+        foreach (string part in subject.Split(','))
+        {
+            string trimmed = part.Trim();
+            if (trimmed.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                return trimmed[3..];
+        }
+        return subject;
     }
 
     private static bool VerifySha256(string filePath, string expectedHex)
@@ -240,6 +387,36 @@ public sealed class AutoUpdateService : BackgroundService
         {
             _logger.LogError(ex, "Auto-Update: error al ejecutar el instalador MSI.");
             TryDeleteFile(msiPath);
+        }
+    }
+
+    // Elimina .msi antiguos del directorio de updates para no acumularlos en disco.
+    // Mantiene los últimos 3 por si se necesita rollback manual.
+    private void CleanupOldMsiFiles(string updatesDir)
+    {
+        try
+        {
+            var oldFiles = new DirectoryInfo(updatesDir)
+                .GetFiles("TrazzoAgent-*.msi")
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .Skip(3)
+                .ToArray();
+
+            foreach (FileInfo file in oldFiles)
+            {
+                try { file.Delete(); }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "Auto-Update: no se pudo borrar MSI antiguo {File}.", file.Name);
+                }
+            }
+
+            if (oldFiles.Length > 0)
+                _logger.LogInformation("Auto-Update: {Count} MSI antiguo(s) eliminado(s) del directorio de updates.", oldFiles.Length);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Auto-Update: error no crítico en cleanup de updates directory.");
         }
     }
 

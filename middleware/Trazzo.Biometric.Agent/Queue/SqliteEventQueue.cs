@@ -6,10 +6,13 @@ namespace Trazzo.Biometric.Agent.Queue;
 public sealed class SqliteEventQueue : IEventQueue, IDisposable
 {
     private const int MaxRetries = 5;
+    private static readonly TimeSpan PruneInterval = TimeSpan.FromHours(6);
 
     private readonly string _connectionString;
     private readonly ILogger<SqliteEventQueue> _logger;
     private readonly SqliteConnection? _keepAliveConnection;
+    private DateTimeOffset _lastPruneAtUtc = DateTimeOffset.MinValue;
+    private readonly object _pruneLock = new();
 
     public SqliteEventQueue(IConfiguration configuration, ILogger<SqliteEventQueue> logger)
         : this(BuildConnectionString(configuration), logger)
@@ -72,7 +75,8 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         cmd.CommandText = """
             SELECT id, event_type, encrypted_template_base64, encrypted_aes_key_base64,
-                   iv_base64, tag_base64, device_id, captured_at_utc, status, retry_count
+                   iv_base64, tag_base64, device_id, captured_at_utc, status, retry_count,
+                   created_at_utc
             FROM biometric_events
             WHERE status = 'pending'
             ORDER BY id ASC
@@ -96,7 +100,10 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
                 DeviceId = await reader.IsDBNullAsync(6, cancellationToken) ? null : reader.GetString(6),
                 CapturedAtUtc = DateTimeOffset.Parse(reader.GetString(7), CultureInfo.InvariantCulture),
                 Status = Enum.Parse<BiometricEventStatus>(reader.GetString(8), ignoreCase: true),
-                RetryCount = reader.GetInt32(9)
+                RetryCount = reader.GetInt32(9),
+                CreatedAtUtc = await reader.IsDBNullAsync(10, cancellationToken)
+                    ? null
+                    : DateTimeOffset.Parse(reader.GetString(10), CultureInfo.InvariantCulture)
             });
         }
 
@@ -110,25 +117,21 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
         await using SqliteConnection conn = new(_connectionString);
         await conn.OpenAsync(cancellationToken);
-        await using SqliteTransaction tx =
-            (SqliteTransaction)await conn.BeginTransactionAsync(cancellationToken);
-        string sentAt = DateTimeOffset.UtcNow.ToString("O");
+        await using SqliteCommand cmd = conn.CreateCommand();
 
-        foreach (long id in idArray)
-        {
-            await using SqliteCommand cmd = conn.CreateCommand();
-            cmd.Transaction = tx;
-            cmd.CommandText = """
-                UPDATE biometric_events
-                SET status = 'sent', sent_at_utc = @sentAt
-                WHERE id = @id
-                """;
-            cmd.Parameters.AddWithValue("@sentAt", sentAt);
-            cmd.Parameters.AddWithValue("@id", id);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-        }
+        // Batch: 1 sola sentencia con placeholders posicionales para todos los ids.
+        // Antes: N UPDATE en una transacción (mismo total de round-trips al motor).
+        string placeholders = string.Join(",", Enumerable.Range(0, idArray.Length).Select(i => $"@id{i}"));
+        cmd.CommandText = $"""
+            UPDATE biometric_events
+            SET status = 'sent', sent_at_utc = @sentAt
+            WHERE id IN ({placeholders})
+            """;
+        cmd.Parameters.AddWithValue("@sentAt", DateTimeOffset.UtcNow.ToString("O"));
+        for (int i = 0; i < idArray.Length; i++)
+            cmd.Parameters.AddWithValue($"@id{i}", idArray[i]);
 
-        await tx.CommitAsync(cancellationToken);
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task MarkFailedAsync(long id, CancellationToken cancellationToken = default)
@@ -162,6 +165,14 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
 
     public async Task PruneAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
+        // Throttle: no correr más de una vez cada PruneInterval (6 h) para evitar DELETE constantes.
+        lock (_pruneLock)
+        {
+            if (DateTimeOffset.UtcNow - _lastPruneAtUtc < PruneInterval)
+                return;
+            _lastPruneAtUtc = DateTimeOffset.UtcNow;
+        }
+
         await using SqliteConnection conn = new(_connectionString);
         await conn.OpenAsync(cancellationToken);
         await using SqliteCommand cmd = conn.CreateCommand();
@@ -186,7 +197,10 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
         conn.Open();
         using SqliteCommand cmd = conn.CreateCommand();
 
+        // WAL: mejora concurrencia de lecturas/escrituras y durabilidad. NORMAL sync es seguro con WAL.
         cmd.CommandText = """
+            PRAGMA journal_mode=WAL;
+            PRAGMA synchronous=NORMAL;
             CREATE TABLE IF NOT EXISTS biometric_events (
                 id                          INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_type                  TEXT NOT NULL,
@@ -216,6 +230,8 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
             : configuredPath;
 
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
-        return $"Data Source={dbPath}";
+        // Pooling=True reduce el overhead de abrir conexión por operación.
+        return $"Data Source={dbPath};Pooling=True";
     }
+
 }

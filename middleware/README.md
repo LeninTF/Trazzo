@@ -5,7 +5,7 @@ Documentación completa en cada subcarpeta:
 | README | Contenido |
 |--------|-----------|
 | [Trazzo.Biometric.Agent](./Trazzo.Biometric.Agent/README.md) | Arquitectura, configuración, protocolo WebSocket, seguridad, errores comunes |
-| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (262 pruebas), cobertura, fakes |
+| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (345 pruebas), cobertura, fakes |
 | [Trazzo.Biometric.Agent.Installer](./Trazzo.Biometric.Agent.Installer/README.md) | Generación del MSI con WiX v4, flujo del instalador, imágenes |
 | [Native/x64](./Trazzo.Biometric.Agent/Native/x64/README.md) | Cómo colocar la DLL del SDK ZKTeco |
 | [Dev handoff](./docs/README-dev-handoff.md) | Pendientes de integración: WebSocket, backend real, hardware, despliegue |

@@ -19,6 +19,10 @@ public sealed class LocalWebSocketServerService(
     IAttendanceMarkingClient? attendanceMarkingClient = null) : IWebSocketServerService
 {
     private const string ErrorMessageType = "error";
+    // 256 KB por mensaje: suficiente para JSON de matching (~1000 templates base64) sin dar espacio a OOM.
+    private const int DefaultMaxIncomingMessageBytes = 256 * 1024;
+    // Máximo de operaciones biométricas en vuelo por conexión (evita flood).
+    private const int DefaultMaxPendingOperationsPerClient = 8;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpListener _listener = new();
@@ -27,6 +31,10 @@ public sealed class LocalWebSocketServerService(
         Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
     private readonly int _deviceMonitorIntervalSeconds = Math.Max(1,
         configuration.GetValue("Agent:DeviceMonitorIntervalSeconds", 3));
+    private readonly int _maxIncomingMessageBytes = Math.Max(4096,
+        configuration.GetValue("Agent:MaxIncomingMessageBytes", DefaultMaxIncomingMessageBytes));
+    private readonly int _maxPendingOperationsPerClient = Math.Max(1,
+        configuration.GetValue("Agent:MaxPendingOperationsPerClient", DefaultMaxPendingOperationsPerClient));
     private bool? _monitorLastKnownConnected;
     private DateTimeOffset? _monitorDisconnectedSince;
     private CancellationTokenSource? _serverCts;
@@ -148,6 +156,7 @@ public sealed class LocalWebSocketServerService(
             {
                 using MemoryStream messageStream = new();
                 WebSocketReceiveResult receiveResult;
+                bool messageTooLarge = false;
 
                 do
                 {
@@ -158,12 +167,46 @@ public sealed class LocalWebSocketServerService(
                         return;
                     }
 
+                    // Cap del mensaje para prevenir OOM por cliente malicioso enviando fragmentos infinitos.
+                    if (messageStream.Length + receiveResult.Count > _maxIncomingMessageBytes)
+                    {
+                        messageTooLarge = true;
+                        break;
+                    }
+
                     await messageStream.WriteAsync(buffer.AsMemory(0, receiveResult.Count), cancellationToken);
                 }
                 while (!receiveResult.EndOfMessage);
 
-                string json = Encoding.UTF8.GetString(messageStream.ToArray());
+                if (messageTooLarge)
+                {
+                    logger.LogWarning(
+                        "Cliente {ClientId} envió un mensaje mayor al máximo permitido ({MaxBytes} bytes). Cerrando conexión.",
+                        clientId, _maxIncomingMessageBytes);
+                    await webSocket.CloseAsync(
+                        WebSocketCloseStatus.MessageTooBig,
+                        $"Mensaje excede el máximo permitido ({_maxIncomingMessageBytes} bytes).",
+                        cancellationToken);
+                    return;
+                }
+
                 pendingOperations.RemoveAll(task => task.IsCompleted);
+
+                // Contra-flood: si el cliente supera el límite de operaciones concurrentes, dropea el mensaje con un error.
+                if (pendingOperations.Count >= _maxPendingOperationsPerClient)
+                {
+                    logger.LogWarning(
+                        "Cliente {ClientId} excedió el límite de operaciones concurrentes ({Max}). Mensaje rechazado.",
+                        clientId, _maxPendingOperationsPerClient);
+                    await SendJsonAsync(
+                        webSocket,
+                        new { type = ErrorMessageType, success = false, message = "Demasiadas operaciones concurrentes. Espere a que terminen las actuales." },
+                        sendLock,
+                        cancellationToken);
+                    continue;
+                }
+
+                string json = Encoding.UTF8.GetString(messageStream.ToArray());
                 pendingOperations.Add(Task.Run(
                     () => ProcessClientMessageAsync(json, webSocket, clientId, sendLock, cancellationToken),
                     CancellationToken.None));

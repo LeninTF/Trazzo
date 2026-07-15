@@ -9,7 +9,12 @@ namespace Trazzo.Biometric.Agent.Backend;
 
 public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
 {
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+    // 8 KB alcanza para respuesta de marcación (ok / rejected + metadata).
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15),
+        MaxResponseContentBufferSize = 8 * 1024
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
@@ -34,7 +39,10 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
     {
         _logger = logger;
         _httpClient = httpClient;
-        _attendanceMarkUrl = BackendEndpointResolver.ResolveAttendanceMarkUrl(configuration);
+        _attendanceMarkUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolveAttendanceMarkUrl(configuration),
+            logger,
+            "Backend:Endpoints:AttendanceMark");
         _agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         _tenantId = configuration["Agent:TenantId"];
         _deviceCode = configuration["Agent:DeviceCode"];
@@ -67,14 +75,15 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
             return false;
         }
 
+        // Nomenclatura alineada con lo que el backend ya expone en enroll/completar
+        // (template_cifrado / llave_cifrado / capturado_en). El iv+tag AES-GCM van
+        // empaquetados dentro de template_cifrado (formato estándar iv||cipher||tag).
         var payload = new
         {
             event_type = "identify",
-            encrypted_template_base64 = encryptedTemplate.EncryptedTemplateBase64,
-            encrypted_aes_key_base64 = encryptedTemplate.EncryptedAesKeyBase64,
-            iv_base64 = encryptedTemplate.IvBase64,
-            tag_base64 = encryptedTemplate.TagBase64,
-            captured_at_utc = capturedAtUtc.ToString("O"),
+            template_cifrado = encryptedTemplate.ToPackedTemplateBase64(),
+            llave_cifrado = encryptedTemplate.EncryptedAesKeyBase64,
+            capturado_en = RemoteEnrollmentService.FormatAsLocalDateTime(capturedAtUtc),
             device_code = resolvedDeviceCode
         };
 

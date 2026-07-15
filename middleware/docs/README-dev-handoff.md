@@ -137,13 +137,13 @@ Pendiente de infraestructura/release:
 
 ### 6. Tests de entorno
 
-La suite tiene 262 tests. En este entorno se verifico:
+La suite tiene 345 tests. En este entorno se verifico:
 
 - `dotnet build Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj --no-restore`: OK.
-- `dotnet test ... --filter "FullyQualifiedName~WebSocketResponseTests|FullyQualifiedName~ZKTecoScannerServiceTests"`: 89/89 OK.
-- `dotnet test ... --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"`: 240/240 OK.
+- `dotnet test ... --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"`: 311/311 OK.
+- Los 34 tests restantes son de `LocalWebSocketServerServiceTests` (listener local real).
 
-Los 22 tests que levantan `HttpListener` pueden fallar en entornos restringidos con:
+Los tests que levantan `HttpListener` pueden fallar en entornos restringidos con:
 
 ```text
 System.Net.HttpListenerException: Controlador no valido.
