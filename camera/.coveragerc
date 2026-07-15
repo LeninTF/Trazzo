@@ -1,0 +1,18 @@
+[run]
+source = src
+branch = True
+omit =
+    src/__init__.py
+    src/*/__init__.py
+    src/server.py
+    src/infrastructure/camera.py
+    src/infrastructure/face_engine.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    raise NotImplementedError
+    if TYPE_CHECKING:
+show_missing = True
+skip_covered = False

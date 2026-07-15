@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+models/buffalo_sc/
+models/anti_spoofing/
+*.db
+*.db-wal
+*.db-shm
+*.key
+keys/
+frame_test.jpg
+.pytest_tmp/
+.pytest_cache/
+htmlcov/
+coverage.xml
+.coverage
