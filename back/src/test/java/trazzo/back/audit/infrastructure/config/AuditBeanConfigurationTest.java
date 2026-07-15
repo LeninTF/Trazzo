@@ -54,6 +54,6 @@ class AuditBeanConfigurationTest {
 
     @Test
     void shouldCreateAuditMetricsUseCase() {
-        assertNotNull(config.auditMetricsUseCase());
+        assertNotNull(config.auditMetricsUseCase(auditRepositoryPort));
     }
 }

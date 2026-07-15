@@ -8,6 +8,7 @@ import lombok.Setter;
 import trazzo.back.audit.domain.model.master.Action;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Entity
@@ -55,7 +56,7 @@ public class AuditEntity {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+            createdAt = LocalDateTime.now(ZoneId.systemDefault());
         }
     }
 }
