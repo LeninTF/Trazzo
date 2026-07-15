@@ -4,12 +4,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
+<<<<<<< Updated upstream
 
 import java.time.LocalDateTime;
+=======
+>>>>>>> Stashed changes
 
 @RequiredArgsConstructor
 public class AuditMetricsService implements AuditMetricsUseCase {
 
+<<<<<<< Updated upstream
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -36,5 +40,10 @@ public class AuditMetricsService implements AuditMetricsUseCase {
                 Math.round(crecimiento * 10.0) / 10.0,
                 0.0
         );
+=======
+    @Override
+    public AuditMetricsResult getMetrics() {
+        return new AuditMetricsResult(0, 0, 0, 0.0, 0.0);
+>>>>>>> Stashed changes
     }
 }

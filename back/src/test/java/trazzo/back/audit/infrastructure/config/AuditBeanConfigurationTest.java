@@ -56,6 +56,10 @@ class AuditBeanConfigurationTest {
 
     @Test
     void shouldCreateAuditMetricsUseCase() {
+<<<<<<< Updated upstream
         assertNotNull(config.auditMetricsUseCase(jdbcTemplate));
+=======
+        assertNotNull(config.auditMetricsUseCase());
+>>>>>>> Stashed changes
     }
 }

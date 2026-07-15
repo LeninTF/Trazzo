@@ -56,7 +56,12 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
+<<<<<<< Updated upstream
     public AuditMetricsUseCase auditMetricsUseCase(JdbcTemplate jdbcTemplate) {
         return new AuditMetricsService(jdbcTemplate);
+=======
+    public AuditMetricsUseCase auditMetricsUseCase() {
+        return new AuditMetricsService();
+>>>>>>> Stashed changes
     }
 }
