@@ -13,7 +13,7 @@ public class Session {
     private String userAgent;
     private String deviceFingerprint;
     private LocalDateTime loginAt;
-    private LocalDateTime lasActivityAt;
+    private LocalDateTime lastActivityAt;
     private LocalDateTime logoutAt;
     private LocalDateTime expiresAt;
     private SessionState state;
@@ -28,7 +28,7 @@ public class Session {
             String userAgent,
             String deviceFingerprint,
             LocalDateTime loginAt,
-            LocalDateTime lasActivityAt,
+            LocalDateTime lastActivityAt,
             LocalDateTime logoutAt,
             LocalDateTime expiresAt,
             SessionState state,
@@ -62,7 +62,7 @@ public class Session {
         if (logoutAt != null && logoutAt.isBefore(loginAt)) {
             throw new IllegalArgumentException("Logout date cannot be before login date.");
         }
-        if (lasActivityAt != null && lasActivityAt.isBefore(loginAt)) {
+        if (lastActivityAt != null && lastActivityAt.isBefore(loginAt)) {
             throw new IllegalArgumentException("Last activity cannot be before login.");
         }
         if (state == null) {
@@ -86,7 +86,7 @@ public class Session {
         this.userAgent = userAgent;
         this.deviceFingerprint = deviceFingerprint;
         this.loginAt = loginAt;
-        this.lasActivityAt = lasActivityAt;
+        this.lastActivityAt = lastActivityAt;
         this.logoutAt = logoutAt;
         this.expiresAt = expiresAt;
         this.state = state;

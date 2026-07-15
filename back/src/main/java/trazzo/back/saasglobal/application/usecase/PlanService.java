@@ -3,6 +3,7 @@ package trazzo.back.saasglobal.application.usecase;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.dto.command.CreatePlanCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdatePlanCommand;
 import trazzo.back.saasglobal.application.dto.result.PlanResult;
@@ -12,6 +13,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PlanService implements PlanUseCase {
 
     private static final String NOT_FOUND_MSG = "Plan not found: ";

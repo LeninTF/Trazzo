@@ -20,7 +20,7 @@ class SesionTest {
         assertEquals("Mozilla/5.0", s.getUserAgent());
         assertEquals("fp-abc", s.getDeviceFingerprint());
         assertEquals(now, s.getLoginAt());
-        assertEquals(now, s.getLasActivityAt());
+        assertEquals(now, s.getLastActivityAt());
         assertNull(s.getLogoutAt());
         assertEquals(now.plusHours(2), s.getExpiresAt());
         assertEquals(SessionState.ACTIVE, s.getState());
@@ -156,7 +156,7 @@ class SesionTest {
     }
 
     @Test
-    void shouldThrowWhenLasActivityAtIsBeforeLoginAt() {
+    void shouldThrowWhenLastActivityAtIsBeforeLoginAt() {
         assertThrows(IllegalArgumentException.class,
                 () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
                         now, now.minusHours(1), null, now.plusHours(1),

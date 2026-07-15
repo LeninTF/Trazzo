@@ -62,7 +62,7 @@ class SessionMapperTest {
         assertEquals("curl/7.68", domain.getUserAgent());
         assertEquals("fp-002", domain.getDeviceFingerprint());
         assertEquals(now, domain.getLoginAt());
-        assertEquals(now.plusHours(2), domain.getLasActivityAt());
+        assertEquals(now.plusHours(2), domain.getLastActivityAt());
         assertNull(domain.getLogoutAt());
         assertEquals(now.plusDays(30), domain.getExpiresAt());
         assertEquals(SessionState.ACTIVE, domain.getState());
@@ -87,7 +87,7 @@ class SessionMapperTest {
         assertEquals(original.getUserAgent(), restored.getUserAgent());
         assertEquals(original.getDeviceFingerprint(), restored.getDeviceFingerprint());
         assertEquals(original.getLoginAt(), restored.getLoginAt());
-        assertEquals(original.getLasActivityAt(), restored.getLasActivityAt());
+        assertEquals(original.getLastActivityAt(), restored.getLastActivityAt());
         assertEquals(original.getLogoutAt(), restored.getLogoutAt());
         assertEquals(original.getExpiresAt(), restored.getExpiresAt());
         assertEquals(SessionState.ACTIVE, restored.getState());

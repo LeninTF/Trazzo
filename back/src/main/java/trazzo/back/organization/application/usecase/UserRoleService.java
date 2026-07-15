@@ -1,6 +1,7 @@
 package trazzo.back.organization.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.organization.application.dto.command.AssignRoleToUserCommand;
 import trazzo.back.organization.application.dto.result.UserRoleAssignmentResult;
 import trazzo.back.organization.application.port.in.UserRoleUseCase;
@@ -13,6 +14,7 @@ import trazzo.back.organization.domain.model.roles.TenantUserRole;
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 public class UserRoleService implements UserRoleUseCase {
 
     private final UserRoleRepositoryPort userRoleRepository;

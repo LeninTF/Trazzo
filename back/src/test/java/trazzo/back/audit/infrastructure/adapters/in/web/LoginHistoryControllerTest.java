@@ -32,7 +32,7 @@ class LoginHistoryControllerTest {
 
     private static LogInHistoryResult aResult() {
         return new LogInHistoryResult("1", "u-1", "user@test.com",
-                StatusLogin.SUCCES, "192.168.1.1", "Mozilla/5.0", LocalDateTime.now());
+                StatusLogin.SUCCESS, "192.168.1.1", "Mozilla/5.0", LocalDateTime.now());
     }
 
     @Test
@@ -56,7 +56,7 @@ class LoginHistoryControllerTest {
         mockMvc.perform(get("/audit/login-history/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("1"))
-                .andExpect(jsonPath("$.status").value("SUCCES"));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
     }
 
     @Test

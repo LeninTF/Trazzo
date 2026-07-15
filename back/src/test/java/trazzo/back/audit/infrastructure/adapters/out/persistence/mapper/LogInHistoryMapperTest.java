@@ -16,14 +16,14 @@ class LogInHistoryMapperTest {
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
         var domain = new LogInHistory("00000000-0000-0000-0000-000000000001", "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-                "test@example.com", StatusLogin.SUCCES,
+                "test@example.com", StatusLogin.SUCCESS,
                 "192.168.1.1", "Mozilla/5.0", now);
 
         var entity = LogInHistoryMapper.toEntity(domain);
 
         assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", entity.getUserId().toString());
         assertEquals("test@example.com", entity.getAttemptedEmail());
-        assertEquals(StatusLogin.SUCCES, entity.getStatus());
+        assertEquals(StatusLogin.SUCCESS, entity.getStatus());
         assertEquals("192.168.1.1", entity.getIpAddress());
         assertEquals("Mozilla/5.0", entity.getUserAgent());
         assertEquals(now, entity.getCreatedAt());

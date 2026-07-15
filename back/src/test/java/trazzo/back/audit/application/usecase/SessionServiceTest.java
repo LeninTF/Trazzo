@@ -45,7 +45,7 @@ class SessionServiceTest {
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals("fp-123", result.deviceFingerprint());
         assertEquals(now, result.loginAt());
-        assertEquals(now, result.lasActivityAt());
+        assertEquals(now, result.lastActivityAt());
         assertNull(result.logoutAt());
         assertEquals(now.plusHours(1), result.expiresAt());
         assertEquals(SessionState.ACTIVE, result.state());

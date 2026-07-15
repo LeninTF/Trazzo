@@ -40,6 +40,6 @@ class IncidentsBeanConfigTest {
 
     @Test
     void shouldCreateNotificationUseCase() {
-        assertNotNull(config.notificationUseCase(incidentRepo));
+        assertNotNull(config.notificationUseCase(incidentRepo, eventPublisher));
     }
 }

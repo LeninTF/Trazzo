@@ -1,6 +1,7 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
@@ -23,6 +24,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
+@Transactional
 public class IncidentService implements IncidentUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

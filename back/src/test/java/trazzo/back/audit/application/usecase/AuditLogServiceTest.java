@@ -1,11 +1,7 @@
 package trazzo.back.audit.application.usecase;
 
 import static org.junit.jupiter.api.Assertions.*;
-<<<<<<< Updated upstream
 import static org.mockito.ArgumentMatchers.any;
-=======
->>>>>>> Stashed changes
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +52,7 @@ class AuditLogServiceTest {
         assertEquals(Action.CREATE, result.action());
         assertEquals("user-1", result.userId());
         assertEquals("/api/test", result.endpoint());
-        assertEquals("192.168.1.1", result.ipAdress());
+        assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals(Map.of(), result.previousValue());
         assertEquals(Map.of(), result.newValue());
@@ -75,15 +71,9 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", Map.of("old", "val"), Map.of("new", "val"), now);
-<<<<<<< Updated upstream
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.of(new TenantInfoPort.TenantInfo("tenant-1", "Test Corp")));
-=======
-        when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
-        when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
-        when(tenantInfoPort.findByTenantId("user-1")).thenReturn(Optional.of(new TenantInfoPort.TenantInfo("tenant-1", "Test Corp")));
->>>>>>> Stashed changes
         when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.of(new UserInfoPort.UserInfo("user-1", "John Doe", "john@test.com")));
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -109,15 +99,9 @@ class AuditLogServiceTest {
         assertEquals("192.168.1.1", logResult.ipAddress());
         assertEquals("Mozilla/5.0", logResult.userAgent());
 
-<<<<<<< Updated upstream
         verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class));
         verify(auditRepository).count(any(), any(), any(), any(), any(), any());
         verify(tenantInfoPort).findByUserId("user-1");
-=======
-        verify(auditRepository).findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any());
-        verify(auditRepository).count(null, null, null, null, null);
-        verify(tenantInfoPort).findByTenantId("user-1");
->>>>>>> Stashed changes
         verify(userInfoPort).findByUserId("user-1");
     }
 
@@ -126,15 +110,9 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.DELETE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-<<<<<<< Updated upstream
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
-=======
-        when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
-        when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
-        when(tenantInfoPort.findByTenantId("user-1")).thenReturn(Optional.empty());
->>>>>>> Stashed changes
         when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -148,15 +126,9 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-<<<<<<< Updated upstream
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
-=======
-        when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
-        when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
-        when(tenantInfoPort.findByTenantId("user-1")).thenReturn(Optional.empty());
->>>>>>> Stashed changes
         when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -170,37 +142,22 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.UPDATE, null, "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-<<<<<<< Updated upstream
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
-=======
-        when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(audit));
-        when(auditRepository.count(null, null, null, null, null)).thenReturn(1L);
->>>>>>> Stashed changes
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
 
         assertEquals(1, result.content().size());
         assertNull(result.content().get(0).userName());
         assertNull(result.content().get(0).userEmail());
-<<<<<<< Updated upstream
         verify(tenantInfoPort, never()).findByUserId(any());
-=======
-        // tenantInfo is still looked up with null userId
-        verify(tenantInfoPort).findByTenantId(null);
->>>>>>> Stashed changes
         verify(userInfoPort, never()).findByUserId(any());
     }
 
     @Test
     void findAllReturnsEmptyWhenNoAudits() {
-<<<<<<< Updated upstream
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of());
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(0L);
-=======
-        when(auditRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of());
-        when(auditRepository.count(null, null, null, null, null)).thenReturn(0L);
->>>>>>> Stashed changes
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
 

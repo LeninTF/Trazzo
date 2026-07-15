@@ -13,7 +13,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/storage")
+@RequestMapping("/storage")
 public class StorageController {
 
     private final FileStoragePort fileStoragePort;

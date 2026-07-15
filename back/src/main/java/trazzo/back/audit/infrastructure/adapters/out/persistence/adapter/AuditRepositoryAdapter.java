@@ -106,7 +106,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
                         e.getAction(),
                         e.getUserId() != null ? e.getUserId().toString() : null,
                         e.getEndpoint(),
-                        e.getIpAdress(),
+                        e.getIpAddress(),
                         e.getUserAgent(),
                         deserializeJson(e.getOldValue()),
                         deserializeJson(e.getNewValue()),

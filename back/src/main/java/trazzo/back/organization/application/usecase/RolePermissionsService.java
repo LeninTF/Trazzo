@@ -1,6 +1,7 @@
 package trazzo.back.organization.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.organization.application.dto.command.AssignPermissionToRoleCommand;
 import trazzo.back.organization.application.dto.result.RolePermissionResult;
 import trazzo.back.organization.application.port.in.RolePermissionsUseCase;
@@ -14,6 +15,7 @@ import trazzo.back.organization.domain.model.roles.RolePermissions;
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 public class RolePermissionsService implements RolePermissionsUseCase {
 
     private final RolePermissionsRepositoryPort rolePermissionsRepository;

@@ -38,7 +38,7 @@ public class SessionService implements SessionUseCase {
         return new SessionResult(
                 session.getId(), session.getTenantUserId(), session.getRefreshTokenHash(),
                 session.getIpAddress(), session.getUserAgent(), session.getDeviceFingerprint(),
-                session.getLoginAt(), session.getLasActivityAt(), session.getLogoutAt(),
+                session.getLoginAt(), session.getLastActivityAt(), session.getLogoutAt(),
                 session.getExpiresAt(), session.getState(),
                 session.getCreatedAt(), session.getUpdatedAt()
         );

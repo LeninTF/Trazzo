@@ -41,7 +41,8 @@ public class IncidentsBeanConfig {
     }
 
     @Bean
-    public NotificationUseCase notificationUseCase(IncidentRepositoryPort incidentRepository) {
-        return new NotificationService(incidentRepository);
+    public NotificationUseCase notificationUseCase(IncidentRepositoryPort incidentRepository,
+                                                   EventPublisherPort eventPublisher) {
+        return new NotificationService(incidentRepository, eventPublisher);
     }
 }

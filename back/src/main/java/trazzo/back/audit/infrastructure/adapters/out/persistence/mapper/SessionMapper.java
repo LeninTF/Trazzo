@@ -18,7 +18,7 @@ public final class SessionMapper {
         entity.setUserAgent(domain.getUserAgent());
         entity.setDeviceFingerprint(domain.getDeviceFingerprint());
         entity.setLoginAt(domain.getLoginAt());
-        entity.setLastActivityAt(domain.getLasActivityAt());
+        entity.setLastActivityAt(domain.getLastActivityAt());
         entity.setLogoutAt(domain.getLogoutAt());
         entity.setExpiresAt(domain.getExpiresAt());
         entity.setState(domain.getState());
