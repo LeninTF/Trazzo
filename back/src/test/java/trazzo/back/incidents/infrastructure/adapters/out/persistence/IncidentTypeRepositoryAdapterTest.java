@@ -28,8 +28,8 @@ class IncidentTypeRepositoryAdapterTest {
     @Test
     void save() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        var entity = new IncidentTypeEntity("id-1", "Permiso", "Desc", true, now, now);
+        var type = IncidentType.restore("1", "Permiso", "Desc", true, now, now);
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
         when(repository.save(any())).thenReturn(entity);
 
         var result = adapter.save(type);
@@ -41,10 +41,10 @@ class IncidentTypeRepositoryAdapterTest {
     @Test
     void findById() {
         var now = LocalDateTime.now();
-        var entity = new IncidentTypeEntity("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(entity));
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
+        when(repository.findById(1)).thenReturn(Optional.of(entity));
 
-        var result = adapter.findById("id-1");
+        var result = adapter.findById("1");
 
         assertTrue(result.isPresent());
         assertEquals("Permiso", result.get().getNombre());
@@ -52,14 +52,14 @@ class IncidentTypeRepositoryAdapterTest {
 
     @Test
     void findByIdNotFound() {
-        when(repository.findById("bad-id")).thenReturn(Optional.empty());
-        assertTrue(adapter.findById("bad-id").isEmpty());
+        when(repository.findById(999)).thenReturn(Optional.empty());
+        assertTrue(adapter.findById("999").isEmpty());
     }
 
     @Test
     void findAllWithActivoFilter() {
         var now = LocalDateTime.now();
-        var entity = new IncidentTypeEntity("id-1", "Permiso", "Desc", true, now, now);
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
         var page = new PageImpl<>(List.of(entity));
         when(repository.findByActivo(true, PageRequest.of(0, 10))).thenReturn(page);
 
@@ -71,7 +71,7 @@ class IncidentTypeRepositoryAdapterTest {
     @Test
     void findAllWithoutFilter() {
         var now = LocalDateTime.now();
-        var entity = new IncidentTypeEntity("id-1", "Permiso", "Desc", true, now, now);
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
         var page = new PageImpl<>(List.of(entity));
         when(repository.findAll(PageRequest.of(0, 10))).thenReturn(page);
 
@@ -100,5 +100,28 @@ class IncidentTypeRepositoryAdapterTest {
     void existsByNombre() {
         when(repository.existsByNombre("Permiso")).thenReturn(true);
         assertTrue(adapter.existsByNombre("Permiso"));
+    }
+
+    @Test
+    void findByIdIn() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
+        when(repository.findByIdIn(List.of(1))).thenReturn(List.of(entity));
+
+        var results = adapter.findByIdIn(List.of("1"));
+
+        assertEquals(1, results.size());
+        assertEquals("Permiso", results.get(0).getNombre());
+    }
+
+    @Test
+    void findByIdInSkipsInvalidIds() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
+        when(repository.findByIdIn(List.of(1))).thenReturn(List.of(entity));
+
+        var results = adapter.findByIdIn(List.of("1", "not-a-number", ""));
+
+        assertEquals(1, results.size());
     }
 }

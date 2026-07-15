@@ -226,6 +226,8 @@ CREATE TABLE incidencias (
     tenant_user_id INT REFERENCES tenant_user(id) ON DELETE CASCADE,
     incidencia_type_id INT REFERENCES incidencia_types(id) ON DELETE CASCADE,
     state state_incidencias_enum DEFAULT 'PENDIENTE',
+    comment TEXT,
+    rejection_reason TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -235,8 +237,13 @@ CREATE TABLE incidencia_evidencia (
     incidencia_id INT REFERENCES incidencias(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
     file_url VARCHAR(255) NOT NULL,
+    file_key VARCHAR(255),
     mime_type VARCHAR(50),
     file_size INT,
+    deleted BOOLEAN DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

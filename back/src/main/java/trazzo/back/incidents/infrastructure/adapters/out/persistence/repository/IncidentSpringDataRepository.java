@@ -12,12 +12,12 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.Inci
 import java.time.LocalDateTime;
 
 @Repository
-public interface IncidentSpringDataRepository extends JpaRepository<IncidentEntity, String> {
+public interface IncidentSpringDataRepository extends JpaRepository<IncidentEntity, Integer> {
 
     @Query("SELECT i FROM IncidentEntity i WHERE " +
-           "(:tenantUserId IS NULL OR i.tenantUserId = :tenantUserId) AND " +
+           "(:tenantUserId IS NULL OR CAST(i.tenantUserId AS string) = :tenantUserId) AND " +
            "(:state IS NULL OR i.state = :state) AND " +
-           "(:tipoId IS NULL OR i.incidentTypeId = :tipoId) AND " +
+           "(:tipoId IS NULL OR CAST(i.incidentTypeId AS string) = :tipoId) AND " +
            "(:desde IS NULL OR i.createdAt >= :desde) AND " +
            "(:hasta IS NULL OR i.createdAt <= :hasta) AND " +
            "(:search IS NULL OR LOWER(i.comment) LIKE LOWER(CONCAT('%', :search, '%')))")

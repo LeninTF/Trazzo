@@ -19,7 +19,7 @@ import trazzo.back.saasglobal.infrastructure.config.ProvisioningProperties;
 @RequiredArgsConstructor
 public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioningPort {
 
-    private static final String SCHEMA_SCRIPT = "db/tenant/schema.sql";
+    private static final String SCHEMA_SCRIPT = "db/tenant/V1__tenant_db.sql";
     private static final int MAX_SAFE_LENGTH = 40;
 
     private final ProvisioningProperties props;

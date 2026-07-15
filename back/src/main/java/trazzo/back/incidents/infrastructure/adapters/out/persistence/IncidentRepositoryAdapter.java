@@ -32,18 +32,28 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     @Override
     public Incident save(Incident incident) {
         var entity = IncidentMapper.toEntity(incident);
+        boolean isNew = entity.getId() == null;
         var saved = incidentRepo.save(entity);
-        if (entity.getPermission() != null) {
+        if (isNew && entity.getPermission() != null) {
+            entity.getPermission().setIncidentId(saved.getId());
+            permissionRepo.save(entity.getPermission());
+        } else if (!isNew && entity.getPermission() != null) {
+            var existingPerm = permissionRepo.findByIncidentId(saved.getId()).orElse(null);
+            if (existingPerm != null) {
+                entity.getPermission().setId(existingPerm.getId());
+            }
             entity.getPermission().setIncidentId(saved.getId());
             permissionRepo.save(entity.getPermission());
         }
-        return findById(saved.getId()).orElseThrow();
+        return findById(String.valueOf(saved.getId())).orElseThrow();
     }
 
     @Override
     public Optional<Incident> findById(String id) {
-        return incidentRepo.findById(id).map(entity -> {
-            var permission = permissionRepo.findByIncidentId(id).orElse(null);
+        Integer intId = toInt(id);
+        if (intId == null) return Optional.empty();
+        return incidentRepo.findById(intId).map(entity -> {
+            var permission = permissionRepo.findByIncidentId(intId).orElse(null);
             entity.setPermission(permission);
             return IncidentMapper.toDomain(entity);
         });
@@ -64,12 +74,7 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
             result = incidentRepo.findAll(pageable);
         }
 
-        var incidentIds = result.stream()
-                .map(IncidentEntity::getId)
-                .toList();
-        Map<String, IncidentPermissionEntity> permissionByIncidentId = permissionRepo.findByIncidentIdIn(incidentIds)
-                .stream()
-                .collect(Collectors.toMap(IncidentPermissionEntity::getIncidentId, p -> p));
+        var permissionByIncidentId = loadPermissions(result);
 
         result.forEach(entity -> {
             var perm = permissionByIncidentId.get(entity.getId());
@@ -94,9 +99,20 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
 
     @Override
     public void deleteById(String id) {
-        evidenceRepo.deleteByIncidentId(id);
-        permissionRepo.deleteByIncidentId(id);
-        incidentRepo.deleteById(id);
+        Integer intId = toInt(id);
+        if (intId == null) return;
+        evidenceRepo.deleteByIncidentId(intId);
+        permissionRepo.deleteByIncidentId(intId);
+        incidentRepo.deleteById(intId);
+    }
+
+    private Map<Integer, IncidentPermissionEntity> loadPermissions(Page<IncidentEntity> page) {
+        var incidentIds = page.stream()
+                .map(IncidentEntity::getId)
+                .toList();
+        return permissionRepo.findByIncidentIdIn(incidentIds)
+                .stream()
+                .collect(Collectors.toMap(IncidentPermissionEntity::getIncidentId, p -> p));
     }
 
     private static IncidentState parseState(String state) {
@@ -104,7 +120,7 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         try {
             return IncidentState.valueOf(state.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Estado de incidencia inválido: " + state);
+            throw new IllegalArgumentException("Estado de incidencia invalido: " + state);
         }
     }
 
@@ -136,5 +152,14 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
             case "state" -> "state";
             default -> "createdAt";
         };
+    }
+
+    private static Integer toInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

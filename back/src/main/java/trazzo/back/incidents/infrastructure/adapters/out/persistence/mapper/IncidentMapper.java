@@ -7,7 +7,6 @@ import trazzo.back.incidents.domain.model.IncidentType;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEvidenceEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentPermissionEntity;
-import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentTypeEntity;
 
 import java.util.Collections;
 import java.util.List;
@@ -20,9 +19,9 @@ public final class IncidentMapper {
 
     public static IncidentEntity toEntity(Incident domain) {
         var entity = new IncidentEntity();
-        entity.setId(domain.getId());
-        entity.setTenantUserId(domain.getTenantUserId());
-        entity.setIncidentTypeId(domain.getIncidentTypeId());
+        entity.setId(toInt(domain.getId()));
+        entity.setTenantUserId(toInt(domain.getTenantUserId()));
+        entity.setIncidentTypeId(toInt(domain.getIncidentTypeId()));
         entity.setState(domain.getState());
         entity.setComment(domain.getComment());
         entity.setRejectionReason(domain.getRejectionReason());
@@ -30,7 +29,7 @@ public final class IncidentMapper {
         entity.setUpdatedAt(domain.getUpdatedAt());
 
         if (domain.getType() != null) {
-            entity.setIncidentTypeId(domain.getType().getId());
+            entity.setIncidentTypeId(toInt(domain.getType().getId()));
         }
 
         var evidenceEntities = Optional.ofNullable(domain.getEvidences())
@@ -48,8 +47,6 @@ public final class IncidentMapper {
     }
 
     public static Incident toDomain(IncidentEntity entity) {
-        IncidentType type = null;
-
         IncidentPermission permission = null;
         if (entity.getPermission() != null) {
             permission = toDomain(entity.getPermission());
@@ -62,13 +59,13 @@ public final class IncidentMapper {
                 .toList();
 
         return Incident.restore(
-                entity.getId(),
-                entity.getTenantUserId(),
-                entity.getIncidentTypeId(),
+                toString(entity.getId()),
+                toString(entity.getTenantUserId()),
+                toString(entity.getIncidentTypeId()),
                 entity.getState(),
                 entity.getComment(),
                 entity.getRejectionReason(),
-                type,
+                null,
                 permission,
                 evidences,
                 entity.getCreatedAt(),
@@ -78,8 +75,8 @@ public final class IncidentMapper {
 
     public static IncidentEvidenceEntity toEntity(IncidentEvidence domain) {
         var entity = new IncidentEvidenceEntity();
-        entity.setId(domain.getId());
-        entity.setIncidentId(domain.getIncidentId());
+        entity.setId(toInt(domain.getId()));
+        entity.setIncidentId(toInt(domain.getIncidentId()));
         entity.setFileName(domain.getFileName());
         entity.setFileKey(domain.getFileKey());
         entity.setMimeType(domain.getMimeType());
@@ -94,8 +91,8 @@ public final class IncidentMapper {
 
     public static IncidentEvidence toDomain(IncidentEvidenceEntity entity) {
         return IncidentEvidence.restore(
-                entity.getId(),
-                entity.getIncidentId(),
+                toString(entity.getId()),
+                toString(entity.getIncidentId()),
                 entity.getFileName(),
                 entity.getFileKey(),
                 entity.getMimeType(),
@@ -110,8 +107,8 @@ public final class IncidentMapper {
 
     public static IncidentPermissionEntity toEntity(IncidentPermission domain) {
         var entity = new IncidentPermissionEntity();
-        entity.setId(domain.getId());
-        entity.setIncidentId(domain.getIncidentId());
+        entity.setId(toInt(domain.getId()));
+        entity.setIncidentId(toInt(domain.getIncidentId()));
         entity.setStartDate(domain.getStartDate());
         entity.setEndDate(domain.getEndDate());
         entity.setDaysGranted(domain.getDaysGranted());
@@ -122,13 +119,26 @@ public final class IncidentMapper {
 
     public static IncidentPermission toDomain(IncidentPermissionEntity entity) {
         return IncidentPermission.restore(
-                entity.getId(),
-                entity.getIncidentId(),
+                toString(entity.getId()),
+                toString(entity.getIncidentId()),
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getDaysGranted(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+    }
+
+    private static Integer toInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String toString(Integer value) {
+        return value != null ? String.valueOf(value) : null;
     }
 }

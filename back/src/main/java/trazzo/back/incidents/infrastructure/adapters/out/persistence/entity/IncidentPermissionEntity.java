@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "incident_permissions")
+@Table(name = "permisos_incidencia")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,16 +18,16 @@ import java.time.LocalDateTime;
 public class IncidentPermissionEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "incident_id", nullable = false, length = 36, unique = true)
-    private String incidentId;
+    @Column(name = "incidencia_id", nullable = false, unique = true)
+    private Integer incidentId;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "end_date", nullable = false)
+    @Column(name = "finish_date", nullable = false)
     private LocalDate endDate;
 
     @Column(name = "days_granted", nullable = false)

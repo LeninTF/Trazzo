@@ -17,15 +17,16 @@ class IncidentMapperTest {
     @Test
     void toEntityMapsIncidentFields() {
         var now = LocalDateTime.now();
-        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
-        var permission = IncidentPermission.create("inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1);
-        var domain = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var evidence = IncidentEvidence.create("1", "doc.pdf", "http://url", "pdf", 100);
+        var permission = IncidentPermission.create("1", LocalDate.now(), LocalDate.now().plusDays(1), 1);
+        var domain = Incident.restore("1", "10", "20", IncidentState.PENDIENTE,
                 "comment", null, null, permission, List.of(evidence), now, now);
 
         var entity = IncidentMapper.toEntity(domain);
 
-        assertEquals("inc-1", entity.getId());
-        assertEquals("u-1", entity.getTenantUserId());
+        assertEquals(1, entity.getId());
+        assertEquals(10, entity.getTenantUserId());
+        assertEquals(20, entity.getIncidentTypeId());
         assertEquals(IncidentState.PENDIENTE, entity.getState());
         assertEquals("comment", entity.getComment());
         assertNotNull(entity.getPermission());
@@ -34,17 +35,18 @@ class IncidentMapperTest {
     @Test
     void toDomainMapsIncidentFields() {
         var now = LocalDateTime.now();
-        var evidenceEntity = new IncidentEvidenceEntity("ev-1", "inc-1", "doc.pdf",
-                "http://url", "pdf", 100, false, null, now, now, now);
-        var permissionEntity = new IncidentPermissionEntity("perm-1", "inc-1",
+        var evidenceEntity = new IncidentEvidenceEntity(1, 1, "doc.pdf",
+                "http://url", "key-123", "pdf", 100, false, null, now, now, now);
+        var permissionEntity = new IncidentPermissionEntity(1, 1,
                 LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now);
-        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var entity = new IncidentEntity(1, 10, 20, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(evidenceEntity), permissionEntity);
 
         var domain = IncidentMapper.toDomain(entity);
 
-        assertEquals("inc-1", domain.getId());
-        assertEquals("u-1", domain.getTenantUserId());
+        assertEquals("1", domain.getId());
+        assertEquals("10", domain.getTenantUserId());
+        assertEquals("20", domain.getIncidentTypeId());
         assertEquals(IncidentState.PENDIENTE, domain.getState());
         assertEquals("comment", domain.getComment());
         assertNotNull(domain.getPermission());
@@ -54,8 +56,8 @@ class IncidentMapperTest {
     @Test
     void roundTripPreservesIncident() {
         var now = LocalDateTime.now();
-        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
-        var domain = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var evidence = IncidentEvidence.create("1", "doc.pdf", "http://url", "pdf", 100);
+        var domain = Incident.restore("1", "10", "20", IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(evidence), now, now);
 
         var entity = IncidentMapper.toEntity(domain);
@@ -70,8 +72,7 @@ class IncidentMapperTest {
 
     @Test
     void evidenceRoundTrip() {
-        var now = LocalDateTime.now();
-        var ev = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
+        var ev = IncidentEvidence.create("1", "doc.pdf", "http://url", "pdf", 100);
         var entity = IncidentMapper.toEntity(ev);
         var restored = IncidentMapper.toDomain(entity);
 
@@ -83,8 +84,7 @@ class IncidentMapperTest {
 
     @Test
     void permissionRoundTrip() {
-        var now = LocalDateTime.now();
-        var perm = IncidentPermission.create("inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1);
+        var perm = IncidentPermission.create("1", LocalDate.now(), LocalDate.now().plusDays(1), 1);
         var entity = IncidentMapper.toEntity(perm);
         var restored = IncidentMapper.toDomain(entity);
 
@@ -92,5 +92,27 @@ class IncidentMapperTest {
         assertEquals(perm.getStartDate(), restored.getStartDate());
         assertEquals(perm.getEndDate(), restored.getEndDate());
         assertEquals(perm.getDaysGranted(), restored.getDaysGranted());
+    }
+
+    @Test
+    void nonNumericDomainIdsMapToNull() {
+        var evidence = IncidentEvidence.create("abc", "doc.pdf", "http://url", "pdf", 100);
+        var entity = IncidentMapper.toEntity(evidence);
+        assertNull(entity.getId());
+        assertNull(entity.getIncidentId());
+    }
+
+    @Test
+    void entityWithNullOptionalIdMapsCorrectly() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentEntity(null, 10, 20, IncidentState.PENDIENTE,
+                null, null, now, now, List.of(), null);
+
+        var domain = IncidentMapper.toDomain(entity);
+
+        assertNull(domain.getId());
+        assertEquals("10", domain.getTenantUserId());
+        assertEquals("20", domain.getIncidentTypeId());
+        assertNull(domain.getComment());
     }
 }

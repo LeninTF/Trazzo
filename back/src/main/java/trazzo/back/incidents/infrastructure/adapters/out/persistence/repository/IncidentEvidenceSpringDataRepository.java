@@ -7,7 +7,7 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.Inci
 import java.util.List;
 
 @Repository
-public interface IncidentEvidenceSpringDataRepository extends JpaRepository<IncidentEvidenceEntity, String> {
-    List<IncidentEvidenceEntity> findByIncidentId(String incidentId);
-    void deleteByIncidentId(String incidentId);
+public interface IncidentEvidenceSpringDataRepository extends JpaRepository<IncidentEvidenceEntity, Integer> {
+    List<IncidentEvidenceEntity> findByIncidentId(Integer incidentId);
+    void deleteByIncidentId(Integer incidentId);
 }

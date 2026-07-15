@@ -26,12 +26,18 @@ public class IncidentTypeRepositoryAdapter implements IncidentTypeRepositoryPort
 
     @Override
     public Optional<IncidentType> findById(String id) {
-        return repository.findById(id).map(IncidentTypeMapper::toDomain);
+        Integer intId = toInt(id);
+        if (intId == null) return Optional.empty();
+        return repository.findById(intId).map(IncidentTypeMapper::toDomain);
     }
 
     @Override
     public List<IncidentType> findByIdIn(List<String> ids) {
-        return repository.findByIdIn(ids)
+        var intIds = ids.stream()
+                .map(IncidentTypeRepositoryAdapter::toInt)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        return repository.findByIdIn(intIds)
                 .stream()
                 .map(IncidentTypeMapper::toDomain)
                 .toList();
@@ -63,5 +69,14 @@ public class IncidentTypeRepositoryAdapter implements IncidentTypeRepositoryPort
     @Override
     public boolean existsByNombre(String nombre) {
         return repository.existsByNombre(nombre);
+    }
+
+    private static Integer toInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
