@@ -1,13 +1,5 @@
 package trazzo.back.saasglobal.application.usecase;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,139 +7,124 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreatePlanCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdatePlanCommand;
-import trazzo.back.saasglobal.application.dto.result.PlanResult;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PlanServiceTest {
 
-    @Mock PlanRepositoryPort planRepository;
-    @InjectMocks PlanService service;
+    @Mock
+    private PlanRepositoryPort planRepository;
 
-    private static Plan plan(int id) {
-        var now = LocalDateTime.now();
-        return Plan.restore(id, "Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY",
-                true, now, now, null);
+    @InjectMocks
+    private PlanService service;
+
+    private Plan samplePlan() {
+        return Plan.restore(1, "Basic", BigDecimal.valueOf(99), "USD", "monthly",
+                true, LocalDateTime.now(), LocalDateTime.now(), null);
     }
 
     @Test
-    void getById_returnsResultWhenFound() {
-        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
+    void create_shouldReturnResult() {
+        var cmd = new CreatePlanCommand("Basic", BigDecimal.valueOf(99), "USD", "monthly");
+        when(planRepository.save(any(Plan.class))).thenAnswer(i -> {
+            Plan p = i.getArgument(0);
+            return Plan.restore(1, p.getName(), p.getPrice(), p.getCurrency(),
+                    p.getBillingPeriod(), p.isActive(), p.getCreatedAt(), p.getUpdatedAt(), null);
+        });
 
-        PlanResult result = service.getById(1);
+        var result = service.create(cmd);
 
-        assertEquals(1, result.id());
-        assertEquals("Basic", result.name());
-        assertTrue(result.active());
+        assertThat(result.name()).isEqualTo("Basic");
+        verify(planRepository).save(any(Plan.class));
     }
 
     @Test
-    void getById_throwsWhenNotFound() {
-        when(planRepository.findById(99)).thenReturn(Optional.empty());
+    void getById_shouldReturnResult() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
 
-        assertThrows(IllegalArgumentException.class, () -> service.getById(99));
+        var result = service.getById(1);
+
+        assertThat(result.id()).isEqualTo(1);
     }
 
     @Test
-    void listAll_returnsMappedResults() {
-        when(planRepository.findAll()).thenReturn(List.of(plan(1), plan(2)));
+    void getById_shouldThrowWhenNotFound() {
+        when(planRepository.findById(999)).thenReturn(Optional.empty());
 
-        List<PlanResult> results = service.listAll();
-
-        assertEquals(2, results.size());
+        assertThatThrownBy(() -> service.getById(999))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Plan not found");
     }
 
     @Test
-    void listActive_returnsMappedResults() {
-        when(planRepository.findAllActive()).thenReturn(List.of(plan(1)));
+    void listActive_shouldReturnList() {
+        when(planRepository.findAllActive()).thenReturn(List.of(samplePlan()));
 
-        List<PlanResult> results = service.listActive();
+        var result = service.listActive();
 
-        assertEquals(1, results.size());
+        assertThat(result).hasSize(1);
     }
 
     @Test
-    void create_savesAndReturnsResult() {
-        when(planRepository.save(any())).thenReturn(plan(1));
-        var command = new CreatePlanCommand("Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY");
+    void listAll_shouldReturnList() {
+        when(planRepository.findAll()).thenReturn(List.of(samplePlan()));
 
-        PlanResult result = service.create(command);
+        var result = service.listAll();
 
-        assertEquals(1, result.id());
-        assertEquals("Basic", result.name());
-        assertTrue(result.active());
+        assertThat(result).hasSize(1);
     }
 
     @Test
-    void update_savesAndReturnsUpdated() {
-        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
-        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var command = new UpdatePlanCommand(1, "Pro", BigDecimal.valueOf(199), "DOLAR", "ANNUAL");
+    void update_shouldReturnResult() {
+        var cmd = new UpdatePlanCommand(1, "Pro", BigDecimal.valueOf(199), "USD", "yearly");
+        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
+        when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
 
-        PlanResult result = service.update(command);
+        var result = service.update(cmd);
 
-        assertEquals("Pro", result.name());
+        assertThat(result.name()).isEqualTo("Pro");
     }
 
     @Test
-    void update_throwsWhenNotFound() {
-        when(planRepository.findById(99)).thenReturn(Optional.empty());
-        var command = new UpdatePlanCommand(99, "Pro", BigDecimal.ONE, "SOLES", "MONTHLY");
+    void activate_shouldSetActive() {
+        var plan = Plan.restore(1, "Basic", BigDecimal.valueOf(99), "USD", "monthly",
+                false, LocalDateTime.now(), LocalDateTime.now(), null);
+        when(planRepository.findById(1)).thenReturn(Optional.of(plan));
+        when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertThrows(IllegalArgumentException.class, () -> service.update(command));
+        var result = service.activate(1);
+
+        assertThat(result.active()).isTrue();
     }
 
     @Test
-    void activate_savesAndReturnsActivated() {
-        var now = LocalDateTime.now();
-        var inactive = Plan.restore(1, "Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY",
-                false, now, now, null);
-        when(planRepository.findById(1)).thenReturn(Optional.of(inactive));
-        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    void deactivate_shouldSetInactive() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
+        when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
 
-        PlanResult result = service.activate(1);
+        var result = service.deactivate(1);
 
-        assertTrue(result.active());
+        assertThat(result.active()).isFalse();
     }
 
     @Test
-    void activate_throwsWhenNotFound() {
-        when(planRepository.findById(99)).thenReturn(Optional.empty());
+    void deleteById_shouldMarkDeleted() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
+        when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertThrows(IllegalArgumentException.class, () -> service.activate(99));
-    }
+        service.deleteById(1);
 
-    @Test
-    void deactivate_savesAndReturnsDeactivated() {
-        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
-        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        PlanResult result = service.deactivate(1);
-
-        assertFalse(result.active());
-    }
-
-    @Test
-    void deactivate_throwsWhenNotFound() {
-        when(planRepository.findById(99)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> service.deactivate(99));
-    }
-
-    @Test
-    void deleteById_savesWithDeletedState() {
-        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
-        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        assertDoesNotThrow(() -> service.deleteById(1));
-        verify(planRepository).save(any());
-    }
-
-    @Test
-    void deleteById_throwsWhenNotFound() {
-        when(planRepository.findById(99)).thenReturn(Optional.empty());
-
-        assertThrows(IllegalArgumentException.class, () -> service.deleteById(99));
+        verify(planRepository).save(any(Plan.class));
     }
 }

@@ -6,6 +6,7 @@ import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @RequiredArgsConstructor
 public class AuditMetricsService implements AuditMetricsUseCase {
@@ -17,8 +18,8 @@ public class AuditMetricsService implements AuditMetricsUseCase {
         Long totalEventos = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit", Long.class);
 
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-        LocalDateTime sixtyDaysAgo = LocalDateTime.now().minusDays(60);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now(ZoneId.of("America/Mexico_City")).minusDays(30);
+        LocalDateTime sixtyDaysAgo = LocalDateTime.now(ZoneId.of("America/Mexico_City")).minusDays(60);
 
         Long recentCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit WHERE created_at >= ?", Long.class, thirtyDaysAgo);

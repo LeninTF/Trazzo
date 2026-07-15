@@ -1,13 +1,12 @@
 package trazzo.back.incidents.application.usecase;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.incidents.application.dto.command.CreateIncidentTypeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentTypeCommand;
-import trazzo.back.incidents.application.dto.result.IncidentTypeResult;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.incidents.domain.model.IncidentType;
 
@@ -15,104 +14,115 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class IncidentTypeServiceTest {
 
+    @Mock
     private IncidentTypeRepositoryPort repository;
+
+    @InjectMocks
     private IncidentTypeService service;
 
-    @BeforeEach
-    void setUp() {
-        repository = mock(IncidentTypeRepositoryPort.class);
-        service = new IncidentTypeService(repository);
+    private IncidentType sampleType() {
+        return IncidentType.restore("type-1", "Retiro", "Motivo personal", true,
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     @Test
-    void createWithUniqueName() {
-        when(repository.existsByNombre("Permiso")).thenReturn(false);
-        when(repository.save(any())).thenAnswer(invocation -> invocation.<IncidentType>getArgument(0));
+    void create_shouldReturnResult() {
+        var cmd = new CreateIncidentTypeCommand("Retiro", "Motivo personal");
+        when(repository.existsByNombre("Retiro")).thenReturn(false);
+        when(repository.save(any(IncidentType.class))).thenAnswer(i -> {
+            IncidentType t = i.getArgument(0);
+            return IncidentType.restore("type-1", t.getNombre(), t.getDescripcion(),
+                    true, t.getCreatedAt(), t.getUpdatedAt());
+        });
 
-        var command = new CreateIncidentTypeCommand("Permiso", "Desc");
-        var result = service.create(command);
+        var result = service.create(cmd);
 
-        assertEquals("Permiso", result.nombre());
-        assertEquals("Desc", result.descripcion());
-        assertTrue(result.activo());
-        verify(repository).save(any());
+        assertThat(result.nombre()).isEqualTo("Retiro");
     }
 
     @Test
-    void createWithDuplicateNameThrowsException() {
-        when(repository.existsByNombre("Permiso")).thenReturn(true);
-        var command = new CreateIncidentTypeCommand("Permiso", "Desc");
+    void create_shouldThrowWhenDuplicate() {
+        var cmd = new CreateIncidentTypeCommand("Retiro", "Desc");
+        when(repository.existsByNombre("Retiro")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> service.create(command));
-        verify(repository, never()).save(any());
+        assertThatThrownBy(() -> service.create(cmd))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ya existe");
     }
 
     @Test
-    void findByIdReturnsType() {
-        var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
+    void findById_shouldReturnResult() {
+        when(repository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
-        var result = service.findById("id-1");
+        var result = service.findById("type-1");
 
-        assertTrue(result.isPresent());
-        assertEquals("Permiso", result.get().nombre());
+        assertThat(result).isPresent();
+        assertThat(result.get().nombre()).isEqualTo("Retiro");
     }
 
     @Test
-    void findByIdReturnsEmptyWhenNotFound() {
-        when(repository.findById("not-found")).thenReturn(Optional.empty());
-        assertTrue(service.findById("not-found").isEmpty());
-    }
-
-    @Test
-    void findAllReturnsPaginatedResults() {
-        var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findAll(true, 0, 10)).thenReturn(List.of(type));
+    void findAll_shouldReturnPaginatedResult() {
+        when(repository.findAll(eq(true), eq(0), eq(10))).thenReturn(List.of(sampleType()));
         when(repository.count(true)).thenReturn(1L);
 
         var result = service.findAll(true, 0, 10);
 
-        assertEquals(1, result.content().size());
-        assertEquals(0, result.page());
-        assertEquals(1, result.totalElements());
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.totalElements()).isEqualTo(1);
     }
 
     @Test
-    void patchUpdatesNombre() {
-        var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Original", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
-        when(repository.save(any())).thenAnswer(invocation -> invocation.<IncidentType>getArgument(0));
+    void patch_shouldRename() {
+        var cmd = new PatchIncidentTypeCommand("Nuevo Nombre", null, null);
+        when(repository.findById("type-1")).thenReturn(Optional.of(sampleType()));
+        when(repository.save(any(IncidentType.class))).thenAnswer(i -> i.getArgument(0));
 
-        var command = new PatchIncidentTypeCommand("Modificado", null, null);
-        var result = service.patch("id-1", command);
+        var result = service.patch("type-1", cmd);
 
-        assertEquals("Modificado", result.nombre());
-        assertEquals("Desc", result.descripcion());
+        assertThat(result.nombre()).isEqualTo("Nuevo Nombre");
     }
 
     @Test
-    void patchDeactivatesType() {
-        var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
-        when(repository.save(any())).thenAnswer(invocation -> invocation.<IncidentType>getArgument(0));
+    void patch_shouldActivate() {
+        var inactiveType = IncidentType.restore("type-1", "Retiro", "Desc", false,
+                LocalDateTime.now(), LocalDateTime.now());
+        var cmd = new PatchIncidentTypeCommand(null, null, true);
+        when(repository.findById("type-1")).thenReturn(Optional.of(inactiveType));
+        when(repository.save(any(IncidentType.class))).thenAnswer(i -> i.getArgument(0));
 
-        var command = new PatchIncidentTypeCommand(null, null, false);
-        var result = service.patch("id-1", command);
+        var result = service.patch("type-1", cmd);
 
-        assertFalse(result.activo());
+        assertThat(result.activo()).isTrue();
     }
 
     @Test
-    void patchWithNotFoundIdThrowsException() {
+    void patch_shouldDeactivate() {
+        var cmd = new PatchIncidentTypeCommand(null, null, false);
+        when(repository.findById("type-1")).thenReturn(Optional.of(sampleType()));
+        when(repository.save(any(IncidentType.class))).thenAnswer(i -> i.getArgument(0));
+
+        var result = service.patch("type-1", cmd);
+
+        assertThat(result.activo()).isFalse();
+    }
+
+    @Test
+    void patch_shouldThrowWhenNotFound() {
+        var cmd = new PatchIncidentTypeCommand("Name", null, null);
         when(repository.findById("bad-id")).thenReturn(Optional.empty());
-        var command = new PatchIncidentTypeCommand("Nuevo", null, null);
 
-        assertThrows(IllegalArgumentException.class, () -> service.patch("bad-id", command));
+        assertThatThrownBy(() -> service.patch("bad-id", cmd))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

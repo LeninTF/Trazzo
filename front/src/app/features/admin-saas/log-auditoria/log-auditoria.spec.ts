@@ -27,6 +27,59 @@ describe('LogAuditoria', () => {
     page: 0, size: 5, totalElements: 2, totalPages: 1,
   };
 
+  const emptyLogs = {
+    content: [],
+    page: 0, size: 5, totalElements: 0, totalPages: 0,
+  };
+
+  const errorTipoLogs = {
+    content: [
+      {
+        id: '3', eventId: 'evt-3', fecha: '2026-06-08T10:00:00', tenant: 'Tenant A', tenantId: 't-2',
+        userName: '', userEmail: 'test@test.com', accion: 'Delete', tipo: 'error',
+        entidad: 'roles', entidadId: '3', ipAddress: '10.0.0.1', userAgent: 'Safari',
+        oldValue: { name: 'old' }, newValue: { name: 'new' },
+      },
+    ],
+    page: 0, size: 5, totalElements: 1, totalPages: 1,
+  };
+
+  const unknownTipoLogs = {
+    content: [
+      {
+        id: '4', eventId: 'evt-4', fecha: '2026-06-09T10:00:00', tenant: 'Tenant B', tenantId: 't-3',
+        userName: 'Carlos Perez', userEmail: 'carlos@test.com', accion: 'Create', tipo: 'unknown_type',
+        entidad: 'users', entidadId: '4', ipAddress: '10.0.0.2', userAgent: 'Edge',
+        oldValue: null, newValue: null,
+      },
+    ],
+    page: 0, size: 5, totalElements: 1, totalPages: 1,
+  };
+
+  const singleWordNameLogs = {
+    content: [
+      {
+        id: '5', eventId: 'evt-5', fecha: '2026-06-10T10:00:00', tenant: 'Tenant C', tenantId: 't-4',
+        userName: 'Maria', userEmail: 'maria@test.com', accion: 'Read', tipo: 'success',
+        entidad: 'plans', entidadId: '5', ipAddress: '10.0.0.3', userAgent: 'Chrome',
+        oldValue: null, newValue: null,
+      },
+    ],
+    page: 0, size: 5, totalElements: 1, totalPages: 1,
+  };
+
+  const multiPageLogs = {
+    content: [
+      {
+        id: '6', eventId: 'evt-6', fecha: '2026-06-11T10:00:00', tenant: 'Tenant D', tenantId: 't-5',
+        userName: 'Pedro Garcia Lopez', userEmail: 'pedro@test.com', accion: 'Login', tipo: 'success',
+        entidad: 'sessions', entidadId: '6', ipAddress: '10.0.0.4', userAgent: 'Chrome',
+        oldValue: null, newValue: null,
+      },
+    ],
+    page: 2, size: 5, totalElements: 30, totalPages: 6,
+  };
+
   const mockMetrics = {
     total_eventos: 100, errores: 3, sesiones_activas: 12, crecimiento: 5, porcentaje_sesiones: 40,
   };
@@ -73,11 +126,47 @@ describe('LogAuditoria', () => {
     expect(mockAudit.getMetrics).toHaveBeenCalled();
     expect(component.metricas.totalEventos).toBe(100);
     expect(component.metricas.errores).toBe(3);
+    expect(component.metricas.sesionesActivas).toBe(12);
+    expect(component.metricas.crecimiento).toBe(5);
+    expect(component.metricas.porcentajeSesiones).toBe(40);
   });
 
-  it('should map tipo from backend to UI value', () => {
+  it('should map tipo success to exito', () => {
     expect(component.logs[0].tipo).toBe('exito');
+  });
+
+  it('should map tipo warning to advertencia', () => {
     expect(component.logs[1].tipo).toBe('advertencia');
+  });
+
+  it('should map tipo error to error', async () => {
+    mockAudit.listLogs.and.returnValue(of(errorTipoLogs));
+    component.cargarLogs();
+    expect(component.logs[0].tipo).toBe('error');
+  });
+
+  it('should fallback to exito for unknown tipo', async () => {
+    mockAudit.listLogs.and.returnValue(of(unknownTipoLogs));
+    component.cargarLogs();
+    expect(component.logs[0].tipo).toBe('exito');
+  });
+
+  it('should handle empty userName with single word name', async () => {
+    mockAudit.listLogs.and.returnValue(of(singleWordNameLogs));
+    component.cargarLogs();
+    expect(component.logs[0].userInitials).toBe('M');
+  });
+
+  it('should handle multi-word name initials limited to 2', async () => {
+    mockAudit.listLogs.and.returnValue(of(multiPageLogs));
+    component.cargarLogs();
+    expect(component.logs[0].userInitials).toBe('PG');
+  });
+
+  it('should handle empty userName returning question mark', async () => {
+    mockAudit.listLogs.and.returnValue(of(errorTipoLogs));
+    component.cargarLogs();
+    expect(component.logs[0].userInitials).toBe('?');
   });
 
   it('should compute logsFiltrado', () => {
@@ -103,6 +192,19 @@ describe('LogAuditoria', () => {
 
   it('should compute finRegistro', () => {
     expect(component.finRegistro).toBe(2);
+  });
+
+  it('should compute finRegistro capped at totalElementos', async () => {
+    mockAudit.listLogs.and.returnValue(of(multiPageLogs));
+    component.cargarLogs();
+    expect(component.finRegistro).toBe(5);
+  });
+
+  it('should clamp paginaActual when totalPages shrinks', async () => {
+    mockAudit.listLogs.and.returnValue(of(multiPageLogs));
+    component.paginaActual = 7;
+    component.cargarLogs();
+    expect(component.paginaActual).toBeLessThanOrEqual(component.totalPaginas);
   });
 
   it('should filtrarLogs reset page, selection and refetch', () => {
@@ -157,6 +259,13 @@ describe('LogAuditoria', () => {
     expect(component.logSeleccionado).toBeNull();
   });
 
+  it('should seleccionarLog switch to different log', () => {
+    component.seleccionarLog(component.logs[0]);
+    expect(component.logSeleccionado?.id).toBe('1');
+    component.seleccionarLog(component.logs[1]);
+    expect(component.logSeleccionado?.id).toBe('2');
+  });
+
   it('should cerrarDetalle', () => {
     component.seleccionarLog(component.logs[0]);
     component.cerrarDetalle();
@@ -177,5 +286,74 @@ describe('LogAuditoria', () => {
   it('should not fail when cargarMetricas errors', () => {
     mockAudit.getMetrics.and.returnValue(throwError(() => new Error('fail')));
     expect(() => component.cargarMetricas()).not.toThrow();
+  });
+
+  it('should show error state in template when error signal is set', () => {
+    component.error.set('Test error');
+    fixture.detectChanges();
+    const el = fixture.nativeElement;
+    expect(el.querySelector('.text-danger')).toBeTruthy();
+  });
+
+  it('should show empty state when no logs', async () => {
+    mockAudit.listLogs.and.returnValue(of(emptyLogs));
+    component.cargarLogs();
+    fixture.detectChanges();
+    expect(component.logs.length).toBe(0);
+  });
+
+  it('should show detail panel when log is selected', () => {
+    component.seleccionarLog(component.logs[0]);
+    fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('.detail-panel');
+    expect(panel).toBeTruthy();
+  });
+
+  it('should hide detail panel when cerrarDetalle is called', () => {
+    component.seleccionarLog(component.logs[0]);
+    component.cerrarDetalle();
+    expect(component.logSeleccionado).toBeNull();
+  });
+
+  it('should pass searchTerm to listLogs', () => {
+    component.searchTerm = 'test search';
+    mockAudit.listLogs.calls.reset();
+    component.filtrarLogs();
+    expect(mockAudit.listLogs).toHaveBeenCalledWith(
+      jasmine.objectContaining({ searchTerm: 'test search' })
+    );
+  });
+
+  it('should pass date filters to listLogs', () => {
+    component.filtroFechaDesde = '2026-01-01';
+    component.filtroFechaHasta = '2026-12-31';
+    mockAudit.listLogs.calls.reset();
+    component.filtrarLogs();
+    expect(mockAudit.listLogs).toHaveBeenCalledWith(
+      jasmine.objectContaining({ fecha_desde: '2026-01-01', fecha_hasta: '2026-12-31' })
+    );
+  });
+
+  it('should pass undefined for empty search and date filters', () => {
+    component.searchTerm = '';
+    component.filtroFechaDesde = '';
+    component.filtroFechaHasta = '';
+    mockAudit.listLogs.calls.reset();
+    component.filtrarLogs();
+    expect(mockAudit.listLogs).toHaveBeenCalledWith(
+      jasmine.objectContaining({ searchTerm: undefined, fecha_desde: undefined, fecha_hasta: undefined })
+    );
+  });
+
+  it('should handle log with oldValue and newValue', async () => {
+    mockAudit.listLogs.and.returnValue(of(errorTipoLogs));
+    component.cargarLogs();
+    expect(component.logs[0].oldValue).toEqual({ name: 'old' });
+    expect(component.logs[0].newValue).toEqual({ name: 'new' });
+  });
+
+  it('should handle log with null oldValue and newValue', () => {
+    expect(component.logs[0].oldValue).toBeNull();
+    expect(component.logs[0].newValue).toBeNull();
   });
 });

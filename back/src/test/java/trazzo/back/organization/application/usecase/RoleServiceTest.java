@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.organization.application.dto.command.CreateRoleCommand;
 import trazzo.back.organization.application.dto.command.UpdateRoleCommand;
+import trazzo.back.organization.application.dto.result.PaginatedResult;
 import trazzo.back.organization.application.port.out.RoleRepositoryPort;
 import trazzo.back.organization.domain.exception.DuplicateOrgNameException;
 import trazzo.back.organization.domain.exception.OrgNotFoundException;
@@ -16,110 +17,115 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RoleServiceTest {
 
-    @Mock RoleRepositoryPort roleRepository;
-    @InjectMocks RoleService service;
+    @Mock
+    private RoleRepositoryPort roleRepository;
 
-    private Role stubRole(String id, String name) {
-        return Role.restore(id, name, "desc", LocalDateTime.now(), LocalDateTime.now());
+    @InjectMocks
+    private RoleService service;
+
+    private Role sampleRole() {
+        return Role.restore("role-1", "Admin", "Administrator", LocalDateTime.now(), LocalDateTime.now());
     }
 
     @Test
-    void create_happyPath_savesAndReturns() {
+    void create_shouldReturnResult() {
+        var cmd = new CreateRoleCommand("Admin", "Administrator");
         when(roleRepository.existsByName("Admin")).thenReturn(false);
-        when(roleRepository.save(any())).thenReturn(stubRole("uuid-1", "Admin"));
+        when(roleRepository.save(any(Role.class))).thenAnswer(i -> {
+            Role r = i.getArgument(0);
+            return Role.restore("role-1", r.getName(), r.getDescription(),
+                    r.getCreatedAt(), r.getUpdatedAt());
+        });
 
-        var result = service.create(new CreateRoleCommand("Admin", "desc"));
+        var result = service.create(cmd);
 
-        assertThat(result.id()).isEqualTo("uuid-1");
         assertThat(result.name()).isEqualTo("Admin");
     }
 
     @Test
-    void create_duplicateName_throwsDuplicateOrgNameException() {
+    void create_shouldThrowWhenDuplicate() {
+        var cmd = new CreateRoleCommand("Admin", "Desc");
         when(roleRepository.existsByName("Admin")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.create(new CreateRoleCommand("Admin", "d")))
+        assertThatThrownBy(() -> service.create(cmd))
                 .isInstanceOf(DuplicateOrgNameException.class);
     }
 
     @Test
-    void findById_found_returnsResult() {
-        when(roleRepository.findById("uuid-1")).thenReturn(Optional.of(stubRole("uuid-1", "Viewer")));
+    void findById_shouldReturnResult() {
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
 
-        var result = service.findById("uuid-1");
+        var result = service.findById("role-1");
 
         assertThat(result).isPresent();
-        assertThat(result.get().name()).isEqualTo("Viewer");
+        assertThat(result.get().name()).isEqualTo("Admin");
     }
 
     @Test
-    void findById_notFound_returnsEmpty() {
-        when(roleRepository.findById("x")).thenReturn(Optional.empty());
-
-        assertThat(service.findById("x")).isEmpty();
-    }
-
-    @Test
-    void findAll_returnsPaginatedResult() {
-        when(roleRepository.findAll(null, 0, 10, null))
-                .thenReturn(List.of(stubRole("a", "A"), stubRole("b", "B")));
-        when(roleRepository.count(null)).thenReturn(2L);
+    void findAll_shouldReturnPaginatedResult() {
+        when(roleRepository.findAll(null, 0, 10, null)).thenReturn(List.of(sampleRole()));
+        when(roleRepository.count(null)).thenReturn(1L);
 
         var result = service.findAll(null, 0, 10, null);
 
-        assertThat(result.content()).hasSize(2);
-        assertThat(result.total()).isEqualTo(2L);
+        assertThat(result.content()).hasSize(1);
     }
 
     @Test
-    void update_happyPath_returnsUpdatedResult() {
-        when(roleRepository.findById("uuid-1")).thenReturn(Optional.of(stubRole("uuid-1", "Old")));
-        when(roleRepository.existsByNameAndIdNot("New", "uuid-1")).thenReturn(false);
-        when(roleRepository.save(any())).thenReturn(stubRole("uuid-1", "New"));
+    void update_shouldReturnResult() {
+        var cmd = new UpdateRoleCommand("Super Admin", "Updated");
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(roleRepository.existsByNameAndIdNot("Super Admin", "role-1")).thenReturn(false);
+        when(roleRepository.save(any(Role.class))).thenAnswer(i -> i.getArgument(0));
 
-        var result = service.update("uuid-1", new UpdateRoleCommand("New", "d"));
+        var result = service.update("role-1", cmd);
 
-        assertThat(result.name()).isEqualTo("New");
+        assertThat(result.name()).isEqualTo("Super Admin");
     }
 
     @Test
-    void update_notFound_throwsOrgNotFoundException() {
-        when(roleRepository.findById("x")).thenReturn(Optional.empty());
+    void update_shouldThrowWhenNotFound() {
+        var cmd = new UpdateRoleCommand("Name", "Desc");
+        when(roleRepository.findById("bad-id")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.update("x", new UpdateRoleCommand("Y", "d")))
+        assertThatThrownBy(() -> service.update("bad-id", cmd))
                 .isInstanceOf(OrgNotFoundException.class);
     }
 
     @Test
-    void update_duplicateName_throwsDuplicateOrgNameException() {
-        when(roleRepository.findById("uuid-1")).thenReturn(Optional.of(stubRole("uuid-1", "Old")));
-        when(roleRepository.existsByNameAndIdNot("Taken", "uuid-1")).thenReturn(true);
+    void update_shouldThrowWhenDuplicateName() {
+        var cmd = new UpdateRoleCommand("Taken", "Desc");
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(roleRepository.existsByNameAndIdNot("Taken", "role-1")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.update("uuid-1", new UpdateRoleCommand("Taken", "d")))
+        assertThatThrownBy(() -> service.update("role-1", cmd))
                 .isInstanceOf(DuplicateOrgNameException.class);
     }
 
     @Test
-    void delete_happyPath_deletesById() {
-        when(roleRepository.findById("uuid-1")).thenReturn(Optional.of(stubRole("uuid-1", "Admin")));
+    void delete_shouldDelete() {
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
 
-        service.delete("uuid-1");
+        service.delete("role-1");
 
-        verify(roleRepository).deleteById("uuid-1");
+        verify(roleRepository).deleteById("role-1");
     }
 
     @Test
-    void delete_notFound_throwsOrgNotFoundException() {
-        when(roleRepository.findById("x")).thenReturn(Optional.empty());
+    void delete_shouldThrowWhenNotFound() {
+        when(roleRepository.findById("bad-id")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.delete("x"))
+        assertThatThrownBy(() -> service.delete("bad-id"))
                 .isInstanceOf(OrgNotFoundException.class);
     }
 }

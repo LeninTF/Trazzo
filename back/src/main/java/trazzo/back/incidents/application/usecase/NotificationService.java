@@ -18,15 +18,15 @@ public class NotificationService implements NotificationUseCase {
 
     @Override
     public void notify(String incidentId, NotifyIncidentCommand command) {
-        var incident = incidentRepository.findById(incidentId)
-                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
-        log.info("Notificación enviada para incidencia {} con tipo {}", incidentId, command.tipo());
+        incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada"));
+        log.info("Notificación enviada para incidencia");
     }
 
     @Override
     public void justifyAttendance(String incidentId) {
-        var incident = incidentRepository.findById(incidentId)
-                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
-        log.info("Justificación de asistencia registrada para incidencia {}", incidentId);
+        incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada"));
+        log.info("Justificación de asistencia registrada para incidencia");
     }
 }

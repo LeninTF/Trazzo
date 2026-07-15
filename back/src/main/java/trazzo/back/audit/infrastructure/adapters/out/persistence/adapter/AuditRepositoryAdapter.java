@@ -32,7 +32,8 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
-    private static final Set<String> SORT_WHITELIST = Set.of("created_at", "entity", "action", "id");
+    private static final String CREATED_AT = "created_at";
+    private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id");
 
     private static final RowMapper<Audit> ROW_MAPPER = (rs, rowNum) -> Audit.restore(
             rs.getString("id"),
@@ -45,7 +46,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
             rs.getString("user_agent"),
             deserializeJson(rs.getString("old_value")),
             deserializeJson(rs.getString("new_value")),
-            rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toLocalDateTime() : null
+            rs.getTimestamp(CREATED_AT) != null ? rs.getTimestamp(CREATED_AT).toLocalDateTime() : null
     );
 
     @Override
@@ -62,7 +63,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
 
         int offset = pageable.getPageNumber() * pageable.getPageSize();
 
-        String sortField = "created_at";
+        String sortField = CREATED_AT;
         String sortDirection = "DESC";
         if (!pageable.getSort().isEmpty()) {
             var order = pageable.getSort().stream().findFirst().orElse(null);
@@ -148,11 +149,11 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private void appendDateClauses(StringBuilder sql, List<SqlParameterValue> params,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
         if (fechaDesde != null) {
-            sql.append(" AND a.created_at >= ?");
+            sql.append(" AND a.").append(CREATED_AT).append(" >= ?");
             params.add(new SqlParameterValue(Types.TIMESTAMP, fechaDesde));
         }
         if (fechaHasta != null) {
-            sql.append(" AND a.created_at <= ?");
+            sql.append(" AND a.").append(CREATED_AT).append(" <= ?");
             params.add(new SqlParameterValue(Types.TIMESTAMP, fechaHasta));
         }
     }

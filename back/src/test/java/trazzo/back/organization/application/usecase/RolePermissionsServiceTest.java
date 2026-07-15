@@ -19,91 +19,99 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RolePermissionsServiceTest {
 
-    @Mock RolePermissionsRepositoryPort rolePermissionsRepository;
-    @Mock RoleRepositoryPort roleRepository;
-    @Mock PermissionRepositoryPort permissionRepository;
-    @InjectMocks RolePermissionsService service;
+    @Mock
+    private RolePermissionsRepositoryPort rolePermissionsRepository;
 
-    private Role stubRole(String id) {
-        return Role.restore(id, "Role", "desc", LocalDateTime.now(), LocalDateTime.now());
+    @Mock
+    private RoleRepositoryPort roleRepository;
+
+    @Mock
+    private PermissionRepositoryPort permissionRepository;
+
+    @InjectMocks
+    private RolePermissionsService service;
+
+    private Role sampleRole() {
+        return Role.restore("role-1", "Admin", "Desc", LocalDateTime.now(), LocalDateTime.now());
     }
 
-    private Permissions stubPerm(String id) {
-        return Permissions.restore(id, "Perm", "desc", "CODE", LocalDateTime.now(), LocalDateTime.now());
-    }
-
-    private RolePermissions stubRp(String roleId, String permId) {
-        return RolePermissions.restore(roleId, permId, LocalDateTime.now());
+    private Permissions samplePermission() {
+        return Permissions.restore("perm-1", "READ", "Read", "CODE", LocalDateTime.now(), LocalDateTime.now());
     }
 
     @Test
-    void assign_happyPath_savesAndReturns() {
-        when(roleRepository.findById("role-1")).thenReturn(Optional.of(stubRole("role-1")));
-        when(permissionRepository.findById("perm-1")).thenReturn(Optional.of(stubPerm("perm-1")));
+    void assign_shouldReturnResult() {
+        var cmd = new AssignPermissionToRoleCommand("perm-1");
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(permissionRepository.findById("perm-1")).thenReturn(Optional.of(samplePermission()));
         when(rolePermissionsRepository.existsByRoleIdAndPermissionId("role-1", "perm-1")).thenReturn(false);
-        when(rolePermissionsRepository.save(any())).thenReturn(stubRp("role-1", "perm-1"));
+        when(rolePermissionsRepository.save(any(RolePermissions.class))).thenAnswer(i -> i.getArgument(0));
 
-        var result = service.assign("role-1", new AssignPermissionToRoleCommand("perm-1"));
+        var result = service.assign("role-1", cmd);
 
         assertThat(result.roleId()).isEqualTo("role-1");
         assertThat(result.permissionId()).isEqualTo("perm-1");
     }
 
     @Test
-    void assign_roleNotFound_throwsOrgNotFoundException() {
-        when(roleRepository.findById("x")).thenReturn(Optional.empty());
+    void assign_shouldThrowWhenRoleNotFound() {
+        var cmd = new AssignPermissionToRoleCommand("perm-1");
+        when(roleRepository.findById("bad-role")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assign("x", new AssignPermissionToRoleCommand("perm-1")))
+        assertThatThrownBy(() -> service.assign("bad-role", cmd))
                 .isInstanceOf(OrgNotFoundException.class);
     }
 
     @Test
-    void assign_permissionNotFound_throwsOrgNotFoundException() {
-        when(roleRepository.findById("role-1")).thenReturn(Optional.of(stubRole("role-1")));
-        when(permissionRepository.findById("x")).thenReturn(Optional.empty());
+    void assign_shouldThrowWhenPermissionNotFound() {
+        var cmd = new AssignPermissionToRoleCommand("bad-perm");
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(permissionRepository.findById("bad-perm")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assign("role-1", new AssignPermissionToRoleCommand("x")))
+        assertThatThrownBy(() -> service.assign("role-1", cmd))
                 .isInstanceOf(OrgNotFoundException.class);
     }
 
     @Test
-    void assign_alreadyAssigned_throwsDuplicateOrgNameException() {
-        when(roleRepository.findById("role-1")).thenReturn(Optional.of(stubRole("role-1")));
-        when(permissionRepository.findById("perm-1")).thenReturn(Optional.of(stubPerm("perm-1")));
+    void assign_shouldThrowWhenDuplicate() {
+        var cmd = new AssignPermissionToRoleCommand("perm-1");
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(permissionRepository.findById("perm-1")).thenReturn(Optional.of(samplePermission()));
         when(rolePermissionsRepository.existsByRoleIdAndPermissionId("role-1", "perm-1")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.assign("role-1", new AssignPermissionToRoleCommand("perm-1")))
+        assertThatThrownBy(() -> service.assign("role-1", cmd))
                 .isInstanceOf(DuplicateOrgNameException.class);
     }
 
     @Test
-    void findByRoleId_roleExists_returnsList() {
-        when(roleRepository.findById("role-1")).thenReturn(Optional.of(stubRole("role-1")));
-        when(rolePermissionsRepository.findByRoleId("role-1"))
-                .thenReturn(List.of(stubRp("role-1", "perm-1"), stubRp("role-1", "perm-2")));
+    void findByRoleId_shouldReturnList() {
+        var rp = RolePermissions.restore("role-1", "perm-1", LocalDateTime.now());
+        when(roleRepository.findById("role-1")).thenReturn(Optional.of(sampleRole()));
+        when(rolePermissionsRepository.findByRoleId("role-1")).thenReturn(List.of(rp));
 
         var result = service.findByRoleId("role-1");
 
-        assertThat(result).hasSize(2);
+        assertThat(result).hasSize(1);
     }
 
     @Test
-    void findByRoleId_roleNotFound_throwsOrgNotFoundException() {
-        when(roleRepository.findById("x")).thenReturn(Optional.empty());
+    void findByRoleId_shouldThrowWhenRoleNotFound() {
+        when(roleRepository.findById("bad-role")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.findByRoleId("x"))
+        assertThatThrownBy(() -> service.findByRoleId("bad-role"))
                 .isInstanceOf(OrgNotFoundException.class);
     }
 
     @Test
-    void remove_happyPath_deletesAssignment() {
+    void remove_shouldDelete() {
         when(rolePermissionsRepository.existsByRoleIdAndPermissionId("role-1", "perm-1")).thenReturn(true);
 
         service.remove("role-1", "perm-1");
@@ -112,7 +120,7 @@ class RolePermissionsServiceTest {
     }
 
     @Test
-    void remove_notAssigned_throwsOrgNotFoundException() {
+    void remove_shouldThrowWhenNotAssigned() {
         when(rolePermissionsRepository.existsByRoleIdAndPermissionId("role-1", "perm-1")).thenReturn(false);
 
         assertThatThrownBy(() -> service.remove("role-1", "perm-1"))
