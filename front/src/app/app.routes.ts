@@ -5,6 +5,7 @@ import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
 import { Login } from './auth/login/login';
+import { HelpPage } from './pages/public/help/help-page';
 import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
 import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
@@ -125,45 +126,54 @@ export const routes: Routes = [
         component: IncidenciasUsuario
     },
     {
-        path: 'sass',
+        path: 'saas',
         pathMatch: 'full',
-        redirectTo: 'sass/tenants'
+        redirectTo: 'saas/tenants'
     },
     
     {
-        path: 'sass/tenants',
+        path: 'saas/tenants',
         component: Tenants
     },
     {
-        path: 'sass/gestion-planes',
+        path: 'saas/gestion-planes',
         component: GestionPlanes
     },
     {
-        path: 'sass/solicitudes',
+        path: 'saas/solicitudes',
         component: Solicitudes
     },
     {
-        path: 'sass/log-auditoria',
+        path: 'saas/log-auditoria',
         component: LogAuditoria
     },
     {
-        path: 'sass/facturas',
+        path: 'saas/facturas',
         component: Facturas
     },
     {
-        path: 'sass/gestion-usuarios',
+        path: 'saas/gestion-usuarios',
         component: GestionUsuarios
     },
     {
-        path: 'sass/gestion-roles',
+        path: 'saas/gestion-roles',
         component: GestionRolesSaas
     },
     {
-        path: 'sass/perfil',
+        path: 'saas/perfil',
         component: PerfilSass
     },
     {
         path: 'usuario/perfil',
         component: Perfil
+    },
+    {
+        path: 'ayuda/:seccion',
+        component: HelpPage
+    },
+    {
+        path: 'ayuda',
+        pathMatch: 'full',
+        redirectTo: 'ayuda/guia-de-uso'
     }
 ];

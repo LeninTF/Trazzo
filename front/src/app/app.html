@@ -1,6 +1,6 @@
 <app-toast></app-toast>
 
-@if (currentUrl().startsWith('/tenant') || currentUrl().startsWith('/sass') || currentUrl().startsWith('/usuario')) {
+@if (currentUrl().startsWith('/tenant') || currentUrl().startsWith('/saas') || currentUrl().startsWith('/usuario')) {
 	<div class="app-shell" [class.app-shell--sidebar-open]="roleService.sidebarOpen()">
 		@if (roleService.sidebarOpen()) {
 			<div class="app-shell__backdrop" (click)="roleService.closeSidebar()" (keydown.enter)="roleService.closeSidebar()" role="button" tabindex="0"></div>
