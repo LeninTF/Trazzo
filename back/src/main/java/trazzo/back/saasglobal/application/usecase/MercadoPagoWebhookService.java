@@ -45,19 +45,21 @@ public class MercadoPagoWebhookService implements ProcessMercadoPagoWebhookUseCa
     @Override
     @Transactional
     public void process(MercadoPagoWebhookCommand cmd) {
-        boolean isNew = webhooksLogRepository.insertIfNotExists(
+        boolean shouldProcess = webhooksLogRepository.insertOrShouldRetry(
                 PaymentWebhooksLog.create(cmd.notificationId(), cmd.notificationId(), cmd.action(), cmd.rawPayload()));
-        if (!isNew) {
+        if (!shouldProcess) {
             log.info("Mercado Pago webhook notificationId={} already processed, skipping", cmd.notificationId());
             return;
         }
         try {
             dispatch(cmd);
-        } catch (RuntimeException e) {
-            log.error("Failed to process Mercado Pago webhook notificationId={} type={}",
-                    cmd.notificationId(), cmd.type(), e);
-        } finally {
             webhooksLogRepository.markProcessed(cmd.notificationId());
+        } catch (RuntimeException e) {
+            // Left unprocessed on purpose: a Mercado Pago retry (or manual replay) will find
+            // insertOrShouldRetry() true again and re-attempt dispatch(), instead of a
+            // transient failure permanently dropping this payment/subscription update.
+            log.error("Failed to process Mercado Pago webhook notificationId={} type={}, will retry on next delivery",
+                    cmd.notificationId(), cmd.type(), e);
         }
     }
 

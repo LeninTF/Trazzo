@@ -13,7 +13,7 @@ public class PaymentWebhooksLogJdbcRepositoryAdapter implements PaymentWebhooksL
     private final JdbcTemplate jdbc;
 
     @Override
-    public boolean insertIfNotExists(PaymentWebhooksLog log) {
+    public boolean insertOrShouldRetry(PaymentWebhooksLog log) {
         int rowsInserted = jdbc.update("""
                 INSERT INTO payment_webhooks_log (id, mp_event_id, action, raw_payload, processed, received_at)
                 VALUES (?, ?, ?, CAST(? AS jsonb), ?, ?)
@@ -25,7 +25,14 @@ public class PaymentWebhooksLogJdbcRepositoryAdapter implements PaymentWebhooksL
                 log.getRawPayload(),
                 log.isProcessed(),
                 log.getReceivedAt());
-        return rowsInserted > 0;
+        if (rowsInserted > 0) {
+            return true;
+        }
+        Boolean processed = jdbc.query(
+                "SELECT processed FROM payment_webhooks_log WHERE id = ?",
+                rs -> rs.next() ? rs.getBoolean("processed") : null,
+                log.getId());
+        return processed != null && !processed;
     }
 
     @Override

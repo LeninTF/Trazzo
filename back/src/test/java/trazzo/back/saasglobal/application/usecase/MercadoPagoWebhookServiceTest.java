@@ -54,7 +54,7 @@ class MercadoPagoWebhookServiceTest {
 
     @Test
     void process_skipsWhenNotificationAlreadyLogged() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(false);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(false);
 
         service.process(new MercadoPagoWebhookCommand("evt-1", "subscription_preapproval", "created", "pre-1", "{}"));
 
@@ -64,7 +64,7 @@ class MercadoPagoWebhookServiceTest {
 
     @Test
     void process_activatesTrialSubscriptionWhenPreapprovalAuthorized() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
         when(mercadoPagoSubscriptionPort.getPreapproval("pre-1"))
                 .thenReturn(new PreapprovalDetails("pre-1", "authorized", "tenant-1"));
         Subscription sub = Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now());
@@ -83,7 +83,7 @@ class MercadoPagoWebhookServiceTest {
 
     @Test
     void process_updatesTenantPlanWhenActivatedSubscriptionIsForADifferentPlan() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
         when(mercadoPagoSubscriptionPort.getPreapproval("pre-2"))
                 .thenReturn(new PreapprovalDetails("pre-2", "authorized", "tenant-1"));
         Subscription sub = Subscription.createTrial("tenant-1", 3, BigDecimal.ZERO, LocalDate.now());
@@ -103,7 +103,7 @@ class MercadoPagoWebhookServiceTest {
 
     @Test
     void process_recordsApprovedPayment() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
         when(paymentTransactionRepository.findByMpPaymentId("pay-1")).thenReturn(Optional.empty());
         when(mercadoPagoSubscriptionPort.getPayment("pay-1")).thenReturn(
                 new PaymentDetails("pay-1", "approved", new BigDecimal("29.99"), new BigDecimal("28.50"), "tenant-1"));
@@ -122,7 +122,7 @@ class MercadoPagoWebhookServiceTest {
 
     @Test
     void process_skipsAlreadyRecordedPayment() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
         when(paymentTransactionRepository.findByMpPaymentId("pay-1")).thenReturn(Optional.of(
                 trazzo.back.saasglobal.domain.model.invoice.PaymentTransaction.create(
                         "tenant-1", "sub-1", null, BigDecimal.TEN, BigDecimal.TEN)));
@@ -134,20 +134,20 @@ class MercadoPagoWebhookServiceTest {
     }
 
     @Test
-    void process_swallowsBusinessErrorsAndStillMarksProcessed() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+    void process_swallowsBusinessErrorsAndLeavesUnprocessedForRetry() {
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
         when(mercadoPagoSubscriptionPort.getPreapproval("pre-1"))
                 .thenThrow(new RuntimeException("Mercado Pago unreachable"));
 
         assertDoesNotThrow(() -> service.process(
                 new MercadoPagoWebhookCommand("evt-5", "subscription_preapproval", "created", "pre-1", "{}")));
 
-        verify(webhooksLogRepository).markProcessed("evt-5");
+        verify(webhooksLogRepository, never()).markProcessed(anyString());
     }
 
     @Test
     void process_ignoresUnknownEventType() {
-        when(webhooksLogRepository.insertIfNotExists(any())).thenReturn(true);
+        when(webhooksLogRepository.insertOrShouldRetry(any())).thenReturn(true);
 
         service.process(new MercadoPagoWebhookCommand("evt-6", "payment.created", "created", "res-1", "{}"));
 

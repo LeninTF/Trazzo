@@ -4,10 +4,14 @@ import trazzo.back.saasglobal.domain.model.invoice.PaymentWebhooksLog;
 
 public interface PaymentWebhooksLogRepositoryPort {
     /**
-     * @return true if this notification id was new and got inserted; false if it was already
-     * logged (a Mercado Pago retry of a notification already seen — caller must not reprocess it).
+     * Inserts a new log row if this notification id hasn't been seen before.
+     *
+     * @return true if the caller should (re)attempt processing — either the id was new, or it
+     * was already logged but a prior attempt never reached {@link #markProcessed}; false if a
+     * prior attempt already completed successfully, so this delivery (a Mercado Pago retry)
+     * must not be reprocessed.
      */
-    boolean insertIfNotExists(PaymentWebhooksLog log);
+    boolean insertOrShouldRetry(PaymentWebhooksLog log);
 
     void markProcessed(String id);
 }
