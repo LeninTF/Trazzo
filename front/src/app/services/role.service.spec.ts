@@ -111,4 +111,38 @@ describe('RoleService', () => {
       expect(service.roleLabel['usuario']).toBe('Usuario');
     });
   });
+
+  describe('clearSession', () => {
+    it('should reset userName, userEmail and role to their defaults', () => {
+      service.setUserInfo('John Doe', 'john@test.com');
+      service.switchRole('admin-saas');
+
+      service.clearSession();
+
+      expect(service.userName()).toBe('');
+      expect(service.userEmail()).toBe('');
+      expect(service.role()).toBe('admin-tenant');
+    });
+
+    it('should remove userName and role from localStorage', () => {
+      service.setUserInfo('John Doe', 'john@test.com');
+      service.switchRole('admin-saas');
+
+      service.clearSession();
+
+      expect(localStorage.getItem('trazzo_user_name')).toBeNull();
+      expect(localStorage.getItem('trazzo_role')).toBeNull();
+    });
+
+    it('should not resurrect the old role on next app load after clearing', () => {
+      service.switchRole('admin-saas');
+      service.clearSession();
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({});
+      const freshService = TestBed.inject(RoleService);
+
+      expect(freshService.role()).toBe('admin-tenant');
+    });
+  });
 });
