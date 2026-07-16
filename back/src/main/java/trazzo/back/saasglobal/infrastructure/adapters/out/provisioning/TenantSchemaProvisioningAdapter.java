@@ -63,6 +63,8 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         }
     }
 
+    // Identifier is sanitized to [a-z0-9_] by validateIdentifier() before this ever runs.
+    @SuppressWarnings("java:S2077")
     private void provisionSchema(String schemaName) {
         validateIdentifier(schemaName);
         createSchema(schemaName);
