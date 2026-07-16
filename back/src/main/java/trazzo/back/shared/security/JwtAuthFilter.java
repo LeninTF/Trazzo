@@ -48,11 +48,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                 && userDetails.isAccountNonLocked()
                                 && userDetails.isAccountNonExpired()
                                 && userDetails.isCredentialsNonExpired()) {
-                            var auth = new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                            SecurityContextHolder.getContext().setAuthentication(auth);
-                            TenantContext.set(tokenValidator.extractTenantSchema(token));
+                            String tenantSchema = tokenValidator.extractTenantSchema(token);
+                            boolean isSaasAdmin = userDetails.getAuthorities().stream()
+                                    .anyMatch(a -> "ROLE_SAAS_ADMIN".equals(a.getAuthority()));
+                            // SaaS-admin tokens carry no tenant claim by design (they operate on
+                            // the master "public" schema). Any other user is tenant-scoped and
+                            // must carry one — TenantContext.set(null) silently defaults to
+                            // "public", so accepting a claim-less token here would route a
+                            // tenant's requests into the master schema instead of failing loudly.
+                            if (!isSaasAdmin && (tenantSchema == null || tenantSchema.isBlank())) {
+                                log.warn("Rejecting authentication for tenant-scoped user with missing tenant claim — path={}",
+                                        request.getRequestURI());
+                            } else {
+                                var auth = new UsernamePasswordAuthenticationToken(
+                                        userDetails, null, userDetails.getAuthorities());
+                                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                                SecurityContextHolder.getContext().setAuthentication(auth);
+                                TenantContext.set(tenantSchema);
+                            }
                         }
                     }
                 } catch (Exception e) {
