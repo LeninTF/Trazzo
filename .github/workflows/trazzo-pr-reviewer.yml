@@ -17,23 +17,30 @@ concurrency:
 
 jobs:
   opencode_review:
-    name: Revisión Estricta DevSecOps
+    name: Revisión DevSecOps
     # Lógica condicional híbrida: Corre si es un PR nuevo O si un comentario invoca al bot
     if: >
-      github.event.sender.type != 'Bot' && 
-      (
-        github.event_name == 'pull_request' || 
-        contains(github.event.comment.body, '/oc') || 
-        contains(github.event.comment.body, '/opencode')
+      github.event.sender.type != 'Bot' && (
+        github.event_name == 'pull_request' ||
+        (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request &&
+          (contains(github.event.comment.body, '/oc') || contains(github.event.comment.body, '/opencode')) &&
+          contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+        ) ||
+        (
+          github.event_name == 'pull_request_review_comment' &&
+          (contains(github.event.comment.body, '/oc') || contains(github.event.comment.body, '/opencode')) &&
+          contains(fromJson('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+        )
       )
     runs-on: ubuntu-latest
     
 
     permissions:
-      id-token: write
+      id-token: write #OpenCode requires this for authentication
       contents: read
-      pull-requests: write 
-      issues: write
+      pull-requests: write
       
     steps:
       - name: Checkout del repositorio
@@ -64,7 +71,7 @@ jobs:
           fi
 
       - name: Ejecutar OpenCode Agent (Big Pickle)
-        uses: anomalyco/opencode/github@latest
+        uses: anomalyco/opencode/github@latest # Usamos la acción oficial con el comando recomendado de OpenCode para GitHub
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -101,13 +108,13 @@ jobs:
             4. 📈 ESFUERZO DE REVISIÓN (CRÍTICO):
                Debes calcular el nivel de esfuerzo algorítmico y técnico que le tomaría a un humano revisar este PR. 
                Al final absoluto de tu respuesta, DEBES escribir OBLIGATORIAMENTE una de estas opciones exactas (sin formato markdown adicional ni comillas):
-               Review effort 1/5
-               Review effort 2/5
-               Review effort 3/5
-               Review effort 4/5
-               Review effort 5/5
+               OC_REVIEW_EFFORT: Review effort 1/5
+               OC_REVIEW_EFFORT: Review effort 2/5
+               OC_REVIEW_EFFORT: Review effort 3/5
+               OC_REVIEW_EFFORT: Review effort 4/5
+               OC_REVIEW_EFFORT: Review effort 5/5
 
-      - name: 🏷️ Aplicar Etiqueta Dinámica de 'Review Effort'
+      - name: Aplicar Etiqueta Dinámica de 'Review Effort'
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,7 +124,12 @@ jobs:
           sleep 5
           
           # Obtener el último comentario generado por el bot
-          LATEST_COMMENT=$(gh pr view $PR_NUMBER --json comments --jq '.comments[-1].body')
+          LATEST_COMMENT=$(gh pr view "$PR_NUMBER" --json comments --jq '
+            .comments 
+            | map(select((.author.login == "github-actions" or .author.login == "github-actions[bot]") and (.body | contains("OC_REVIEW_EFFORT:")))) 
+            | last 
+            | .body
+          ')
           
           # Extraer exactamente la métrica de esfuerzo usando Regex
           EFFORT_LABEL=$(echo "$LATEST_COMMENT" | grep -o 'Review effort [1-5]/5' | tail -n 1)
