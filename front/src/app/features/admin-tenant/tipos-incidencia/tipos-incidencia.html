@@ -62,10 +62,12 @@
                 @if (isEditing(tipo)) {
                   <tr class="ti-row--editing" [formGroup]="editForm">
                     <td>
-                      <input type="text" class="ti-input" formControlName="nombre" placeholder="Nombre del tipo" />
+                      <label class="visually-hidden" for="edit-tipo-nombre">Nombre</label>
+                      <input id="edit-tipo-nombre" type="text" class="ti-input" formControlName="nombre" placeholder="Nombre del tipo" />
                     </td>
                     <td>
-                      <input type="text" class="ti-input" formControlName="descripcion" placeholder="Descripción (opcional)" />
+                      <label class="visually-hidden" for="edit-tipo-descripcion">Descripción</label>
+                      <input id="edit-tipo-descripcion" type="text" class="ti-input" formControlName="descripcion" placeholder="Descripción (opcional)" />
                     </td>
                     <td>
                       <label class="ti-toggle-wrap">
