@@ -56,6 +56,30 @@ describe('LogAuditoria', () => {
     page: 0, size: 5, totalElements: 1, totalPages: 1,
   };
 
+  const nullFieldsLogs = {
+    content: [
+      {
+        id: '7', eventId: null, fecha: '2026-06-12T10:00:00', tenant: null, tenantId: null,
+        userName: null, userEmail: null, accion: null, tipo: null,
+        entidad: null, entidadId: null, ipAddress: null, userAgent: null,
+        oldValue: null, newValue: null,
+      },
+    ],
+    page: 0, size: 5, totalElements: 1, totalPages: 1,
+  };
+
+  const doubleSpaceNameLogs = {
+    content: [
+      {
+        id: '8', eventId: 'evt-8', fecha: '2026-06-13T10:00:00', tenant: 'Tenant E', tenantId: 't-6',
+        userName: 'a  b', userEmail: 'ab@test.com', accion: 'Login', tipo: 'exito',
+        entidad: 'users', entidadId: '8', ipAddress: '10.0.0.5', userAgent: 'Chrome',
+        oldValue: null, newValue: null,
+      },
+    ],
+    page: 0, size: 5, totalElements: 1, totalPages: 1,
+  };
+
   const singleWordNameLogs = {
     content: [
       {
@@ -157,11 +181,17 @@ describe('LogAuditoria', () => {
     expect(component.logs[0].userInitials).toBe('M');
   });
 
-  it('should handle multi-word name initials limited to 2', async () => {
-    mockAudit.listLogs.and.returnValue(of(multiPageLogs));
-    component.cargarLogs();
-    expect(component.logs[0].userInitials).toBe('PG');
-  });
+    it('should handle multi-word name initials limited to 2', async () => {
+      mockAudit.listLogs.and.returnValue(of(multiPageLogs));
+      component.cargarLogs();
+      expect(component.logs[0].userInitials).toBe('PG');
+    });
+
+    it('should handle name with consecutive spaces covering p[0] fallback', async () => {
+      mockAudit.listLogs.and.returnValue(of(doubleSpaceNameLogs));
+      component.cargarLogs();
+      expect(component.logs[0].userInitials).toBe('A');
+    });
 
   it('should handle empty userName returning question mark', async () => {
     mockAudit.listLogs.and.returnValue(of(errorTipoLogs));
@@ -355,5 +385,72 @@ describe('LogAuditoria', () => {
   it('should handle log with null oldValue and newValue', () => {
     expect(component.logs[0].oldValue).toBeNull();
     expect(component.logs[0].newValue).toBeNull();
+  });
+
+  it('should default all null optional fields to empty strings', async () => {
+    mockAudit.listLogs.and.returnValue(of(nullFieldsLogs));
+    component.cargarLogs();
+    const log = component.logs[0];
+    expect(log.tenant).toBe('');
+    expect(log.tenantId).toBe('');
+    expect(log.userName).toBe('');
+    expect(log.userEmail).toBe('');
+    expect(log.accion).toBe('');
+    expect(log.entidad).toBe('');
+    expect(log.entidadId).toBe('');
+    expect(log.eventId).toBe('');
+    expect(log.ipAddress).toBe('');
+    expect(log.userAgent).toBe('');
+  });
+
+  it('should fallback to exito when tipo is null via optional chaining', async () => {
+    mockAudit.listLogs.and.returnValue(of(nullFieldsLogs));
+    component.cargarLogs();
+    expect(component.logs[0].tipo).toBe('exito');
+  });
+
+  it('should change to page 1 (lower boundary)', () => {
+    component.totalPaginasServidor = 3;
+    component.paginaActual = 2;
+    mockAudit.listLogs.calls.reset();
+    component.cambiarPagina(1);
+    expect(component.paginaActual).toBe(1);
+    expect(mockAudit.listLogs).toHaveBeenCalled();
+  });
+
+  it('should change to last page (upper boundary)', () => {
+    component.totalPaginasServidor = 3;
+    component.paginaActual = 1;
+    mockAudit.listLogs.and.returnValue(of({ ...mockLogs, totalPages: 3 }));
+    mockAudit.listLogs.calls.reset();
+    component.cambiarPagina(3);
+    expect(component.paginaActual).toBe(3);
+    expect(mockAudit.listLogs).toHaveBeenCalled();
+  });
+
+  it('should show loading state in template', () => {
+    component.loading.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.loading-state')).toBeTruthy();
+  });
+
+  it('should hide pagination when totalElementos is 0', async () => {
+    mockAudit.listLogs.and.returnValue(of(emptyLogs));
+    component.cargarLogs();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.table-card__footer')).toBeFalsy();
+  });
+
+  it('should assign consistent color for same email', () => {
+    const c1 = component.logs[0].userColor;
+    component.cargarLogs();
+    const c2 = component.logs[0].userColor;
+    expect(c1).toBe(c2);
+  });
+
+  it('should set loading false after cargarLogs error', () => {
+    mockAudit.listLogs.and.returnValue(throwError(() => new Error('fail')));
+    component.cargarLogs();
+    expect(component.loading()).toBeFalse();
   });
 });
