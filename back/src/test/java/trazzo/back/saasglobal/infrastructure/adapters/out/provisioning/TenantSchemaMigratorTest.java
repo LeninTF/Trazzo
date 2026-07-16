@@ -75,7 +75,7 @@ class TenantSchemaMigratorTest {
 
         migrator.run(mock(ApplicationArguments.class));
 
-        verify(statement).execute("SET search_path TO \"tenant_demo\"");
+        verify(statement).execute("SET search_path TO \"tenant_demo\", public");
         verify(resourceResolver).getResources(contains("db/tenant/migration/"));
     }
 

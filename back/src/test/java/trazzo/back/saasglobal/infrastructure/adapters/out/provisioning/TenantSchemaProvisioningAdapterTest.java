@@ -48,7 +48,7 @@ class TenantSchemaProvisioningAdapterTest {
         assertEquals("t-1", result.getTenantId());
         assertEquals("tenant_acme", result.getSchemaName());
         verify(statement).execute("CREATE SCHEMA \"tenant_acme\"");
-        verify(statement).execute("SET search_path TO \"tenant_acme\"");
+        verify(statement).execute("SET search_path TO \"tenant_acme\", public");
     }
 
     @Test

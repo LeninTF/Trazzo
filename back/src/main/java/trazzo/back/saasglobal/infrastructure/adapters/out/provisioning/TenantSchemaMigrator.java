@@ -86,7 +86,10 @@ public class TenantSchemaMigrator implements ApplicationRunner {
         }
         try (Connection conn = rawDataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("SET search_path TO \"" + schemaName + "\"");
+                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
+                // since PG13, always implicitly searched first) but kept for defense in depth
+                // and to match TenantAwareDataSource's runtime search_path exactly.
+                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
             }
             Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
             // Each script runs independently: this migrator has no per-tenant applied-migration

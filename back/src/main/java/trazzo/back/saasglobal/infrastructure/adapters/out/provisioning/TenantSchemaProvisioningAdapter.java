@@ -72,7 +72,10 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         try (Connection conn = rawDataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
-                stmt.execute("SET search_path TO \"" + schemaName + "\"");
+                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
+                // since PG13, always implicitly searched first) but kept for defense in depth
+                // and to match TenantAwareDataSource's runtime search_path exactly.
+                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
             }
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
         } catch (SQLException e) {
