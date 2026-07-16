@@ -1,0 +1,136 @@
+name: Trazzo AI PR Agent (OpenCode)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  
+  # 2. Ejecución "On-Demand" mediante comentarios
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+concurrency:
+  # Cancela ejecuciones antiguas si el desarrollador hace un push rápido de corrección
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  opencode_review:
+    name: Revisión Estricta DevSecOps
+    # Lógica condicional híbrida: Corre si es un PR nuevo O si un comentario invoca al bot
+    if: >
+      github.event.sender.type != 'Bot' && 
+      (
+        github.event_name == 'pull_request' || 
+        contains(github.event.comment.body, '/oc') || 
+        contains(github.event.comment.body, '/opencode')
+      )
+    runs-on: ubuntu-latest
+    
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write 
+      issues: write
+      
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Etiquetado Automático por Tecnologías
+        # Solo lo ejecutamos si es un PR nuevo o actualizado, no en comentarios
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+
+          FILES=$(gh pr view $PR_NUMBER --json files --jq '.files[].path')
+          LABELS=""
+          
+          if echo "$FILES" | grep -iqE '\.cs$|\.csproj$'; then LABELS="$LABELS,.NET"; fi
+          if echo "$FILES" | grep -iqE '\.md$|\.txt$'; then LABELS="$LABELS,documentation"; fi
+          if echo "$FILES" | grep -iqE '^\.github/workflows/'; then LABELS="$LABELS,github_actions"; fi
+          if echo "$FILES" | grep -iqE '\.java$|\.pom$|\.xml$'; then LABELS="$LABELS,java"; fi
+          if echo "$FILES" | grep -iqE '\.js$|\.ts$|\.jsx$|\.tsx$'; then LABELS="$LABELS,javascript"; fi
+          
+          if [ -n "$LABELS" ]; then
+            LABELS=${LABELS#,}
+            gh pr edit $PR_NUMBER --add-label "$LABELS"
+          fi
+
+      - name: Ejecutar OpenCode Agent (Big Pickle)
+        uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: "opencode/big-pickle"
+          use_github_token: true
+          
+          # Trazzo DevSecOps
+          prompt: |
+            Eres el agente revisor de código "Trazzo AI", actuando como un Tech Lead Senior, Arquitecto de Software y experto en DevSecOps. 
+            Tu contexto es un proyecto empresarial construido con Java Spring Boot (Arquitectura Hexagonal estricta) y un frontend modular en Angular.
+            
+            Evalúa este Pull Request aplicando estándares rigurosos de Seguridad, Mantenibilidad y Escalabilidad.
+            No seas condescendiente, sé directo y técnico.
+            
+            Debes estructurar tu respuesta de la siguiente manera:
+            
+            1. 📋 RESUMEN DEL PR:
+               - QUÉ se hizo (Objetivo general).
+               - CÓMO se hizo (Estrategia técnica y patrones aplicados).
+               - DÓNDE se hizo (Capas afectadas: Dominio, Aplicación, Infraestructura, Interfaz de Usuario).
+            
+            2. 📊 ANÁLISIS DE IMPACTO Y SUGERENCIAS:
+               Agrupa todos tus hallazgos bajo estas etiquetas estrictas:
+               - [🔴 Crítico]: Riesgos de seguridad (inyección SQL, exposición de secretos/JWT), vulneración de la Arquitectura Hexagonal (ej. la capa de Dominio dependiendo de Infraestructura o frameworks externos), fugas de memoria o problemas de concurrencia graves.
+               - [🟡 Moderado]: Oportunidades de escalabilidad, ineficiencia en consultas a base de datos (problema N+1 en JPA/Hibernate), mala gestión de estado o fugas en RxJS en Angular, deuda técnica arquitectónica.
+               - [🟢 Menor]: Convenciones de nombres, duplicación de código, sugerencias de Clean Code o mejoras de tipado.
+            
+            3. 💬 COMENTARIOS EN LÍNEA PARA ARCHIVOS AFECTADOS:
+               Para cualquier fallo encontrado, DEBES sugerir la corrección indicando:
+               - Descripción del Problema: Explicación técnica de por qué es un error o mala práctica.
+               - Prompt Sugerido: Un bloque de código Markdown conteniendo un "Prompt" literal que el programador pueda copiar y pegar en su herramienta de IA (Cursor o GitHub Copilot) para auto-corregir el fallo respetando el contexto de Trazzo.
+            
+            4. 📈 ESFUERZO DE REVISIÓN (CRÍTICO):
+               Debes calcular el nivel de esfuerzo algorítmico y técnico que le tomaría a un humano revisar este PR. 
+               Al final absoluto de tu respuesta, DEBES escribir OBLIGATORIAMENTE una de estas opciones exactas (sin formato markdown adicional ni comillas):
+               Review effort 1/5
+               Review effort 2/5
+               Review effort 3/5
+               Review effort 4/5
+               Review effort 5/5
+
+      - name: 🏷️ Aplicar Etiqueta Dinámica de 'Review Effort'
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+
+          sleep 5
+          
+          # Obtener el último comentario generado por el bot
+          LATEST_COMMENT=$(gh pr view $PR_NUMBER --json comments --jq '.comments[-1].body')
+          
+          # Extraer exactamente la métrica de esfuerzo usando Regex
+          EFFORT_LABEL=$(echo "$LATEST_COMMENT" | grep -o 'Review effort [1-5]/5' | tail -n 1)
+          
+          if [ -n "$EFFORT_LABEL" ]; then
+            # Buena Práctica: Remover la etiqueta de esfuerzo anterior si el PR fue actualizado (sincronizado)
+            gh pr view $PR_NUMBER --json labels --jq '.labels[].name' | grep 'Review effort' | while read old_label; do
+              gh pr edit $PR_NUMBER --remove-label "$old_label"
+            done
+            
+            # Aplicar la nueva etiqueta calculada
+            gh pr edit $PR_NUMBER --add-label "$EFFORT_LABEL"
+            echo "✅ Etiqueta de esfuerzo aplicada con éxito: $EFFORT_LABEL"
+          else
+            echo "⚠️ No se detectó la etiqueta de esfuerzo en la respuesta de la IA."
+          fi
