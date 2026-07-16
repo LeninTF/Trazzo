@@ -162,7 +162,7 @@
 			<div class="modal-content modal-content--custom">
 				<div class="modal__header">
 					<h5 class="modal__title">Detalle de Factura</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar">
+					<button type="button" class="btn-close" (click)="cerrarDetalle()" aria-label="Cerrar">
 						<i class="bi bi-x-lg"></i>
 					</button>
 				</div>
@@ -210,7 +210,7 @@
 					}
 				</div>
 				<div class="modal__footer">
-					<button type="button" class="btn btn--primary" data-bs-dismiss="modal">
+					<button type="button" class="btn btn--primary" (click)="cerrarDetalle()">
 						<i class="bi bi-check-lg"></i> Cerrar
 					</button>
 				</div>

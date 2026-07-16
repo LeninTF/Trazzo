@@ -189,6 +189,10 @@ export class Facturas {
     });
   }
 
+  cerrarDetalle(): void {
+    this.modalService.hide('modalDetalleTransaccion');
+  }
+
   exportarCSV(): void {
     const headers = ['Cliente', 'RUC', 'Comprobante', 'Fecha', 'Monto', 'Estado'];
     const rows = this.items().map(f =>

@@ -194,6 +194,11 @@ export class GestionUsuarios {
     this.modalService.show('modalConfirmarEliminar');
   }
 
+  cancelarEliminar(): void {
+    this.editandoUsuario.set(null);
+    this.cerrarModal('modalConfirmarEliminar');
+  }
+
   eliminarUsuario(): void {
     const u = this.editandoUsuario();
     if (!u) return;

@@ -152,6 +152,16 @@ export class Solicitudes {
     this.currentPage.set({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
   }
 
+  cerrarDetalle(): void {
+    this.modalService.hide('modalDetalle');
+  }
+
+  cancelarAccion(): void {
+    this.confirmAction.set(null);
+    this.motivoAccion.set('');
+    this.modalService.hide('modalConfirmar');
+  }
+
   verDetalle(id: number): void {
     this.api.requests.getById(id).subscribe({
       next: (detail) => {

@@ -304,6 +304,10 @@ export class GestionPlanes implements OnInit {
     if (this.editPlanId()) this.modalService.show('modalEliminarPlan');
   }
 
+  cancelarEliminar(): void {
+    this.cerrarModal('modalEliminarPlan');
+  }
+
   eliminarPlan(): void {
     const id = this.editPlanId();
     if (!id) return;
@@ -342,6 +346,10 @@ export class GestionPlanes implements OnInit {
   verDetalleSuscripcion(s: Suscripcion): void {
     this.suscripcionSeleccionada.set(s);
     this.modalService.show('modalDetalleSuscripcion');
+  }
+
+  cerrarDetalleSuscripcion(): void {
+    this.cerrarModal('modalDetalleSuscripcion');
   }
 
   exportarCSV(): void {

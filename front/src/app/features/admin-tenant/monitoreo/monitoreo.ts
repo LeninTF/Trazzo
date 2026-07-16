@@ -479,6 +479,15 @@ export class Monitoreo implements OnInit, OnDestroy {
   // MÉTODOS PARA ESCÁNERES
   // ==========================================
 
+  abrirModalRegistrarEscaner(): void {
+    this.limpiarFormularioEscaner();
+    this.modalService.show('modalRegistrarEscaner');
+  }
+
+  cerrarModalRegistrarEscaner(): void {
+    this.modalService.hide('modalRegistrarEscaner');
+  }
+
   registrarEscaner(): void {
     if (!this.validarFormularioEscaner()) return;
     const nuevoEscanerObj = this.crearObjetoEscaner();
@@ -531,6 +540,11 @@ export class Monitoreo implements OnInit, OnDestroy {
       this.modalService.hide('modalConfirmarEliminar');
       this.escanerAEliminar = null;
     }
+  }
+
+  cancelarEliminarEscaner(): void {
+    this.escanerAEliminar = null;
+    this.modalService.hide('modalConfirmarEliminar');
   }
 
   toggleEscaner(id: number): void {
