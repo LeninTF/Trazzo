@@ -63,23 +63,49 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         }
     }
 
-    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only.
-    // No IF NOT EXISTS on CREATE SCHEMA: a name collision (e.g. two tenants deriving the same
-    // schema name) must fail loudly here rather than silently reusing another tenant's schema.
-    @SuppressWarnings("java:S2077")
     private void provisionSchema(String schemaName) {
         validateIdentifier(schemaName);
+        createSchema(schemaName);
         try (Connection conn = rawDataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
                 // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
                 // since PG13, always implicitly searched first) but kept for defense in depth
                 // and to match TenantAwareDataSource's runtime search_path exactly.
                 stmt.execute("SET search_path TO \"" + schemaName + "\", public");
             }
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
+        } catch (Exception e) {
+            // The schema was created by us (createSchema() above already succeeded), so a
+            // failure past this point must not leave it behind half-populated — that would
+            // block retrying the same subDomain (CREATE SCHEMA no longer tolerates a collision).
+            dropSchemaBestEffort(schemaName);
+            throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
+        }
+    }
+
+    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only.
+    // No IF NOT EXISTS: a name collision (e.g. two tenants deriving the same schema name) must
+    // fail loudly here rather than silently reusing another tenant's schema. Not wrapped in
+    // cleanup: if this itself fails, the schema was never created by us, so there is nothing to
+    // drop — dropping here on a collision would destroy the other tenant's existing schema.
+    @SuppressWarnings("java:S2077")
+    private void createSchema(String schemaName) {
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
         } catch (SQLException e) {
             throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
+        }
+    }
+
+    @SuppressWarnings("java:S2077")
+    private void dropSchemaBestEffort(String schemaName) {
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
+        } catch (SQLException dropEx) {
+            log.warn("Failed to drop orphaned schema '{}' after provisioning failure: {}",
+                    schemaName, dropEx.getMessage());
         }
     }
 
