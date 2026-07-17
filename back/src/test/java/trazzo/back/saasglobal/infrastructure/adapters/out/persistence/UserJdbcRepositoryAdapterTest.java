@@ -56,4 +56,26 @@ class UserJdbcRepositoryAdapterTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllByTenantId_returnsEmptyListWhenNoRows() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        List<User> result = adapter.findAllByTenantId("tenant-1");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllByTenantId_doesNotFilterOutSoftDeletedRows() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+
+        adapter.findAllByTenantId("tenant-1");
+
+        org.mockito.Mockito.verify(jdbc).query(sqlCaptor.capture(), any(RowMapper.class), any());
+        assertThat(sqlCaptor.getValue()).doesNotContain("deleted_at IS NULL");
+    }
 }

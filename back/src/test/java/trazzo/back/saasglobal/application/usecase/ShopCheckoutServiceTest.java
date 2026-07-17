@@ -236,7 +236,7 @@ class ShopCheckoutServiceTest {
         when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         wireTenantCreatedUpToAdminUser();
         User createdUser = User.create(1, "tenant-1", "juan@acme.pe", "999999999", "encoded", true);
-        when(userRepository.findByTenantId("tenant-1")).thenReturn(Optional.of(createdUser));
+        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of(createdUser));
         Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
                 TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
                 LocalDateTime.now(), LocalDateTime.now(), null);
@@ -254,6 +254,31 @@ class ShopCheckoutServiceTest {
     }
 
     @Test
+    void checkout_rollbackDeletesEveryUserForTheTenant_notJustTheFirstNonDeletedOne() {
+        // Guards against reusing findByTenantId (first-non-deleted-only) for compensation:
+        // any row it would miss (a second user, or a soft-deleted one) keeps holding the
+        // users.tenant_id FK and silently blocks tenantRepository.purgeById.
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        wireTenantCreatedUpToAdminUser();
+        User activeUser = User.create(1, "tenant-1", "juan@acme.pe", "999999999", "encoded", true);
+        User softDeletedUser = User.restore("u-2", 2, "tenant-1", "old@acme.pe", null, "encoded",
+                java.util.List.of(), java.util.List.of(), true, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of(activeUser, softDeletedUser));
+        Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
+                TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
+                LocalDateTime.now(), LocalDateTime.now(), null);
+        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenantWithSchema));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenThrow(new RuntimeException("Mercado Pago rejected the request"));
+
+        assertThrows(RuntimeException.class, () -> service.checkout(command()));
+
+        verify(personRepository).deleteById(1);
+        verify(personRepository).deleteById(2);
+        verify(tenantRepository).purgeById("tenant-1");
+    }
+
+    @Test
     void checkout_rollsBackTenantWithoutDeletingPersonWhenAdminUserCreationFails() {
         when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
@@ -266,7 +291,7 @@ class ShopCheckoutServiceTest {
         when(createTrialTenantUseCase.createTrial(any(CreateTrialTenantCommand.class)))
                 .thenReturn(new TenantResultDto("tenant-1", "acme-sac", 2, true, LocalDateTime.now(), LocalDateTime.now()));
         when(personRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate document_value"));
-        when(userRepository.findByTenantId("tenant-1")).thenReturn(Optional.empty());
+        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of());
         Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
                 TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
                 LocalDateTime.now(), LocalDateTime.now(), null);

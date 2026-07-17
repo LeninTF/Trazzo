@@ -123,7 +123,11 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                     .map(Tenant::getSettings)
                     .map(TenantSettings::getSchemaName)
                     .orElse(null);
-            userRepository.findByTenantId(tenantId).ifPresent(user -> personRepository.deleteById(user.getPersonId()));
+            // findAllByTenantId (not findByTenantId): the latter filters out soft-deleted rows
+            // and returns only the first match — either gap would leave a user row behind
+            // holding the tenants.tenant_id FK and silently blocking purgeById below.
+            userRepository.findAllByTenantId(tenantId)
+                    .forEach(user -> personRepository.deleteById(user.getPersonId()));
             subscriptionRepository.deleteByTenantId(tenantId);
             tenantRepository.purgeById(tenantId);
             if (schemaName != null) {
