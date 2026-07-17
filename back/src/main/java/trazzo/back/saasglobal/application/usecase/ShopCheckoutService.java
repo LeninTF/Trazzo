@@ -2,6 +2,7 @@ package trazzo.back.saasglobal.application.usecase;
 
 import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.model.iam.DocumentType;
@@ -28,6 +30,8 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Holding;
 import trazzo.back.saasglobal.domain.model.multitenancy.HoldingType;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
 import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
+import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
+import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
 /**
  * Orchestrates the /shop self-signup flow: a new customer picks a plan, fills their contact and
@@ -35,6 +39,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
  * the Mercado Pago webhook once the payer authorizes the recurring charge), creates the admin
  * login, and starts the Mercado Pago preapproval that the frontend redirects the payer to.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShopCheckoutService implements ShopCheckoutUseCase {
@@ -48,6 +53,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     private final HoldingRepositoryPort holdingRepository;
     private final TenantRepositoryPort tenantRepository;
     private final CreateTrialTenantUseCase createTrialTenantUseCase;
+    private final TenantSchemaProvisioningPort schemaProvisioning;
     private final SubscriptionRepositoryPort subscriptionRepository;
     private final PersonRepositoryPort personRepository;
     private final UserRepositoryPort userRepository;
@@ -59,16 +65,17 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     @Value("${app.frontend-url:http://localhost:4200}")
     private String frontendUrl;
 
+    private record AdminUserCreated(Person person, User user, String rawPassword) {}
+
     /**
      * Deliberately NOT @Transactional: createTrialTenantUseCase.createTrial() provisions the
      * tenant's Postgres schema over a raw, non-Spring-managed connection (see
      * TenantSchemaProvisioningAdapter), so wrapping this method in a transaction cannot roll
-     * that back — a later failure (admin user creation, the Mercado Pago call) would instead
-     * roll back only the master-DB tenant row while the schema survives, orphaning it and
-     * blocking any retry with the same subDomain. createTrial() already manages its own
-     * consistency (schema + master row, deprovisioning on internal failure); once it returns
-     * successfully the tenant is real and must stay, matching the product decision to create
-     * the tenant immediately and activate it later when payment confirms.
+     * that back. Everything after createTrial() succeeds (admin user, Mercado Pago preapproval)
+     * is instead guarded by an explicit try/catch below that compensates — deletes the admin
+     * user/person, the subscription, the tenant row, and drops the schema — so a checkout that
+     * never reached Mercado Pago (or that Mercado Pago rejected) leaves no trace, and the
+     * customer can retry with the same data instead of hitting a duplicate-document/email 409.
      */
     @Override
     public ShopCheckoutResult checkout(ShopCheckoutCommand cmd) {
@@ -81,22 +88,51 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
         var tenantResult = createTrialTenantUseCase.createTrial(
                 new CreateTrialTenantCommand(subDomain, plan.getId(), holding.getId(), null, null, null, null));
 
-        createAdminUser(tenantResult.id(), cmd);
+        try {
+            AdminUserCreated admin = createAdminUser(tenantResult.id(), cmd);
 
-        PreapprovalCreated preapproval = mercadoPagoSubscriptionPort.createPreapproval(new PreapprovalRequest(
-                plan.getPrice(),
-                plan.getCurrency(),
-                plan.getBillingPeriod(),
-                cmd.email(),
-                tenantResult.id(),
-                frontendUrl + "/shop/gracias",
-                "Suscripción Trazzo - " + plan.getName()));
+            PreapprovalCreated preapproval = mercadoPagoSubscriptionPort.createPreapproval(new PreapprovalRequest(
+                    plan.getPrice(),
+                    plan.getCurrency(),
+                    plan.getBillingPeriod(),
+                    cmd.email(),
+                    tenantResult.id(),
+                    frontendUrl + "/shop/gracias",
+                    "Suscripción Trazzo - " + plan.getName()));
 
-        linkPreapprovalToSubscription(tenantResult.id(), preapproval.id());
+            linkPreapprovalToSubscription(tenantResult.id(), preapproval.id());
 
-        String redirectUrl = preapproval.sandboxInitPoint() != null
-                ? preapproval.sandboxInitPoint() : preapproval.initPoint();
-        return new ShopCheckoutResult(tenantResult.id(), subDomain, redirectUrl);
+            // Sent only once the preapproval exists — sending "your account is ready" before
+            // this point would be misleading if the checkout then fails and gets rolled back.
+            emailService.send(admin.user().getEmail(), "Bienvenido a Trazzo",
+                    "Tu cuenta de administrador fue creada. Contraseña temporal: " + admin.rawPassword()
+                            + "<br>Deberás cambiarla al iniciar sesión.");
+
+            String redirectUrl = preapproval.sandboxInitPoint() != null
+                    ? preapproval.sandboxInitPoint() : preapproval.initPoint();
+            return new ShopCheckoutResult(tenantResult.id(), subDomain, redirectUrl);
+        } catch (RuntimeException e) {
+            compensateFailedCheckout(tenantResult.id());
+            throw e;
+        }
+    }
+
+    private void compensateFailedCheckout(String tenantId) {
+        try {
+            String schemaName = tenantRepository.findById(tenantId)
+                    .map(Tenant::getSettings)
+                    .map(TenantSettings::getSchemaName)
+                    .orElse(null);
+            userRepository.findByTenantId(tenantId).ifPresent(user -> personRepository.deleteById(user.getPersonId()));
+            subscriptionRepository.deleteByTenantId(tenantId);
+            tenantRepository.purgeById(tenantId);
+            if (schemaName != null) {
+                schemaProvisioning.deprovision(schemaName);
+            }
+            log.info("Rolled back failed checkout for tenant {}", tenantId);
+        } catch (RuntimeException cleanupEx) {
+            log.error("Failed to fully roll back checkout for tenant {} — manual cleanup needed", tenantId, cleanupEx);
+        }
     }
 
     private Integer requirePlanId(Integer planId) {
@@ -128,7 +164,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
         return candidate;
     }
 
-    private void createAdminUser(String tenantId, ShopCheckoutCommand cmd) {
+    private AdminUserCreated createAdminUser(String tenantId, ShopCheckoutCommand cmd) {
         boolean useAltAdmin = cmd.anotherAdmin();
         String firstName = useAltAdmin ? cmd.adminFirstName() : cmd.firstName();
         String fatherSurname = useAltAdmin ? cmd.adminLastNamePaterno() : cmd.lastNamePaterno();
@@ -145,9 +181,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
         String encodedPassword = passwordEncoder.encode(rawPassword);
         User user = userRepository.save(User.create(person.getId(), tenantId, email, phone, encodedPassword, true));
 
-        emailService.send(user.getEmail(), "Bienvenido a Trazzo",
-                "Tu cuenta de administrador fue creada. Contraseña temporal: " + rawPassword
-                        + "<br>Deberás cambiarla al iniciar sesión.");
+        return new AdminUserCreated(person, user, rawPassword);
     }
 
     private void linkPreapprovalToSubscription(String tenantId, String preapprovalId) {

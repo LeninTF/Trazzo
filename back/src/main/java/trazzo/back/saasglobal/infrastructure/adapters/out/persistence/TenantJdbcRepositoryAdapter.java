@@ -92,6 +92,11 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
     }
 
     @Override
+    public void purgeById(String id) {
+        jdbc.update("DELETE FROM tenants WHERE id = ?::uuid", id);
+    }
+
+    @Override
     public List<Tenant> findAll(String search, Integer planId, String status, int page, int size) {
         MapSqlParameterSource params = listFilterParams(search, planId, status)
                 .addValue("limit", size)

@@ -90,6 +90,11 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
         return count != null ? count : 0L;
     }
 
+    @Override
+    public void deleteByTenantId(String tenantId) {
+        jdbc.update("DELETE FROM subscriptions WHERE tenant_id = ?::uuid", tenantId);
+    }
+
     private Subscription mapRow(ResultSet rs, int rowNum) throws SQLException {
         return Subscription.restore(
                 rs.getString("id"),

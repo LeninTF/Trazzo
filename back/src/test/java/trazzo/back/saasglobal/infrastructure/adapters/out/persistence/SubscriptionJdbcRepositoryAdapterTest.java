@@ -100,4 +100,11 @@ class SubscriptionJdbcRepositoryAdapterTest {
 
         assertEquals(5L, adapter.countAll());
     }
+
+    @Test
+    void deleteByTenantId_deletesByTenantId() {
+        adapter.deleteByTenantId("tenant-1");
+
+        verify(jdbc).update(anyString(), eq("tenant-1"));
+    }
 }

@@ -95,6 +95,13 @@ class TenantJdbcRepositoryAdapterTest {
     }
 
     @Test
+    void purgeById_deletesById() {
+        adapter.purgeById("tenant-1");
+
+        verify(jdbc).update(anyString(), eq("tenant-1"));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void findAll_returnsEmptyListWhenNoRows() {
         when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))

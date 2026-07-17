@@ -64,6 +64,14 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public Optional<User> findByTenantId(String tenantId) {
+        List<User> rows = jdbc.query(
+                BASE_SELECT + "WHERE u.tenant_id = ?::uuid AND u.deleted_at IS NULL\n" + GROUP_BY,
+                this::mapRow, tenantId);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public List<User> findAll(String search, int page, int size) {
         MapSqlParameterSource params = filterParams(search)
                 .addValue("limit", size)

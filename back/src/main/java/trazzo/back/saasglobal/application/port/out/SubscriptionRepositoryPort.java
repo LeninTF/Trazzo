@@ -11,4 +11,7 @@ public interface SubscriptionRepositoryPort {
     Optional<Subscription> findByMpPreapprovalId(String mpPreapprovalId);
     List<Subscription> findAll(int page, int size);
     long countAll();
+
+    /** Hard delete — used only to compensate a checkout that failed before any payment attempt. */
+    void deleteByTenantId(String tenantId);
 }
