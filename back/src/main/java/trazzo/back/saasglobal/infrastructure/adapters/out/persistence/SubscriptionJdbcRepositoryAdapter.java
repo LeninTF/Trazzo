@@ -67,6 +67,15 @@ public class SubscriptionJdbcRepositoryAdapter implements SubscriptionRepository
     }
 
     @Override
+    public Optional<Subscription> findActiveByTenantIdForUpdate(String tenantId) {
+        List<Subscription> rows = jdbc.query(
+                "SELECT * FROM subscriptions WHERE tenant_id = ?::uuid"
+                + " AND status IN ('TRIAL','ACTIVE') ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+                this::mapRow, tenantId);
+        return rows.stream().findFirst();
+    }
+
+    @Override
     public Optional<Subscription> findByMpPreapprovalId(String mpPreapprovalId) {
         List<Subscription> rows = jdbc.query(
                 "SELECT * FROM subscriptions WHERE mp_preapproval_id = ?",

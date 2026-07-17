@@ -78,6 +78,28 @@ class SubscriptionJdbcRepositoryAdapterTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_returnsEmptyWhenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        Optional<Subscription> result = adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_locksTheRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+
+        adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        verify(jdbc).query(sqlCaptor.capture(), any(RowMapper.class), any());
+        assertTrue(sqlCaptor.getValue().contains("FOR UPDATE"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void findAll_returnsEmptyListWhenNoRows() {
         when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn(List.of());

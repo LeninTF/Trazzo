@@ -69,8 +69,14 @@ public class MercadoPagoSubscriptionAdapter implements MercadoPagoSubscriptionPo
 
     @Override
     public PaymentDetails getPayment(String paymentId) {
+        long id;
         try {
-            Payment payment = mercadoPagoPaymentClient.get(Long.valueOf(paymentId));
+            id = Long.parseLong(paymentId);
+        } catch (NumberFormatException e) {
+            throw new MercadoPagoIntegrationException("Invalid Mercado Pago payment id: " + paymentId, e);
+        }
+        try {
+            Payment payment = mercadoPagoPaymentClient.get(id);
             return new PaymentDetails(
                     String.valueOf(payment.getId()),
                     payment.getStatus(),

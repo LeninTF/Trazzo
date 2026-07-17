@@ -91,6 +91,11 @@ class MercadoPagoSubscriptionAdapterTest {
         assertEquals("tenant-1", result.externalReference());
     }
 
+    @Test
+    void getPayment_throwsIntegrationExceptionOnMalformedId() {
+        assertThrows(MercadoPagoIntegrationException.class, () -> adapter.getPayment("not-a-number"));
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         var field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
