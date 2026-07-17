@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -75,5 +76,27 @@ class ShopCheckoutControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY.replace("juan@acme.pe", "not-an-email")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void checkout_returns400_whenPlanNotFound() throws Exception {
+        when(shopCheckoutUseCase.checkout(any()))
+                .thenThrow(new IllegalArgumentException("Plan not found: 2"));
+
+        mockMvc.perform(post("/shop/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void checkout_returns409_whenDocumentAlreadyRegistered() throws Exception {
+        when(shopCheckoutUseCase.checkout(any()))
+                .thenThrow(new DataIntegrityViolationException("duplicate key value violates unique constraint \"persons_document_value_key\""));
+
+        mockMvc.perform(post("/shop/checkout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isConflict());
     }
 }

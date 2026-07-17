@@ -9,6 +9,7 @@ import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preapproval.Preapproval;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort;
 
@@ -18,6 +19,7 @@ import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort;
  * preapproval carries its own auto_recurring built straight from the Trazzo Plan instead of
  * referencing a separate Mercado Pago plan object.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class MercadoPagoSubscriptionAdapter implements MercadoPagoSubscriptionPort {
@@ -43,7 +45,10 @@ public class MercadoPagoSubscriptionAdapter implements MercadoPagoSubscriptionPo
             Preapproval created = preapprovalClient.create(mpRequest);
             return new PreapprovalCreated(
                     created.getId(), created.getStatus(), created.getInitPoint(), created.getSandboxInitPoint());
-        } catch (MPException | MPApiException e) {
+        } catch (MPApiException e) {
+            logApiError("create preapproval", e);
+            throw new MercadoPagoIntegrationException("Failed to create Mercado Pago preapproval", e);
+        } catch (MPException e) {
             throw new MercadoPagoIntegrationException("Failed to create Mercado Pago preapproval", e);
         }
     }
@@ -54,7 +59,10 @@ public class MercadoPagoSubscriptionAdapter implements MercadoPagoSubscriptionPo
             Preapproval preapproval = preapprovalClient.get(preapprovalId);
             return new PreapprovalDetails(
                     preapproval.getId(), preapproval.getStatus(), preapproval.getExternalReference());
-        } catch (MPException | MPApiException e) {
+        } catch (MPApiException e) {
+            logApiError("fetch preapproval " + preapprovalId, e);
+            throw new MercadoPagoIntegrationException("Failed to fetch Mercado Pago preapproval " + preapprovalId, e);
+        } catch (MPException e) {
             throw new MercadoPagoIntegrationException("Failed to fetch Mercado Pago preapproval " + preapprovalId, e);
         }
     }
@@ -69,9 +77,20 @@ public class MercadoPagoSubscriptionAdapter implements MercadoPagoSubscriptionPo
                     payment.getTransactionAmount(),
                     payment.getNetAmount(),
                     payment.getExternalReference());
-        } catch (MPException | MPApiException e) {
+        } catch (MPApiException e) {
+            logApiError("fetch payment " + paymentId, e);
+            throw new MercadoPagoIntegrationException("Failed to fetch Mercado Pago payment " + paymentId, e);
+        } catch (MPException e) {
             throw new MercadoPagoIntegrationException("Failed to fetch Mercado Pago payment " + paymentId, e);
         }
+    }
+
+    // MPApiException.getMessage() is a generic "Api error. Check response for details" — the
+    // actual rejection reason (invalid field, sandbox restriction, etc.) only lives in the raw
+    // response body, which the SDK doesn't log anywhere on its own.
+    private static void logApiError(String action, MPApiException e) {
+        log.error("Mercado Pago API rejected {} — status={} body={}",
+                action, e.getStatusCode(), e.getApiResponse() != null ? e.getApiResponse().getContent() : null);
     }
 
     private static String toMpCurrency(String trazzoCurrency) {
