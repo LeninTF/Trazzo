@@ -242,6 +242,7 @@ public sealed class AutoUpdateService : BackgroundService
                     _logger.LogWarning(
                         "Auto-Update: MSI excede el máximo permitido ({MaxBytes} bytes) durante lectura.",
                         _maxMsiBytes);
+                    TryDeleteFile(tempPath);
                     return null;
                 }
                 await fs.WriteAsync(copyBuffer.AsMemory(0, read), cancellationToken);

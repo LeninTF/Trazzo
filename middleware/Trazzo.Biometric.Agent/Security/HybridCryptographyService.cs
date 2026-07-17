@@ -238,7 +238,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     }
 
     // DPAPI-LocalMachine: solo procesos en esta máquina pueden desencriptar.
-    // Cross-plataforma: en no-Windows, degradamos a un HMAC estático (menos seguro pero funcional).
+    // En no-Windows (desarrollo/Linux) el cache se almacena sin cifrar; no aplica en producción (Windows Service).
     private static byte[] ProtectForLocalMachine(byte[] plaintext)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

@@ -1,0 +1,13 @@
+.venv
+__pycache__
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.pytest_tmp
+.coverage
+coverage.xml
+tests/
+test_camera.py
+frame_test.jpg
+pyrightconfig.json
+sonar-project.properties

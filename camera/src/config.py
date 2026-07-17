@@ -107,7 +107,7 @@ def _load() -> Settings:
         models_dir=os.path.abspath(models_dir),
         model_pack=_str("MODEL_PACK", "buffalo_sc"),
         detection_threshold=_float("DETECTION_THRESHOLD", 0.5, 0.1, 0.99),
-        recognition_threshold=_float("RECOGNITION_THRESHOLD", 0.4, 0.1, 0.99),
+        recognition_threshold=_float("RECOGNITION_THRESHOLD", 0.55, 0.1, 0.99),
         min_face_size=_int("MIN_FACE_SIZE", 80, 20, 1000),
         enrollment_samples=_int("ENROLLMENT_SAMPLES", 1, 1, 10),
         capture_max_seconds=_float("CAPTURE_MAX_SECONDS", 8.0, 1.0, 60.0),

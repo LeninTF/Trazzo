@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 
 _YAW_FRONT_MAX: Final[float] = 0.08     # frontal
 _YAW_TURN_MIN: Final[float] = 0.18      # girado (enroll)
-_STAGE_TIMEOUT_S: Final[float] = 300.0
+_STAGE_TIMEOUT_S: Final[float] = 20.0
 _STABLE_FRAMES: Final[int] = 3
 _MAX_SPOOF_STREAK: Final[int] = 30      # rechazos seguidos antes de abortar (~1.5s a 20fps)
 
