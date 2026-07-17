@@ -9,11 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# opencv-python no tiene GUI en el servidor; headless es más liviano
+# instala todo (insightface jala opencv-python como dep), luego cambia a headless
 COPY requirements.txt .
-RUN sed 's/opencv-python==/opencv-python-headless==/g' requirements.txt > requirements_docker.txt \
-    && pip install --no-cache-dir -r requirements_docker.txt \
-    && rm requirements_docker.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y opencv-python \
+    && pip install --no-cache-dir "opencv-python-headless==5.0.0.93" \
+    && rm requirements.txt
 
 COPY src/ ./src/
 

@@ -3,8 +3,6 @@ services:
     build: .
     ports:
       - "9002:9002"
-    devices:
-      - /dev/video0:/dev/video0
     volumes:
       - ./models:/app/models
       - camera-db:/data
