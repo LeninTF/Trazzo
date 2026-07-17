@@ -3,12 +3,12 @@ package trazzo.back.saasglobal.application.usecase;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.dto.command.SubscribeToPlanCommand;
 import trazzo.back.saasglobal.application.dto.result.SubscribeToPlanResult;
 import trazzo.back.saasglobal.application.port.in.SubscribeToPlanUseCase;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalCreated;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalRequest;
@@ -34,9 +34,7 @@ public class TenantPlanSubscriptionService implements SubscribeToPlanUseCase {
     private final TenantRepositoryPort tenantRepository;
     private final SubscriptionRepositoryPort subscriptionRepository;
     private final MercadoPagoSubscriptionPort mercadoPagoSubscriptionPort;
-
-    @Value("${app.frontend-url:http://localhost:4200}")
-    private String frontendUrl;
+    private final AppConfigPort appConfig;
 
     @Override
     @Transactional
@@ -58,7 +56,7 @@ public class TenantPlanSubscriptionService implements SubscribeToPlanUseCase {
                 plan.getBillingPeriod(),
                 cmd.payerEmail(),
                 tenant.getId(),
-                frontendUrl + "/org/billing",
+                appConfig.frontendUrl() + "/org/billing",
                 "Suscripción Trazzo - " + plan.getName()));
 
         subscription.linkMercadoPago(preapproval.id());
@@ -69,8 +67,11 @@ public class TenantPlanSubscriptionService implements SubscribeToPlanUseCase {
         return new SubscribeToPlanResult(subscription.getId(), redirectUrl);
     }
 
+    // FOR UPDATE (within this method's @Transactional boundary) blocks a concurrent subscribe()
+    // for the same tenant until this one commits, instead of both reading the same active
+    // subscription, both skipping the cancel, and both creating a duplicate new one.
     private void cancelCurrentSubscriptionIfAny(String tenantId) {
-        subscriptionRepository.findActiveByTenantId(tenantId).ifPresent(current -> {
+        subscriptionRepository.findActiveByTenantIdForUpdate(tenantId).ifPresent(current -> {
             try {
                 current.cancel();
                 subscriptionRepository.save(current);

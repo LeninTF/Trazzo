@@ -17,9 +17,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.test.util.ReflectionTestUtils;
 import trazzo.back.saasglobal.application.dto.command.SubscribeToPlanCommand;
 import trazzo.back.saasglobal.application.dto.result.SubscribeToPlanResult;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalCreated;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
@@ -39,6 +39,7 @@ class TenantPlanSubscriptionServiceTest {
     @Mock TenantRepositoryPort tenantRepository;
     @Mock SubscriptionRepositoryPort subscriptionRepository;
     @Mock MercadoPagoSubscriptionPort mercadoPagoSubscriptionPort;
+    @Mock AppConfigPort appConfig;
     @InjectMocks TenantPlanSubscriptionService service;
 
     private static Plan plan() {
@@ -54,12 +55,12 @@ class TenantPlanSubscriptionServiceTest {
 
     @Test
     void subscribe_cancelsCurrentSubscriptionAndCreatesNewOne() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
         when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
         Subscription current = Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now());
         current.activate(LocalDate.now().plusMonths(1));
-        when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(current));
+        when(subscriptionRepository.findActiveByTenantIdForUpdate("tenant-1")).thenReturn(Optional.of(current));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(mercadoPagoSubscriptionPort.createPreapproval(any()))
                 .thenReturn(new PreapprovalCreated("preapproval-2", "pending", "https://mp/init", "https://mp/sandbox-init"));
@@ -101,10 +102,10 @@ class TenantPlanSubscriptionServiceTest {
 
     @Test
     void subscribe_doesNotCancelWhenNoCurrentSubscription() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
         when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
-        when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.empty());
+        when(subscriptionRepository.findActiveByTenantIdForUpdate("tenant-1")).thenReturn(Optional.empty());
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(mercadoPagoSubscriptionPort.createPreapproval(any()))
                 .thenReturn(new PreapprovalCreated("preapproval-2", "pending", "https://mp/init", null));

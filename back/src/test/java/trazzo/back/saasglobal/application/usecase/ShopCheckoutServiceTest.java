@@ -19,8 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
+import trazzo.back.saasglobal.application.port.out.PasswordHasherPort;
 import trazzo.back.saasglobal.application.dto.command.CreateTrialTenantCommand;
 import trazzo.back.saasglobal.application.dto.command.ShopCheckoutCommand;
 import trazzo.back.saasglobal.application.dto.result.ShopCheckoutResult;
@@ -36,6 +36,7 @@ import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
+import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.model.iam.Person;
 import trazzo.back.saasglobal.domain.model.iam.User;
 import trazzo.back.saasglobal.domain.model.multitenancy.Holding;
@@ -57,7 +58,8 @@ class ShopCheckoutServiceTest {
     @Mock SubscriptionRepositoryPort subscriptionRepository;
     @Mock PersonRepositoryPort personRepository;
     @Mock UserRepositoryPort userRepository;
-    @Mock PasswordEncoder passwordEncoder;
+    @Mock PasswordHasherPort passwordHasher;
+    @Mock AppConfigPort appConfig;
     @Mock EmailService emailService;
     @Mock MercadoPagoSubscriptionPort mercadoPagoSubscriptionPort;
     @InjectMocks ShopCheckoutService service;
@@ -76,7 +78,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_happyPath_createsTenantAdminAndPreapproval() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
 
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
@@ -92,7 +94,7 @@ class ShopCheckoutServiceTest {
             return Person.restore(1, null, p.getDocumentType(), p.getDocumentValue(), p.getName(),
                     p.getFatherSurname(), p.getMotherSurname(), null, LocalDateTime.now(), LocalDateTime.now());
         });
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(
                 Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now())));
@@ -112,7 +114,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_reusesExistingHoldingByTaxId() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
 
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         Holding existing = Holding.restore(5, "20123456789", "Acme SAC", HoldingType.PRIVADO, true,
@@ -126,7 +128,7 @@ class ShopCheckoutServiceTest {
             return Person.restore(1, null, p.getDocumentType(), p.getDocumentValue(), p.getName(),
                     p.getFatherSurname(), p.getMotherSurname(), null, LocalDateTime.now(), LocalDateTime.now());
         });
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(
                 Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now())));
@@ -141,15 +143,41 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_throwsWhenPlanMissing() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(2)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> service.checkout(command()));
     }
 
     @Test
+    void checkout_throwsWhenSubDomainSuffixesExhausted() {
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
+        when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
+        when(holdingRepository.save(any())).thenAnswer(inv -> {
+            Holding h = inv.getArgument(0);
+            return Holding.restore(1, h.getTaxId(), h.getLegalName(), h.getType(), true, LocalDateTime.now(), LocalDateTime.now(), null);
+        });
+        when(tenantRepository.existsBySubDomain(anyString())).thenReturn(true);
+
+        assertThrows(TenantValidationException.class, () -> service.checkout(command()));
+
+        verify(createTrialTenantUseCase, never()).createTrial(any());
+    }
+
+    @Test
+    void checkout_throwsWhenPlanInactive() {
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        Plan inactive = Plan.restore(2, "Plan Demo", new BigDecimal("29.99"), null, "SOLES", "MONTHLY",
+                false, LocalDateTime.now(), null, null);
+        when(planRepository.findById(2)).thenReturn(Optional.of(inactive));
+
+        assertThrows(IllegalArgumentException.class, () -> service.checkout(command()));
+    }
+
+    @Test
     void checkout_usesAlternateAdminWhenAnotherAdminTrue() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         var cmd = new ShopCheckoutCommand(
                 2, "Juan", "Perez", "Lopez", "DNI", "12345678", "juan@acme.pe", "999999999",
                 "20123456789", "Acme SAC", "Acme Sociedad Anonima Cerrada", "Av. Siempre Viva 123",
@@ -169,7 +197,7 @@ class ShopCheckoutServiceTest {
             return Person.restore(1, null, p.getDocumentType(), p.getDocumentValue(), p.getName(),
                     p.getFatherSurname(), p.getMotherSurname(), null, LocalDateTime.now(), LocalDateTime.now());
         });
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(
                 Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now())));
@@ -199,13 +227,13 @@ class ShopCheckoutServiceTest {
             return Person.restore(1, null, p.getDocumentType(), p.getDocumentValue(), p.getName(),
                     p.getFatherSurname(), p.getMotherSurname(), null, LocalDateTime.now(), LocalDateTime.now());
         });
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
     @Test
     void checkout_rollsBackTenantAndAdminUserWhenPreapprovalCreationFails() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         wireTenantCreatedUpToAdminUser();
         User createdUser = User.create(1, "tenant-1", "juan@acme.pe", "999999999", "encoded", true);
         when(userRepository.findByTenantId("tenant-1")).thenReturn(Optional.of(createdUser));
@@ -227,7 +255,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_rollsBackTenantWithoutDeletingPersonWhenAdminUserCreationFails() {
-        ReflectionTestUtils.setField(service, "frontendUrl", "http://localhost:4200");
+        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
         when(holdingRepository.save(any())).thenAnswer(inv -> {

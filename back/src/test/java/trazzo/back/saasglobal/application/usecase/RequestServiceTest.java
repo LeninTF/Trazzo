@@ -20,6 +20,7 @@ import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.RequestCommentResult;
 import trazzo.back.saasglobal.application.dto.result.RequestDetailResult;
 import trazzo.back.saasglobal.application.dto.result.RequestResult;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.RequestCommentRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.RequestContactRepositoryPort;
@@ -42,6 +43,7 @@ class RequestServiceTest {
     @Mock UserRequestCommentRepositoryPort userRequestCommentRepository;
     @Mock RequestRecordRepositoryPort requestRecordRepository;
     @Mock EmailService emailService;
+    @Mock AppConfigPort appConfig;
 
     @InjectMocks RequestService service;
 

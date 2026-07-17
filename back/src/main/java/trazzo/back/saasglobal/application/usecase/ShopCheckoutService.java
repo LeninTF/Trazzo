@@ -3,19 +3,19 @@ package trazzo.back.saasglobal.application.usecase;
 import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.dto.command.CreateTrialTenantCommand;
 import trazzo.back.saasglobal.application.dto.command.ShopCheckoutCommand;
 import trazzo.back.saasglobal.application.dto.result.ShopCheckoutResult;
 import trazzo.back.saasglobal.application.port.in.CreateTrialTenantUseCase;
 import trazzo.back.saasglobal.application.port.in.ShopCheckoutUseCase;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.HoldingRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalCreated;
 import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalRequest;
+import trazzo.back.saasglobal.application.port.out.PasswordHasherPort;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
@@ -48,6 +48,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     private static final String TEMP_SECRET_ALPHABET =
             "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%";
     private static final int MAX_SUBDOMAIN_BASE_LENGTH = 40;
+    private static final int MAX_SUBDOMAIN_SUFFIX_ATTEMPTS = 1000;
 
     private final PlanRepositoryPort planRepository;
     private final HoldingRepositoryPort holdingRepository;
@@ -57,13 +58,11 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     private final SubscriptionRepositoryPort subscriptionRepository;
     private final PersonRepositoryPort personRepository;
     private final UserRepositoryPort userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHasherPort passwordHasher;
     private final EmailService emailService;
     private final MercadoPagoSubscriptionPort mercadoPagoSubscriptionPort;
+    private final AppConfigPort appConfig;
     private final SecureRandom random = new SecureRandom();
-
-    @Value("${app.frontend-url:http://localhost:4200}")
-    private String frontendUrl;
 
     private record AdminUserCreated(Person person, User user, String rawPassword) {}
 
@@ -80,7 +79,8 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     @Override
     public ShopCheckoutResult checkout(ShopCheckoutCommand cmd) {
         Plan plan = planRepository.findById(requirePlanId(cmd.planId()))
-                .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + cmd.planId()));
+                .filter(Plan::isActive)
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found or inactive: " + cmd.planId()));
 
         Holding holding = findOrCreateHolding(cmd.ruc(), cmd.businessName());
         String subDomain = deriveUniqueSubDomain(cmd.companyName());
@@ -97,7 +97,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                     plan.getBillingPeriod(),
                     cmd.email(),
                     tenantResult.id(),
-                    frontendUrl + "/shop/gracias",
+                    appConfig.frontendUrl() + "/shop/gracias",
                     "Suscripción Trazzo - " + plan.getName()));
 
             linkPreapprovalToSubscription(tenantResult.id(), preapproval.id());
@@ -159,6 +159,10 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
         int suffix = 1;
         while (tenantRepository.existsBySubDomain(candidate)) {
             suffix++;
+            if (suffix > MAX_SUBDOMAIN_SUFFIX_ATTEMPTS) {
+                throw new TenantValidationException(
+                        "Could not derive a unique subDomain for companyName: " + companyName);
+            }
             candidate = base + "-" + suffix;
         }
         return candidate;
@@ -178,7 +182,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                 null, toDocumentType(documentType), documentNumber, firstName, fatherSurname, motherSurname, null));
 
         String rawPassword = generateTempPassword();
-        String encodedPassword = passwordEncoder.encode(rawPassword);
+        String encodedPassword = passwordHasher.hash(rawPassword);
         User user = userRepository.save(User.create(person.getId(), tenantId, email, phone, encodedPassword, true));
 
         return new AdminUserCreated(person, user, rawPassword);
