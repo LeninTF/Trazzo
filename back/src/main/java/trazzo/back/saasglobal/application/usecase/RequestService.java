@@ -63,8 +63,9 @@ public class RequestService implements RequestUseCase {
         emailService.send(notificationEmail,
                 "Nueva solicitud: " + contact.getCompanyName(),
                 "Nueva solicitud de %s recibida.<br>Empresa: %s<br>Contacto: %s %s (%s)<br>Mensaje: %s".formatted(
-                        type, contact.getCompanyName(), contact.getName(), contact.getLastName(),
-                        contact.getEmail(), request.getMessage()));
+                        type, escapeHtml(contact.getCompanyName()), escapeHtml(contact.getName()),
+                        escapeHtml(contact.getLastName()), escapeHtml(contact.getEmail()),
+                        escapeHtml(request.getMessage())));
 
         return toResult(request, contact);
     }
@@ -156,7 +157,7 @@ public class RequestService implements RequestUseCase {
         if (contact != null) {
             emailService.send(contact.getEmail(),
                     "Nuevo comentario en tu solicitud",
-                    "Se agregó un comentario a tu solicitud:<br>" + commentText);
+                    "Se agregó un comentario a tu solicitud:<br>" + escapeHtml(commentText));
         }
 
         return comment;
@@ -175,5 +176,17 @@ public class RequestService implements RequestUseCase {
         }
         return new RequestContactResult(contact.getName(), contact.getLastName(), contact.getEmail(),
                 contact.getPhoneNumber(), contact.getTaxId(), contact.getCompanyName());
+    }
+
+    // These emails are built as raw HTML (see ResendEmailAdapter), and the interpolated fields
+    // come from the public, unauthenticated /requests submit form — without escaping, an
+    // attacker-supplied name/message could inject markup (fake links, iframes) into an email
+    // read by Trazzo staff or the requester.
+    private static String escapeHtml(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#x27;");
     }
 }
