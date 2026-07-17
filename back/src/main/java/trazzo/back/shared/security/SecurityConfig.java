@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -42,6 +41,10 @@ public class SecurityConfig {
     // Mercado Pago webhook receiver — unauthenticated (verified via WebhookSignatureValidator
     // inside the controller instead, since Mercado Pago cannot present a Bearer token).
     private static final String MERCADOPAGO_WEBHOOK_URL = "/webhooks/mercadopago";
+    // Load balancers/uptime monitors need this reachable without a token; show-details is
+    // separately gated to when-authorized (see application.properties), so an anonymous hit
+    // only ever sees a bare UP/DOWN, never DB status or disk space.
+    private static final String ACTUATOR_HEALTH_URL = "/actuator/health";
 
     // CSRF is intentionally disabled: stateless REST API authenticated via JWT Bearer tokens.
     // Cookie-based CSRF attacks do not apply when no session cookies are used.
@@ -72,7 +75,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(LOGIN_URL, PUBLIC_KEY_URL, ERROR_URL, SUBMIT_REQUEST_URL, PUBLIC_PLANS_URL,
-                        SHOP_CHECKOUT_URL, MERCADOPAGO_WEBHOOK_URL).permitAll();
+                        SHOP_CHECKOUT_URL, MERCADOPAGO_WEBHOOK_URL, ACTUATOR_HEALTH_URL).permitAll();
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }
@@ -80,7 +83,9 @@ public class SecurityConfig {
                 // per-permission checks live on individual endpoints via @PreAuthorize.
                 // /audit/** was previously uncovered (fell through to the generic authenticated()
                 // rule below, reachable by tenant users too) — now correctly admin-gated.
-                auth.requestMatchers("/saas/**", "/tenants/**", "/audit/**").hasRole("SAAS_ADMIN");
+                // /actuator/** (info, and any future exposed endpoint besides health) requires
+                // the same admin gate — it used to bypass Spring Security entirely.
+                auth.requestMatchers("/saas/**", "/tenants/**", "/audit/**", "/actuator/**").hasRole("SAAS_ADMIN");
                 auth.anyRequest().authenticated();
             })
             .headers(headers -> configureHeaders(headers, h2ConsoleEnabled, h2Console))
@@ -100,11 +105,6 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring().requestMatchers("/actuator/**");
     }
 
     private void configureHeaders(
