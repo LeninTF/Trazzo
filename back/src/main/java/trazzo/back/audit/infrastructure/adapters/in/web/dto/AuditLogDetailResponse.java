@@ -7,9 +7,9 @@ import java.util.Map;
 
 public record AuditLogDetailResponse(
     String id,
-    String entity,
-    String entityId,
-    Action action,
+    String entidad,
+    String entidadId,
+    Action accion,
     String userId,
     String endpoint,
     String ipAddress,
@@ -20,9 +20,9 @@ public record AuditLogDetailResponse(
 ) {
     public static AuditLogDetailResponse from(AuditLogDetailResult result) {
         return new AuditLogDetailResponse(
-            result.id(), result.entity(), result.entityId(), result.action(),
+            result.id(), result.entidad(), result.entidadId(), result.accion(),
             result.userId(), result.endpoint(), result.ipAddress(),
-            result.userAgent(), result.previousValue(), result.newValue(),
+            result.userAgent(), result.oldValue(), result.newValue(),
             result.createdAt()
         );
     }

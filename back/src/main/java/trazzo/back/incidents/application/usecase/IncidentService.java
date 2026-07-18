@@ -117,11 +117,24 @@ public class IncidentService implements IncidentUseCase {
     private void attachTypes(List<Incident> incidents) {
         var typeIds = incidents.stream()
                 .map(Incident::getIncidentTypeId)
+                .filter(java.util.Objects::nonNull)
                 .distinct()
                 .toList();
+        if (typeIds.isEmpty()) {
+            return;
+        }
         Map<String, IncidentType> typeMap = typeRepository.findByIdIn(typeIds)
                 .stream()
                 .collect(Collectors.toMap(IncidentType::getId, t -> t));
+
+        List<String> missingIds = typeIds.stream()
+                .filter(id -> !typeMap.containsKey(id))
+                .toList();
+        if (!missingIds.isEmpty()) {
+            missingIds.forEach(id ->
+                    typeRepository.findById(id).ifPresent(t -> typeMap.put(id, t)));
+        }
+
         incidents.forEach(i -> {
             var type = typeMap.get(i.getIncidentTypeId());
             if (type != null) {
@@ -136,11 +149,6 @@ public class IncidentService implements IncidentUseCase {
             var t = incident.getType();
             tipoResult = new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
                     t.isActivo(), t.getCreatedAt(), t.getUpdatedAt());
-        } else if (incident.getIncidentTypeId() != null) {
-            tipoResult = typeRepository.findById(incident.getIncidentTypeId())
-                    .map(t -> new IncidentTypeResult(t.getId(), t.getNombre(), t.getDescripcion(),
-                            t.isActivo(), t.getCreatedAt(), t.getUpdatedAt()))
-                    .orElse(null);
         }
 
         IncidentPermissionResult permisoResult = null;

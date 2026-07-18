@@ -97,7 +97,6 @@ class IncidentServiceTest {
     @Test
     void findById_shouldReturnResult() {
         when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
-        when(typeRepository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
         var result = service.findById("inc-1");
 
@@ -124,7 +123,6 @@ class IncidentServiceTest {
         var cmd = new PatchIncidentCommand("Updated comment");
         when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
         when(incidentRepository.save(any(Incident.class))).thenAnswer(i -> i.getArgument(0));
-        when(typeRepository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
         var result = service.patch("inc-1", cmd);
 
@@ -145,7 +143,6 @@ class IncidentServiceTest {
         var cmd = new IncidentStateChangeCommand(IncidentState.APROBADO, null, null);
         when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
         when(incidentRepository.save(any(Incident.class))).thenAnswer(i -> i.getArgument(0));
-        when(typeRepository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
         var result = service.changeState("inc-1", cmd);
 
@@ -157,7 +154,6 @@ class IncidentServiceTest {
         var cmd = new IncidentStateChangeCommand(IncidentState.APROBADO, 5, null);
         when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
         when(incidentRepository.save(any(Incident.class))).thenAnswer(i -> i.getArgument(0));
-        when(typeRepository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
         var result = service.changeState("inc-1", cmd);
 
@@ -170,7 +166,6 @@ class IncidentServiceTest {
         var cmd = new IncidentStateChangeCommand(IncidentState.DENEGADO, null, "Invalid reason");
         when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
         when(incidentRepository.save(any(Incident.class))).thenAnswer(i -> i.getArgument(0));
-        when(typeRepository.findById("type-1")).thenReturn(Optional.of(sampleType()));
 
         var result = service.changeState("inc-1", cmd);
 

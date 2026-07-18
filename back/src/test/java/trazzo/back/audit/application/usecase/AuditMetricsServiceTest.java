@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Clock;
@@ -49,10 +50,6 @@ class AuditMetricsServiceTest {
                 "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
                 Long.class))
                 .thenReturn(0L);
-        when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion",
-                Long.class))
-                .thenReturn(0L);
 
         var result = service.getMetrics();
 
@@ -87,10 +84,6 @@ class AuditMetricsServiceTest {
                 "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
                 Long.class))
                 .thenReturn(10L);
-        when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion",
-                Long.class))
-                .thenReturn(20L);
 
         var result = service.getMetrics();
 
@@ -125,10 +118,6 @@ class AuditMetricsServiceTest {
                 "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
                 Long.class))
                 .thenReturn(null);
-        when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion",
-                Long.class))
-                .thenReturn(null);
 
         var result = service.getMetrics();
 
@@ -136,6 +125,40 @@ class AuditMetricsServiceTest {
         assertEquals(0, result.errores());
         assertEquals(0, result.sesionesActivas());
         assertEquals(0.0, result.crecimiento());
+        assertEquals(0.0, result.porcentajeSesiones());
+    }
+
+    @Test
+    void getMetricsReturnsZeroesWhenSesionTableMissing() {
+        when(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit",
+                Long.class))
+                .thenReturn(10L);
+        when(jdbcTemplate.queryForObject(
+                eq("SELECT COUNT(*) FROM audit WHERE created_at >= ?"),
+                eq(Long.class),
+                any()))
+                .thenReturn(3L);
+        when(jdbcTemplate.queryForObject(
+                eq("SELECT COUNT(*) FROM audit WHERE created_at >= ? AND created_at < ?"),
+                eq(Long.class),
+                any(), any()))
+                .thenReturn(2L);
+        when(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit WHERE action = 'DELETE'",
+                Long.class))
+                .thenReturn(1L);
+        when(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
+                Long.class))
+                .thenThrow(new DataAccessResourceFailureException("Table not found"));
+
+        var result = service.getMetrics();
+
+        assertEquals(10, result.totalEventos());
+        assertEquals(1, result.errores());
+        assertEquals(0, result.sesionesActivas());
+        assertEquals(50.0, result.crecimiento(), 0.1);
         assertEquals(0.0, result.porcentajeSesiones());
     }
 }

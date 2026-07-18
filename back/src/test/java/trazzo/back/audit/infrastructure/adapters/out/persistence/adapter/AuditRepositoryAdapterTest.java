@@ -59,6 +59,79 @@ class AuditRepositoryAdapterTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void findAll_shouldUseDefaultSort() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("ORDER BY a.created_at DESC"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withSearchAppendsSearchClause() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll("test", null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("LOWER(a.entity) LIKE"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withInvalidTenantUuidSkipsClause() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, "not-a-uuid", null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("1=1"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withActionAppendsClause() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, Action.DELETE, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("a.action = ?"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withEntityAppendsClause() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, "User", null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("a.entity = ?"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withDateClauses() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, null, now, now.plusDays(1),
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("created_at >= ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("created_at <= ?"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
     void count_shouldReturnTotalElements() {
         when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
                 .thenReturn(5L);
@@ -67,5 +140,25 @@ class AuditRepositoryAdapterTest {
                 now, now.plusDays(1));
 
         assertThat(result).isEqualTo(5L);
+    }
+
+    @Test
+    void count_shouldReturnZeroWhenNull() {
+        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
+                .thenReturn(null);
+
+        var result = adapter.count(null, null, null, null, null, null);
+
+        assertThat(result).isEqualTo(0L);
+    }
+
+    @Test
+    void deserializeJson_shouldHandleNull() {
+        assertThat(AuditRepositoryAdapter.deserializeJson(null)).isNotNull();
+    }
+
+    @Test
+    void deserializeJson_shouldHandleEmptyString() {
+        assertThat(AuditRepositoryAdapter.deserializeJson("")).isNotNull();
     }
 }

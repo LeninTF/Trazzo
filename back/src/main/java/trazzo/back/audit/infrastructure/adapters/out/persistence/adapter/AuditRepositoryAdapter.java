@@ -11,6 +11,7 @@ import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.AuditJpaRepository;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.util.JsonUtils;
+import trazzo.back.shared.util.SortUtils;
 
 import java.sql.Types;
 import java.time.LocalDateTime;
@@ -32,11 +33,6 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private static final String CREATED_AT = "created_at";
     private static final String IP_ADDRESS = "ip_address";
     private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id", IP_ADDRESS);
-    private static final Map<String, String> SORT_FIELD_MAP = Map.of(
-            "createdAt", CREATED_AT,
-            "ipAddress", IP_ADDRESS,
-            "entityId", "entity_id"
-    );
 
     private static final RowMapper<Audit> ROW_MAPPER = (rs, rowNum) -> Audit.restore(
             rs.getString("id"),
@@ -71,7 +67,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
         if (!pageable.getSort().isEmpty()) {
             var order = pageable.getSort().stream().findFirst().orElse(null);
             if (order != null) {
-                String mappedField = SORT_FIELD_MAP.getOrDefault(order.getProperty(), order.getProperty());
+                String mappedField = SortUtils.AUDIT_SORT_FIELD_MAP.getOrDefault(order.getProperty(), order.getProperty());
                 if (SORT_WHITELIST.contains(mappedField)) {
                     sortField = mappedField;
                     sortDirection = order.isAscending() ? "ASC" : "DESC";

@@ -1,17 +1,28 @@
-package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
+package trazzo.back.shared.util;
 
 import org.springframework.data.domain.Sort;
 
+import java.util.Map;
 import java.util.function.Function;
 
-final class SortUtils {
+public final class SortUtils {
 
     private SortUtils() {
     }
 
-    static Sort parseSort(String sort, Function<String, String> fieldMapper) {
+    public static final Map<String, String> AUDIT_SORT_FIELD_MAP = Map.of(
+            "createdAt", "created_at",
+            "ipAddress", "ip_address",
+            "entityId", "entity_id"
+    );
+
+    public static Sort parseSort(String sort, Function<String, String> fieldMapper) {
+        return parseSort(sort, fieldMapper, "createdAt");
+    }
+
+    public static Sort parseSort(String sort, Function<String, String> fieldMapper, String defaultField) {
         if (sort == null || sort.isBlank()) {
-            return Sort.by(Sort.Direction.DESC, "createdAt");
+            return Sort.by(Sort.Direction.DESC, defaultField);
         }
         var parts = sort.split(",");
         var field = fieldMapper.apply(parts[0].trim());
@@ -20,7 +31,7 @@ final class SortUtils {
         return Sort.by(direction, field);
     }
 
-    static NativeSort parseNativeSort(String sort) {
+    public static NativeSort parseNativeSort(String sort) {
         if (sort == null || sort.isBlank()) {
             return new NativeSort("a.created_at", "DESC");
         }
@@ -39,6 +50,6 @@ final class SortUtils {
         return new NativeSort(field, direction);
     }
 
-    record NativeSort(String field, String direction) {
+    public record NativeSort(String field, String direction) {
     }
 }

@@ -2,7 +2,7 @@ package trazzo.back.audit.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.exception.AuditValidationException;
+
+import java.time.format.DateTimeParseException;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -34,6 +36,8 @@ class AuditGlobalExceptionHandlerTest {
                 case "illegal-arg" -> throw new IllegalArgumentException("Bad argument");
                 case "illegal-state" -> throw new IllegalStateException("Bad state");
                 case "validation" -> throw new AuditValidationException("Validation failed");
+                case "date-parse" -> throw new DateTimeParseException("Text 'bad-date'", "bad-date", 0);
+                case "data-access" -> throw new DataAccessResourceFailureException("Connection refused");
                 default -> throw new RuntimeException("Unexpected error");
             }
         }
@@ -73,6 +77,23 @@ class AuditGlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Validation Error"))
                 .andExpect(jsonPath("$.message").value("Validation failed"));
+    }
+
+    @Test
+    void dateTimeParse_returns400() throws Exception {
+        mockMvc.perform(get("/throw/date-parse"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Invalid date format"));
+    }
+
+    @Test
+    void dataAccess_returns400() throws Exception {
+        mockMvc.perform(get("/throw/data-access"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test

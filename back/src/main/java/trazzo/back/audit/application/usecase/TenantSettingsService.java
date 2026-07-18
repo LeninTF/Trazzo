@@ -7,7 +7,7 @@ import trazzo.back.audit.application.port.in.TenantSettingsUseCase;
 import trazzo.back.audit.application.port.out.TenantSettingsRecordRepositoryPort;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.master.TenantSettingsRecord;
-import trazzo.back.audit.infrastructure.adapters.out.persistence.adapter.SortUtils;
+import trazzo.back.shared.util.SortUtils;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;

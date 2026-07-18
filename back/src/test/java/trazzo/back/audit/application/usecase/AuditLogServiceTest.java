@@ -47,14 +47,14 @@ class AuditLogServiceTest {
         var result = service.findById("1");
 
         assertEquals("1", result.id());
-        assertEquals("entity", result.entity());
-        assertEquals("entity-1", result.entityId());
-        assertEquals(Action.CREATE, result.action());
+        assertEquals("entity", result.entidad());
+        assertEquals("entity-1", result.entidadId());
+        assertEquals(Action.CREATE, result.accion());
         assertEquals("user-1", result.userId());
         assertEquals("/api/test", result.endpoint());
         assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("Mozilla/5.0", result.userAgent());
-        assertEquals(Map.of(), result.previousValue());
+        assertEquals(Map.of(), result.oldValue());
         assertEquals(Map.of(), result.newValue());
         assertEquals(now, result.createdAt());
     }
