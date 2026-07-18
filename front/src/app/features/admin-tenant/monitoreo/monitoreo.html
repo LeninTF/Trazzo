@@ -1,10 +1,10 @@
-<!-- monitoreo.html -->
 @if (error()) {
-<div class="container-fluid monitoreo-container p-4" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
-    <div class="text-center">
-        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
-        <p class="mt-3 text-muted">{{ error() }}</p>
-    </div>
+<div class="container-fluid monitoreo-container p-4"
+  style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+  <div class="text-center">
+    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+    <p class="mt-3 text-muted">{{ error() }}</p>
+  </div>
 </div>
 } @else {
 <div class="container-fluid monitoreo-container p-4">
@@ -16,6 +16,71 @@
     </h1>
     <button class="btn-refrescar" (click)="refrescarDatos()" title="Refrescar datos">
       <i class="bi bi-arrow-repeat"></i> Actualizar
+    </button>
+  </div>
+
+  <!-- STATUS GRID -->
+  <div class="status-grid">
+    <div class="status-box">
+      <span class="label">Conexión WS</span>
+      <span class="value" [class.ok]="mwConnectionState() === 'connected'"
+        [class.err]="mwConnectionState() === 'disconnected'"
+        [class.warn]="mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting'">
+        {{ mwConnectionState() === 'connected' ? 'Conectado' :
+        mwConnectionState() === 'connecting' ? 'Conectando...' :
+        mwConnectionState() === 'reconnecting' ? 'Reconectando...' : 'Desconectado' }}
+      </span>
+    </div>
+    <div class="status-box">
+      <span class="label">Operación</span>
+      <span class="value">{{ operationLabel() }}</span>
+    </div>
+    <div class="status-box">
+      <span class="label">Enrolamiento</span>
+      <span class="value">{{ enrollmentProgress() || '—' }}</span>
+    </div>
+    <div class="status-box">
+      <span class="label">Lector ZK9500</span>
+      <span class="value" [class.ok]="readerConnected()"
+        [class.err]="!readerConnected() && mwConnectionState() === 'connected'">
+        {{ readerDetail() }}
+      </span>
+    </div>
+  </div>
+
+  <!-- BIOMETRIC TOOLBAR -->
+  <div class="toolbar">
+    <button class="btn-toolbar primary" (click)="conectarWs()"
+      [disabled]="mwConnectionState() === 'connected' || mwConnectionState() === 'connecting'">
+      <i class="bi bi-plug"></i> Conectar
+    </button>
+    <button class="btn-toolbar" (click)="desconectarWs()" [disabled]="mwConnectionState() === 'disconnected'">
+      <i class="bi bi-plug-fill"></i> Desconectar
+    </button>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="btn-toolbar" (click)="consultarEstadoLector()" [disabled]="mwConnectionState() !== 'connected'">
+      <i class="bi bi-upc-scan"></i> Estado del lector
+    </button>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="btn-toolbar" (click)="capturarHuella()"
+      [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-fingerprint"></i> Capturar huella
+    </button>
+    <button class="btn-toolbar" (click)="identificarHuella()"
+      [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-person-badge"></i> Identificar huella
+    </button>
+    <button class="btn-toolbar" (click)="enrolarHuella()"
+      [disabled]="mwConnectionState() !== 'connected' || !readerConnected() || operationInProgress()">
+      <i class="bi bi-plus-circle"></i> Enrolar huella
+    </button>
+    <button class="btn-toolbar danger" (click)="cancelarEnrolamiento()"
+      [disabled]="mwConnectionState() !== 'connected' || !enrollmentInProgress()">
+      <i class="bi bi-x-circle"></i> Cancelar enrolamiento
     </button>
   </div>
 
@@ -105,6 +170,8 @@
                   </div>
                 </div>
               </div>
+
+
               <div class="col-2 text-end">
                 <button class="btn-eliminar-evento" (click)="eliminarEvento(evento.id)" title="Eliminar evento">
                   <i class="bi bi-trash3"></i>
@@ -124,57 +191,82 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- COLUMNA DERECHA: ESCÁNERES -->
     <div class="col-lg-4">
-      <div class="card border-0 shadow-sm">
+      <!-- ESCÁNERES -->
+      <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0 pt-4 pb-2">
           <h5 class="mb-0 fw-semibold">
             <i class="bi bi-hdd-stack me-2"></i> Estado de Escáneres
           </h5>
         </div>
         <div class="card-body">
-          <div *ngFor="let escaner of escaneres" class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-            <div class="escaner-info" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
+          <div class="alert border-0 py-2 px-3 mb-3"
+            [ngClass]="mwConnectionState() === 'connected' ? 'alert-success' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'alert-warning' : 'alert-secondary'">
+            <i class="bi"
+              [ngClass]="mwConnectionState() === 'connected' ? 'bi-wifi' : mwConnectionState() === 'connecting' || mwConnectionState() === 'reconnecting' ? 'bi-arrow-repeat' : 'bi-wifi-off'"></i>
+            <small class="ms-1 fw-semibold">Middleware:
+              {{ mwConnectionState() === 'connected' ? 'CONECTADO' :
+              mwConnectionState() === 'connecting' ? 'CONECTANDO...' :
+              mwConnectionState() === 'reconnecting' ? 'RECONECTANDO...' : 'DESCONECTADO' }}
+            </small>
+            @if (mwDeviceStatus(); as st) {
+            <small class="ms-2 text-muted">| {{ st.deviceCount }} dispositivo(s)</small>
+            }
+            @if (fingerprintStore.count > 0) {
+            <small class="ms-2 text-muted">| {{ fingerprintStore.count }} huella(s) enrolada(s)</small>
+            }
+          </div>
+
+          <div *ngFor="let escaner of escaneres"
+            class="escaner-item d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+            <div class="escaner-info" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)"
+              tabindex="0" role="button">
               <i class="bi bi-upc-scan fs-5 me-2" [ngClass]="escaner.online ? 'text-primary' : 'text-secondary'"></i>
               <div>
                 <strong>{{ escaner.nombre }}</strong>
                 <div class="small text-muted">{{ escaner.ubicacion }}</div>
+                @if (escaner.fisico) {
+                <span class="badge bg-info mt-1" style="font-size: 0.6rem;">FÍSICO</span>
+                }
               </div>
             </div>
             <div class="escaner-actions">
-              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'" (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0" role="button">
+              <span class="badge px-3 py-2 me-2" [ngClass]="escaner.online ? 'bg-success' : 'bg-danger'"
+                (click)="toggleEscaner(escaner.id)" (keydown.enter)="toggleEscaner(escaner.id)" tabindex="0"
+                role="button">
                 <i [ngClass]="escaner.online ? 'bi bi-wifi' : 'bi bi-wifi-off'"></i>
                 {{ escaner.online ? 'EN LÍNEA' : 'OFFLINE' }}
               </span>
+              @if (!escaner.fisico) {
               <button class="btn-eliminar-escaner" (click)="eliminarEscaner(escaner.id)" title="Eliminar escáner">
                 <i class="bi bi-trash3"></i>
               </button>
+              }
             </div>
           </div>
 
-          <!-- BOTÓN REGISTRAR NUEVO ESCÁNER -->
-          <button class="btn-registrar-nuevo w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalRegistrarEscaner">
+          <button class="btn-registrar-nuevo w-100 mb-3" (click)="abrirModalRegistrarEscaner()">
             <i class="bi bi-plus-circle me-2"></i> REGISTRAR NUEVO ESCÁNER
           </button>
 
-          <!-- Última actualización -->
           <div class="alert alert-info-custom mt-2 mb-0 py-2 px-3">
             <i class="bi bi-info-circle-fill me-1"></i>
-            <small>Última actualización: {{ ultimaActualizacionTexto }}</small>
+            <small>Última actualización: {{ ultimaActualizacionTexto() }}</small>
           </div>
         </div>
-      </div>
     </div>
   </div>
 </div>
+</div>
 }
 
-<!-- ========================================== -->
-<!-- MODAL REGISTRAR NUEVO ESCÁNER              -->
-<!-- ========================================== -->
-<div class="modal fade" id="modalRegistrarEscaner" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalRegistrarEscanerLabel" aria-hidden="true">
+<!-- MODAL REGISTRAR NUEVO ESCÁNER -->
+<div class="modal fade" id="modalRegistrarEscaner" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+  aria-labelledby="modalRegistrarEscanerLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content registrar-modal-content">
 
@@ -184,7 +276,7 @@
             <i class="bi bi-upc-scan me-2"></i>Registrar Nuevo Escáner
           </h2>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cerrarModalRegistrarEscaner()" aria-label="Close"></button>
       </div>
 
       <div class="modal-body registrar-modal-body">
@@ -203,12 +295,15 @@
 
         <form class="registrar-form">
           <div class="registrar-form-group">
-            <label class="registrar-label" for="escaner-nombre">NOMBRE DEL ESCÁNER <span class="text-danger">*</span></label>
-            <input type="text" id="escaner-nombre" class="registrar-input" placeholder="Ej: Escáner 03 - Puerta Sur" [(ngModel)]="nuevoEscaner.nombre" name="nombreEscaner">
+            <label class="registrar-label" for="escaner-nombre">NOMBRE DEL ESCÁNER <span
+                class="text-danger">*</span></label>
+            <input type="text" id="escaner-nombre" class="registrar-input" placeholder="Ej: Escáner 03 - Puerta Sur"
+              [(ngModel)]="nuevoEscaner.nombre" name="nombreEscaner">
           </div>
           <div class="registrar-form-group">
             <label class="registrar-label" for="escaner-ubicacion">UBICACIÓN <span class="text-danger">*</span></label>
-            <input type="text" id="escaner-ubicacion" class="registrar-input" placeholder="Ej: PUERTA SUR, EDIFICIO C" [(ngModel)]="nuevoEscaner.ubicacion" name="ubicacion">
+            <input type="text" id="escaner-ubicacion" class="registrar-input" placeholder="Ej: PUERTA SUR, EDIFICIO C"
+              [(ngModel)]="nuevoEscaner.ubicacion" name="ubicacion">
           </div>
           <div class="registrar-config-adicional">
             <div class="registrar-config-header">
@@ -219,7 +314,8 @@
               <input type="checkbox" id="escanerOnline" [(ngModel)]="nuevoEscaner.online" name="escanerOnline">
               <label for="escanerOnline">
                 <strong>Activar escáner inmediatamente</strong>
-                <span class="registrar-checkbox-description">El escáner estará disponible para registrar asistencias al momento de crearlo.</span>
+                <span class="registrar-checkbox-description">El escáner estará disponible para registrar asistencias al
+                  momento de crearlo.</span>
               </label>
             </div>
           </div>
@@ -231,7 +327,7 @@
           <button type="button" class="btn-registrar-dispositivo" (click)="registrarEscaner()">
             <i class="bi bi-check-lg me-2"></i>REGISTRAR ESCÁNER
           </button>
-          <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">
+          <button type="button" class="btn-cancelar-dispositivo" (click)="cerrarModalRegistrarEscaner()">
             CANCELAR
           </button>
         </div>
@@ -240,27 +336,27 @@
   </div>
 </div>
 
-<!-- ========================================== -->
-<!-- MODAL CONFIRMAR ELIMINAR ESCÁNER           -->
-<!-- ========================================== -->
+<!-- MODAL CONFIRMAR ELIMINAR ESCÁNER -->
 <div class="modal fade" id="modalConfirmarEliminar" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content registrar-modal-content">
-      <div class="modal-header registrar-modal-header" style="background: var(--danger-bg); border-bottom-color: var(--danger);">
+      <div class="modal-header registrar-modal-header"
+        style="background: var(--danger-bg); border-bottom-color: var(--danger);">
         <div>
           <h2 class="registrar-modal-title" style="color: var(--danger);">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
           </h2>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" (click)="cancelarEliminarEscaner()"></button>
       </div>
       <div class="modal-body registrar-modal-body">
         <p>¿Está seguro de que desea eliminar el escáner <strong>{{ escanerAEliminar?.nombre }}</strong>?</p>
         <p class="text-muted small">Esta acción eliminará el escáner de la lista y no podrá ser recuperado.</p>
       </div>
       <div class="registrar-actions p-4 pt-0">
-        <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">CANCELAR</button>
-        <button type="button" class="btn-registrar-dispositivo" style="background: var(--danger);" (click)="confirmarEliminarEscaner()">ELIMINAR</button>
+        <button type="button" class="btn-cancelar-dispositivo" (click)="cancelarEliminarEscaner()">CANCELAR</button>
+        <button type="button" class="btn-registrar-dispositivo" style="background: var(--danger);"
+          (click)="confirmarEliminarEscaner()">ELIMINAR</button>
       </div>
     </div>
   </div>

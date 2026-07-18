@@ -22,19 +22,20 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
         if (plan.getId() == null) {
             Integer id = jdbc.queryForObject(
                     """
-                    INSERT INTO plans (name, price, currency, billing_period, is_active, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO plans (name, price, price_annual, currency, billing_period, is_active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?::currency_enum, ?, ?, ?, ?)
                     RETURNING id
                     """,
                     Integer.class,
                     plan.getName(),
                     plan.getPrice(),
+                    plan.getPriceAnnual(),
                     plan.getCurrency(),
                     plan.getBillingPeriod(),
                     plan.isActive(),
                     plan.getCreatedAt(),
                     plan.getUpdatedAt());
-            return Plan.restore(id, plan.getName(), plan.getPrice(), plan.getCurrency(),
+            return Plan.restore(id, plan.getName(), plan.getPrice(), plan.getPriceAnnual(), plan.getCurrency(),
                     plan.getBillingPeriod(), plan.isActive(),
                     plan.getCreatedAt(), plan.getUpdatedAt(), plan.getDeletedAt());
         }
@@ -42,7 +43,8 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
                 UPDATE plans
                 SET name           = ?,
                     price          = ?,
-                    currency       = ?,
+                    price_annual   = ?,
+                    currency       = ?::currency_enum,
                     billing_period = ?,
                     is_active      = ?,
                     updated_at     = ?,
@@ -51,6 +53,7 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
                 """,
                 plan.getName(),
                 plan.getPrice(),
+                plan.getPriceAnnual(),
                 plan.getCurrency(),
                 plan.getBillingPeriod(),
                 plan.isActive(),
@@ -69,12 +72,13 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
 
     @Override
     public List<Plan> findAll() {
-        return jdbc.query("SELECT * FROM plans ORDER BY id", this::mapRow);
+        return jdbc.query("SELECT * FROM plans WHERE deleted_at IS NULL ORDER BY id", this::mapRow);
     }
 
     @Override
     public List<Plan> findAllActive() {
-        return jdbc.query("SELECT * FROM plans WHERE is_active = TRUE ORDER BY id", this::mapRow);
+        return jdbc.query(
+                "SELECT * FROM plans WHERE is_active = TRUE AND deleted_at IS NULL ORDER BY id", this::mapRow);
     }
 
     private Plan mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -82,6 +86,7 @@ public class PlanJdbcRepositoryAdapter implements PlanRepositoryPort {
                 rs.getInt("id"),
                 rs.getString("name"),
                 rs.getBigDecimal("price"),
+                rs.getBigDecimal("price_annual"),
                 rs.getString("currency"),
                 rs.getString("billing_period"),
                 rs.getBoolean("is_active"),

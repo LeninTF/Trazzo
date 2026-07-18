@@ -62,6 +62,16 @@ class InvoiceTest {
     }
 
     @Test
+    void create_allowsNullPaymentTransactionId() {
+        Invoice inv = Invoice.create("t1", null, "F001", "001", "FACTURA",
+                "20111111111", "Empresa SAC", "Av. Lima 123",
+                "20222222222", "Cliente SAC", "Av. Arequipa 456",
+                "PEN", SUBTOTAL, TAX, TOTAL);
+
+        assertNull(inv.getPaymentTransactionId());
+    }
+
+    @Test
     void create_throwsWhenTenantIdBlank() {
         assertThrows(IllegalArgumentException.class, () ->
                 Invoice.create("", "tx1", "F001", "001", "FACTURA",

@@ -28,7 +28,7 @@ public class AuditEntity {
     private String entityId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private Action action;
 
     @Column(name = "user_id")

@@ -87,6 +87,13 @@ class PersonJdbcRepositoryAdapterTest {
         assertThat(person.getDocumentType()).isEqualTo(DocumentType.PASAPORTE);
     }
 
+    @Test
+    void deleteById_deletesById() {
+        adapter.deleteById(1);
+
+        verify(jdbc).update(anyString(), org.mockito.ArgumentMatchers.eq(1));
+    }
+
     @SuppressWarnings("unchecked")
     private RowMapper<Person> captureRowMapper() {
         adapter.findById(1);

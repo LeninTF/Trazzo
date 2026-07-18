@@ -169,7 +169,7 @@ describe('Login', () => {
       expect(authLoginSpy).not.toHaveBeenCalled();
     });
 
-    it('should navigate to /sass/tenants for master user (admin_trazzo)', () => {
+    it('should navigate to /saas/tenants for master user (admin_trazzo)', () => {
       component.email.set('admin@trazzo.com');
       component.password.set('validpass');
       authLoginSpy.and.returnValue(of(mockMasterResponse));
@@ -181,8 +181,8 @@ describe('Login', () => {
       expect(authLoginSpy).toHaveBeenCalledWith({ email: 'admin@trazzo.com', password: 'validpass' });
       expect(localStorage.getItem('trazzo_token')).toBe('master-token');
       expect(roleSpy.setUserInfo).toHaveBeenCalledWith('Admin Trazzo', 'admin@trazzo.com');
-      expect(roleSpy.switchRole).toHaveBeenCalledWith('admin-sass');
-      expect(routerSpy.navigate).toHaveBeenCalledWith(['/sass/tenants']);
+      expect(roleSpy.switchRole).toHaveBeenCalledWith('admin-saas');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/saas/tenants']);
       expect(toastSpy.success).toHaveBeenCalledWith('Bienvenido(a), Admin Trazzo');
       expect(component.isLoading()).toBeFalse();
     });

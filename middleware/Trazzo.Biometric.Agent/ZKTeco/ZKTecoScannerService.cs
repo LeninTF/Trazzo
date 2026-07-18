@@ -14,6 +14,7 @@ public sealed class ZKTecoScannerService(
 {
     private const string DeviceDisconnectedMessage = "Lector biométrico desconectado.";
     private const string NoDeviceConnectedMessage = "No se encontró ningún lector biométrico conectado.";
+    private const string OperationCanceledMessage = "Lectura ignorada porque la sesión de captura ya finalizó.";
 
     // ZK9500: 300×400 px (FAP20) según ZKTeco Fingerprint Scanners Hardware Selection Guide
     private const int DefaultImageWidth = 300;
@@ -186,7 +187,7 @@ public sealed class ZKTecoScannerService(
                 FinalizeOperation(id, BiometricOperationState.Error);
             }
 
-            return FingerprintCaptureResult.Failed("Lectura ignorada porque la sesión de captura ya finalizó.");
+            return FingerprintCaptureResult.Failed(OperationCanceledMessage);
         }
         finally
         {
@@ -249,7 +250,77 @@ public sealed class ZKTecoScannerService(
                 FinalizeOperation(id, BiometricOperationState.Error);
             }
 
-            return FingerprintIdentifyResult.Failed("Lectura ignorada porque la sesión de captura ya finalizó.");
+            return FingerprintIdentifyResult.Failed(OperationCanceledMessage);
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
+    }
+
+    public async Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(
+        IReadOnlyList<(int Index, byte[] Template)> templates,
+        CancellationToken cancellationToken)
+    {
+        if (!await TryEnterOperationAsync())
+        {
+            return FingerprintMatchResult.Failed(BusyMessage);
+        }
+
+        Guid? operationId = null;
+
+        try
+        {
+            FingerprintCaptureResult? readinessFailure = await EnsureReadyForOperationAsync(cancellationToken);
+            if (readinessFailure is not null)
+            {
+                return FingerprintMatchResult.Failed(readinessFailure.Message);
+            }
+
+            operationId = StartOperation(BiometricOperationState.Identifying, cancellationToken);
+            CapturedSample sample = await CaptureValidSampleAsync(operationId.Value, _captureTimeoutSeconds);
+
+            if (!sample.Success)
+            {
+                FinalizeOperation(operationId.Value, sample.FinalState);
+                return FingerprintMatchResult.Failed(sample.Message);
+            }
+
+            if (logger.IsEnabled(LogLevel.Information))
+                logger.LogInformation("Captura para matching finalizada. Probando contra {TemplateCount} templates.", templates.Count);
+
+            int matchIndex = FindMatchingTemplateIndex(sample.Template, templates);
+
+            if (matchIndex >= 0)
+            {
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation("Coincidencia encontrada con template en índice {Index}.", matchIndex);
+                FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
+                return FingerprintMatchResult.MatchedResult(matchIndex, sample.TemplateSize, sample.Quality, templates.Count);
+            }
+
+            logger.LogInformation("No se encontró coincidencia con ningún template.");
+            FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
+            return FingerprintMatchResult.NoMatchResult(sample.TemplateSize, sample.Quality, templates.Count);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "La verificación contra templates falló.");
+            if (operationId is Guid id)
+            {
+                FinalizeOperation(id, BiometricOperationState.Error);
+            }
+
+            return FingerprintMatchResult.Failed("No se pudo verificar la huella contra los templates almacenados.");
+        }
+        catch (OperationCanceledException)
+        {
+            if (operationId is Guid id)
+            {
+                FinalizeOperation(id, BiometricOperationState.Error);
+            }
+
+            return FingerprintMatchResult.Failed(OperationCanceledMessage);
         }
         finally
         {
@@ -522,7 +593,7 @@ public sealed class ZKTecoScannerService(
         if (!IsOperationActive(operationId))
         {
             logger.LogWarning("Lectura ignorada porque la sesión ya no está activa.");
-            return CapturedSample.Failed("Lectura ignorada porque la sesión de captura ya finalizó.", BiometricOperationState.Error);
+            return CapturedSample.Failed(OperationCanceledMessage, BiometricOperationState.Error);
         }
 
         logger.LogInformation(
@@ -575,6 +646,16 @@ public sealed class ZKTecoScannerService(
 
         byte[] template = _templateBuffer[..templateSize].ToArray();
         return CapturedSample.Succeeded(template, templateSize, qualityResult, image);
+    }
+
+    private int FindMatchingTemplateIndex(byte[] sampleTemplate, IReadOnlyList<(int Index, byte[] Template)> templates)
+    {
+        for (int i = 0; i < templates.Count; i++)
+        {
+            if (sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template) == 0)
+                return i;
+        }
+        return -1;
     }
 
     private async Task<bool> TryEnterOperationAsync()

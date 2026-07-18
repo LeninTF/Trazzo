@@ -1,71 +1,98 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of, throwError } from 'rxjs';
 import { GestionUsuarios } from './gestion-usuarios';
+import { ApiService } from '../../../api/services/api.service';
+import { ToastService } from '../../../services/toast.service';
+import { ModalService } from '../../../services/modal.service';
+import type { MasterUserProfile, SaasRoleProfile } from '../../../api/types';
 
 describe('GestionUsuarios', () => {
   let component: GestionUsuarios;
   let fixture: ComponentFixture<GestionUsuarios>;
 
+  const mockRoles: SaasRoleProfile[] = [
+    { id: 1, name: 'super-administrador', displayName: 'Super Administrador', description: null, permissions: [], systemManaged: false },
+    { id: 2, name: 'soporte', displayName: 'Soporte', description: null, permissions: [], systemManaged: false },
+  ];
+
+  const mockUser = (id: string, name: string, roleIds: number[]): MasterUserProfile => ({
+    id, email: `${name.toLowerCase()}@trazzo.pe`, phone: '999888777',
+    tenant_id: null, must_change_password: false, created_at: '2026-01-01T00:00:00',
+    persona: { id: 1, img_url: null, document_type: 'DNI', document_value: '12345678', name, father_surname: 'Perez', mother_surname: 'Lopez', birth_date: null },
+    MetodoRecuperacion: [],
+    roles: roleIds.map(rid => ({ id: rid, name: mockRoles.find(r => r.id === rid)!.name, descripcion: null })),
+    tenant_info: null,
+  });
+
+  let mockUsers: { listMasters: jasmine.Spy; createMaster: jasmine.Spy; updateMaster: jasmine.Spy; deleteMaster: jasmine.Spy; assignMasterRole: jasmine.Spy };
+  let mockRolesService: { list: jasmine.Spy };
+  let mockToast: jasmine.SpyObj<ToastService>;
+  let mockModal: jasmine.SpyObj<ModalService>;
+
   beforeEach(async () => {
+    mockUsers = {
+      listMasters: jasmine.createSpy('listMasters').and.returnValue(of({
+        content: [mockUser('u1', 'Ana', [1]), mockUser('u2', 'Luis', [2])],
+        page: 0, size: 20, totalElements: 2, totalPages: 1,
+      })),
+      createMaster: jasmine.createSpy('createMaster').and.returnValue(of(mockUser('u3', 'Nuevo', []))),
+      updateMaster: jasmine.createSpy('updateMaster').and.returnValue(of(mockUser('u1', 'Ana', [1]))),
+      deleteMaster: jasmine.createSpy('deleteMaster').and.returnValue(of(undefined)),
+      assignMasterRole: jasmine.createSpy('assignMasterRole').and.returnValue(of(mockUser('u1', 'Ana', [2]))),
+    };
+    mockRolesService = { list: jasmine.createSpy('list').and.returnValue(of(mockRoles)) };
+    mockToast = jasmine.createSpyObj('ToastService', ['show', 'success', 'error', 'info']);
+    mockModal = jasmine.createSpyObj('ModalService', ['show', 'hide']);
+
     await TestBed.configureTestingModule({
       imports: [GestionUsuarios],
+      providers: [
+        { provide: ApiService, useValue: { users: mockUsers, roles: mockRolesService } },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ModalService, useValue: mockModal },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(GestionUsuarios);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should have 7 initial usuarios', () => {
-    expect(component.usuarios().length).toBe(7);
+  it('should load usuarios and roles on init', () => {
+    expect(mockUsers.listMasters).toHaveBeenCalled();
+    expect(mockRolesService.list).toHaveBeenCalled();
+    expect(component.usuarios()).toHaveSize(2);
+    expect(component.rolesDisponibles()).toHaveSize(2);
   });
 
   it('should filter by rol', () => {
-    component.setFilterRol('Superadmin');
-    expect(component.usuariosFiltrados().every(u => u.rol === 'Superadmin')).toBeTrue();
+    component.setFilterRol('1');
+    expect(component.usuariosFiltrados().every(u => u.roles.some(r => r.id === 1))).toBeTrue();
   });
 
-  it('should filter by estado', () => {
-    component.setFilterEstado('activo');
-    expect(component.usuariosFiltrados().every(u => u.estado === 'activo')).toBeTrue();
-  });
-
-  it('should combine filters', () => {
-    component.setFilterRol('Soporte');
-    component.setFilterEstado('activo');
-    expect(component.usuariosFiltrados().every(u => u.rol === 'Soporte' && u.estado === 'activo')).toBeTrue();
-  });
-
-  it('should show all with todos filters', () => {
+  it('should show all with todos filter', () => {
     component.setFilterRol('todos');
-    component.setFilterEstado('todos');
-    expect(component.usuariosFiltrados().length).toBe(7);
+    expect(component.usuariosFiltrados()).toHaveSize(2);
   });
 
   it('should limpiarFiltros', () => {
-    component.setFilterRol('Superadmin');
-    component.setFilterEstado('inactivo');
+    component.setFilterRol('1');
     component.limpiarFiltros();
     expect(component.filterRol()).toBe('todos');
-    expect(component.filterEstado()).toBe('todos');
   });
 
-  it('should compute metricas', () => {
-    expect(component.total()).toBe(7);
-    expect(component.activos()).toBe(component.usuarios().filter(u => u.estado === 'activo').length);
-    expect(component.inactivos()).toBe(component.usuarios().filter(u => u.estado === 'inactivo').length);
+  it('should compute total', () => {
+    expect(component.total()).toBe(2);
   });
 
-  it('should compute actividadSemanal', () => {
-    const pct = Math.round((component.activos() / component.total()) * 100);
-    expect(component.actividadSemanal()).toBe(pct);
-  });
-
-  it('should compute role counts', () => {
-    expect(component.superadmins() + component.soportes() + component.facturaciones()).toBe(7);
+  it('should compute distribucionRoles', () => {
+    const dist = component.distribucionRoles();
+    expect(dist.find(d => d.rol.id === 1)?.count).toBe(1);
+    expect(dist.find(d => d.rol.id === 2)?.count).toBe(1);
   });
 
   it('should abrirCrear new user', () => {
@@ -73,11 +100,15 @@ describe('GestionUsuarios', () => {
     expect(component.vistaCrear()).toBeTrue();
     expect(component.editandoUsuario()).toBeNull();
     expect(component.paso()).toBe(1);
+    expect(component.selectedRoleIds().size).toBe(0);
   });
 
-  it('should abrirCrear for editing', () => {
-    component.abrirCrear(component.usuarios()[0]);
-    expect(component.editandoUsuario()?.nombre).toBe('Carlos Méndez');
+  it('should abrirCrear for editing prefills form and roles', () => {
+    const user = component.usuarios()[0];
+    component.abrirCrear(user);
+    expect(component.editandoUsuario()).toBe(user);
+    expect(component.createForm.get('nombres')?.value).toBe('Ana');
+    expect(component.isRoleSelected(1)).toBeTrue();
   });
 
   it('should cancelarCrear', () => {
@@ -93,61 +124,87 @@ describe('GestionUsuarios', () => {
     expect(component.paso()).toBe(2);
     component.pasoAnterior();
     expect(component.paso()).toBe(1);
-    component.irPaso(3);
-    expect(component.paso()).toBe(3);
   });
 
-  it('should not go below paso 1', () => {
+  it('should not go beyond totalPasos', () => {
     component.abrirCrear();
-    component.pasoAnterior();
+    component.irPaso(5);
     expect(component.paso()).toBe(1);
   });
 
-  it('should compute progreso', () => {
+  it('should toggleRole', () => {
     component.abrirCrear();
-    expect(component.progreso()).toBe(33);
-    component.irPaso(3);
-    expect(component.progreso()).toBe(100);
+    component.toggleRole(2);
+    expect(component.isRoleSelected(2)).toBeTrue();
+    component.toggleRole(2);
+    expect(component.isRoleSelected(2)).toBeFalse();
   });
 
-  it('should registrarPersonal with valid form', () => {
+  it('should registrarPersonal create new user with valid form', () => {
     component.abrirCrear();
     component.createForm.patchValue({
-      nombreCompleto: 'Test User',
-      tipoDocumento: 'DNI',
-      numDocumento: '12345678',
-      correo: 'test@test.com',
-      telefono: '999999999',
-      empleadoId: 'EMP001',
-      nombreUsuario: 'testuser',
-      contrasena: 'password123',
+      nombres: 'Test', apellidoPaterno: 'User', apellidoMaterno: 'Lopez',
+      tipoDocumento: 'DNI', numDocumento: '87654321', correo: 'test@trazzo.pe', telefono: '999999999',
     });
+    component.toggleRole(2);
+
     component.registrarPersonal();
-    expect(component.usuarios().length).toBe(8);
+
+    expect(mockUsers.createMaster).toHaveBeenCalledWith(jasmine.objectContaining({
+      name: 'Test', father_surname: 'User', mother_surname: 'Lopez', email: 'test@trazzo.pe', role_ids: [2],
+    }));
     expect(component.vistaCrear()).toBeFalse();
   });
 
   it('should not registrarPersonal with invalid form', () => {
     component.abrirCrear();
     component.registrarPersonal();
-    expect(component.usuarios().length).toBe(7);
+    expect(mockUsers.createMaster).not.toHaveBeenCalled();
+    expect(mockToast.show).toHaveBeenCalled();
   });
 
-  it('should generarUsuario from nombre', () => {
-    component.abrirCrear();
-    component.createForm.patchValue({ nombreCompleto: 'Juan Perez' });
-    component.generarUsuario();
-    expect(component.createForm.get('nombreUsuario')?.value).toBe('juan.perez');
-  });
-
-  it('should guardarBorrador', () => {
-    component.guardarBorrador();
-  });
-
-  it('should toggleEstado', () => {
+  it('should registrarPersonal update existing user when editing', () => {
     const user = component.usuarios()[0];
-    const wasActive = user.estado === 'activo';
-    component.toggleEstado(user);
-    expect(component.usuarios().find(u => u.id === user.id)!.estado).toBe(wasActive ? 'inactivo' : 'activo');
+    component.abrirCrear(user);
+
+    component.registrarPersonal();
+
+    expect(mockUsers.updateMaster).toHaveBeenCalledWith('u1', jasmine.objectContaining({ email: user.email }));
+    expect(mockUsers.assignMasterRole).toHaveBeenCalledWith('u1', { role_ids: [1] });
+  });
+
+  it('should show error toast when registrarPersonal fails', () => {
+    mockUsers.createMaster.and.returnValue(throwError(() => new Error('fail')));
+    component.abrirCrear();
+    component.createForm.patchValue({
+      nombres: 'Test', apellidoPaterno: 'User', apellidoMaterno: 'Lopez',
+      tipoDocumento: 'DNI', numDocumento: '87654321', correo: 'test@trazzo.pe',
+    });
+
+    component.registrarPersonal();
+
+    expect(mockToast.show).toHaveBeenCalledWith('No se pudo registrar el administrador.', 'error');
+  });
+
+  it('should confirmarEliminar show modal', () => {
+    const user = component.usuarios()[0];
+    component.confirmarEliminar(user);
+    expect(component.editandoUsuario()).toBe(user);
+    expect(mockModal.show).toHaveBeenCalledWith('modalConfirmarEliminar');
+  });
+
+  it('should eliminarUsuario delete and refresh', () => {
+    const user = component.usuarios()[0];
+    component.confirmarEliminar(user);
+
+    component.eliminarUsuario();
+
+    expect(mockUsers.deleteMaster).toHaveBeenCalledWith('u1');
+    expect(mockModal.hide).toHaveBeenCalledWith('modalConfirmarEliminar');
+  });
+
+  it('should nombreCompleto join name and father surname', () => {
+    const user = component.usuarios()[0];
+    expect(component.nombreCompleto(user)).toBe('Ana Perez');
   });
 });

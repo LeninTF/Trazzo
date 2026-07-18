@@ -50,6 +50,49 @@ class SecurityConfigTest {
                     .andExpect(result ->
                             assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         }
+
+        @Test
+        void publicPlans_isAccessibleWithoutToken() throws Exception {
+            // /public/plans backs the marketing site's pricing section (permitAll).
+            mockMvc.perform(get("/public/plans"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void actuatorHealth_isAccessibleWithoutToken() throws Exception {
+            mockMvc.perform(get("/actuator/health"))
+                    .andExpect(result ->
+                            assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
+        }
+    }
+
+    @Nested
+    @SpringBootTest(classes = TestApplication.class)
+    @AutoConfigureMockMvc
+    class ActuatorEndpoints {
+
+        @Autowired MockMvc mockMvc;
+        @MockitoBean TokenValidator tokenValidator;
+        @MockitoBean UserDetailsService userDetailsService;
+
+        @Test
+        void actuatorInfo_withoutAuth_returns401() throws Exception {
+            mockMvc.perform(get("/actuator/info"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void actuatorInfo_withNonAdminAuth_returns403() throws Exception {
+            mockMvc.perform(get("/actuator/info").with(user("tenant-user")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void actuatorInfo_withSaasAdminAuth_passedBySecurity() throws Exception {
+            mockMvc.perform(get("/actuator/info").with(user("admin@trazzo.pe").roles("SAAS_ADMIN")))
+                    .andExpect(result ->
+                            assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
+        }
     }
 
     @Nested

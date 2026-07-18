@@ -1,10 +1,12 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './auth/auth.guard';
 import { Index } from './pages/public/index/index';
 import { Form } from './pages/public/form/form';
 import { Shop } from './pages/shop/shop';
 import { PrivacyPolicy } from './pages/public/legal/privacy-policy/privacy-policy';
 import { TermsAndConditions } from './pages/public/legal/terms-and-conditions/terms-and-conditions';
 import { Login } from './auth/login/login';
+import { HelpPage } from './pages/public/help/help-page';
 import { Dashboard } from './features/admin-tenant/dashboard/dashboard';
 import { Monitoreo } from './features/admin-tenant/monitoreo/monitoreo';
 import { GestionHorarios } from './features/admin-tenant/gestion-horarios/gestion-horarios';
@@ -61,47 +63,58 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/dashboard',
-        component: Dashboard
+        component: Dashboard,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/monitoreo',
-        component: Monitoreo
+        component: Monitoreo,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/incidencias',
-        component: Incidencias
+        component: Incidencias,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/reglas-asistencia',
-        component: ReglasAsistencia
+        component: ReglasAsistencia,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/sedes',
-        component: Sedes
+        component: Sedes,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/gestion-roles',
-        component: GestionRoles
+        component: GestionRoles,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/configuracion-tenant',
-        component: ConfiguracionTenant
+        component: ConfiguracionTenant,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/planes',
-        component: Planes
+        component: Planes,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/directorio-personal',
-        component: DirectorioPersonal
+        component: DirectorioPersonal,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/gestion-horarios',
-        component: GestionHorarios
+        component: GestionHorarios,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/perfil',
-        component: Perfil
+        component: Perfil,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario',
@@ -110,60 +123,82 @@ export const routes: Routes = [
     },
     {
         path: 'usuario/dashboard',
-        component: DashboardUsuario
+        component: DashboardUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/calendario',
-        component: CalendarioUsuario
+        component: CalendarioUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/historial-asistencia',
-        component: HistorialAsistenciaUsuario
+        component: HistorialAsistenciaUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/incidencias',
-        component: IncidenciasUsuario
+        component: IncidenciasUsuario,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass',
+        path: 'saas',
         pathMatch: 'full',
-        redirectTo: 'sass/tenants'
+        redirectTo: 'saas/tenants'
     },
-    
+
     {
-        path: 'sass/tenants',
-        component: Tenants
-    },
-    {
-        path: 'sass/gestion-planes',
-        component: GestionPlanes
+        path: 'saas/tenants',
+        component: Tenants,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/solicitudes',
-        component: Solicitudes
+        path: 'saas/gestion-planes',
+        component: GestionPlanes,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/log-auditoria',
-        component: LogAuditoria
+        path: 'saas/solicitudes',
+        component: Solicitudes,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/facturas',
-        component: Facturas
+        path: 'saas/log-auditoria',
+        component: LogAuditoria,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/gestion-usuarios',
-        component: GestionUsuarios
+        path: 'saas/facturas',
+        component: Facturas,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/gestion-roles',
-        component: GestionRolesSaas
+        path: 'saas/gestion-usuarios',
+        component: GestionUsuarios,
+        canActivate: [authGuard]
     },
     {
-        path: 'sass/perfil',
-        component: PerfilSass
+        path: 'saas/gestion-roles',
+        component: GestionRolesSaas,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'saas/perfil',
+        component: PerfilSass,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/perfil',
-        component: Perfil
+        component: Perfil,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'ayuda/:seccion',
+        component: HelpPage
+    },
+    {
+        path: 'ayuda',
+        pathMatch: 'full',
+        redirectTo: 'ayuda/guia-de-uso'
     }
 ];

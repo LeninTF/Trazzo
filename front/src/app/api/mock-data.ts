@@ -189,7 +189,7 @@ export const mockTenantUsers: TenantUserProfile[] = personas.slice(0, 10).map((p
 
 export const mockMasterUsers: MasterUserProfile[] = [
   {
-    id: 1,
+    id: 'a1a1a1a1-0000-0000-0000-000000000001',
     email: 'admin@trazzo.pe',
     phone: '+51987654321',
     tenant_id: null,
@@ -201,7 +201,7 @@ export const mockMasterUsers: MasterUserProfile[] = [
     tenant_info: null,
   },
   {
-    id: 2,
+    id: 'a1a1a1a1-0000-0000-0000-000000000002',
     email: 'soporte@trazzo.pe',
     phone: '+51976543210',
     tenant_id: null,
@@ -213,7 +213,7 @@ export const mockMasterUsers: MasterUserProfile[] = [
     tenant_info: null,
   },
   {
-    id: 3,
+    id: 'a1a1a1a1-0000-0000-0000-000000000003',
     email: 'visor@trazzo.pe',
     phone: '+51965432109',
     tenant_id: 'a1b2c3d4-0000-0000-0000-000000000001',

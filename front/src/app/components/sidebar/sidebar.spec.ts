@@ -3,20 +3,25 @@ import { provideRouter, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { Sidebar } from './sidebar';
 import { RoleService } from '../../services/role.service';
+import { AuthService } from '../../api/services/auth.service';
 
 describe('Sidebar', () => {
   let component: Sidebar;
   let fixture: ComponentFixture<Sidebar>;
   let roleService: RoleService;
   let router: Router;
+  let mockAuth: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
     localStorage.clear();
+    mockAuth = jasmine.createSpyObj('AuthService', ['logout']);
+
     await TestBed.configureTestingModule({
       imports: [Sidebar],
       providers: [
         provideRouter([]),
         RoleService,
+        { provide: AuthService, useValue: mockAuth },
       ],
     }).compileComponents();
 
@@ -32,10 +37,10 @@ describe('Sidebar', () => {
   });
 
   describe('roleUrlPrefix', () => {
-    it('should return "sass" for admin-sass role', () => {
-      roleService.switchRole('admin-sass');
+    it('should return "saas" for admin-saas role', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
-      expect(component['roleUrlPrefix']()).toBe('sass');
+      expect(component['roleUrlPrefix']()).toBe('saas');
     });
 
     it('should return "usuario" for usuario role', () => {
@@ -58,8 +63,8 @@ describe('Sidebar', () => {
       expect(component['roleLabel']()).toBe('ADMINISTRADOR TENANT');
     });
 
-    it('should return "ADMINISTRADOR SAAS" for admin-sass', () => {
-      roleService.switchRole('admin-sass');
+    it('should return "ADMINISTRADOR SAAS" for admin-saas', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
       expect(component['roleLabel']()).toBe('ADMINISTRADOR SAAS');
     });
@@ -83,6 +88,21 @@ describe('Sidebar', () => {
       const subSpy = spyOn(component['sub'], 'unsubscribe');
       component.ngOnDestroy();
       expect(subSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('cerrarSesion', () => {
+    it('should call logout, reset role state, and navigate to /login', () => {
+      roleService.setUserInfo('Admin', 'admin@trazzo.pe');
+      roleService.switchRole('admin-saas');
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+
+      component['cerrarSesion']();
+
+      expect(mockAuth.logout).toHaveBeenCalled();
+      expect(roleService.userName()).toBe('');
+      expect(roleService.role()).toBe('admin-tenant');
+      expect(navigateSpy).toHaveBeenCalledWith('/login');
     });
   });
 });

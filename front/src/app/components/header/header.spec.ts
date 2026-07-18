@@ -2,23 +2,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Header } from './header';
 import { RoleService } from '../../services/role.service';
+import { NotificationService } from '../../services/notification.service';
 
 describe('Header', () => {
   let component: Header;
   let fixture: ComponentFixture<Header>;
   let roleService: RoleService;
+  let notificationService: NotificationService;
   let router: Router;
 
   beforeEach(async () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [Header],
-      providers: [provideRouter([]), RoleService],
+      providers: [provideRouter([]), RoleService, NotificationService],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Header);
     component = fixture.componentInstance;
     roleService = TestBed.inject(RoleService);
+    notificationService = TestBed.inject(NotificationService);
     router = TestBed.inject(Router);
     fixture.detectChanges();
   });
@@ -34,10 +37,10 @@ describe('Header', () => {
       expect(component['settingsUrl']()).toBe('/tenant/configuracion-tenant');
     });
 
-    it('should return sass profile url for admin-sass role', () => {
-      roleService.switchRole('admin-sass');
+    it('should return saas profile url for admin-saas role', () => {
+      roleService.switchRole('admin-saas');
       fixture.detectChanges();
-      expect(component['settingsUrl']()).toBe('/sass/perfil');
+      expect(component['settingsUrl']()).toBe('/saas/perfil');
     });
 
     it('should return usuario profile url for usuario role', () => {
@@ -48,14 +51,18 @@ describe('Header', () => {
   });
 
   describe('notificaciones', () => {
-    it('should have 3 notifications', () => {
-      expect(component['notificaciones'].length).toBe(3);
+    it('should return notifications based on role from NotificationService', () => {
+      roleService.switchRole('admin-tenant');
+      fixture.detectChanges();
+      const notifs = notificationService.notificaciones();
+      expect(notifs.length).toBe(10);
     });
 
-    it('should have correct tipoColor mapping', () => {
+    it('should have correct tipoColor mapping including info', () => {
       expect(component['tipoColor']['danger']).toBe('#dc2626');
       expect(component['tipoColor']['warning']).toBe('#f59e0b');
       expect(component['tipoColor']['success']).toBe('#10b981');
+      expect(component['tipoColor']['info']).toBe('#3b82f6');
     });
   });
 
@@ -63,20 +70,53 @@ describe('Header', () => {
     it('should contain 3 role options', () => {
       expect(component['roles'].length).toBe(3);
       expect(component['roles'][0].value).toBe('admin-tenant');
-      expect(component['roles'][1].value).toBe('admin-sass');
+      expect(component['roles'][1].value).toBe('admin-saas');
       expect(component['roles'][2].value).toBe('usuario');
     });
   });
 
+  describe('irANotificacion', () => {
+    it('should mark as read and navigate to notification route', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const marcarSpy = spyOn(notificationService, 'marcarComoLeida');
+      const notif = { id: 'notif-1', route: '/tenant/configuracion-tenant' } as any;
+
+      component['irANotificacion'](notif);
+
+      expect(marcarSpy).toHaveBeenCalledWith('notif-1');
+      expect(navigateSpy).toHaveBeenCalledWith('/tenant/configuracion-tenant');
+    });
+  });
+
   describe('switchRoleAndNavigate', () => {
-    it('should switch role and navigate to dashboard', () => {
+    it('should switch to admin-saas and navigate to tenants', () => {
       const navigateSpy = spyOn(router, 'navigateByUrl');
       const switchSpy = spyOn(roleService, 'switchRole');
 
-      component['switchRoleAndNavigate']('admin-sass');
+      component['switchRoleAndNavigate']('admin-saas');
 
-      expect(switchSpy).toHaveBeenCalledWith('admin-sass');
-      expect(navigateSpy).toHaveBeenCalledWith('/sass/tenants');
+      expect(switchSpy).toHaveBeenCalledWith('admin-saas');
+      expect(navigateSpy).toHaveBeenCalledWith('/saas/tenants');
+    });
+
+    it('should switch to admin-tenant and navigate to dashboard', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const switchSpy = spyOn(roleService, 'switchRole');
+
+      component['switchRoleAndNavigate']('admin-tenant');
+
+      expect(switchSpy).toHaveBeenCalledWith('admin-tenant');
+      expect(navigateSpy).toHaveBeenCalledWith('/tenant/dashboard');
+    });
+
+    it('should switch to usuario and navigate to dashboard', () => {
+      const navigateSpy = spyOn(router, 'navigateByUrl');
+      const switchSpy = spyOn(roleService, 'switchRole');
+
+      component['switchRoleAndNavigate']('usuario');
+
+      expect(switchSpy).toHaveBeenCalledWith('usuario');
+      expect(navigateSpy).toHaveBeenCalledWith('/usuario/dashboard');
     });
   });
 

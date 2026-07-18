@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
 import trazzo.back.saasglobal.domain.model.multitenancy.SubscriptionStatus;
 
@@ -26,11 +28,12 @@ import trazzo.back.saasglobal.domain.model.multitenancy.SubscriptionStatus;
 class SubscriptionJdbcRepositoryAdapterTest {
 
     @Mock JdbcTemplate jdbc;
+    @Mock NamedParameterJdbcTemplate namedJdbc;
     @InjectMocks SubscriptionJdbcRepositoryAdapter adapter;
 
     private static Subscription trialSub() {
         return Subscription.restore("sub-1", 1, "tenant-1",
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
     }
 
     @Test
@@ -46,7 +49,7 @@ class SubscriptionJdbcRepositoryAdapterTest {
     void save_withDateEndReturnsSameSubscription() {
         var sub = Subscription.restore("sub-2", 1, "tenant-1",
                 LocalDate.now(), LocalDate.now().plusMonths(1),
-                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), LocalDateTime.now());
+                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), "mp-preapproval-1", LocalDateTime.now());
 
         var result = adapter.save(sub);
 
@@ -71,5 +74,59 @@ class SubscriptionJdbcRepositoryAdapterTest {
         Optional<Subscription> result = adapter.findActiveByTenantId("tenant-1");
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_returnsEmptyWhenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        Optional<Subscription> result = adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_locksTheRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+
+        adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        verify(jdbc).query(sqlCaptor.capture(), any(RowMapper.class), any());
+        assertTrue(sqlCaptor.getValue().contains("FOR UPDATE"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_returnsEmptyListWhenNoRows() {
+        when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+
+        List<Subscription> result = adapter.findAll(0, 20);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void countAll_returnsZeroWhenNull() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(null);
+
+        assertEquals(0L, adapter.countAll());
+    }
+
+    @Test
+    void countAll_returnsCount() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(5L);
+
+        assertEquals(5L, adapter.countAll());
+    }
+
+    @Test
+    void deleteByTenantId_deletesByTenantId() {
+        adapter.deleteByTenantId("tenant-1");
+
+        verify(jdbc).update(anyString(), eq("tenant-1"));
     }
 }

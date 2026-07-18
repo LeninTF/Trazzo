@@ -1,0 +1,85 @@
+package trazzo.back.saasglobal.infrastructure.config;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
+import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
+import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
+
+class TenantDataSeederTest {
+
+    private TenantRepositoryPort tenantRepository;
+    private TenantSchemaProvisioningPort schemaProvisioning;
+    private JdbcTemplate jdbc;
+    private TenantDataSeeder seeder;
+
+    @BeforeEach
+    void setUp() {
+        tenantRepository = mock(TenantRepositoryPort.class);
+        schemaProvisioning = mock(TenantSchemaProvisioningPort.class);
+        jdbc = mock(JdbcTemplate.class);
+        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, "demo");
+    }
+
+    @Test
+    void constructor_throwsWhenSubDomainBlank() {
+        assertThrows(IllegalStateException.class,
+                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, "  "));
+    }
+
+    @Test
+    void run_whenDemoTenantExistsSkipsSeed() {
+        when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.of(mock(Tenant.class)));
+
+        seeder.run();
+
+        verifyNoInteractions(schemaProvisioning);
+        verify(tenantRepository, never()).save(any());
+    }
+
+    @Test
+    void run_whenPlanAlreadyExistsReusesItAndProvisionsSchema() {
+        when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.empty());
+        when(jdbc.queryForList("SELECT id FROM plans WHERE name = ?", Integer.class, "Plan Demo"))
+                .thenReturn(List.of(7));
+        when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder.run();
+
+        verify(jdbc, never()).queryForObject(contains("INSERT INTO plans"), eq(Integer.class), any());
+        var settingsCaptor = ArgumentCaptor.forClass(TenantSettings.class);
+        verify(schemaProvisioning).provisionExisting(settingsCaptor.capture());
+        assertEquals("tenant_demo", settingsCaptor.getValue().getSchemaName());
+
+        var tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals("demo", tenantCaptor.getValue().getSubDomain());
+        assertEquals(7, tenantCaptor.getValue().getPlanId());
+        assertTrue(tenantCaptor.getValue().isActivated());
+    }
+
+    @Test
+    void run_whenPlanMissingCreatesItThenProvisionsSchema() {
+        when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.empty());
+        when(jdbc.queryForList("SELECT id FROM plans WHERE name = ?", Integer.class, "Plan Demo"))
+                .thenReturn(List.of());
+        when(jdbc.queryForObject(contains("INSERT INTO plans"), eq(Integer.class), eq("Plan Demo")))
+                .thenReturn(3);
+        when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        seeder.run();
+
+        verify(schemaProvisioning).provisionExisting(any(TenantSettings.class));
+        var tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantRepository).save(tenantCaptor.capture());
+        assertEquals(3, tenantCaptor.getValue().getPlanId());
+    }
+}
