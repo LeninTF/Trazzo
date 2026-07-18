@@ -26,6 +26,8 @@ services:
       # real, publicly-resolvable HTTPS URL even for local dev — override with FRONTEND_URL
       # only if you need redirects to actually land on a different host.
       - FRONTEND_URL=${FRONTEND_URL:-https://www.trazzo.pe}
+      - ABANDONED_TRIAL_HOURS=${ABANDONED_TRIAL_HOURS:-24}
+      - ABANDONED_TRIAL_CLEANUP_CRON=${ABANDONED_TRIAL_CLEANUP_CRON:-0 0 * * * *}
     networks:
       - trazzo-local-net
 

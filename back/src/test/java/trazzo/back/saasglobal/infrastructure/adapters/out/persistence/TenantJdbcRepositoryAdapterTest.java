@@ -103,6 +103,16 @@ class TenantJdbcRepositoryAdapterTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void findAbandonedTrials_returnsEmptyListWhenNoneFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        List<Tenant> result = adapter.findAbandonedTrials(LocalDateTime.now());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void findAll_returnsEmptyListWhenNoRows() {
         when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn(List.of());

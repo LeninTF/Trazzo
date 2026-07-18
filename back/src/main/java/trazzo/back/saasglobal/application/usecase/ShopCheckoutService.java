@@ -2,7 +2,6 @@ package trazzo.back.saasglobal.application.usecase;
 
 import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.dto.command.CreateTrialTenantCommand;
 import trazzo.back.saasglobal.application.dto.command.ShopCheckoutCommand;
@@ -20,7 +19,6 @@ import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
-import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.model.iam.DocumentType;
@@ -30,8 +28,6 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Holding;
 import trazzo.back.saasglobal.domain.model.multitenancy.HoldingType;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
 import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
-import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
-import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
 /**
  * Orchestrates the /shop self-signup flow: a new customer picks a plan, fills their contact and
@@ -39,7 +35,6 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
  * the Mercado Pago webhook once the payer authorizes the recurring charge), creates the admin
  * login, and starts the Mercado Pago preapproval that the frontend redirects the payer to.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShopCheckoutService implements ShopCheckoutUseCase {
@@ -54,7 +49,7 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
     private final HoldingRepositoryPort holdingRepository;
     private final TenantRepositoryPort tenantRepository;
     private final CreateTrialTenantUseCase createTrialTenantUseCase;
-    private final TenantSchemaProvisioningPort schemaProvisioning;
+    private final TenantPurgeService tenantPurgeService;
     private final SubscriptionRepositoryPort subscriptionRepository;
     private final PersonRepositoryPort personRepository;
     private final UserRepositoryPort userRepository;
@@ -112,30 +107,8 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                     ? preapproval.sandboxInitPoint() : preapproval.initPoint();
             return new ShopCheckoutResult(tenantResult.id(), subDomain, redirectUrl);
         } catch (RuntimeException e) {
-            compensateFailedCheckout(tenantResult.id());
+            tenantPurgeService.purge(tenantResult.id());
             throw e;
-        }
-    }
-
-    private void compensateFailedCheckout(String tenantId) {
-        try {
-            String schemaName = tenantRepository.findById(tenantId)
-                    .map(Tenant::getSettings)
-                    .map(TenantSettings::getSchemaName)
-                    .orElse(null);
-            // findAllByTenantId (not findByTenantId): the latter filters out soft-deleted rows
-            // and returns only the first match — either gap would leave a user row behind
-            // holding the tenants.tenant_id FK and silently blocking purgeById below.
-            userRepository.findAllByTenantId(tenantId)
-                    .forEach(user -> personRepository.deleteById(user.getPersonId()));
-            subscriptionRepository.deleteByTenantId(tenantId);
-            tenantRepository.purgeById(tenantId);
-            if (schemaName != null) {
-                schemaProvisioning.deprovision(schemaName);
-            }
-            log.info("Rolled back failed checkout for tenant {}", tenantId);
-        } catch (RuntimeException cleanupEx) {
-            log.error("Failed to fully roll back checkout for tenant {} — manual cleanup needed", tenantId, cleanupEx);
         }
     }
 

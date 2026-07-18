@@ -34,7 +34,6 @@ import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
-import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.model.iam.Person;
@@ -43,8 +42,6 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Holding;
 import trazzo.back.saasglobal.domain.model.multitenancy.HoldingType;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
 import trazzo.back.saasglobal.domain.model.multitenancy.Subscription;
-import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
-import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -54,7 +51,7 @@ class ShopCheckoutServiceTest {
     @Mock HoldingRepositoryPort holdingRepository;
     @Mock TenantRepositoryPort tenantRepository;
     @Mock CreateTrialTenantUseCase createTrialTenantUseCase;
-    @Mock TenantSchemaProvisioningPort schemaProvisioning;
+    @Mock TenantPurgeService tenantPurgeService;
     @Mock SubscriptionRepositoryPort subscriptionRepository;
     @Mock PersonRepositoryPort personRepository;
     @Mock UserRepositoryPort userRepository;
@@ -232,54 +229,20 @@ class ShopCheckoutServiceTest {
     }
 
     @Test
-    void checkout_rollsBackTenantAndAdminUserWhenPreapprovalCreationFails() {
+    void checkout_purgesTenantWhenPreapprovalCreationFails() {
         when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         wireTenantCreatedUpToAdminUser();
-        User createdUser = User.create(1, "tenant-1", "juan@acme.pe", "999999999", "encoded", true);
-        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of(createdUser));
-        Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
-                TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
-                LocalDateTime.now(), LocalDateTime.now(), null);
-        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenantWithSchema));
         when(mercadoPagoSubscriptionPort.createPreapproval(any()))
                 .thenThrow(new RuntimeException("Mercado Pago rejected the request"));
 
         assertThrows(RuntimeException.class, () -> service.checkout(command()));
 
-        verify(personRepository).deleteById(1);
-        verify(subscriptionRepository).deleteByTenantId("tenant-1");
-        verify(tenantRepository).purgeById("tenant-1");
-        verify(schemaProvisioning).deprovision("tenant_acme_sac");
+        verify(tenantPurgeService).purge("tenant-1");
         verify(emailService, never()).send(anyString(), anyString(), anyString());
     }
 
     @Test
-    void checkout_rollbackDeletesEveryUserForTheTenant_notJustTheFirstNonDeletedOne() {
-        // Guards against reusing findByTenantId (first-non-deleted-only) for compensation:
-        // any row it would miss (a second user, or a soft-deleted one) keeps holding the
-        // users.tenant_id FK and silently blocks tenantRepository.purgeById.
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
-        wireTenantCreatedUpToAdminUser();
-        User activeUser = User.create(1, "tenant-1", "juan@acme.pe", "999999999", "encoded", true);
-        User softDeletedUser = User.restore("u-2", 2, "tenant-1", "old@acme.pe", null, "encoded",
-                java.util.List.of(), java.util.List.of(), true, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
-        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of(activeUser, softDeletedUser));
-        Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
-                TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
-                LocalDateTime.now(), LocalDateTime.now(), null);
-        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenantWithSchema));
-        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
-                .thenThrow(new RuntimeException("Mercado Pago rejected the request"));
-
-        assertThrows(RuntimeException.class, () -> service.checkout(command()));
-
-        verify(personRepository).deleteById(1);
-        verify(personRepository).deleteById(2);
-        verify(tenantRepository).purgeById("tenant-1");
-    }
-
-    @Test
-    void checkout_rollsBackTenantWithoutDeletingPersonWhenAdminUserCreationFails() {
+    void checkout_purgesTenantWhenAdminUserCreationFails() {
         when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
@@ -291,17 +254,9 @@ class ShopCheckoutServiceTest {
         when(createTrialTenantUseCase.createTrial(any(CreateTrialTenantCommand.class)))
                 .thenReturn(new TenantResultDto("tenant-1", "acme-sac", 2, true, LocalDateTime.now(), LocalDateTime.now()));
         when(personRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate document_value"));
-        when(userRepository.findAllByTenantId("tenant-1")).thenReturn(java.util.List.of());
-        Tenant tenantWithSchema = Tenant.restore("tenant-1", null, "acme-sac", 2,
-                TenantSettings.of("tenant-1", "tenant_acme_sac"), null, LocalDateTime.now(), null,
-                LocalDateTime.now(), LocalDateTime.now(), null);
-        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenantWithSchema));
 
         assertThrows(DataIntegrityViolationException.class, () -> service.checkout(command()));
 
-        verify(personRepository, never()).deleteById(any());
-        verify(subscriptionRepository).deleteByTenantId("tenant-1");
-        verify(tenantRepository).purgeById("tenant-1");
-        verify(schemaProvisioning).deprovision("tenant_acme_sac");
+        verify(tenantPurgeService).purge("tenant-1");
     }
 }
