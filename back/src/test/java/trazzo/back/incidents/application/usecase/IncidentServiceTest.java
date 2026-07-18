@@ -26,7 +26,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,12 +57,6 @@ class IncidentServiceTest {
     private Incident sampleIncident() {
         return Incident.restore("inc-1", "user-1", "type-1",
                 IncidentState.PENDIENTE, "comment", null, null, null,
-                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
-    }
-
-    private Incident approvedIncident() {
-        return Incident.restore("inc-1", "user-1", "type-1",
-                IncidentState.APROBADO, "comment", null, null, null,
                 Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
     }
 

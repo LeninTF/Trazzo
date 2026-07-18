@@ -1,5 +1,6 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.mapper;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 import trazzo.back.audit.domain.model.tenant.Session;
@@ -29,7 +30,7 @@ public final class SessionMapper {
         return entity;
     }
 
-    public static Session toDomain(SessionEntity entity) {
+    public static Session toDomain(SessionEntity entity, Clock clock) {
         return new Session(
                 entity.getId(),
                 entity.getTenantUserId(),
@@ -44,7 +45,7 @@ public final class SessionMapper {
                 entity.getState(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                LocalDateTime.now()
+                LocalDateTime.now(clock)
         );
     }
 }

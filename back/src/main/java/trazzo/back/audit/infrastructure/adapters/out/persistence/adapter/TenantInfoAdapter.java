@@ -2,7 +2,6 @@ package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Component;
@@ -47,8 +46,6 @@ public class TenantInfoAdapter implements TenantInfoPort {
                     new SqlParameterValue(Types.OTHER, uuid)
             );
             return Optional.ofNullable(info);
-        } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
         } catch (DataAccessException e) {
             return Optional.empty();
         }
@@ -83,7 +80,7 @@ public class TenantInfoAdapter implements TenantInfoPort {
                 .toArray(SqlParameterValue[]::new);
         var result = new HashMap<String, TenantInfo>();
         try {
-            jdbcTemplate.query(sql, (rs) -> {
+            jdbcTemplate.query(sql, rs -> {
                 String userId = rs.getString("user_id");
                 result.put(userId, new TenantInfo(
                         rs.getString("tenant_id"),

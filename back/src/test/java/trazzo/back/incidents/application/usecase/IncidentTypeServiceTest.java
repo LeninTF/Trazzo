@@ -17,9 +17,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,7 +70,7 @@ class IncidentTypeServiceTest {
 
     @Test
     void findAll_shouldReturnPaginatedResult() {
-        when(repository.findAll(eq(true), eq(0), eq(10))).thenReturn(List.of(sampleType()));
+        when(repository.findAll(true, 0, 10)).thenReturn(List.of(sampleType()));
         when(repository.count(true)).thenReturn(1L);
 
         var result = service.findAll(true, 0, 10);

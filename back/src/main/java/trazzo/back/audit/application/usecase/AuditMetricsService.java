@@ -1,7 +1,5 @@
 package trazzo.back.audit.application.usecase;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;

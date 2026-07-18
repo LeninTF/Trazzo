@@ -30,10 +30,11 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private final JdbcTemplate jdbcTemplate;
 
     private static final String CREATED_AT = "created_at";
-    private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id", "ip_address");
+    private static final String IP_ADDRESS = "ip_address";
+    private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id", IP_ADDRESS);
     private static final Map<String, String> SORT_FIELD_MAP = Map.of(
             "createdAt", CREATED_AT,
-            "ipAddress", "ip_address",
+            "ipAddress", IP_ADDRESS,
             "entityId", "entity_id"
     );
 
@@ -44,7 +45,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
             Action.valueOf(rs.getString("action")),
             rs.getString("user_id"),
             rs.getString("endpoint"),
-            rs.getString("ip_address"),
+            rs.getString(IP_ADDRESS),
             rs.getString("user_agent"),
             deserializeJson(rs.getString("old_value")),
             deserializeJson(rs.getString("new_value")),
@@ -123,7 +124,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private void appendSearchClause(StringBuilder sql, List<SqlParameterValue> params, String searchTerm) {
         if (searchTerm != null && !searchTerm.isBlank()) {
             String pattern = "%" + searchTerm.toLowerCase() + "%";
-            sql.append(" AND (LOWER(a.entity) LIKE ? OR LOWER(a.ip_address) LIKE ? OR LOWER(a.user_id::text) LIKE ? OR LOWER(a.endpoint) LIKE ?)");
+            sql.append(" AND (LOWER(a.entity) LIKE ? OR LOWER(a.").append(IP_ADDRESS).append(") LIKE ? OR LOWER(a.user_id::text) LIKE ? OR LOWER(a.endpoint) LIKE ?)");
             params.add(new SqlParameterValue(Types.VARCHAR, pattern));
             params.add(new SqlParameterValue(Types.VARCHAR, pattern));
             params.add(new SqlParameterValue(Types.VARCHAR, pattern));

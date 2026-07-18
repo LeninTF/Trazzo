@@ -1,8 +1,8 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -12,7 +12,10 @@ import trazzo.back.audit.domain.model.tenant.SessionState;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.SessionEntity;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.SessionJpaRepository;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,10 +29,15 @@ class SessionRepositoryAdapterTest {
     @Mock
     private SessionJpaRepository jpaRepository;
 
-    @InjectMocks
+    private final Clock clock = Clock.fixed(Instant.EPOCH, ZoneId.of("UTC"));
     private SessionRepositoryAdapter adapter;
 
     private final LocalDateTime now = LocalDateTime.now();
+
+    @BeforeEach
+    void setUp() {
+        adapter = new SessionRepositoryAdapter(jpaRepository, clock);
+    }
 
     private SessionEntity createEntity() {
         var e = new SessionEntity();

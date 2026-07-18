@@ -28,8 +28,8 @@ class AuditMetricsServiceTest {
     @Test
     void getMetricsReturnsZerosForEmptyDb() {
         when(jdbcTemplate.queryForObject(
-                eq("SELECT COUNT(*) FROM audit"),
-                eq(Long.class)))
+                "SELECT COUNT(*) FROM audit",
+                Long.class))
                 .thenReturn(0L);
         when(jdbcTemplate.queryForObject(
                 eq("SELECT COUNT(*) FROM audit WHERE created_at >= ?"),

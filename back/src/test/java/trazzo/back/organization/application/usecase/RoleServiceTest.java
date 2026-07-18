@@ -7,7 +7,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.organization.application.dto.command.CreateRoleCommand;
 import trazzo.back.organization.application.dto.command.UpdateRoleCommand;
-import trazzo.back.organization.application.dto.result.PaginatedResult;
 import trazzo.back.organization.application.port.out.RoleRepositoryPort;
 import trazzo.back.organization.domain.exception.DuplicateOrgNameException;
 import trazzo.back.organization.domain.exception.OrgNotFoundException;
@@ -20,8 +19,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
