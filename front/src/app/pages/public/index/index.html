@@ -185,65 +185,37 @@
 				</div>
 
 				<div class="row justify-content-center g-4 align-items-stretch">
-					<div class="col-lg-4 d-flex">
-						<article class="pricing-card pricing-card-soft h-100 w-100">
-							<div class="pricing-header">
-								<div>
-									<p class="pricing-title">Starter</p>
-									<div class="pricing-price"><strong>$49</strong><span>/mes</span></div>
+					@for (card of planCards(); track card.plan.id) {
+						<div class="col-lg-4 d-flex">
+							<article class="pricing-card h-100 w-100" [class.pricing-card-soft]="!card.destacado" [class.pricing-card-featured]="card.destacado">
+								@if (card.destacado) {
+									<div class="pricing-badge">Más popular</div>
+								}
+								<div class="pricing-header">
+									<div>
+										<p class="pricing-title" [class.pricing-title-light]="card.destacado">{{ card.plan.name }}</p>
+										<div class="pricing-price" [class.pricing-price-light]="card.destacado"><strong>S/{{ card.plan.price }}</strong><span>/mes</span></div>
+									</div>
 								</div>
-							</div>
 
-							<ul class="pricing-features">
-								<li><i class="bi bi-check-circle"></i><span>Hasta 5 usuarios</span></li>
-								<li><i class="bi bi-check-circle"></i><span>10GB de almacenamiento</span></li>
-								<li><i class="bi bi-check-circle"></i><span>Reportes básicos</span></li>
-							</ul>
+								<ul class="pricing-features" [class.pricing-features-light]="card.destacado">
+									@for (feature of card.features; track feature) {
+										<li><i class="bi bi-check-circle"></i><span>{{ feature }}</span></li>
+									}
+								</ul>
 
-							<a class="btn btn-outline-primary btn-lg rounded-pill w-100 pricing-cta" href="/shop">Seleccionar Plan</a>
-						</article>
-					</div>
-
-					<div class="col-lg-4 d-flex">
-						<article class="pricing-card pricing-card-featured h-100 w-100">
-							<div class="pricing-badge">Más popular</div>
-							<div class="pricing-header">
-								<div>
-									<p class="pricing-title pricing-title-light">Professional</p>
-									<div class="pricing-price pricing-price-light"><strong>$149</strong><span>/mes</span></div>
-								</div>
-							</div>
-
-							<ul class="pricing-features pricing-features-light">
-								<li><i class="bi bi-check-circle"></i><span>Hasta 25 usuarios</span></li>
-								<li><i class="bi bi-check-circle"></i><span>100GB de almacenamiento</span></li>
-								<li><i class="bi bi-check-circle"></i><span>Soporte 24/7</span></li>
-								<li><i class="bi bi-check-circle"></i><span>APIs personalizadas</span></li>
-							</ul>
-
-							<a class="btn btn-light btn-lg rounded-pill w-100 pricing-cta pricing-cta-light" href="/shop">Comprar</a>
-						</article>
-					</div>
-
-					<div class="col-lg-4 d-flex">
-						<article class="pricing-card pricing-card-soft h-100 w-100">
-							<div class="pricing-header">
-								<div>
-									<p class="pricing-title">Enterprise</p>
-									<div class="pricing-price"><strong>$499</strong><span>/mes</span></div>
-								</div>
-							</div>
-
-							<ul class="pricing-features">
-								<li><i class="bi bi-check-circle"></i><span>Usuarios ilimitados</span></li>
-								<li><i class="bi bi-check-circle"></i><span>1TB de almacenamiento</span></li>
-								<li><i class="bi bi-check-circle"></i><span>Soporte dedicado</span></li>
-								<li><i class="bi bi-check-circle"></i><span>SLA garantizado</span></li>
-							</ul>
-
-							<a class="btn btn-outline-primary btn-lg rounded-pill w-100 pricing-cta" href="/shop">Seleccionar Plan</a>
-						</article>
-					</div>
+								<a class="btn btn-lg rounded-pill w-100 pricing-cta"
+									[class.btn-outline-primary]="!card.destacado"
+									[class.btn-light]="card.destacado"
+									[class.pricing-cta-light]="card.destacado"
+									[href]="'/shop?planId=' + card.plan.id">{{ card.destacado ? 'Comprar' : 'Seleccionar Plan' }}</a>
+							</article>
+						</div>
+					} @empty {
+						@if (!loading()) {
+							<p class="text-secondary text-center mb-0">No hay planes disponibles por el momento.</p>
+						}
+					}
 				</div>
 			</div>
 		</section>

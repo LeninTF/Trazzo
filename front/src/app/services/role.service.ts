@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Role = 'admin-tenant' | 'admin-sass' | 'usuario';
+export type Role = 'admin-tenant' | 'admin-saas' | 'usuario';
 
 const STORAGE_KEY = 'trazzo_role';
 
@@ -12,7 +12,7 @@ export class RoleService {
 
   readonly roleLabel: Record<Role, string> = {
     'admin-tenant': 'Administrador Tenant',
-    'admin-sass': 'Administrador SaaS',
+    'admin-saas': 'Administrador SaaS',
     'usuario': 'Usuario',
   };
 
@@ -32,6 +32,20 @@ export class RoleService {
     localStorage.setItem(STORAGE_KEY, role);
   }
 
+  /**
+   * RoleService is a app-wide singleton whose signals are only ever read from
+   * localStorage once, at injection time — clearing storage alone would leave
+   * the in-memory userName/role stale for the rest of this SPA session (no
+   * full page reload happens on logout), so the signals must be reset here too.
+   */
+  clearSession(): void {
+    this.userName.set('');
+    this.userEmail.set('');
+    this.role.set('admin-tenant');
+    localStorage.removeItem('trazzo_user_name');
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   toggleSidebar(): void {
     this.sidebarOpen.update(v => !v);
   }
@@ -46,7 +60,7 @@ export class RoleService {
 
   private loadRole(): Role {
     const stored = localStorage.getItem(STORAGE_KEY) as Role | null;
-    if (stored && ['admin-tenant', 'admin-sass', 'usuario'].includes(stored)) {
+    if (stored && ['admin-tenant', 'admin-saas', 'usuario'].includes(stored)) {
       return stored;
     }
     return 'admin-tenant';

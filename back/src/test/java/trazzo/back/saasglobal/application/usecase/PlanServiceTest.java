@@ -1,5 +1,15 @@
 package trazzo.back.saasglobal.application.usecase;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -7,31 +17,47 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreatePlanCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdatePlanCommand;
+import trazzo.back.saasglobal.application.dto.result.PlanResult;
+import trazzo.back.saasglobal.application.port.out.FeatureRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.PlanFeatureRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
+import trazzo.back.saasglobal.domain.model.multitenancy.Feature;
 import trazzo.back.saasglobal.domain.model.multitenancy.Plan;
+import trazzo.back.saasglobal.domain.model.multitenancy.PlanFeature;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+    @Mock PlanRepositoryPort planRepository;
+    @Mock PlanFeatureRepositoryPort planFeatureRepository;
+    @Mock FeatureRepositoryPort featureRepository;
+    @InjectMocks PlanService service;
 
-@ExtendWith(MockitoExtension.class)
-class PlanServiceTest {
+    private static Plan plan(int id) {
+        var now = LocalDateTime.now();
+        return Plan.restore(id, "Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999), "SOLES", "MONTHLY",
+                true, now, now, null);
+    }
 
-    @Mock
-    private PlanRepositoryPort planRepository;
+    private static Feature feature(int id, String name) {
+        var now = LocalDateTime.now();
+        return Feature.restore(id, name, "desc", now, now);
+    }
+
+    @Test
+    void getById_returnsResultWhenFound() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
 
     @InjectMocks
     private PlanService service;
 
-    private Plan samplePlan() {
-        return Plan.restore(1, "Basic", BigDecimal.valueOf(99), "USD", "monthly",
-                true, LocalDateTime.now(), LocalDateTime.now(), null);
+        assertEquals(1, result.id());
+        assertEquals("Basic", result.name());
+        assertEquals(BigDecimal.valueOf(999), result.priceAnnual());
+        assertTrue(result.active());
     }
 
     @Test
@@ -50,8 +76,9 @@ class PlanServiceTest {
     }
 
     @Test
-    void getById_shouldReturnResult() {
-        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
+    void listAll_returnsMappedResults() {
+        when(planRepository.findAll()).thenReturn(List.of(plan(1), plan(2)));
+        when(planFeatureRepository.findByPlanId(any())).thenReturn(List.of());
 
         var result = service.getById(1);
 
@@ -59,8 +86,11 @@ class PlanServiceTest {
     }
 
     @Test
-    void getById_shouldThrowWhenNotFound() {
-        when(planRepository.findById(999)).thenReturn(Optional.empty());
+    void listActive_returnsMappedResults() {
+        when(planRepository.findAllActive()).thenReturn(List.of(plan(1)));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
+
+        List<PlanResult> results = service.listActive();
 
         assertThatThrownBy(() -> service.getById(999))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -68,28 +98,88 @@ class PlanServiceTest {
     }
 
     @Test
-    void listActive_shouldReturnList() {
-        when(planRepository.findAllActive()).thenReturn(List.of(samplePlan()));
+    void create_savesAndReturnsResult() {
+        when(planRepository.save(any())).thenReturn(plan(1));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
+        var command = new CreatePlanCommand("Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999),
+                "SOLES", "MONTHLY", null);
 
         var result = service.listActive();
 
+        assertEquals(1, result.id());
+        assertEquals("Basic", result.name());
+        assertTrue(result.active());
+        verify(planFeatureRepository).deleteByPlanId(1);
+    }
+
+    @Test
+    void create_withFeatures_savesBooleanTrueAndNumericFeatures() {
+        when(planRepository.save(any())).thenReturn(plan(1));
+        when(featureRepository.findAll()).thenReturn(List.of(
+                feature(10, "max_trabajadores"), feature(11, "reportes"), feature(12, "soporte-24-7")));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
+        var features = Map.<String, Object>of(
+                "max_trabajadores", 250,
+                "reportes", true,
+                "soporte-24-7", false);
+        var command = new CreatePlanCommand("Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999),
+                "SOLES", "MONTHLY", features);
+
+        service.create(command);
+
+        verify(planFeatureRepository).save(argThat(pf ->
+                pf.getFeatureId() == 10 && "INT".equals(pf.getDataType()) && "250".equals(pf.getValue())));
+        verify(planFeatureRepository).save(argThat(pf ->
+                pf.getFeatureId() == 11 && "BOOLEAN".equals(pf.getDataType()) && "true".equals(pf.getValue())));
+        verify(planFeatureRepository, never()).save(argThat(pf -> pf.getFeatureId() == 12));
+    }
+
+    @Test
+    void getById_mapsPersistedFeaturesBackToTypedValues() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
+        when(featureRepository.findAll()).thenReturn(List.of(
+                feature(10, "max_trabajadores"), feature(11, "reportes")));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of(
+                PlanFeature.restore(1, 1, 10, "INT", "250", LocalDate.now(), null, true, LocalDateTime.now(), LocalDateTime.now()),
+                PlanFeature.restore(2, 1, 11, "BOOLEAN", "true", LocalDate.now(), null, true, LocalDateTime.now(), LocalDateTime.now())));
+
+        PlanResult result = service.getById(1);
+
+        assertEquals(250L, result.features().get("max_trabajadores"));
+        assertEquals(true, result.features().get("reportes"));
+    }
+
+    @Test
+    void update_savesAndReturnsUpdated() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
+        var command = new UpdatePlanCommand(1, "Pro", BigDecimal.valueOf(199), BigDecimal.valueOf(1999),
+                "DOLAR", "ANNUAL", null);
+
+        PlanResult result = service.update(command);
+
+        assertEquals("Pro", result.name());
+        assertEquals(BigDecimal.valueOf(1999), result.priceAnnual());
+        verify(planFeatureRepository).deleteByPlanId(1);
+    }
+
+    @Test
+    void update_throwsWhenNotFound() {
+        when(planRepository.findById(99)).thenReturn(Optional.empty());
+        var command = new UpdatePlanCommand(99, "Pro", BigDecimal.ONE, BigDecimal.ONE, "SOLES", "MONTHLY", null);
+
         assertThat(result).hasSize(1);
     }
 
     @Test
-    void listAll_shouldReturnList() {
-        when(planRepository.findAll()).thenReturn(List.of(samplePlan()));
-
-        var result = service.listAll();
-
-        assertThat(result).hasSize(1);
-    }
-
-    @Test
-    void update_shouldReturnResult() {
-        var cmd = new UpdatePlanCommand(1, "Pro", BigDecimal.valueOf(199), "USD", "yearly");
-        when(planRepository.findById(1)).thenReturn(Optional.of(samplePlan()));
-        when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
+    void activate_savesAndReturnsActivated() {
+        var now = LocalDateTime.now();
+        var inactive = Plan.restore(1, "Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999), "SOLES", "MONTHLY",
+                false, now, now, null);
+        when(planRepository.findById(1)).thenReturn(Optional.of(inactive));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
 
         var result = service.update(cmd);
 
@@ -103,7 +193,16 @@ class PlanServiceTest {
         when(planRepository.findById(1)).thenReturn(Optional.of(plan));
         when(planRepository.save(any(Plan.class))).thenAnswer(i -> i.getArgument(0));
 
-        var result = service.activate(1);
+        assertThrows(IllegalArgumentException.class, () -> service.activate(99));
+    }
+
+    @Test
+    void deactivate_savesAndReturnsDeactivated() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(plan(1)));
+        when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(planFeatureRepository.findByPlanId(1)).thenReturn(List.of());
+
+        PlanResult result = service.deactivate(1);
 
         assertThat(result.active()).isTrue();
     }

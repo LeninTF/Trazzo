@@ -33,7 +33,7 @@
 				</div>
 			</div>
 
-			<form class="contact-form">
+			<form class="contact-form" (ngSubmit)="onSubmit($event)" *ngIf="!submitted()">
 				<section class="form-section">
 					<div class="section-head">
 						<h2>Datos personales</h2>
@@ -43,19 +43,23 @@
 					<div class="field-grid">
 						<label>
 							Nombres
-							<input type="text" name="names" placeholder="Ej. María Fernanda" />
+							<input type="text" name="names" placeholder="Ej. María Fernanda" [(ngModel)]="names" required />
 						</label>
 						<label>
 							Apellidos
-							<input type="text" name="lastNames" placeholder="Ej. Pérez Gómez" />
+							<input type="text" name="lastNames" placeholder="Ej. Pérez Gómez" [(ngModel)]="lastNames" required />
+						</label>
+						<label>
+							Correo electrónico
+							<input type="email" name="email" placeholder="nombre@empresa.com" [(ngModel)]="email" required />
 						</label>
 						<label>
 							Número de celular
-							<input type="tel" name="phone" placeholder="+51 999 999 999" />
+							<input type="tel" name="phone" placeholder="+51 999 999 999" [(ngModel)]="phone" required />
 						</label>
 						<label>
 							Tipo de interés
-							<select name="interestType">
+							<select name="interestType" [(ngModel)]="interestType" required>
 								<option value="">Seleccione una opción</option>
 								<option value="trial">Trial</option>
 								<option value="info">Más información</option>
@@ -84,11 +88,11 @@
 					<div class="field-grid">
 						<label>
 							RUC
-							<input type="text" name="ruc" placeholder="20XXXXXXXXX" />
+							<input type="text" name="ruc" placeholder="20XXXXXXXXX" [(ngModel)]="ruc" required />
 						</label>
 						<label>
 							Razón social
-							<input type="text" name="businessName" placeholder="Nombre legal de la institución" />
+							<input type="text" name="businessName" placeholder="Nombre legal de la institución" [(ngModel)]="businessName" required />
 						</label>
 					</div>
 				</section>
@@ -102,7 +106,7 @@
 					<div class="field-grid">
 						<label class="full-width">
 							Mensaje
-							<textarea name="message" rows="6" placeholder="Escribe aquí tu consulta"></textarea>
+							<textarea name="message" rows="6" placeholder="Escribe aquí tu consulta" [(ngModel)]="message" required></textarea>
 						</label>
 					</div>
 				</section>
@@ -114,12 +118,17 @@
 
 				<div class="form-actions">
 					<a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="/">Cancelar</a>
-					<button type="submit" class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm">
+					<button type="submit" class="btn btn-primary btn-lg rounded-pill px-4 shadow-sm" [disabled]="isLoading()">
 						<i class="bi bi-send-fill me-2"></i>
-						Enviar
+						{{ isLoading() ? 'Enviando...' : 'Enviar' }}
 					</button>
 				</div>
 			</form>
+
+			<div class="form-note-card" *ngIf="submitted()">
+				<i class="bi bi-check-circle-fill"></i>
+				<p class="mb-0">¡Gracias! Tu solicitud fue enviada correctamente. Nuestro equipo te contactará pronto.</p>
+			</div>
 		</section>
 	</main>
 </div>

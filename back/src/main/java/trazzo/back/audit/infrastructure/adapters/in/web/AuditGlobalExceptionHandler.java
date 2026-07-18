@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -65,12 +66,14 @@ public class AuditGlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
-    @ExceptionHandler(DataAccessException.class)
-    public ResponseEntity<ErrorResponse> handleDataAccess(DataAccessException ex) {
-        log.error("Database error: {}", ex.getMessage(), ex);
-        var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request",
-                "Invalid request data or database constraint violation");
-        return ResponseEntity.badRequest().body(error);
+    // See trazzo.back.saasglobal...SaasGlobalExceptionHandler for why this is needed: @PreAuthorize
+    // failures throw inside the controller call and would otherwise be swallowed into a 500 by
+    // the Exception.class catch-all below instead of surfacing as the correct 403.
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthorizationDenied(AuthorizationDeniedException ex) {
+        log.warn("Authorization denied: {}", ex.getMessage());
+        var error = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Forbidden", "No tienes permiso para esta acción");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     @ExceptionHandler(Exception.class)

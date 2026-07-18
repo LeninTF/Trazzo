@@ -21,6 +21,24 @@ public class PersonJdbcRepositoryAdapter implements PersonRepositoryPort {
     private final JdbcTemplate jdbc;
 
     @Override
+    public Person save(Person person) {
+        Integer id = jdbc.queryForObject(
+                """
+                INSERT INTO persons (img_url, document_type, document_value, name, father_surname,
+                                     mother_surname, birth_date, created_at, updated_at)
+                VALUES (?, ?::document_type_enum, ?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """,
+                Integer.class,
+                person.getImgUrl(), person.getDocumentType().name(), person.getDocumentValue(),
+                person.getName(), person.getFatherSurname(), person.getMotherSurname(),
+                person.getBirthDate(), person.getCreatedAt(), person.getUpdatedAt());
+        return Person.restore(id, person.getImgUrl(), person.getDocumentType(), person.getDocumentValue(),
+                person.getName(), person.getFatherSurname(), person.getMotherSurname(),
+                person.getBirthDate(), person.getCreatedAt(), person.getUpdatedAt());
+    }
+
+    @Override
     public Optional<Person> findById(Integer id) {
         String sql = """
                 SELECT id, img_url, document_type, document_value, name,
@@ -34,6 +52,11 @@ public class PersonJdbcRepositoryAdapter implements PersonRepositoryPort {
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
+    }
+
+    @Override
+    public void deleteById(Integer id) {
+        jdbc.update("DELETE FROM persons WHERE id = ?", id);
     }
 
     private static class PersonRowMapper implements RowMapper<Person> {

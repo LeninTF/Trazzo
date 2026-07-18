@@ -2,7 +2,9 @@ package trazzo.back.audit.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,8 +38,8 @@ class AuditGlobalExceptionHandlerTest {
                 case "illegal-arg" -> throw new IllegalArgumentException("Bad argument");
                 case "illegal-state" -> throw new IllegalStateException("Bad state");
                 case "validation" -> throw new AuditValidationException("Validation failed");
-                case "date-parse" -> throw new DateTimeParseException("Text 'bad-date'", "bad-date", 0);
-                case "data-access" -> throw new DataAccessResourceFailureException("Connection refused");
+                case "auth-denied" -> throw new AuthorizationDeniedException(
+                        "Access Denied", new AuthorizationDecision(false));
                 default -> throw new RuntimeException("Unexpected error");
             }
         }
@@ -80,20 +82,11 @@ class AuditGlobalExceptionHandlerTest {
     }
 
     @Test
-    void dateTimeParse_returns400() throws Exception {
-        mockMvc.perform(get("/throw/date-parse"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Invalid date format"));
-    }
-
-    @Test
-    void dataAccess_returns400() throws Exception {
-        mockMvc.perform(get("/throw/data-access"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"));
+    void authorizationDenied_returns403Forbidden() throws Exception {
+        mockMvc.perform(get("/throw/auth-denied"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"));
     }
 
     @Test
