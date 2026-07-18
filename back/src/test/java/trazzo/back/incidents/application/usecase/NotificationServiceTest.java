@@ -6,7 +6,6 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import trazzo.back.incidents.application.dto.command.NotifyIncidentCommand;
-import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
 
@@ -17,14 +16,12 @@ import java.util.Optional;
 class NotificationServiceTest {
 
     private IncidentRepositoryPort incidentRepo;
-    private EventPublisherPort eventPublisher;
     private NotificationService service;
 
     @BeforeEach
     void setUp() {
         incidentRepo = mock(IncidentRepositoryPort.class);
-        eventPublisher = mock(EventPublisherPort.class);
-        service = new NotificationService(incidentRepo, eventPublisher);
+        service = new NotificationService(incidentRepo);
     }
 
     @Test

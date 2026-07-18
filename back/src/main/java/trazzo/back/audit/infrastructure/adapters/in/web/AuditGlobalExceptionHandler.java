@@ -4,6 +4,7 @@ import java.time.format.DateTimeParseException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -61,6 +62,14 @@ public class AuditGlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDateTimeParse(DateTimeParseException ex) {
         log.warn("Invalid date format: {}", ex.getMessage());
         var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", "Invalid date format");
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ErrorResponse> handleDataAccess(DataAccessException ex) {
+        log.error("Database error: {}", ex.getMessage(), ex);
+        var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request",
+                "Invalid request data or database constraint violation");
         return ResponseEntity.badRequest().body(error);
     }
 

@@ -16,7 +16,7 @@ class SessionMapperTest {
         var now = LocalDateTime.now();
         var domain = new Session(1L, "user-1", "hash123", "192.168.1.1",
                 "Mozilla/5.0", "fp-001", now, now.plusHours(1), null,
-                now.plusDays(7), SessionState.ACTIVE, now, now);
+                now.plusDays(7), SessionState.ACTIVE, now, now, now);
 
         var entity = SessionMapper.toEntity(domain);
 
@@ -75,7 +75,7 @@ class SessionMapperTest {
         var now = LocalDateTime.now();
         var original = new Session(2L, "user-3", "hash789", "192.168.1.3",
                 "Edge/100", "fp-003", now, now.plusMinutes(30), null,
-                now.plusDays(1), SessionState.ACTIVE, now, now);
+                now.plusDays(1), SessionState.ACTIVE, now, now, now);
 
         var entity = SessionMapper.toEntity(original);
         var restored = SessionMapper.toDomain(entity);

@@ -10,12 +10,12 @@ import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
+import trazzo.back.incidents.application.port.out.EvidenceUrlResolver;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.domain.model.IncidentType;
-import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -45,7 +45,7 @@ class IncidentServiceTest {
     private EventPublisherPort eventPublisher;
 
     @Mock
-    private FileStoragePort fileStoragePort;
+    private EvidenceUrlResolver evidenceUrlResolver;
 
     @InjectMocks
     private IncidentService service;

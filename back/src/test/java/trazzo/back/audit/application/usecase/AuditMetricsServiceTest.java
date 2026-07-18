@@ -9,6 +9,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+
 class AuditMetricsServiceTest {
 
     private JdbcTemplate jdbcTemplate;
@@ -17,7 +21,8 @@ class AuditMetricsServiceTest {
     @BeforeEach
     void setUp() {
         jdbcTemplate = mock(JdbcTemplate.class);
-        service = new AuditMetricsService(jdbcTemplate);
+        Clock fixedClock = Clock.fixed(Instant.parse("2026-01-15T00:00:00Z"), ZoneId.of("America/Mexico_City"));
+        service = new AuditMetricsService(jdbcTemplate, fixedClock);
     }
 
     @Test

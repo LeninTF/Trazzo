@@ -33,7 +33,8 @@ public class Session {
             LocalDateTime expiresAt,
             SessionState state,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt) {
+            LocalDateTime updatedAt,
+            LocalDateTime clock) {
 
         if (tenantUserId == null || tenantUserId.isBlank()) {
             throw new IllegalArgumentException("Tenant user id is required.");
@@ -74,11 +75,9 @@ public class Session {
         if (state == SessionState.ACTIVE && logoutAt != null) {
             throw new IllegalArgumentException("Active session cannot have logout date.");
         }
-        if (state == SessionState.EXPIRED &&
-    expiresAt.isAfter(LocalDateTime.now())) {
-
-    throw new IllegalArgumentException("Session is not expired yet.");
-}
+        if (state == SessionState.EXPIRED && expiresAt.isAfter(clock)) {
+            throw new IllegalArgumentException("Session is not expired yet.");
+        }
         this.id = id;
         this.tenantUserId = tenantUserId;
         this.refreshTokenHash = refreshTokenHash;

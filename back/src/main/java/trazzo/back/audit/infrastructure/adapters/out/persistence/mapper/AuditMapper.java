@@ -1,16 +1,13 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.mapper;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.AuditEntity;
+import trazzo.back.audit.infrastructure.adapters.out.persistence.util.JsonUtils;
 
 import java.util.Map;
 import java.util.UUID;
 
 public final class AuditMapper {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private AuditMapper() {
     }
@@ -52,24 +49,10 @@ public final class AuditMapper {
     }
 
     static Map<String, Object> deserializeJson(String json) {
-        if (json == null || json.isBlank()) {
-            return Map.of();
-        }
-        try {
-            return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
-            return Map.of();
-        }
+        return JsonUtils.deserialize(json);
     }
 
     static String serializeJson(Map<String, Object> map) {
-        if (map == null || map.isEmpty()) {
-            return null;
-        }
-        try {
-            return MAPPER.writeValueAsString(map);
-        } catch (Exception e) {
-            return null;
-        }
+        return JsonUtils.serialize(map);
     }
 }

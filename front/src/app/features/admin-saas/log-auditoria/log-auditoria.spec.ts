@@ -199,12 +199,8 @@ describe('LogAuditoria', () => {
     expect(component.logs[0].userInitials).toBe('?');
   });
 
-  it('should compute logsFiltrado', () => {
-    expect(component.logsFiltrado.length).toBe(2);
-  });
-
-  it('should compute logsPaginado', () => {
-    expect(component.logsPaginado.length).toBe(2);
+  it('should have logs loaded', () => {
+    expect(component.logs.length).toBe(2);
   });
 
   it('should compute totalPaginas from server', () => {

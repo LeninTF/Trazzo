@@ -1,5 +1,7 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.mapper;
 
+import java.time.LocalDateTime;
+
 import trazzo.back.audit.domain.model.tenant.Session;
 import trazzo.back.audit.domain.model.tenant.SessionState;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.SessionEntity;
@@ -41,7 +43,8 @@ public final class SessionMapper {
                 entity.getExpiresAt(),
                 entity.getState(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                LocalDateTime.now()
         );
     }
 }

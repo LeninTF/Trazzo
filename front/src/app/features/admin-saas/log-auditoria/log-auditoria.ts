@@ -156,14 +156,6 @@ export class LogAuditoria implements OnInit {
     });
   }
 
-  get logsFiltrado(): LogEvento[] {
-    return this.logs;
-  }
-
-  get logsPaginado(): LogEvento[] {
-    return this.logs;
-  }
-
   get totalPaginas(): number {
     return this.totalPaginasServidor;
   }

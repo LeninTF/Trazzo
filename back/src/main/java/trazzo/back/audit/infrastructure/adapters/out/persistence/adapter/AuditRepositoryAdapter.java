@@ -1,7 +1,5 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -12,6 +10,7 @@ import trazzo.back.audit.application.port.out.AuditRepositoryPort;
 import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.AuditJpaRepository;
+import trazzo.back.audit.infrastructure.adapters.out.persistence.util.JsonUtils;
 
 import java.sql.Types;
 import java.time.LocalDateTime;
@@ -30,10 +29,13 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     private final AuditJpaRepository jpaRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private static final String CREATED_AT = "created_at";
-    private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id");
+    private static final Set<String> SORT_WHITELIST = Set.of(CREATED_AT, "entity", "action", "id", "ip_address");
+    private static final Map<String, String> SORT_FIELD_MAP = Map.of(
+            "createdAt", CREATED_AT,
+            "ipAddress", "ip_address",
+            "entityId", "entity_id"
+    );
 
     private static final RowMapper<Audit> ROW_MAPPER = (rs, rowNum) -> Audit.restore(
             rs.getString("id"),
@@ -67,11 +69,15 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
         String sortDirection = "DESC";
         if (!pageable.getSort().isEmpty()) {
             var order = pageable.getSort().stream().findFirst().orElse(null);
-            if (order != null && SORT_WHITELIST.contains(order.getProperty())) {
-                sortField = order.getProperty();
-                sortDirection = order.isAscending() ? "ASC" : "DESC";
+            if (order != null) {
+                String mappedField = SORT_FIELD_MAP.getOrDefault(order.getProperty(), order.getProperty());
+                if (SORT_WHITELIST.contains(mappedField)) {
+                    sortField = mappedField;
+                    sortDirection = order.isAscending() ? "ASC" : "DESC";
+                }
             }
         }
+        // SQL does not support parameterized ORDER BY; the whitelist is the sole defense against injection.
         sql.append(" ORDER BY a.").append(sortField).append(" ").append(sortDirection);
         sql.append(" LIMIT ? OFFSET ?");
         params.add(new SqlParameterValue(Types.INTEGER, pageable.getPageSize()));
@@ -127,8 +133,14 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
 
     private void appendTenantClause(StringBuilder sql, List<SqlParameterValue> params, String tenantId) {
         if (tenantId != null && !tenantId.isBlank()) {
-            sql.append(" AND a.user_id IN (SELECT id FROM users WHERE tenant_id = ?::uuid)");
-            params.add(new SqlParameterValue(Types.VARCHAR, tenantId));
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(tenantId);
+            } catch (IllegalArgumentException e) {
+                return;
+            }
+            sql.append(" AND a.user_id IN (SELECT id FROM users WHERE tenant_id = ?)");
+            params.add(new SqlParameterValue(Types.OTHER, uuid));
         }
     }
 
@@ -140,7 +152,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     }
 
     private void appendEntityClause(StringBuilder sql, List<SqlParameterValue> params, String entity) {
-        if (entity != null) {
+        if (entity != null && !entity.isBlank()) {
             sql.append(" AND a.entity = ?");
             params.add(new SqlParameterValue(Types.VARCHAR, entity));
         }
@@ -159,13 +171,6 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     }
 
     static Map<String, Object> deserializeJson(String json) {
-        if (json == null || json.isBlank()) {
-            return Map.of();
-        }
-        try {
-            return MAPPER.readValue(json, MAP_TYPE);
-        } catch (Exception e) {
-            return Map.of();
-        }
+        return JsonUtils.deserialize(json);
     }
 }

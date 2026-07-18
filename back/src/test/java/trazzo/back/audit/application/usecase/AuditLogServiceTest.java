@@ -73,8 +73,8 @@ class AuditLogServiceTest {
                 "192.168.1.1", "Mozilla/5.0", Map.of("old", "val"), Map.of("new", "val"), now);
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
-        when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.of(new TenantInfoPort.TenantInfo("tenant-1", "Test Corp")));
-        when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.of(new UserInfoPort.UserInfo("user-1", "John Doe", "john@test.com")));
+        when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of("user-1", new TenantInfoPort.TenantInfo("tenant-1", "Test Corp")));
+        when(userInfoPort.findByUserIds(any())).thenReturn(Map.of("user-1", new UserInfoPort.UserInfo("user-1", "John Doe", "john@test.com")));
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
 
@@ -86,7 +86,7 @@ class AuditLogServiceTest {
 
         var logResult = result.content().get(0);
         assertEquals("1", logResult.id());
-        assertEquals("EVT-1-X", logResult.eventId());
+        assertEquals("EVT-1", logResult.eventId());
         assertEquals(now, logResult.fecha());
         assertEquals("Test Corp", logResult.tenant());
         assertEquals("tenant-1", logResult.tenantId());
@@ -101,8 +101,8 @@ class AuditLogServiceTest {
 
         verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class));
         verify(auditRepository).count(any(), any(), any(), any(), any(), any());
-        verify(tenantInfoPort).findByUserId("user-1");
-        verify(userInfoPort).findByUserId("user-1");
+        verify(tenantInfoPort).findByUserIds(any());
+        verify(userInfoPort).findByUserIds(any());
     }
 
     @Test
@@ -112,8 +112,8 @@ class AuditLogServiceTest {
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
-        when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
-        when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of());
+        when(userInfoPort.findByUserIds(any())).thenReturn(Map.of());
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
 
@@ -128,8 +128,8 @@ class AuditLogServiceTest {
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
         when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
-        when(tenantInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
-        when(userInfoPort.findByUserId("user-1")).thenReturn(Optional.empty());
+        when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of());
+        when(userInfoPort.findByUserIds(any())).thenReturn(Map.of());
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
 
@@ -150,8 +150,6 @@ class AuditLogServiceTest {
         assertEquals(1, result.content().size());
         assertNull(result.content().get(0).userName());
         assertNull(result.content().get(0).userEmail());
-        verify(tenantInfoPort, never()).findByUserId(any());
-        verify(userInfoPort, never()).findByUserId(any());
     }
 
     @Test

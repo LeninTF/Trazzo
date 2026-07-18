@@ -66,7 +66,7 @@ public class SecurityConfig {
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }
-                auth.requestMatchers("/saas/**", "/tenants/**").hasRole("admin_trazzo");
+                auth.requestMatchers("/saas/**", "/tenants/**", "/audit/**").hasRole("admin_trazzo");
                 auth.anyRequest().authenticated();
             })
             .headers(headers -> configureHeaders(headers, h2ConsoleEnabled, h2Console))

@@ -6,6 +6,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
+import trazzo.back.incidents.application.port.out.EvidenceUrlResolver;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
@@ -22,10 +23,11 @@ class IncidentsBeanConfigTest {
     @Mock private TenantUserPort tenantUserPort;
     @Mock private EventPublisherPort eventPublisher;
     @Mock private FileStoragePort fileStoragePort;
+    @Mock private EvidenceUrlResolver evidenceUrlResolver;
 
     @Test
     void shouldCreateIncidentUseCase() {
-        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher, fileStoragePort));
+        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher, evidenceUrlResolver));
     }
 
     @Test
@@ -40,6 +42,6 @@ class IncidentsBeanConfigTest {
 
     @Test
     void shouldCreateNotificationUseCase() {
-        assertNotNull(config.notificationUseCase(incidentRepo, eventPublisher));
+        assertNotNull(config.notificationUseCase(incidentRepo));
     }
 }

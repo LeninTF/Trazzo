@@ -110,7 +110,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (log of logsPaginado; track log.id) {
+          @for (log of logs; track log.id) {
             <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)" (keydown.enter)="seleccionarLog(log)" role="button" tabindex="0">
               <td class="log-table__date" data-label="Fecha/Hora">
                 <strong>{{ log.fecha | date:'dd/MM/yyyy' }}</strong>

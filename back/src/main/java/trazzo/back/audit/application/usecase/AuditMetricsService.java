@@ -1,25 +1,38 @@
 package trazzo.back.audit.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
-@RequiredArgsConstructor
 public class AuditMetricsService implements AuditMetricsUseCase {
 
     private final JdbcTemplate jdbcTemplate;
+    private final Clock clock;
+    private final ZoneId zone;
+
+    public AuditMetricsService(JdbcTemplate jdbcTemplate, Clock clock, ZoneId zone) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.clock = clock;
+        this.zone = zone;
+    }
+
+    public AuditMetricsService(JdbcTemplate jdbcTemplate, Clock clock) {
+        this(jdbcTemplate, clock, ZoneId.of("America/Mexico_City"));
+    }
 
     @Override
     public AuditMetricsResult getMetrics() {
         Long totalEventos = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit", Long.class);
 
-        LocalDateTime thirtyDaysAgo = LocalDateTime.now(ZoneId.of("America/Mexico_City")).minusDays(30);
-        LocalDateTime sixtyDaysAgo = LocalDateTime.now(ZoneId.of("America/Mexico_City")).minusDays(60);
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now(clock).atZone(zone).toLocalDateTime().minusDays(30);
+        LocalDateTime sixtyDaysAgo = LocalDateTime.now(clock).atZone(zone).toLocalDateTime().minusDays(60);
 
         Long recentCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit WHERE created_at >= ?", Long.class, thirtyDaysAgo);
