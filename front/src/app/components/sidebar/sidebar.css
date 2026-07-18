@@ -187,11 +187,17 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.7rem;
+	width: 100%;
 	padding: 0.65rem 0.8rem;
+	border: none;
 	border-radius: 0.95rem;
+	background: none;
 	color: #54607c;
 	text-decoration: none;
+	font: inherit;
 	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
 	transition: background-color 160ms ease, color 160ms ease;
 }
 

@@ -18,6 +18,16 @@ services:
       - PROVISIONING_ADMIN_PASS=admin
       - PROVISIONING_DB_HOST=postgres-local
       - PROVISIONING_DB_PORT=5432
+      - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN:-}
+      - MERCADOPAGO_PUBLIC_KEY=${MERCADOPAGO_PUBLIC_KEY:-}
+      - MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET:-}
+      # Mercado Pago's preapproval API rejects back_url values pointing at localhost
+      # ("Invalid value for back_url, must be a valid URL"), so the default here must be a
+      # real, publicly-resolvable HTTPS URL even for local dev — override with FRONTEND_URL
+      # only if you need redirects to actually land on a different host.
+      - FRONTEND_URL=${FRONTEND_URL:-https://www.trazzo.pe}
+      - ABANDONED_TRIAL_HOURS=${ABANDONED_TRIAL_HOURS:-24}
+      - ABANDONED_TRIAL_CLEANUP_CRON=${ABANDONED_TRIAL_CLEANUP_CRON:-0 0 * * * *}
     networks:
       - trazzo-local-net
 

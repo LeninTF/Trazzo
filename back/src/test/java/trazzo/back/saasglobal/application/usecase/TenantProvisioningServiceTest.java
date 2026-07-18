@@ -36,13 +36,12 @@ class TenantProvisioningServiceTest {
     private static CreateTrialTenantCommand trialCmd() {
         return new CreateTrialTenantCommand(
                 "acme", 1, 10,
-                "localhost", "5432", "testdb", "user", "pass",
                 null, null, null, null
         );
     }
 
     private static TenantSettings someSettings() {
-        return TenantSettings.of("t-1", "localhost", "5432", "db", "usr", "pwd");
+        return TenantSettings.of("t-1", "tenant_acme");
     }
 
     /* == createTrial == */
@@ -60,6 +59,21 @@ class TenantProvisioningServiceTest {
         verify(subscriptionRepository).save(any(Subscription.class));
         assertEquals("acme", result.subDomain());
         assertTrue(result.activated());
+    }
+
+    @Test
+    void createTrial_deprovisionsSchemaWhenPersistenceFailsAfterProvisioning() {
+        // Schema provisioning uses a raw, non-Spring-managed connection, so a failure after
+        // it succeeded is not rolled back by @Transactional — the schema must be dropped
+        // explicitly, or the orphaned schema would block retrying the same subDomain.
+        when(tenantRepository.existsBySubDomain("acme")).thenReturn(false);
+        when(tenantRepository.save(any())).thenThrow(new RuntimeException("db down"));
+
+        assertThrows(RuntimeException.class, () -> service.createTrial(trialCmd()));
+
+        verify(schemaProvisioning).provisionExisting(any(TenantSettings.class));
+        verify(schemaProvisioning).deprovision("tenant_acme");
+        verifyNoInteractions(subscriptionRepository);
     }
 
     @Test
@@ -91,7 +105,7 @@ class TenantProvisioningServiceTest {
         var subId = "sub-1";
         var dateEnd = LocalDate.now().plusMonths(1);
         var sub = Subscription.restore(subId, 1, tenantId,
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
         var tenant = Tenant.createPending("acme", 1, null);
         var settings = someSettings();
 
@@ -119,7 +133,7 @@ class TenantProvisioningServiceTest {
     @Test
     void activate_throwsWhenTenantNotFound() {
         var sub = Subscription.restore("sub-1", 1, "t-1",
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
         when(subscriptionRepository.findById(any())).thenReturn(Optional.of(sub));
         when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(tenantRepository.findById(any())).thenReturn(Optional.empty());

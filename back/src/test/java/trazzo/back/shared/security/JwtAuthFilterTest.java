@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -58,6 +59,7 @@ class JwtAuthFilterTest {
         when(tokenValidator.extractUsername("valid.token")).thenReturn("user@test.com");
         when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(userDetails);
         when(tokenValidator.isTokenValid("valid.token", userDetails)).thenReturn(true);
+        when(tokenValidator.extractTenantSchema("valid.token")).thenReturn("tenant_acme");
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer valid.token");
@@ -69,6 +71,63 @@ class JwtAuthFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication().getName())
                 .isEqualTo("user@test.com");
+    }
+
+    @Test
+    void request_withSaasAdminTokenAndNoTenantClaim_stillSetsAuthentication() throws Exception {
+        UserDetails admin = User.withUsername("admin@test.com")
+                .password("").authorities(List.of(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"))).build();
+        when(tokenValidator.extractUsername("admin.token")).thenReturn("admin@test.com");
+        when(userDetailsService.loadUserByUsername("admin@test.com")).thenReturn(admin);
+        when(tokenValidator.isTokenValid("admin.token", admin)).thenReturn(true);
+        when(tokenValidator.extractTenantSchema("admin.token")).thenReturn(null);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer admin.token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    @Test
+    void request_withTenantUserTokenMissingTenantClaim_rejectsAuthentication() throws Exception {
+        UserDetails tenantUser = User.withUsername("user@test.com")
+                .password("").authorities(List.of()).build();
+        when(tokenValidator.extractUsername("token")).thenReturn("user@test.com");
+        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(tenantUser);
+        when(tokenValidator.isTokenValid("token", tenantUser)).thenReturn(true);
+        when(tokenValidator.extractTenantSchema("token")).thenReturn(null);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    void request_withTenantUserTokenBlankTenantClaim_rejectsAuthentication() throws Exception {
+        UserDetails tenantUser = User.withUsername("user@test.com")
+                .password("").authorities(List.of()).build();
+        when(tokenValidator.extractUsername("token")).thenReturn("user@test.com");
+        when(userDetailsService.loadUserByUsername("user@test.com")).thenReturn(tenantUser);
+        when(tokenValidator.isTokenValid("token", tenantUser)).thenReturn(true);
+        when(tokenValidator.extractTenantSchema("token")).thenReturn("   ");
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test

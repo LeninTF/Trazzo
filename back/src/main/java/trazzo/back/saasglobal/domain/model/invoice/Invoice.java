@@ -49,7 +49,9 @@ public class Invoice {
         this.id = id;
         this.pdfUrl = pdfUrl;
         this.tenantId = requireText(tenantId, "tenantId");
-        this.paymentTransactionId = requireText(paymentTransactionId, "paymentTransactionId");
+        // Nullable: an invoice can exist before a real Mercado Pago payment does (matches the
+        // nullable invoices.payment_transaction_id column).
+        this.paymentTransactionId = paymentTransactionId;
         this.invoiceSeries = requireText(invoiceSeries, "invoiceSeries");
         this.consecutiveNumber = requireText(consecutiveNumber, "consecutiveNumber");
         this.voucherType = requireText(voucherType, "voucherType");

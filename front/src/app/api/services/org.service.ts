@@ -10,6 +10,9 @@ import type {
   OrgPermissionResult,
   OrgRolePermissionResult,
   OrgUserRoleResult,
+  SaasPlanResult,
+  InvoiceListResponse,
+  SubscribeResponse,
 } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
@@ -132,5 +135,23 @@ export class OrgService {
 
   removeUserRole(tenantUserId: number, assignmentId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiBase}/org/users/${tenantUserId}/roles/${assignmentId}`);
+  }
+
+  // ========== BILLING (tenant-facing) ==========
+
+  getMyPlan(): Observable<SaasPlanResult> {
+    return this.http.get<SaasPlanResult>(`${this.apiBase}/org/billing/plan`);
+  }
+
+  listAvailablePlans(): Observable<SaasPlanResult[]> {
+    return this.http.get<SaasPlanResult[]>(`${this.apiBase}/org/billing/plans`);
+  }
+
+  listMyInvoices(opts?: { paymentStatus?: string; dateFrom?: string; dateTo?: string; page?: number; size?: number }): Observable<InvoiceListResponse> {
+    return this.http.get<InvoiceListResponse>(`${this.apiBase}/org/billing/invoices`, { params: params(opts) });
+  }
+
+  subscribeToPlan(planId: number): Observable<SubscribeResponse> {
+    return this.http.post<SubscribeResponse>(`${this.apiBase}/org/billing/subscribe`, { planId });
   }
 }

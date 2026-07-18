@@ -1,38 +1,22 @@
-import { Component, signal, WritableSignal, inject } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { ToastService } from '../../../services/toast.service';
+import { RedirectService } from '../../../services/redirect.service';
+import { ApiService } from '../../../api/services/api.service';
+import type { SaasPlanResult, InvoiceProfile } from '../../../api/types';
 
-interface Factura {
-  id: number;
-  codigo: string;
-  plan: string;
-  fecha: Date;
-  monto: number;
-  estado: 'Pagada' | 'Pendiente' | 'Vencida';
-}
-
-interface Plan {
-  id: string;
-  nombre: string;
-  precio: number;
-  descripcion: string;
-  caracteristicas: string[];
-  limiteUsuarios: number;
-  limiteAlmacenamiento: number;
-}
-
-interface Metricas {
-  usuariosActivos: number;
-  limiteUsuarios: number;
-  almacenamientoUsado: number;
-  limiteAlmacenamiento: number;
-}
+const ESTADO_LABELS: Record<string, string> = {
+  PENDIENTE: 'Pendiente',
+  COMPLETADO: 'Pagada',
+  FALLIDO: 'Fallida',
+  REEMBOLSADO: 'Reembolsada',
+};
 
 @Component({
   selector: 'app-planes',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './planes.html',
   styleUrl: './planes.css',
 })
@@ -42,174 +26,127 @@ export class Planes {
   readonly error = signal('');
 
   private readonly toastService = inject(ToastService);
-  
-  // ==========================================
-  // SIGNALS PARA DATOS REACTIVOS
-  // ==========================================
-  
-  facturas: WritableSignal<Factura[]> = signal<Factura[]>([
-    { id: 1, codigo: 'INV 2023-006', plan: 'Plan Starter', fecha: new Date('2023-08-12'), monto: 49.00, estado: 'Pagada' },
-    { id: 2, codigo: 'INV 2023-007', plan: 'Plan Professional', fecha: new Date('2023-09-12'), monto: 129.00, estado: 'Pagada' },
-    { id: 3, codigo: 'INV 2023-008', plan: 'Plan Professional', fecha: new Date('2023-10-12'), monto: 129.00, estado: 'Pagada' },
-    { id: 4, codigo: 'INV 2023-009', plan: 'Plan Professional', fecha: new Date('2023-11-12'), monto: 129.00, estado: 'Pendiente' }
-  ]);
-  
-  planes: WritableSignal<Plan[]> = signal<Plan[]>([
-    {
-      id: 'starter',
-      nombre: 'Starter',
-      precio: 49,
-      descripcion: 'Para equipos pequeños que empiezan',
-      caracteristicas: ['Hasta 100 empleados', 'Reportes básicos PDF', 'Soporte vía email'],
-      limiteUsuarios: 100,
-      limiteAlmacenamiento: 20
-    },
-    {
-      id: 'professional',
-      nombre: 'Professional',
-      precio: 129,
-      descripcion: 'Gestión avanzada para empresas en crecimiento',
-      caracteristicas: ['Hasta 1,000 empleados', 'Analytics Avanzado & Excel', 'Soporte prioritario 24/5', 'Control de Vacaciones & Permisos'],
-      limiteUsuarios: 1000,
-      limiteAlmacenamiento: 50
-    },
-    {
-      id: 'enterprise',
-      nombre: 'Enterprise',
-      precio: 299,
-      descripcion: 'Personalización total y seguridad avanzada',
-      caracteristicas: ['Empleados ilimitados', 'Webhooks', 'SSO & SAML', 'Account Manager dedicado'],
-      limiteUsuarios: 10000,
-      limiteAlmacenamiento: 200
-    }
-  ]);
-  
-  // ==========================================
-  // ESTADO DE SELECCIÓN Y MODALES
-  // ==========================================
-  planActualId: string = 'professional';
-  planSeleccionadoId: string | null = null;
-  facturaSeleccionadaId: number | null = null;
-  
-  modalActualizarOpen: boolean = false;
-  modalFacturaOpen: boolean = false;
-  
-  metricas: Metricas = {
-    usuariosActivos: 822,
-    limiteUsuarios: 1000,
-    almacenamientoUsado: 22.5,
-    limiteAlmacenamiento: 50
-  };
-  
-  // ==========================================
-  // GETTERS (para usar en el template)
-  // ==========================================
-  
-  get planActual(): Plan | undefined {
-    return this.planes().find(p => p.id === this.planActualId);
+  private readonly api = inject(ApiService);
+  private readonly redirectService = inject(RedirectService);
+
+  planActual = signal<SaasPlanResult | null>(null);
+  planes = signal<SaasPlanResult[]>([]);
+  facturas = signal<InvoiceProfile[]>([]);
+  usuariosActivos = signal(0);
+
+  planSeleccionadoId: number | null = null;
+  facturaSeleccionadaId: string | null = null;
+
+  modalActualizarOpen = false;
+  modalFacturaOpen = false;
+
+  readonly estadoLabels = ESTADO_LABELS;
+
+  constructor() {
+    this.cargarDatos();
   }
-  
-  get planSeleccionado(): Plan | undefined {
-    if (!this.planSeleccionadoId) return undefined;
+
+  private cargarDatos(): void {
+    this.loading.set(true);
+    this.error.set('');
+
+    forkJoin({
+      planActual: this.api.org.getMyPlan(),
+      planes: this.api.org.listAvailablePlans(),
+      facturas: this.api.org.listMyInvoices({ size: 10 }),
+      usuarios: this.api.users.list({ page: 1, size: 1 }),
+    }).subscribe({
+      next: ({ planActual, planes, facturas, usuarios }) => {
+        this.planActual.set(planActual);
+        this.planes.set(planes);
+        this.facturas.set(facturas.content);
+        this.usuariosActivos.set(usuarios.totalElements);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('No se pudo cargar la información de planes y facturación.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  get planSeleccionado(): SaasPlanResult | undefined {
+    if (this.planSeleccionadoId === null) return undefined;
     return this.planes().find(p => p.id === this.planSeleccionadoId);
   }
-  
-  get facturaSeleccionada(): Factura | undefined {
+
+  get facturaSeleccionada(): InvoiceProfile | undefined {
     if (!this.facturaSeleccionadaId) return undefined;
     return this.facturas().find(f => f.id === this.facturaSeleccionadaId);
   }
-  
-  get porcentajeUsuarios(): number {
-    const limite = this.planActual?.limiteUsuarios || this.metricas.limiteUsuarios;
-    return Math.round((this.metricas.usuariosActivos / limite) * 100);
+
+  get limiteUsuarios(): number | null {
+    const max = this.planActual()?.features?.['max_trabajadores'];
+    return typeof max === 'number' ? max : null;
   }
-  
-  get porcentajeAlmacenamiento(): number {
-    const limite = this.planActual?.limiteAlmacenamiento || this.metricas.limiteAlmacenamiento;
-    return Math.round((this.metricas.almacenamientoUsado / limite) * 100);
+
+  get porcentajeUsuarios(): number | null {
+    const limite = this.limiteUsuarios;
+    if (!limite) return null;
+    return Math.round((this.usuariosActivos() / limite) * 100);
   }
-  
-  // ==========================================
-  // MÉTODOS DE SELECCIÓN
-  // ==========================================
-  
-  seleccionarPlan(plan: Plan): void {
+
+  featureLabel(plan: SaasPlanResult): string[] {
+    const f = plan.features ?? {};
+    const labels: string[] = [];
+    if (f['max_trabajadores'] != null) labels.push(`Hasta ${f['max_trabajadores']} empleados`);
+    if (f['max_sedes'] != null) labels.push(`Hasta ${f['max_sedes']} sedes`);
+    if (f['almacenamiento_gb'] != null) labels.push(`${f['almacenamiento_gb']} GB de almacenamiento`);
+    return labels;
+  }
+
+  seleccionarPlan(plan: SaasPlanResult): void {
     this.planSeleccionadoId = plan.id;
   }
-  
-  seleccionarFactura(factura: Factura): void {
+
+  seleccionarFactura(factura: InvoiceProfile): void {
     this.facturaSeleccionadaId = factura.id;
     this.modalFacturaOpen = true;
   }
-  
-  // ==========================================
-  // MÉTODOS DE MODALES
-  // ==========================================
-  
+
   abrirModalActualizarPlan(): void {
-    if (!this.planSeleccionadoId) {
-      // Si no hay plan seleccionado, usar el siguiente al actual o el primero
-      const planesList = this.planes();
-      const currentIndex = planesList.findIndex(p => p.id === this.planActualId);
-      if (currentIndex + 1 < planesList.length) {
-        this.planSeleccionadoId = planesList[currentIndex + 1].id;
-      } else {
-        this.planSeleccionadoId = planesList[0].id;
-      }
+    if (this.planSeleccionadoId === null) {
+      const alternativo = this.planes().find(p => p.id !== this.planActual()?.id);
+      this.planSeleccionadoId = alternativo?.id ?? this.planActual()?.id ?? null;
     }
     this.modalActualizarOpen = true;
   }
-  
+
   cerrarModalActualizar(): void {
     this.modalActualizarOpen = false;
   }
-  
+
   confirmarActualizarPlan(): void {
-    const planSeleccionado = this.planSeleccionado;
-    if (planSeleccionado) {
-      this.planActualId = planSeleccionado.id;
-      this.metricas.limiteUsuarios = planSeleccionado.limiteUsuarios;
-      this.metricas.limiteAlmacenamiento = planSeleccionado.limiteAlmacenamiento;
-      
-      // Agregar nueva factura por el cambio de plan
-      const nuevaFactura: Factura = {
-        id: Date.now(),
-        codigo: `INV ${new Date().getFullYear()}-${String(this.facturas().length + 1).padStart(3, '0')}`,
-        plan: `Plan ${planSeleccionado.nombre}`,
-        fecha: new Date(),
-        monto: planSeleccionado.precio,
-        estado: 'Pendiente'
-      };
-      this.facturas.update(f => [nuevaFactura, ...f]);
-      
-      this.mostrarToast(` Plan actualizado a ${planSeleccionado.nombre}`);
-      this.planSeleccionadoId = null;
-      this.cerrarModalActualizar();
+    const planId = this.planSeleccionadoId;
+    if (planId === null) {
+      return;
     }
+    this.api.org.subscribeToPlan(planId).subscribe({
+      next: (response) => {
+        this.redirectService.redirectTo(response.initPoint);
+      },
+      error: () => {
+        this.toastService.error('No se pudo iniciar el pago para el nuevo plan. Inténtalo nuevamente.');
+      },
+    });
+    this.cerrarModalActualizar();
   }
-  
+
   cerrarModalFactura(): void {
     this.modalFacturaOpen = false;
     this.facturaSeleccionadaId = null;
   }
-  
-  // ==========================================
-  // MÉTODOS DE ACCIÓN
-  // ==========================================
-  
+
   exportarFacturas(): void {
-    this.mostrarToast('Exportando facturas...');
+    this.toastService.info('La exportación de facturas aún no está disponible.');
   }
-  
+
   descargarFactura(): void {
-    this.mostrarToast('Descargando factura...');
-  }
-  
-  // ==========================================
-  // MÉTODOS UTILITARIOS
-  // ==========================================
-  
-  private mostrarToast(mensaje: string): void {
-    this.toastService.info(mensaje);
+    this.toastService.info('La descarga de facturas aún no está disponible.');
   }
 }

@@ -2,81 +2,113 @@ package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+import java.util.regex.Pattern;
+import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
-import trazzo.back.saasglobal.infrastructure.config.ProvisioningProperties;
-import trazzo.back.shared.security.EncryptionService;
 
+/**
+ * On startup, applies any pending {@code db/tenant/migration/*.sql} scripts to every
+ * activated tenant's schema, using the app's single physical database (schema-based
+ * multi-tenancy) rather than a separate connection per tenant.
+ *
+ * Ordered after TenantDataSeeder (@Order(1)): without an explicit order, Spring's
+ * ApplicationRunner/CommandLineRunner execution order is not guaranteed, so this could
+ * run before the local-dev demo tenant is created — finding zero activated tenants and
+ * silently doing nothing (no log line, no error) instead of seeding its schema.
+ */
 @Slf4j
 @Component
-@RequiredArgsConstructor
+@Order(2)
 public class TenantSchemaMigrator implements ApplicationRunner {
 
     private static final String MIGRATION_PATH = "db/tenant/migration/";
+    private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
     private final JdbcTemplate jdbc;
-    private final EncryptionService encryptionService;
-    private final ProvisioningProperties props;
+    private final DataSource rawDataSource;
     private final ResourcePatternResolver resourceResolver;
+
+    public TenantSchemaMigrator(
+            JdbcTemplate jdbc,
+            @Qualifier("rawDataSource") DataSource rawDataSource,
+            ResourcePatternResolver resourceResolver
+    ) {
+        this.jdbc = jdbc;
+        this.rawDataSource = rawDataSource;
+        this.resourceResolver = resourceResolver;
+    }
 
     @Override
     public void run(ApplicationArguments args) {
         List<Map<String, Object>> tenants = jdbc.queryForList("""
-                SELECT t.id, ts.db_name, ts.db_host, ts.db_port, ts.db_user, ts.db_password
+                SELECT t.id, ts.schema_name
                 FROM tenants t
                 JOIN tenant_settings ts ON ts.tenant_id = t.id
                 WHERE t.activated_at IS NOT NULL AND t.deleted_at IS NULL
                 """);
 
+        if (tenants.isEmpty()) {
+            log.info("No activated tenants found; nothing to migrate.");
+            return;
+        }
+
         for (Map<String, Object> row : tenants) {
+            String tenantId = row.get("id") != null ? row.get("id").toString() : "unknown";
+            String schemaName = (String) row.get("schema_name");
             try {
-                String tenantId = row.get("id").toString();
-                String dbName = (String) row.get("db_name");
-                String dbHost = (String) row.get("db_host");
-                String dbPort = (String) row.get("db_port");
-                String dbUser = (String) row.get("db_user");
-                String encryptedPassword = (String) row.get("db_password");
-                String dbPassword = encryptionService.decrypt(encryptedPassword);
-                migrateTenant(tenantId, dbHost, dbPort, dbName, dbUser, dbPassword);
+                migrateTenant(tenantId, schemaName);
             } catch (Exception e) {
-                String id = row.get("id") != null ? row.get("id").toString() : "unknown";
-                String dbName = (String) row.get("db_name");
-                log.error("Failed to migrate tenant {} ({}): {}", id, dbName, e.getMessage());
+                log.error("Failed to migrate tenant {} (schema {}): {}", tenantId, schemaName, e.getMessage());
             }
         }
     }
 
-    private void migrateTenant(String tenantId, String host, String port, String dbName,
-                                String user, String password) {
-        String url = "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+    // Schema is validated against VALID_SCHEMA immediately below before being concatenated;
+    // SET search_path cannot use a JDBC bind parameter for the identifier.
+    @SuppressWarnings("java:S2077")
+    private void migrateTenant(String tenantId, String schemaName) {
+        if (schemaName == null || !VALID_SCHEMA.matcher(schemaName).matches()) {
+            throw new TenantProvisioningException("Invalid schema name for tenant " + tenantId + ": " + schemaName, null);
+        }
+        try (Connection conn = rawDataSource.getConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
+                // since PG13, always implicitly searched first) but kept for defense in depth
+                // and to match TenantAwareDataSource's runtime search_path exactly.
+                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
+            }
             Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
+            // Each script runs independently: this migrator has no per-tenant applied-migration
+            // tracking (every script re-runs on every startup), so one broken/non-idempotent
+            // script must not prevent unrelated later scripts from ever being applied.
             List.of(resources).stream()
                     .sorted(Comparator.comparing(Resource::getFilename))
                     .forEach(script -> {
                         try {
                             ScriptUtils.executeSqlScript(conn, script);
-                            log.info("Executed {} on tenant {} ({})", script.getFilename(), tenantId, dbName);
+                            log.info("Executed {} on tenant {} (schema {})", script.getFilename(), tenantId, schemaName);
                         } catch (Exception e) {
-                            throw new RuntimeException("Failed to execute " + script.getFilename(), e);
+                            log.error("Failed to execute {} on tenant {} (schema {}): {}",
+                                    script.getFilename(), tenantId, schemaName, e.getMessage());
                         }
                     });
-            log.info("Migrated tenant {} ({})", tenantId, dbName);
+            log.info("Migrated tenant {} (schema {})", tenantId, schemaName);
         } catch (SQLException | IOException e) {
-            throw new TenantProvisioningException(
-                    "Failed to migrate tenant DB: " + dbName, e);
+            throw new TenantProvisioningException("Failed to migrate tenant schema: " + schemaName, e);
         }
     }
 }

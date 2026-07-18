@@ -129,7 +129,7 @@ class SubscriptionTest {
         var now = LocalDateTime.now();
         var sub = Subscription.restore("id-1", 1, "tenant-1",
                 LocalDate.now(), LocalDate.now().plusMonths(1),
-                SubscriptionStatus.ACTIVE, BigDecimal.TEN, now);
+                SubscriptionStatus.ACTIVE, BigDecimal.TEN, null, now);
         sub.suspend();
         assertEquals(SubscriptionStatus.SUSPENDED, sub.getStatus());
     }
@@ -177,7 +177,7 @@ class SubscriptionTest {
         var dateStart = LocalDate.now();
         var dateEnd = dateStart.plusMonths(1);
         var sub = Subscription.restore("id-1", 2, "tenant-1",
-                dateStart, dateEnd, SubscriptionStatus.ACTIVE, new BigDecimal("99.00"), now);
+                dateStart, dateEnd, SubscriptionStatus.ACTIVE, new BigDecimal("99.00"), "mp-preapproval-1", now);
 
         assertEquals("id-1", sub.getId());
         assertEquals(2, sub.getPlanId());
@@ -186,6 +186,22 @@ class SubscriptionTest {
         assertEquals(dateEnd, sub.getDateEnd());
         assertEquals(SubscriptionStatus.ACTIVE, sub.getStatus());
         assertEquals(new BigDecimal("99.00"), sub.getPurchasePrice());
+        assertEquals("mp-preapproval-1", sub.getMpPreapprovalId());
         assertEquals(now, sub.getCreatedAt());
+    }
+
+    /* == linkMercadoPago == */
+
+    @Test
+    void linkMercadoPago_setsPreapprovalId() {
+        var sub = Subscription.createTrial("tenant-1", 1, BigDecimal.ZERO, LocalDate.now());
+        sub.linkMercadoPago("mp-preapproval-1");
+        assertEquals("mp-preapproval-1", sub.getMpPreapprovalId());
+    }
+
+    @Test
+    void linkMercadoPago_throwsWhenBlank() {
+        var sub = Subscription.createTrial("tenant-1", 1, BigDecimal.ZERO, LocalDate.now());
+        assertThrows(TenantValidationException.class, () -> sub.linkMercadoPago(" "));
     }
 }

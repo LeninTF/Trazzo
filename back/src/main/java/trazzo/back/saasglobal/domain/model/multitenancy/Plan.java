@@ -14,6 +14,7 @@ public class Plan {
     private Integer id;
     private String name;
     private BigDecimal price;
+    private BigDecimal priceAnnual;
     private String currency;
     private String billingPeriod;
     private boolean isActive;
@@ -27,6 +28,7 @@ public class Plan {
             Integer id,
             String name,
             BigDecimal price,
+            BigDecimal priceAnnual,
             String currency,
             String billingPeriod,
             boolean isActive,
@@ -37,6 +39,7 @@ public class Plan {
         this.id = id;
         this.name = requireText(name, "name");
         this.price = requirePositive(price);
+        this.priceAnnual = requirePositiveIfPresent(priceAnnual);
         this.currency = requireText(currency, "currency");
         this.billingPeriod = billingPeriod;
         this.isActive = isActive;
@@ -45,9 +48,9 @@ public class Plan {
         this.deletedAt = deletedAt;
     }
 
-    public static Plan create(String name, BigDecimal price, String currency, String billingPeriod) {
+    public static Plan create(String name, BigDecimal price, BigDecimal priceAnnual, String currency, String billingPeriod) {
         LocalDateTime now = LocalDateTime.now(Clock.systemDefaultZone());
-        return new Plan(null, name, price, currency, billingPeriod, true, now, now, null);
+        return new Plan(null, name, price, priceAnnual, currency, billingPeriod, true, now, now, null);
     }
 
     @SuppressWarnings("java:S107")
@@ -55,6 +58,7 @@ public class Plan {
             Integer id,
             String name,
             BigDecimal price,
+            BigDecimal priceAnnual,
             String currency,
             String billingPeriod,
             boolean isActive,
@@ -62,12 +66,13 @@ public class Plan {
             LocalDateTime updatedAt,
             LocalDateTime deletedAt
     ) {
-        return new Plan(id, name, price, currency, billingPeriod, isActive, createdAt, updatedAt, deletedAt);
+        return new Plan(id, name, price, priceAnnual, currency, billingPeriod, isActive, createdAt, updatedAt, deletedAt);
     }
 
-    public void update(String name, BigDecimal price, String currency, String billingPeriod) {
+    public void update(String name, BigDecimal price, BigDecimal priceAnnual, String currency, String billingPeriod) {
         this.name = requireText(name, "name");
         this.price = requirePositive(price);
+        this.priceAnnual = requirePositiveIfPresent(priceAnnual);
         this.currency = requireText(currency, "currency");
         this.billingPeriod = billingPeriod;
         this.updatedAt = LocalDateTime.now(clock);
@@ -102,5 +107,12 @@ public class Plan {
             throw new IllegalArgumentException("price must be zero or positive");
         }
         return value;
+    }
+
+    private static BigDecimal requirePositiveIfPresent(BigDecimal value) {
+        if (value == null) {
+            return null;
+        }
+        return requirePositive(value);
     }
 }

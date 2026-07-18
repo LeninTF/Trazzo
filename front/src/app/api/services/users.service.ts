@@ -6,6 +6,7 @@ import type {
   CrearTenantUsuarioRequest, PatchTenantUsuarioRequest, AsignarRolRequest,
   CambiarPasswordRequest, SoftDeleteResponse,
   MasterUserProfile, MasterUserListResponse,
+  CrearMasterUsuarioRequest, UpdateMasterUsuarioRequest, AssignMasterRoleRequest,
 } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
@@ -70,7 +71,7 @@ export class UsersService {
     return this.http.get<MasterUserListResponse>(`${this.apiBase}/saas/users`, { params: params(opts) });
   }
 
-  getMaster(id: number): Observable<MasterUserProfile> {
+  getMaster(id: string): Observable<MasterUserProfile> {
     return this.http.get<MasterUserProfile>(`${this.apiBase}/saas/users/${id}`);
   }
 
@@ -85,5 +86,21 @@ export class UsersService {
     persona?: { name?: string; father_surname?: string; mother_surname?: string };
   }): Observable<MasterUserProfile> {
     return this.http.patch<MasterUserProfile>(`${this.apiBase}/saas/users/me`, body);
+  }
+
+  createMaster(body: CrearMasterUsuarioRequest): Observable<MasterUserProfile> {
+    return this.http.post<MasterUserProfile>(`${this.apiBase}/saas/users`, body);
+  }
+
+  updateMaster(id: string, body: UpdateMasterUsuarioRequest): Observable<MasterUserProfile> {
+    return this.http.patch<MasterUserProfile>(`${this.apiBase}/saas/users/${id}`, body);
+  }
+
+  deleteMaster(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/saas/users/${id}`);
+  }
+
+  assignMasterRole(id: string, body: AssignMasterRoleRequest): Observable<MasterUserProfile> {
+    return this.http.put<MasterUserProfile>(`${this.apiBase}/saas/users/${id}/roles`, body);
   }
 }

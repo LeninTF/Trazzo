@@ -39,8 +39,9 @@ public class PlanController {
 
     @PostMapping
     public ResponseEntity<PlanResult> create(@RequestBody @Valid CreatePlanRequest request) {
-        PlanResult result = planUseCase.create(
-                new CreatePlanCommand(request.name(), request.price(), request.currency(), request.billingPeriod()));
+        PlanResult result = planUseCase.create(new CreatePlanCommand(
+                request.name(), request.price(), request.priceAnnual(),
+                request.currency(), request.billingPeriod(), request.features()));
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
@@ -53,8 +54,9 @@ public class PlanController {
     public ResponseEntity<PlanResult> update(
             @PathVariable Integer id,
             @RequestBody @Valid UpdatePlanRequest request) {
-        return ResponseEntity.ok(planUseCase.update(
-                new UpdatePlanCommand(id, request.name(), request.price(), request.currency(), request.billingPeriod())));
+        return ResponseEntity.ok(planUseCase.update(new UpdatePlanCommand(
+                id, request.name(), request.price(), request.priceAnnual(),
+                request.currency(), request.billingPeriod(), request.features())));
     }
 
     @PutMapping("/{id}/activate")

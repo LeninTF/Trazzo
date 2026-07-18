@@ -2,6 +2,7 @@ package trazzo.back.audit.infrastructure.adapters.in.web;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,6 +17,7 @@ public class AuditMetricsController {
     private final AuditMetricsUseCase auditMetricsUseCase;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('monitoreo-sistema.dashboard-global')")
     public ResponseEntity<AuditMetricsResponse> getMetrics() {
         var result = auditMetricsUseCase.getMetrics();
         return ResponseEntity.ok(AuditMetricsResponse.from(result));
