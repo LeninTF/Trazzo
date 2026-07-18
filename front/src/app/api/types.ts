@@ -283,7 +283,6 @@ export interface IncidentListResponse extends PageResponse<IncidentProfile> {
 export interface CreateIncidentRequest {
   incidencia_type_id: number;
   comment?: string | null;
-  tenant_user_id?: number | null;
 }
 
 export interface PatchIncidentRequest {

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
@@ -12,7 +13,9 @@ import trazzo.back.incidents.application.port.in.EvidenceUseCase;
 import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
+import trazzo.back.shared.security.AuthenticatedUser;
 
 import java.time.LocalDate;
 
@@ -25,6 +28,7 @@ public class IncidentController {
     private final EvidenceUseCase evidenceUseCase;
     private final NotificationUseCase notificationUseCase;
     private final FileStoragePort fileStoragePort;
+    private final TenantUserPort tenantUserPort;
 
     private String buildPublicUrl(String fileKey) {
         return fileStoragePort.buildPublicUrl(fileKey);
@@ -51,8 +55,16 @@ public class IncidentController {
     }
 
     @PostMapping
-    public ResponseEntity<IncidentResponse> create(@Valid @RequestBody CreateIncidentRequest request) {
-        var command = new CreateIncidentCommand(request.tenantUserId(), request.incidenciaTypeId(), request.comment());
+    public ResponseEntity<IncidentResponse> create(
+            @Valid @RequestBody CreateIncidentRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        var tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró usuario de tenant para el usuario autenticado"));
+        var command = new CreateIncidentCommand(
+                String.valueOf(tenantUserId),
+                request.incidenciaTypeId(),
+                request.comment());
         var result = incidentUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentResponse.from(result));
     }

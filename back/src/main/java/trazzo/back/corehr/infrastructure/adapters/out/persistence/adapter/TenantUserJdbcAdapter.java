@@ -1,6 +1,7 @@
 package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -27,6 +28,11 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
             WHERE tu.id = ? AND tu.deleted_at IS NULL
             """;
 
+    private static final String ID_BY_MASTER_USER_SQL = """
+            SELECT tu.id FROM tenant_user tu
+            WHERE tu.master_user_id = ? AND tu.deleted_at IS NULL
+            """;
+
     @Override
     public Optional<TenantUserBasicInfo> findBasicInfoById(Long tenantUserId) {
         return jdbc.query(BASIC_INFO_SQL, (rs, rowNum) ->
@@ -50,5 +56,11 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     @Override
     public boolean existsById(Long tenantUserId) {
         return findBasicInfoById(tenantUserId).isPresent();
+    }
+
+    @Override
+    public Optional<Long> findIdByMasterUserId(UUID masterUserId) {
+        return jdbc.queryForList(ID_BY_MASTER_USER_SQL, Long.class, masterUserId)
+                .stream().findFirst();
     }
 }

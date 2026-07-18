@@ -7,13 +7,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,16 +28,18 @@ import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
+import trazzo.back.shared.security.AuthenticatedUser;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(IncidentController.class)
-@WithMockUser
 class IncidentControllerTest {
 
     @Autowired
@@ -51,10 +57,14 @@ class IncidentControllerTest {
     @MockitoBean
     private FileStoragePort fileStoragePort;
 
+    @MockitoBean
+    private TenantUserPort tenantUserPort;
+
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private IncidentResult sampleResult;
     private IncidentEvidenceResult sampleEvidenceResult;
+    private AuthenticatedUser testUser;
 
     @BeforeEach
     void setUp() {
@@ -63,6 +73,17 @@ class IncidentControllerTest {
                 "comment", null, null, null, List.of(), null, now, now);
         sampleEvidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
                 "file-key", "http://url", "pdf", 100, now, now);
+        testUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                "test@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+        var auth = new UsernamePasswordAuthenticationToken(testUser, null, testUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -80,15 +101,28 @@ class IncidentControllerTest {
 
     @Test
     void createReturns201() throws Exception {
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
         when(incidentUseCase.create(any())).thenReturn(sampleResult);
 
-        var request = new CreateIncidentRequest("u-1", "comment", "t-1");
+        var request = new CreateIncidentRequest("t-1", "comment");
         mockMvc.perform(post("/incidentes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("inc-1"));
+    }
+
+    @Test
+    void createReturns400WhenTenantUserNotFound() throws Exception {
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
+
+        var request = new CreateIncidentRequest("t-1", "comment");
+        mockMvc.perform(post("/incidentes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
