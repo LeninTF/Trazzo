@@ -16,4 +16,13 @@ export class AuthService {
   getPublicKey(): Observable<PublicKeyResponse> {
     return this.http.get<PublicKeyResponse>(`${this.apiBase}/security/public-key`);
   }
+
+  /**
+   * Stateless JWT: there is no server-side session to invalidate, so logout is
+   * purely a client-side token discard (matches how the interceptor clears it
+   * on a 401). Callers should also reset RoleService's in-memory user state.
+   */
+  logout(): void {
+    localStorage.removeItem('trazzo_token');
+  }
 }

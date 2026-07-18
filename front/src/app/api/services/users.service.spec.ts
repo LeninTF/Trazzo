@@ -128,7 +128,7 @@ describe('UsersService', () => {
 
   describe('master users', () => {
     const mockMasterUser: MasterUserProfile = {
-      id: 1, email: 'master@trazzo.com', phone: '999888777',
+      id: 'master-1', email: 'master@trazzo.com', phone: '999888777',
       tenant_id: null, must_change_password: false,
       created_at: '2024-01-01T00:00:00Z',
       persona: { id: 1, name: 'Master', father_surname: 'User', mother_surname: '', document_type: 'DNI', document_value: '87654321', birth_date: null, img_url: null },
@@ -144,17 +144,17 @@ describe('UsersService', () => {
     });
 
     it('should get master by id', () => {
-      service.getMaster(1).subscribe(user => {
-        expect(user.id).toBe(1);
+      service.getMaster('master-1').subscribe(user => {
+        expect(user.id).toBe('master-1');
       });
-      const req = httpMock.expectOne(`${apiBase}/saas/users/1`);
+      const req = httpMock.expectOne(`${apiBase}/saas/users/master-1`);
       expect(req.request.method).toBe('GET');
       req.flush(mockMasterUser);
     });
 
     it('should getMasterMe', () => {
       service.getMasterMe().subscribe(user => {
-        expect(user.id).toBe(1);
+        expect(user.id).toBe('master-1');
       });
       const req = httpMock.expectOne(`${apiBase}/saas/users/me`);
       expect(req.request.method).toBe('GET');
@@ -166,6 +166,40 @@ describe('UsersService', () => {
       const req = httpMock.expectOne(`${apiBase}/saas/users/me`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ img_url: 'https://example.com/avatar.jpg' });
+      req.flush(mockMasterUser);
+    });
+
+    it('should createMaster', () => {
+      const body = { name: 'New', father_surname: 'User', mother_surname: 'Lopez', email: 'new@trazzo.com', document_type: 'DNI', document_value: '11223344', role_ids: [1] } as any;
+      service.createMaster(body).subscribe();
+      const req = httpMock.expectOne(`${apiBase}/saas/users`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(body);
+      req.flush(mockMasterUser);
+    });
+
+    it('should updateMaster', () => {
+      const body = { email: 'updated@trazzo.com' };
+      service.updateMaster('master-1', body).subscribe();
+      const req = httpMock.expectOne(`${apiBase}/saas/users/master-1`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(body);
+      req.flush(mockMasterUser);
+    });
+
+    it('should deleteMaster', () => {
+      service.deleteMaster('master-1').subscribe();
+      const req = httpMock.expectOne(`${apiBase}/saas/users/master-1`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
+
+    it('should assignMasterRole', () => {
+      const body = { role_ids: [2] };
+      service.assignMasterRole('master-1', body).subscribe();
+      const req = httpMock.expectOne(`${apiBase}/saas/users/master-1/roles`);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(body);
       req.flush(mockMasterUser);
     });
   });

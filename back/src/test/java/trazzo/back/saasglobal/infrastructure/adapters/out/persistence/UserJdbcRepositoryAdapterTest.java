@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,5 +45,37 @@ class UserJdbcRepositoryAdapterTest {
         User result = adapter.save(user);
 
         assertThat(result).isSameAs(user);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findByTenantId_returnsEmptyWhenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        Optional<User> result = adapter.findByTenantId("tenant-1");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllByTenantId_returnsEmptyListWhenNoRows() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        List<User> result = adapter.findAllByTenantId("tenant-1");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAllByTenantId_doesNotFilterOutSoftDeletedRows() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+
+        adapter.findAllByTenantId("tenant-1");
+
+        org.mockito.Mockito.verify(jdbc).query(sqlCaptor.capture(), any(RowMapper.class), any());
+        assertThat(sqlCaptor.getValue()).doesNotContain("deleted_at IS NULL");
     }
 }

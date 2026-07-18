@@ -62,6 +62,7 @@ class PlanJdbcRepositoryAdapterTest {
         when(rs.getInt("id")).thenReturn(1);
         when(rs.getString("name")).thenReturn("Basic");
         when(rs.getBigDecimal("price")).thenReturn(BigDecimal.valueOf(99));
+        when(rs.getBigDecimal("price_annual")).thenReturn(BigDecimal.valueOf(999));
         when(rs.getString("currency")).thenReturn("SOLES");
         when(rs.getString("billing_period")).thenReturn("MONTHLY");
         when(rs.getBoolean("is_active")).thenReturn(true);
@@ -84,9 +85,9 @@ class PlanJdbcRepositoryAdapterTest {
 
     @Test
     void save_insertsNewPlanAndReturnsWithId() {
-        Plan newPlan = Plan.create("Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY");
+        Plan newPlan = Plan.create("Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999), "SOLES", "MONTHLY");
         when(jdbc.queryForObject(anyString(), eq(Integer.class),
-                any(), any(), any(), any(), any(), any(), any())).thenReturn(42);
+                any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(42);
 
         Plan saved = adapter.save(newPlan);
 
@@ -98,12 +99,12 @@ class PlanJdbcRepositoryAdapterTest {
     @Test
     void save_updatesExistingPlanAndReturnsSameInstance() {
         var now = LocalDateTime.now();
-        Plan existing = Plan.restore(1, "Basic", BigDecimal.valueOf(99), "SOLES", "MONTHLY",
+        Plan existing = Plan.restore(1, "Basic", BigDecimal.valueOf(99), BigDecimal.valueOf(999), "SOLES", "MONTHLY",
                 true, now, now, null);
 
         Plan saved = adapter.save(existing);
 
         assertSame(existing, saved);
-        verify(jdbc).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(jdbc).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

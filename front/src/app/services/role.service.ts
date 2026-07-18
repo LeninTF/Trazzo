@@ -32,6 +32,20 @@ export class RoleService {
     localStorage.setItem(STORAGE_KEY, role);
   }
 
+  /**
+   * RoleService is a app-wide singleton whose signals are only ever read from
+   * localStorage once, at injection time — clearing storage alone would leave
+   * the in-memory userName/role stale for the rest of this SPA session (no
+   * full page reload happens on logout), so the signals must be reset here too.
+   */
+  clearSession(): void {
+    this.userName.set('');
+    this.userEmail.set('');
+    this.role.set('admin-tenant');
+    localStorage.removeItem('trazzo_user_name');
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   toggleSidebar(): void {
     this.sidebarOpen.update(v => !v);
   }

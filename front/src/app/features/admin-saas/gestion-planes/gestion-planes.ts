@@ -39,7 +39,7 @@ interface Plan {
 }
 
 interface Suscripcion {
-  id: number;
+  id: string;
   tenant: string;
   plan: string;
   fechaInicio: string;
@@ -47,6 +47,13 @@ interface Suscripcion {
   monto: number;
   estado: 'activo' | 'vencido' | 'pendiente';
 }
+
+const SUBSCRIPTION_STATUS_MAP: Record<string, Suscripcion['estado']> = {
+  ACTIVE: 'activo',
+  TRIAL: 'pendiente',
+  SUSPENDED: 'vencido',
+  CANCELED: 'vencido',
+};
 
 @Component({
   selector: 'app-gestion-planes',
@@ -91,7 +98,7 @@ export class GestionPlanes implements OnInit {
 
   readonly planes = signal<Plan[]>([]);
 
-  readonly suscripciones: Suscripcion[] = [];
+  readonly suscripciones = signal<Suscripcion[]>([]);
 
   readonly planForm = this.fb.group({
     nombre:           ['', [Validators.required, Validators.minLength(3)]],
@@ -122,26 +129,32 @@ export class GestionPlanes implements OnInit {
 
   get modulosForm(): AbstractControl { return this.planForm.get('modulos')!; }
 
-  readonly precioFinal = computed(() => ({
-    mensual: this.planForm.get('precioMensual')?.value ?? 0,
-    anual:   this.planForm.get('precioAnual')?.value ?? 0,
-  }));
+  // Plain methods, not computed(): they read plain AbstractControl.value (not a signal),
+  // so a computed() here would track no dependency, memoize once at construction, and never
+  // update again. The template already invokes these as functions on every change-detection
+  // cycle, so a plain method re-evaluates correctly without any template changes.
+  precioFinal(): { mensual: number; anual: number } {
+    return {
+      mensual: this.planForm.get('precioMensual')?.value ?? 0,
+      anual:   this.planForm.get('precioAnual')?.value ?? 0,
+    };
+  }
 
-  readonly modulosActivos = computed(() =>
-    this.modulosDisponibles.filter(m => this.planForm.get('modulos.' + m.id)?.value)
-  );
+  modulosActivos(): Modulo[] {
+    return this.modulosDisponibles.filter(m => this.planForm.get('modulos.' + m.id)?.value);
+  }
 
-  readonly reglasActivas = computed(() =>
-    this.reglasDisponibles.filter(r => this.planForm.get('reglas.' + r.id)?.value)
-  );
+  reglasActivas(): Regla[] {
+    return this.reglasDisponibles.filter(r => this.planForm.get('reglas.' + r.id)?.value);
+  }
 
   readonly suscripcionesPaginadas = computed(() => {
     const start = (this.suscripcionPagina() - 1) * this.suscripcionPageSize;
-    return this.suscripciones.slice(start, start + this.suscripcionPageSize);
+    return this.suscripciones().slice(start, start + this.suscripcionPageSize);
   });
 
   readonly totalSuscripcionPaginas = computed(() =>
-    Math.max(1, Math.ceil(this.suscripciones.length / this.suscripcionPageSize))
+    Math.max(1, Math.ceil(this.suscripciones().length / this.suscripcionPageSize))
   );
 
   readonly suscripcionPaginasNum = computed(() =>
@@ -150,32 +163,53 @@ export class GestionPlanes implements OnInit {
 
   ngOnInit(): void {
     this.cargarPlanes();
+    this.cargarSuscripciones();
+  }
+
+  cargarSuscripciones(): void {
+    this.saasService.listSubscriptions({ page: 0, size: 100 }).subscribe({
+      next: response => {
+        this.suscripciones.set(response.content.map(s => ({
+          id: s.id,
+          tenant: s.tenantName,
+          plan: s.planName ?? '—',
+          fechaInicio: s.dateStart,
+          fechaFin: s.dateEnd ?? '—',
+          monto: s.purchasePrice,
+          estado: SUBSCRIPTION_STATUS_MAP[s.status] ?? 'pendiente',
+        })));
+      },
+      error: () => this.toastService.error('No se pudieron cargar las suscripciones.'),
+    });
   }
 
   cargarPlanes(): void {
     this.loading.set(true);
     this.saasService.listPlans().subscribe({
       next: plans => {
-        this.planes.set(plans.map(p => ({
-          id: p.id,
-          nombre: p.name,
-          sku: `PLAN-${String(p.id).padStart(3, '0')}`,
-          precio: Number(p.price),
-          precioMensual: p.billingPeriod === 'MONTHLY' ? Number(p.price) : Number(p.price) / 12,
-          precioAnual: p.billingPeriod === 'ANNUAL' ? Number(p.price) : Number(p.price) * 12,
-          descripcion: '',
-          maxTrabajadores: 100,
-          maxSedes: 1,
-          almacenamiento: 5,
-          sincronizacionNube: false,
-          modulos: [],
-          reglas: [],
-          moneda: p.currency,
-          periodo: p.billingPeriod,
-          activo: p.active,
-          creadoEn: p.createdAt,
-          ultimaModificacion: { usuario: 'Sistema', fecha: p.createdAt },
-        })));
+        this.planes.set(plans.map(p => {
+          const f = p.features ?? {};
+          return {
+            id: p.id,
+            nombre: p.name,
+            sku: `PLAN-${String(p.id).padStart(3, '0')}`,
+            precio: Number(p.price),
+            precioMensual: Number(p.price),
+            precioAnual: Number(p.priceAnnual ?? 0),
+            descripcion: '',
+            maxTrabajadores: Number(f['max_trabajadores'] ?? 100),
+            maxSedes: Number(f['max_sedes'] ?? 1),
+            almacenamiento: Number(f['almacenamiento_gb'] ?? 5),
+            sincronizacionNube: false,
+            modulos: this.modulosDisponibles.map(m => m.id).filter(id => !!f[id]),
+            reglas: this.reglasDisponibles.map(r => r.id).filter(id => !!f[id]),
+            moneda: p.currency,
+            periodo: p.billingPeriod,
+            activo: p.active,
+            creadoEn: p.createdAt,
+            ultimaModificacion: { usuario: 'Sistema', fecha: p.createdAt },
+          };
+        }));
         this.loading.set(false);
       },
       error: () => {
@@ -202,6 +236,8 @@ export class GestionPlanes implements OnInit {
       maxSedes:        plan.maxSedes,
       almacenamiento:  plan.almacenamiento,
       sincronizacionNube: plan.sincronizacionNube,
+      modulos: Object.fromEntries(this.modulosDisponibles.map(m => [m.id, plan.modulos.includes(m.id)])),
+      reglas: Object.fromEntries(this.reglasDisponibles.map(r => [r.id, plan.reglas.includes(r.id)])),
     });
   }
 
@@ -229,11 +265,20 @@ export class GestionPlanes implements OnInit {
     const v = this.planForm.value;
     const isMonthly = v.periodo === 'MONTHLY';
     const price = isMonthly ? (v.precioMensual ?? 0) : (v.precioAnual ?? 0);
+    const features: Record<string, number | boolean> = {
+      max_trabajadores: v.maxTrabajadores ?? 0,
+      max_sedes: v.maxSedes ?? 0,
+      almacenamiento_gb: v.almacenamiento ?? 0,
+      ...Object.fromEntries(this.modulosDisponibles.map(m => [m.id, !!(v.modulos as Record<string, boolean> | undefined)?.[m.id]])),
+      ...Object.fromEntries(this.reglasDisponibles.map(r => [r.id, !!(v.reglas as Record<string, boolean> | undefined)?.[r.id]])),
+    };
     const body = {
       name: v.nombre!,
       price,
+      priceAnnual: v.precioAnual ?? 0,
       currency: v.moneda ?? 'SOLES',
       billingPeriod: v.periodo ?? 'MONTHLY',
+      features,
     };
 
     this.loading.set(true);
@@ -257,6 +302,10 @@ export class GestionPlanes implements OnInit {
 
   confirmarEliminar(): void {
     if (this.editPlanId()) this.modalService.show('modalEliminarPlan');
+  }
+
+  cancelarEliminar(): void {
+    this.cerrarModal('modalEliminarPlan');
   }
 
   eliminarPlan(): void {
@@ -299,12 +348,16 @@ export class GestionPlanes implements OnInit {
     this.modalService.show('modalDetalleSuscripcion');
   }
 
+  cerrarDetalleSuscripcion(): void {
+    this.cerrarModal('modalDetalleSuscripcion');
+  }
+
   exportarCSV(): void {
-    const headers = ['ID', 'Nombre', 'Precio', 'Moneda', 'Periodo', 'Activo', 'Creado'];
-    const rows = this.planes().map(p =>
-      [String(p.id), p.nombre, String(p.precio), p.moneda, p.periodo, p.activo ? 'Sí' : 'No', p.creadoEn]
+    const headers = ['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado'];
+    const rows = this.suscripciones().map(s =>
+      [s.tenant, s.plan, s.fechaInicio, s.fechaFin, String(s.monto), s.estado]
     );
-    this.exportService.exportCSV(`planes-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
+    this.exportService.exportCSV(`suscripciones-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
     this.toastService.show('CSV exportado.', 'info');
   }
 

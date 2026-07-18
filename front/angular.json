@@ -34,6 +34,9 @@
               "@fontsource/inter/600.css",
               "@fontsource/inter/700.css",
               "@fontsource/inter/800.css"
+            ],
+            "scripts": [
+              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
             ]
           },
           "configurations": {

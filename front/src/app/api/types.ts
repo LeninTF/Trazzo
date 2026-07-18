@@ -62,7 +62,7 @@ export interface TenantUserProfile {
 }
 
 export interface MasterUserProfile {
-  id: number;
+  id: string;
   email: string | null;
   phone: string | null;
   tenant_id: string | null;
@@ -144,6 +144,16 @@ export interface CrearMasterUsuarioRequest {
   mother_surname: string;
   email: string;
   phone?: string | null;
+  password?: string;
+  role_ids: number[];
+}
+
+export interface UpdateMasterUsuarioRequest {
+  email: string;
+  phone?: string | null;
+}
+
+export interface AssignMasterRoleRequest {
   role_ids: number[];
 }
 
@@ -162,6 +172,76 @@ export interface SoftDeleteResponse {
   deleted_at: string;
   deleted_by: number;
 }
+
+// ==========================================
+// SECCIÓN: ROLES Y PERMISOS SAAS
+// ==========================================
+
+export interface SaasRoleProfile {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  permissions: string[];
+  systemManaged: boolean;
+}
+
+export interface CreateSaasRoleRequest {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}
+
+export interface UpdateSaasRoleRequest {
+  name: string;
+  displayName: string;
+  description?: string | null;
+}
+
+export interface UpdateSaasRolePermissionsRequest {
+  permissions: string[];
+}
+
+// ==========================================
+// SECCIÓN: FACTURAS
+// ==========================================
+
+export interface InvoiceProfile {
+  id: string;
+  tenantId: string | null;
+  invoiceSeries: string;
+  consecutiveNumber: string;
+  voucherType: string | null;
+  clientTaxId: string;
+  clientName: string;
+  subTotal: number;
+  taxAmount: number;
+  total: number;
+  paymentStatus: string;
+  expirationDate: string | null;
+  createdAt: string;
+}
+
+export interface InvoiceListResponse extends PageResponse<InvoiceProfile> {}
+
+// ==========================================
+// SECCIÓN: SUSCRIPCIONES
+// ==========================================
+
+export interface SubscriptionProfile {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  planId: number;
+  planName: string | null;
+  dateStart: string;
+  dateEnd: string | null;
+  status: 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CANCELED';
+  purchasePrice: number;
+  createdAt: string;
+}
+
+export interface SubscriptionListResponse extends PageResponse<SubscriptionProfile> {}
 
 // ==========================================
 // SECCIÓN: AUTENTICACIÓN
@@ -741,25 +821,131 @@ export interface SaasPlanResult {
   id: number;
   name: string;
   price: number;
+  priceAnnual: number | null;
   currency: string;
   billingPeriod: string;
   active: boolean;
   createdAt: string;
+  features: Record<string, number | boolean>;
 }
 
 export interface CreateSaasPlanRequest {
   name: string;
   price: number;
+  priceAnnual: number;
   currency: string;
   billingPeriod: string;
+  features: Record<string, number | boolean>;
 }
 
 export interface UpdateSaasPlanRequest {
   id: number;
   name: string;
   price: number;
+  priceAnnual: number;
   currency: string;
   billingPeriod: string;
+  features: Record<string, number | boolean>;
+}
+
+// ==========================================
+// SECCIÓN: SHOP CHECKOUT (alta de cliente / Mercado Pago)
+// ==========================================
+
+export interface ShopCheckoutRequest {
+  planId: number;
+  firstName: string;
+  lastNamePaterno: string;
+  lastNameMaterno: string;
+  documentType: string;
+  documentNumber: string;
+  email: string;
+  phone: string;
+  ruc: string;
+  companyName: string;
+  businessName: string;
+  address: string;
+  anotherAdmin: boolean;
+  adminFirstName?: string;
+  adminLastNamePaterno?: string;
+  adminLastNameMaterno?: string;
+  adminDocumentType?: string;
+  adminDocumentNumber?: string;
+  adminEmail?: string;
+  adminPhone?: string;
+}
+
+export interface ShopCheckoutResponse {
+  tenantId: string;
+  subDomain: string;
+  initPoint: string;
+}
+
+export interface SubscribeResponse {
+  subscriptionId: string;
+  initPoint: string;
+}
+
+// ==========================================
+// SECCIÓN: HOLDINGS
+// ==========================================
+
+export interface HoldingProfile {
+  id: number;
+  taxId: string;
+  legalName: string;
+  type: 'PUBLICO' | 'PRIVADO';
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// SECCIÓN: TENANTS (SaaS)
+// ==========================================
+
+export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED';
+
+export interface TenantSaasProfile {
+  id: string;
+  subDomain: string;
+  holdingId: number | null;
+  holdingName: string | null;
+  planId: number;
+  planName: string | null;
+  status: TenantStatus;
+  activatedAt: string | null;
+  createdAt: string;
+}
+
+export interface TenantListResponse extends PageResponse<TenantSaasProfile> {}
+
+export interface TenantMetrics {
+  total: number;
+  crecimientoPct: number;
+  activos: number;
+  porcentajeActivos: number;
+  nuevos30d: number;
+  nuevosMeta: number;
+  tasaChurnPct: number;
+  variacionChurnPct: number;
+}
+
+export interface CreateTrialTenantPayload {
+  subDomain: string;
+  planId: number;
+  holdingId: number;
+  logoUrl?: string;
+  slogan?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+}
+
+export interface UpdateTenantBrandingPayload {
+  logoUrl?: string;
+  slogan?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 // ==========================================
@@ -798,4 +984,69 @@ export interface AuditMetricsResult {
   sesiones_activas: number;
   crecimiento: number;
   porcentaje_sesiones: number;
+}
+
+// ==========================================
+// SECCIÓN: SOLICITUDES (formulario público de contacto)
+// ==========================================
+
+export type RequestType = 'TRIAL' | 'INFO';
+export type RequestStatus = 'PENDING' | 'OBSERVADO' | 'APPROVED' | 'REJECTED';
+
+export interface RequestContactProfile {
+  name: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  taxId: string;
+  companyName: string;
+}
+
+export interface RequestSummary {
+  id: number;
+  type: RequestType;
+  title: string;
+  message: string;
+  status: RequestStatus;
+  createdAt: string;
+  updatedAt: string;
+  contact: RequestContactProfile | null;
+}
+
+export interface RequestCommentProfile {
+  id: number;
+  comment: string;
+  authorUserId: string | null;
+  createdAt: string;
+}
+
+export interface RequestHistoryEntry {
+  id: number;
+  status: string;
+  userId: string | null;
+  changeReason: string | null;
+  createdAt: string;
+}
+
+export interface RequestDetail extends RequestSummary {
+  comments: RequestCommentProfile[];
+  history: RequestHistoryEntry[];
+}
+
+export interface RequestListResponse extends PageResponse<RequestSummary> {}
+
+export interface SubmitRequestPayload {
+  type: 'trial' | 'info';
+  name: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  taxId: string;
+  companyName: string;
+  message: string;
+}
+
+export interface ChangeRequestStatusPayload {
+  status: RequestStatus;
+  comment?: string;
 }

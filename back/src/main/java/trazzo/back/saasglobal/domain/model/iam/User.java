@@ -20,6 +20,8 @@ public class User {
     private String phone;
     private String password;
     private List<String> roles;
+    private List<String> permissionCodes;
+    private boolean mustChangePassword;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
@@ -27,8 +29,8 @@ public class User {
 
     @SuppressWarnings("java:S107")
     private User(String id, Integer personId, String tenantId, String email, String phone,
-                 String password, List<String> roles, LocalDateTime createdAt,
-                 LocalDateTime updatedAt, LocalDateTime deletedAt) {
+                 String password, List<String> roles, List<String> permissionCodes, boolean mustChangePassword,
+                 LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
         this.id = id != null ? id : UUID.randomUUID().toString();
         this.personId = requireNonNull(personId, "personId");
         this.tenantId = tenantId;
@@ -36,6 +38,8 @@ public class User {
         this.phone = phone;
         this.password = requireText(password, "password");
         this.roles = roles != null ? List.copyOf(roles) : List.of();
+        this.permissionCodes = permissionCodes != null ? List.copyOf(permissionCodes) : List.of();
+        this.mustChangePassword = mustChangePassword;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
@@ -43,18 +47,34 @@ public class User {
 
     public static User create(Integer personId, String tenantId, String email,
                               String phone, String encodedPassword) {
+        return create(personId, tenantId, email, phone, encodedPassword, false);
+    }
+
+    public static User create(Integer personId, String tenantId, String email,
+                              String phone, String encodedPassword, boolean mustChangePassword) {
         LocalDateTime now = LocalDateTime.now(Clock.systemDefaultZone());
         return new User(null, personId, tenantId, email, phone, encodedPassword,
-                List.of(), now, now, null);
+                List.of(), List.of(), mustChangePassword, now, now, null);
     }
 
     @SuppressWarnings("java:S107")
     public static User restore(String id, Integer personId, String tenantId, String email,
-                               String phone, String password, List<String> roles,
-                               LocalDateTime createdAt, LocalDateTime updatedAt,
+                               String phone, String password, List<String> roles, List<String> permissionCodes,
+                               boolean mustChangePassword, LocalDateTime createdAt, LocalDateTime updatedAt,
                                LocalDateTime deletedAt) {
-        return new User(id, personId, tenantId, email, phone, password, roles,
-                createdAt, updatedAt, deletedAt);
+        return new User(id, personId, tenantId, email, phone, password, roles, permissionCodes,
+                mustChangePassword, createdAt, updatedAt, deletedAt);
+    }
+
+    public void updateContact(String email, String phone) {
+        this.email = requireEmail(email);
+        this.phone = phone;
+        this.updatedAt = LocalDateTime.now(clock);
+    }
+
+    public void clearMustChangePassword() {
+        this.mustChangePassword = false;
+        this.updatedAt = LocalDateTime.now(clock);
     }
 
     public void delete() {

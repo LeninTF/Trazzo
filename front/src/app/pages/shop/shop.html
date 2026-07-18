@@ -40,19 +40,19 @@
 			<div class="d-flex justify-content-between align-items-start mb-3">
 				<div>
 					<p class="summary-label">Plan seleccionado</p>
-					<h2>Control de asistencia</h2>
+					<h2>{{ plan()?.name ?? 'Cargando…' }}</h2>
 				</div>
-				<span class="badge bg-primary align-self-start">Activo</span>
+				<span class="badge bg-primary align-self-start">{{ plan() ? 'Activo' : '' }}</span>
 			</div>
 
 			<dl>
 				<div>
-					<dt><i class="bi bi-people-fill" aria-hidden="true"></i> Usuarios incluidos</dt>
-					<dd>Hasta 50</dd>
+					<dt><i class="bi bi-cash-coin" aria-hidden="true"></i> Precio</dt>
+					<dd>{{ plan() ? ('S/' + plan()!.price + '/' + (plan()!.billingPeriod === 'MONTHLY' ? 'mes' : plan()!.billingPeriod)) : '—' }}</dd>
 				</div>
 				<div>
-					<dt><i class="bi bi-headset" aria-hidden="true"></i> Soporte</dt>
-					<dd>Prioritario</dd>
+					<dt><i class="bi bi-people-fill" aria-hidden="true"></i> Usuarios incluidos</dt>
+					<dd>{{ plan()?.features?.['max_trabajadores'] ?? '—' }}</dd>
 				</div>
 				<div>
 					<dt><i class="bi bi-shield-check" aria-hidden="true"></i> Estado</dt>
@@ -62,7 +62,7 @@
 		</aside>
 	</section>
 
-	<form class="checkout-form" novalidate>
+	<form class="checkout-form" novalidate (submit)="submitCheckout($event)">
 		<details class="form-card accordion animate-fade-up" [open]="activeSection() === 1" (toggle)="onSectionToggle(1, $event)">
 			<summary (click)="setSection(1)">
 				<span class="section-number"><i class="bi bi-person-circle"></i></span>
@@ -225,10 +225,11 @@
 		</details>
 
 		<div class="checkout-actions animate-fade-up delay-3">
+			<p *ngIf="errorMessage()" class="text-danger" role="alert">{{ errorMessage() }}</p>
 			<p>Al pulsar continuar, revisaremos los datos antes de finalizar el alta.</p>
-			<button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+			<button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm" [disabled]="submitting()">
 				<i class="bi bi-lock-fill me-2"></i>
-				Continuar con el pago
+				{{ submitting() ? 'Procesando…' : 'Continuar con el pago' }}
 			</button>
 		</div>
 	</form>

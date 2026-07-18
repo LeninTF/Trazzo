@@ -1,7 +1,7 @@
 import { HttpRequest, HttpResponse } from '@angular/common/http';
 import { of } from 'rxjs';
 import { mockInterceptor, _setTestApiBase } from './mock.interceptor';
-import { mockAttendance } from './mock-data';
+import { mockAttendance, mockMasterUsers } from './mock-data';
 
 _setTestApiBase('https://api.trazzo.pe/api/v1');
 
@@ -395,7 +395,7 @@ describe('mockInterceptor', () => {
   });
 
   it('should mock GET /saas/users/{id}', (done) => {
-    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/saas/users/1');
+    const req = new HttpRequest('GET', `https://api.trazzo.pe/api/v1/saas/users/${mockMasterUsers[0].id}`);
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(200);
@@ -415,7 +415,7 @@ describe('mockInterceptor', () => {
   });
 
   it('should mock PATCH /saas/users/{id}', (done) => {
-    const req = new HttpRequest('PATCH', 'https://api.trazzo.pe/api/v1/saas/users/1', { nombre: 'Updated' });
+    const req = new HttpRequest('PATCH', `https://api.trazzo.pe/api/v1/saas/users/${mockMasterUsers[0].id}`, { nombre: 'Updated' });
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(200);
@@ -424,7 +424,7 @@ describe('mockInterceptor', () => {
   });
 
   it('should mock DELETE /saas/users/{id}', (done) => {
-    const req = new HttpRequest('DELETE', 'https://api.trazzo.pe/api/v1/saas/users/1');
+    const req = new HttpRequest('DELETE', `https://api.trazzo.pe/api/v1/saas/users/${mockMasterUsers[0].id}`);
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(200);
