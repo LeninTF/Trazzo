@@ -24,7 +24,6 @@ import trazzo.back.audit.application.usecase.SystemAuditService;
 import trazzo.back.audit.application.usecase.TenantSettingsService;
 
 import java.time.Clock;
-import java.time.ZoneId;
 
 @Configuration
 public class AuditBeanConfiguration {
@@ -32,12 +31,6 @@ public class AuditBeanConfiguration {
     @Bean
     public Clock clock() {
         return Clock.systemDefaultZone();
-    }
-
-    @Bean
-    public ZoneId metricsTimezone(
-            @org.springframework.beans.factory.annotation.Value("${trazzo.metrics.timezone:America/Mexico_City}") String timezone) {
-        return ZoneId.of(timezone);
     }
 
     @Bean
@@ -70,7 +63,7 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
-    public AuditMetricsUseCase auditMetricsUseCase(JdbcTemplate jdbcTemplate, Clock clock, ZoneId metricsTimezone) {
-        return new AuditMetricsService(jdbcTemplate, clock, metricsTimezone);
+    public AuditMetricsUseCase auditMetricsUseCase(JdbcTemplate jdbcTemplate, Clock clock) {
+        return new AuditMetricsService(jdbcTemplate, clock);
     }
 }

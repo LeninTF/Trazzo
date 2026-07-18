@@ -29,7 +29,7 @@ class AuditLogDetailResponseTest {
         assertThat(response.endpoint()).isEqualTo("/api/users");
         assertThat(response.ipAddress()).isEqualTo("10.0.0.1");
         assertThat(response.userAgent()).isEqualTo("curl/7.0");
-        assertThat(response.previousValue()).containsEntry("name", "old");
+        assertThat(response.oldValue()).containsEntry("name", "old");
         assertThat(response.newValue()).containsEntry("name", "new");
         assertThat(response.createdAt()).isEqualTo(now);
     }

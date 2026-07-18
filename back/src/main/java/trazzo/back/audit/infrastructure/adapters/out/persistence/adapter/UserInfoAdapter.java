@@ -3,6 +3,8 @@ package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Component;
 import trazzo.back.audit.application.port.out.UserInfoPort;
@@ -13,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -35,7 +36,7 @@ public class UserInfoAdapter implements UserInfoPort {
         try {
             UserInfo info = jdbcTemplate.queryForObject("""
                     SELECT u.id AS user_id,
-                           p.name || ' ' || p.father_surname || ' ' || p.mother_surname AS user_name,
+                           COALESCE(p.name, '') || ' ' || COALESCE(p.father_surname, '') || ' ' || COALESCE(p.mother_surname, '') AS user_name,
                            u.email AS user_email
                     FROM users u
                     JOIN persons p ON p.id = u.person_id
@@ -73,26 +74,24 @@ public class UserInfoAdapter implements UserInfoPort {
         if (uuids.isEmpty()) {
             return Map.of();
         }
-        String placeholders = uuids.stream().map(u -> "?").collect(Collectors.joining(","));
         String sql = "SELECT u.id AS user_id, " +
-                "p.name || ' ' || p.father_surname || ' ' || p.mother_surname AS user_name, " +
+                "COALESCE(p.name, '') || ' ' || COALESCE(p.father_surname, '') || ' ' || COALESCE(p.mother_surname, '') AS user_name, " +
                 "u.email AS user_email " +
                 "FROM users u " +
                 "JOIN persons p ON p.id = u.person_id " +
-                "WHERE u.id IN (" + placeholders + ") AND u.deleted_at IS NULL";
-        SqlParameterValue[] params = uuids.stream()
-                .map(u -> new SqlParameterValue(Types.OTHER, u))
-                .toArray(SqlParameterValue[]::new);
+                "WHERE u.id IN (:ids) AND u.deleted_at IS NULL";
+        var namedParams = new NamedParameterJdbcTemplate(jdbcTemplate);
+        var paramSource = new MapSqlParameterSource("ids", uuids);
         var result = new HashMap<String, UserInfo>();
         try {
-            jdbcTemplate.query(sql, rs -> {
-                String userId = rs.getString("user_id");
-                result.put(userId, new UserInfo(
-                        userId,
+            namedParams.query(sql, paramSource, rs -> {
+                String uid = rs.getString("user_id");
+                result.put(uid, new UserInfo(
+                        uid,
                         rs.getString("user_name"),
                         rs.getString("user_email")
                 ));
-            }, (Object[]) params);
+            });
         } catch (DataAccessException e) {
             return Map.of();
         }

@@ -14,7 +14,6 @@ import trazzo.back.audit.application.port.out.TenantSettingsRecordRepositoryPort
 import trazzo.back.audit.application.port.out.UserInfoPort;
 
 import java.time.Clock;
-import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -59,6 +58,6 @@ class AuditBeanConfigurationTest {
 
     @Test
     void shouldCreateAuditMetricsUseCase() {
-        assertNotNull(config.auditMetricsUseCase(jdbcTemplate, Clock.systemDefaultZone(), ZoneId.of("America/Mexico_City")));
+        assertNotNull(config.auditMetricsUseCase(jdbcTemplate, Clock.systemDefaultZone()));
     }
 }

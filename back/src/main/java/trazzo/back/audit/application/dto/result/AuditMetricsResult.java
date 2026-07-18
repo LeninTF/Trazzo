@@ -1,9 +1,11 @@
 package trazzo.back.audit.application.dto.result;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record AuditMetricsResult(
-    long totalEventos,
+    @JsonProperty("total_eventos") long totalEventos,
     long errores,
-    long sesionesActivas,
+    @JsonProperty("sesiones_activas") long sesionesActivas,
     double crecimiento,
-    double porcentajeSesiones
+    @JsonProperty("porcentaje_sesiones") double porcentajeSesiones
 ) {}

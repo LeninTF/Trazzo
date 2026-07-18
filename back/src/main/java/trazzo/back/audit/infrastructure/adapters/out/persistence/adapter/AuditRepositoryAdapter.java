@@ -147,7 +147,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
 
     private void appendActionClause(StringBuilder sql, List<SqlParameterValue> params, Action action) {
         if (action != null) {
-            sql.append(" AND a.action = ?::action_enum");
+            sql.append(" AND a.action = ?");
             params.add(new SqlParameterValue(Types.VARCHAR, action.name()));
         }
     }

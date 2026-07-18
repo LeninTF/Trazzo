@@ -3,6 +3,8 @@ package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.SqlParameterValue;
 import org.springframework.stereotype.Component;
 import trazzo.back.audit.application.port.out.TenantInfoPort;
@@ -13,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -70,23 +71,21 @@ public class TenantInfoAdapter implements TenantInfoPort {
         if (uuids.isEmpty()) {
             return Map.of();
         }
-        String placeholders = uuids.stream().map(u -> "?").collect(Collectors.joining(","));
         String sql = "SELECT u.id AS user_id, t.id AS tenant_id, t.sub_domain AS tenant_name " +
                 "FROM users u " +
                 "JOIN tenants t ON t.id = u.tenant_id " +
-                "WHERE u.id IN (" + placeholders + ") AND u.deleted_at IS NULL AND t.deleted_at IS NULL";
-        SqlParameterValue[] params = uuids.stream()
-                .map(u -> new SqlParameterValue(Types.OTHER, u))
-                .toArray(SqlParameterValue[]::new);
+                "WHERE u.id IN (:ids) AND u.deleted_at IS NULL AND t.deleted_at IS NULL";
+        var namedParams = new NamedParameterJdbcTemplate(jdbcTemplate);
+        var paramSource = new MapSqlParameterSource("ids", uuids);
         var result = new HashMap<String, TenantInfo>();
         try {
-            jdbcTemplate.query(sql, rs -> {
-                String userId = rs.getString("user_id");
-                result.put(userId, new TenantInfo(
+            namedParams.query(sql, paramSource, rs -> {
+                String uid = rs.getString("user_id");
+                result.put(uid, new TenantInfo(
                         rs.getString("tenant_id"),
                         rs.getString("tenant_name")
                 ));
-            }, (Object[]) params);
+            });
         } catch (DataAccessException e) {
             return Map.of();
         }
