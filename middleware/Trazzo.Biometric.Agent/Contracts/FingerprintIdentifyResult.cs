@@ -11,6 +11,14 @@ public sealed record FingerprintIdentifyResult(
     FingerprintQualityResult? Quality,
     DateTimeOffset CapturedAtUtc)
 {
+    /// <summary>
+    /// Estado de entrega de la marcación al backend: <c>"marked"</c> (marcación síncrona OK),
+    /// <c>"queued"</c> (encolada para reenvío offline) o <c>"not_transmitted"</c> (no se envió;
+    /// típicamente falta la clave RSA de cifrado). Permite al frontend distinguir "asistencia
+    /// registrada" de "solo se capturó la huella".
+    /// </summary>
+    public string? DeliveryStatus { get; init; }
+
     public static FingerprintIdentifyResult Succeeded(
         byte[] template,
         int templateSize,

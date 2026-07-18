@@ -175,9 +175,14 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
 
     public int DBFree(IntPtr databaseHandle) => 0;
 
-    public int DBMatchResult { get; init; } = 0;
+    // Default alto: representa "mismo dedo / coincidencia fuerte", que es el caso normal en
+    // enrolamiento (3 capturas del mismo dedo). Los tests de no-coincidencia lo bajan explícitamente.
+    public int DBMatchResult { get; init; } = 100;
 
-    public int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2) => DBMatchResult;
+    public Queue<int>? DBMatchResultSequence { get; set; }
+
+    public int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2)
+        => DBMatchResultSequence is { Count: > 0 } ? DBMatchResultSequence.Dequeue() : DBMatchResult;
 
     public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score) => 0;
 

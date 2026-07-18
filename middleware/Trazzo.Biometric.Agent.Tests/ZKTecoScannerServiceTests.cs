@@ -686,6 +686,26 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task EnrollFingerprintAsync_CuandoUnaMuestraEsDeOtroDedo_LaDescartaYReintenta()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        // La verificación de la 2ª muestra devuelve score bajo (dedo distinto) → se descarta;
+        // los siguientes DBMatch caen al fallback 100 (mismo dedo) y el enrolamiento completa.
+        sdk.DBMatchResultSequence = new Queue<int>([10]);
+        List<string> progress = [];
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.EnrollFingerprintAsync(
+            (update, _) => { progress.Add(update.Message); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(3, result.CapturedSamples);
+        Assert.Contains(progress, message => message.Contains("MISMO dedo", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EnrollFingerprintAsync_WhenFingerLiftRequired_WaitsBetweenSamples()
     {
         // Múltiples -1 por lift: IsFingerAlreadyOnReaderAsync puede consumir 0 o más
@@ -933,7 +953,8 @@ public sealed class ZKTecoScannerServiceTests
     public async Task MatchFingerprintAgainstTemplatesAsync_CuandoCoincide_DevuelveMatchedResult()
     {
         byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
-        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(template: capturedTemplate);
+        // Score 80 ≥ umbral por defecto (50): coincidencia válida según el SDK real.
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(template: capturedTemplate, dbMatchResult: 80);
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
         var templates = new List<(int Index, byte[] Template)>
@@ -1267,7 +1288,8 @@ public sealed class ZKTecoScannerServiceTests
         bool fillQualityImage = true,
         Exception? captureException = null,
         int captureDelayMilliseconds = 0,
-        int dbMergeResult = 0)
+        int dbMergeResult = 0,
+        int dbMatchResult = 100)
     {
         return new FakeZKTecoNativeSdk
         {
@@ -1280,7 +1302,8 @@ public sealed class ZKTecoScannerServiceTests
             FillQualityImage = fillQualityImage,
             CaptureException = captureException,
             CaptureDelayMilliseconds = captureDelayMilliseconds,
-            DBMergeResult = dbMergeResult
+            DBMergeResult = dbMergeResult,
+            DBMatchResult = dbMatchResult
         };
     }
 }

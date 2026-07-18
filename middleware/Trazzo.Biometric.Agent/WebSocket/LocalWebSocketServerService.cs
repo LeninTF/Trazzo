@@ -443,22 +443,30 @@ public sealed class LocalWebSocketServerService(
         IReadOnlyCollection<string> allowedOrigins,
         IPEndPoint? remoteEndPoint = null)
     {
-        if (allowedOrigins.Count > 0)
+        // Loopback y file:// (Origin "null"/vacío desde un cliente loopback) SIEMPRE se permiten,
+        // incluso con orígenes de producción configurados. El servidor solo escucha en localhost,
+        // así que un sitio remoto malicioso no puede falsear un origen loopback: la protección
+        // contra CSWSH remoto se mantiene, y las herramientas locales (test-websocket.html,
+        // dev server en http://localhost) siguen funcionando.
+        if (IsLoopbackOrigin(origin, remoteEndPoint))
         {
-            return allowedOrigins.Any(allowed =>
-                string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+            return true;
         }
 
-        if (string.IsNullOrWhiteSpace(origin))
+        // Orígenes de producción explícitamente permitidos (p. ej. el frontend del tenant).
+        return allowedOrigins.Count > 0
+            && allowedOrigins.Any(allowed => string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsLoopbackOrigin(string? origin, IPEndPoint? remoteEndPoint)
+    {
+        // Sin Origin o "null" (file://): solo se acepta si el cliente conecta desde loopback.
+        if (string.IsNullOrWhiteSpace(origin) || string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
         {
             return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
         }
 
-        if (string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
-        {
-            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
-        }
-
+        // Origin explícito http(s)://localhost / 127.0.0.1 / [::1].
         return Uri.TryCreate(origin, UriKind.Absolute, out Uri? originUri) && originUri.IsLoopback;
     }
 
@@ -535,9 +543,29 @@ public sealed class LocalWebSocketServerService(
     private async Task<FingerprintIdentifyResult> IdentifyAndEnqueueAsync(CancellationToken ct)
     {
         FingerprintIdentifyResult result = await scannerService.IdentifyFingerprintAsync(ct);
-        bool marked = false;
 
-        if (result.Success && result.EncryptedTemplate is not null && attendanceMarkingClient is not null)
+        if (!result.Success)
+        {
+            return result;
+        }
+
+        // Sin template cifrado (no hay clave RSA del backend) no se puede transmitir la
+        // marcación. Antes esto devolvía success=true sin marcar ni encolar → asistencia
+        // fantasma. Se marca explícitamente como "not_transmitted" para que el frontend
+        // no muestre asistencia confirmada.
+        if (result.EncryptedTemplate is null)
+        {
+            logger.LogWarning(
+                "Identificación capturada pero NO transmitida: falta el template cifrado (clave RSA del backend no configurada).");
+            return result with
+            {
+                DeliveryStatus = "not_transmitted",
+                Message = "Huella capturada, pero la asistencia no se transmitió: falta la clave de cifrado del backend."
+            };
+        }
+
+        bool marked = false;
+        if (attendanceMarkingClient is not null)
         {
             marked = await attendanceMarkingClient.TryMarkAsync(
                 result.EncryptedTemplate,
@@ -546,12 +574,17 @@ public sealed class LocalWebSocketServerService(
                 ct);
         }
 
-        if (!marked)
+        if (marked)
         {
-            await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+            return result with { DeliveryStatus = "marked" };
         }
 
-        return result;
+        await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+        return result with
+        {
+            DeliveryStatus = "queued",
+            Message = "Huella capturada. Backend no disponible: asistencia encolada para sincronización."
+        };
     }
 
     private async Task<FingerprintMatchResult> MatchAndEnqueueAsync(string json, CancellationToken ct)

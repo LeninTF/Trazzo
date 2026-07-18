@@ -37,6 +37,13 @@ public sealed class ZKTecoScannerService(
     private const double DefaultMinimumContrastScore = 18;
     private const double DefaultCenterTolerancePercent = 28;
     private const double DefaultContrastThresholdOffset = 15;
+    // 0 = análisis de estructura desactivado por defecto en código (las pruebas sintéticas
+    // no configuran esta clave). Producción lo activa en appsettings.json con un valor real.
+    private const double DefaultMinimumRidgeCoherencePercent = 0;
+    // Umbral de similitud de ZKFinger DBMatch para aceptar una coincidencia 1:N.
+    // El SDK devuelve un score: mayor = más parecido. El demo oficial acepta score > 0;
+    // subir el umbral endurece contra falsos positivos (menor FAR). Calibrar con hardware.
+    private const int DefaultMatchMinScore = 50;
 
     private readonly SemaphoreSlim _sdkLock = new(1, 1);
     private readonly SemaphoreSlim _operationLock = new(1, 1);
@@ -50,13 +57,15 @@ public sealed class ZKTecoScannerService(
     private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
     private readonly double _enrollmentSampleTimeoutSeconds = GetStandardizedDoubleConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds, MaxEnrollmentSampleTimeoutSeconds);
     private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", false);
+    private readonly int _matchMinScore = GetPositiveConfigurationValue(configuration, "Biometric:Match:MinScore", DefaultMatchMinScore);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MaximumForegroundCoveragePercent", DefaultMaximumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumContrastScore", DefaultMinimumContrastScore),
         configuration.GetValue("Biometric:Quality:RequireCenteredFingerprint", true),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:CenterTolerancePercent", DefaultCenterTolerancePercent),
-        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:ContrastThresholdOffset", DefaultContrastThresholdOffset));
+        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:ContrastThresholdOffset", DefaultContrastThresholdOffset),
+        GetNonNegativeDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumRidgeCoherencePercent", DefaultMinimumRidgeCoherencePercent));
 
     private byte[] _imageBuffer = new byte[DefaultImageWidth * DefaultImageHeight];
     private byte[] _templateBuffer = new byte[DefaultTemplateBufferSize];
@@ -437,6 +446,23 @@ public sealed class ZKTecoScannerService(
                 continue;
             }
 
+            // Verifica que la muestra sea del MISMO dedo que la primera aceptada. Sin esto,
+            // un usuario podría enrolar 3 dedos distintos (o de 2 personas) y DBMerge fusionaría
+            // un template que luego coincide con varias huellas → rompe la distinción biométrica.
+            if (samples.Count > 0 && !IsSameFingerAsReference(samples[0], sample.Template))
+            {
+                logger.LogWarning(
+                    "Muestra de enrolamiento descartada: no coincide con la primera muestra (dedo distinto).");
+                await progressCallback(
+                    FingerprintEnrollProgress.Create(step, _enrollmentSamples,
+                        "Use el MISMO dedo en todas las capturas. Coloque nuevamente el dedo inicial."),
+                    operationToken);
+                // Espera el retiro para forzar una colocación nueva y no re-leer la misma huella.
+                if (_requireFingerLiftBetweenEnrollmentSamples)
+                    await WaitForFingerLiftAsync(operationToken);
+                continue;
+            }
+
             samples.Add(sample.Template);
             if (step < _enrollmentSamples && _requireFingerLiftBetweenEnrollmentSamples)
             {
@@ -650,14 +676,49 @@ public sealed class ZKTecoScannerService(
         return CapturedSample.Succeeded(template, templateSize, qualityResult, image);
     }
 
+    // ZKFinger DBMatch devuelve un SCORE de similitud: mayor = más parecido, 0/negativo = no
+    // coincide (ver Demo2/Form1.cs oficial que acepta con `0 < ret`). Se elige el MEJOR score
+    // que además supere el umbral `_matchMinScore`, para una identificación 1:N robusta y no
+    // por el primer positivo. Antes se comparaba `== 0`, lo que invertía el criterio: aceptaba
+    // huellas distintas (score 0) y rechazaba la correcta (score > 0).
     private int FindMatchingTemplateIndex(byte[] sampleTemplate, IReadOnlyList<(int Index, byte[] Template)> templates)
     {
+        int bestIndex = -1;
+        int bestScore = 0;
+
         for (int i = 0; i < templates.Count; i++)
         {
-            if (sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template) == 0)
-                return i;
+            int score = sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template);
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug(
+                    "DBMatch contra template índice {Index}: score={Score} (umbral mínimo={Threshold}).",
+                    i, score, _matchMinScore);
+
+            if (score >= _matchMinScore && score > bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
         }
-        return -1;
+
+        if (bestIndex >= 0 && logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation(
+                "Mejor coincidencia: índice {Index} con score {Score} (umbral {Threshold}).",
+                bestIndex, bestScore, _matchMinScore);
+
+        return bestIndex;
+    }
+
+    // Compara dos capturas del enrolamiento: deben ser del mismo dedo para poder fusionarse.
+    // Reutiliza el umbral de matching (score de DBMatch ≥ _matchMinScore).
+    private bool IsSameFingerAsReference(byte[] reference, byte[] candidate)
+    {
+        int score = sdk.DBMatch(_databaseHandle, reference, candidate);
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug(
+                "Verificación de mismo dedo en enrolamiento: score={Score} (umbral {Threshold}).",
+                score, _matchMinScore);
+        return score >= _matchMinScore;
     }
 
     private async Task<bool> TryEnterOperationAsync()
@@ -881,16 +942,33 @@ public sealed class ZKTecoScannerService(
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
+        // Buffers locales por llamada y serialización con _sdkLock: evita mutar los buffers
+        // compartidos y ejecutar AcquireFingerprint en paralelo con otra llamada nativa
+        // (p. ej. una captura previa que excedió su timeout y sigue viva en background).
+        byte[] localImage = new byte[_imageBuffer.Length];
+        byte[] localTemplate = new byte[_templateBuffer.Length];
+
         while (stopwatch.Elapsed < checkDuration)
         {
-            Array.Clear(_imageBuffer);
-            Array.Clear(_templateBuffer);
-            int templateSize = _templateBuffer.Length;
-            int captureResult = await Task.Run(
-                () => sdk.AcquireFingerprint(_deviceHandle, _imageBuffer, _templateBuffer, ref templateSize),
-                cancellationToken);
+            int captureResult = await Task.Run(async () =>
+            {
+                await _sdkLock.WaitAsync(cancellationToken);
+                try
+                {
+                    Array.Clear(localImage);
+                    Array.Clear(localTemplate);
+                    int size = localTemplate.Length;
+                    return sdk.AcquireFingerprint(_deviceHandle, localImage, localTemplate, ref size) == 0 && size > 0
+                        ? 1
+                        : 0;
+                }
+                finally
+                {
+                    _sdkLock.Release();
+                }
+            }, cancellationToken);
 
-            if (captureResult == 0 && templateSize > 0)
+            if (captureResult == 1)
             {
                 return true;
             }
@@ -1303,6 +1381,16 @@ public sealed class ZKTecoScannerService(
     {
         string? configuredValue = configuration[key];
         return double.TryParse(configuredValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double value) && value > 0
+            ? value
+            : fallback;
+    }
+
+    // Permite el valor 0 (p. ej. desactivar el análisis de estructura de crestas), a diferencia
+    // de GetPositiveDoubleConfigurationValue que exige > 0.
+    private static double GetNonNegativeDoubleConfigurationValue(IConfiguration configuration, string key, double fallback)
+    {
+        string? configuredValue = configuration[key];
+        return double.TryParse(configuredValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double value) && value >= 0
             ? value
             : fallback;
     }

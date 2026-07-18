@@ -148,6 +148,9 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     "PostCaptureCooldownMilliseconds": 200,
     "TemplateBufferSize": 2048,
     "IncludeFingerprintImageInResponses": false,
+    "Match": {
+      "MinScore": 50
+    },
     "Quality": {
       "MinimumTemplateSize": 400,
       "MinimumForegroundCoveragePercent": 8,
@@ -155,13 +158,14 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
       "MinimumContrastScore": 18,
       "RequireCenteredFingerprint": true,
       "CenterTolerancePercent": 28,
-      "ContrastThresholdOffset": 15
+      "ContrastThresholdOffset": 15,
+      "MinimumRidgeCoherencePercent": 35
     }
   },
   "Enrollment": {
     "RequiredSamples": 3,
     "SampleTimeoutSeconds": 15,
-    "RequireFingerLiftBetweenSamples": false,
+    "RequireFingerLiftBetweenSamples": true,
     "RemotePollingEnabled": true,
     "RemotePollingIntervalSeconds": 5
   },
@@ -191,9 +195,41 @@ El campo `quality.scorePercent` es el valor recomendado para mostrar en UI como 
 
 Para dedos con poca huella, los umbrales por defecto son más tolerantes (`MinimumForegroundCoveragePercent = 8`, `MinimumContrastScore = 18`) y se sigue exigiendo template válido, contraste mínimo y centrado.
 
+### Rechazo de superficies que no son huella (codo, palma, objeto)
+
+Cobertura, contraste y centrado no bastan: un codo o una palma también son manchas oscuras, centradas y con contraste. Por eso el agente valida además la **estructura de crestas** mediante coherencia direccional (tensor de estructura por bloques). Una huella real tiene crestas con orientación local dominante → coherencia alta; una superficie sin crestas → coherencia baja y se rechaza con el mensaje *"La superficie no tiene estructura de huella"*.
+
+- Se controla con `Biometric:Quality:MinimumRidgeCoherencePercent` (0-100). Producción viene con **35**.
+- `0` desactiva el control (útil solo para pruebas). Si se elimina la clave, el control queda desactivado.
+- Calibrar con el ZK9500 real: el log `Calidad de huella` incluye la coherencia medida; subir el umbral si algún codo aún pasa, bajarlo si rechaza dedos válidos.
+
+### Distinción de huellas (matching 1:N local)
+
+El path local `fingerprint.match` compara la captura contra los templates recibidos usando el score de `ZKFinger DBMatch` (mayor = más parecido). Acepta la **mejor** coincidencia que supere `Biometric:Match:MinScore` (default **50**). Subir el umbral reduce falsos positivos (menor FAR); bajarlo reduce rechazos de la persona correcta (menor FRR). Calibrar con hardware observando el score en el log `DBMatch contra template índice`.
+
+> El matching 1:N por institución (padrón completo del tenant) es responsabilidad del backend en `POST /asistencia/marcar` (aislado por `X-Tenant-ID`). El path local es para verificación puntual/diagnóstico.
+
+### Integridad del enrolamiento (mismo dedo en las 3 muestras)
+
+El enrolamiento fusiona 3 capturas con `DBMerge`. Antes de fusionar, cada muestra nueva se **verifica contra la primera** con `DBMatch`: si el score no supera `Biometric:Match:MinScore`, la muestra se descarta y se pide repetir con el mensaje *"Use el MISMO dedo en todas las capturas"*. Esto evita que se enrolen 3 dedos distintos (o de 2 personas) en un solo template, lo que produciría una plantilla que coincide con varias huellas y rompería la distinción biométrica.
+
+Además, `Enrollment:RequireFingerLiftBetweenSamples` viene en **`true`** en producción: entre muestras se exige levantar el dedo para forzar 3 colocaciones distintas y no re-leer la misma. En pruebas/dev puede ponerse en `false`.
+
+### Estado de entrega de la asistencia (`deliveryStatus`)
+
+La respuesta de `fingerprint.identify` incluye `deliveryStatus`, para que el frontend distinga asistencia registrada de solo-captura:
+
+| `deliveryStatus` | Significado |
+|---|---|
+| `marked` | El backend aceptó la marcación síncrona (`POST /asistencia/marcar`). |
+| `queued` | Backend no disponible: el evento cifrado quedó encolado para `POST /asistencia/sync`. |
+| `not_transmitted` | Se capturó la huella pero **no se transmitió** (falta la clave RSA del backend). No se registró asistencia. |
+
+Antes, sin clave de cifrado la identificación devolvía `success: true` sin marcar ni encolar nada → asistencia fantasma. Ahora ese caso se reporta explícito como `not_transmitted`.
+
 ### Tiempo de respuesta ZK9500
 
-Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger Standard SDK 5.3.0.33, `Demo2/Form1.cs`): el loop `DoCapture` usa `Thread.Sleep(200)` sin cooldown ni espera de lift entre muestras. Por eso la captura e identificación esperan hasta 15 segundos para que el usuario coloque el dedo, con lectura cada 200 ms. No hay bloqueo artificial entre botones: cuando una operación termina por éxito, error o timeout, el usuario puede volver a capturar, identificar o enrolar inmediatamente. `PostCaptureCooldownMilliseconds` (200 ms) es solo drenado técnico interno del lector y no debe devolver error al WebSocket. Por defecto `RequireFingerLiftBetweenSamples = false` (igual que la demo): entre muestras del enrollment el sistema no espera activamente que se levante el dedo, ya que el SDK naturalmente solo devuelve éxito con una colocación nueva. El enrolamiento usa hasta 15 segundos por muestra.
+Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger Standard SDK 5.3.0.33, `Demo2/Form1.cs`): el loop `DoCapture` usa `Thread.Sleep(200)` con lectura cada 200 ms. Por eso la captura e identificación esperan hasta 15 segundos para que el usuario coloque el dedo. No hay bloqueo artificial entre botones: cuando una operación termina por éxito, error o timeout, el usuario puede volver a capturar, identificar o enrolar inmediatamente. `PostCaptureCooldownMilliseconds` (200 ms) es solo drenado técnico interno del lector y no debe devolver error al WebSocket. En el **enrolamiento** sí se espera el retiro del dedo entre muestras (`RequireFingerLiftBetweenSamples = true`) para capturar 3 colocaciones distintas del mismo dedo. El enrolamiento usa hasta 15 segundos por muestra.
 
 ### Valores obligatorios en producción
 

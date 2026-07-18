@@ -161,10 +161,37 @@ public sealed class WebSocketResponseTests
             """{ "type": "fingerprint.identify" }""",
             CancellationToken.None);
 
-        Assert.Equal(identifyResult, response);
+        var identify = Assert.IsType<FingerprintIdentifyResult>(response);
+        Assert.True(identify.Success);
+        Assert.Equal("queued", identify.DeliveryStatus);
         BiometricEvent queued = Assert.Single(queue.Enqueued);
         Assert.Equal("identify", queued.EventType);
         Assert.Equal("ZK9500-IDENTIFY", queued.DeviceId);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForIdentifyWithoutEncryptedTemplate_NoTransmiteNiEncola()
+    {
+        // Éxito de captura pero sin template cifrado (falta clave RSA): NO debe marcar ni encolar,
+        // y debe informar el estado "not_transmitted" para no simular asistencia registrada.
+        FingerprintIdentifyResult identifyResult = FingerprintIdentifyResult.Succeeded(
+            [1, 2, 3],
+            3,
+            quality: null,
+            deviceId: "ZK9500-IDENTIFY",
+            encryptedTemplate: null);
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(
+            identifyResult: identifyResult,
+            eventQueue: queue);
+
+        object response = await server.HandleMessageAsync(
+            """{ "type": "fingerprint.identify" }""",
+            CancellationToken.None);
+
+        var identify = Assert.IsType<FingerprintIdentifyResult>(response);
+        Assert.Equal("not_transmitted", identify.DeliveryStatus);
+        Assert.Empty(queue.Enqueued);
     }
 
     [Fact]
@@ -329,6 +356,21 @@ public sealed class WebSocketResponseTests
         Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://app.trazzo.pe", allowedOrigins));
         Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins));
         Assert.False(LocalWebSocketServerService.IsOriginAllowed(null, allowedOrigins));
+    }
+
+    [Fact]
+    public void IsOriginAllowed_ConListaDeProduccion_SiguePermitiendoLoopbackYFileLocal()
+    {
+        // Con orígenes de producción configurados, las herramientas locales deben seguir
+        // conectando: test-websocket.html (Origin "null" desde loopback) y http://localhost.
+        string[] allowedOrigins = ["https://trazzosaas.noahtechperu.com"];
+        var loopback = new IPEndPoint(IPAddress.Loopback, 49152);
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", allowedOrigins, loopback));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", allowedOrigins));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://trazzosaas.noahtechperu.com", allowedOrigins));
+        // Un sitio remoto sigue bloqueado.
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins));
     }
 
     [Theory]
