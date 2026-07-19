@@ -11,5 +11,6 @@ public interface DeviceRepositoryPort {
     List<Device> findAll(Long branchId, Boolean state, int page, int size);
     long count(Long branchId, Boolean state);
     boolean existsByCode(String code);
+    Optional<Device> findByCode(String code);
     void deleteById(Long id);
 }

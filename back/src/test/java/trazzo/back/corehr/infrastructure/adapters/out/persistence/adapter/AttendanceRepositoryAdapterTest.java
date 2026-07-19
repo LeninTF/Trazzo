@@ -62,7 +62,7 @@ class AttendanceRepositoryAdapterTest {
     }
 
     private Attendance createDomain() {
-        return Attendance.restore(id, 100L, 10L, 200L, now, now.plusHours(8), date, 0, AttendanceState.PUNTUAL, now, now);
+        return Attendance.restore(id, 100L, 10L, 200L, now, now.plusHours(8), date, 0, AttendanceState.PUNTUAL, null, null, now, now);
     }
 
     @Test
