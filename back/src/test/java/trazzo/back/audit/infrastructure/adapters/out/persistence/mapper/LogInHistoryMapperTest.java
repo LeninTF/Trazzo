@@ -85,4 +85,42 @@ class LogInHistoryMapperTest {
         assertEquals("anon@test.com", domain.getAttemptedEmail());
         assertEquals(StatusLogin.FAILED_USER_NOT_FOUND, domain.getStatus());
     }
+
+    @Test
+    void shouldHandleNullIdInDomain_toEntity() {
+        var domain = new LogInHistory(null, "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                "test@test.com", StatusLogin.SUCCESS, "1.2.3.4", "agent", LocalDateTime.now());
+
+        var entity = LogInHistoryMapper.toEntity(domain);
+
+        assertNotNull(entity.getId());
+        assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", entity.getUserId().toString());
+    }
+
+    @Test
+    void shouldHandleNullIdInEntity_toDomain() {
+        var entity = new LogInHistoryEntity();
+        entity.setUserId(UUID.fromString("a1b2c3d4-e5f6-7890-abcd-ef1234567890"));
+        entity.setAttemptedEmail("test@test.com");
+        entity.setStatus(StatusLogin.SUCCESS);
+        entity.setIpAddress("1.2.3.4");
+        entity.setUserAgent("agent");
+        entity.setCreatedAt(LocalDateTime.now());
+
+        var domain = LogInHistoryMapper.toDomain(entity);
+
+        assertNull(domain.getId());
+        assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", domain.getUserId());
+    }
+
+    @Test
+    void shouldHandleNullUserIdInDomain_toEntity() {
+        var domain = new LogInHistory("00000000-0000-0000-0000-000000000001", null,
+                "anon@test.com", StatusLogin.FAILED_USER_NOT_FOUND, "1.2.3.4", "agent", LocalDateTime.now());
+
+        var entity = LogInHistoryMapper.toEntity(domain);
+
+        assertNull(entity.getUserId());
+        assertEquals("anon@test.com", entity.getAttemptedEmail());
+    }
 }

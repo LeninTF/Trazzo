@@ -190,4 +190,108 @@ class IncidentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Estado no válido");
     }
+
+    @Test
+    void findAll_attachTypes_withBatchAndFallback() {
+        var incident1 = Incident.restore("inc-1", "user-1", "type-1",
+                IncidentState.PENDIENTE, "c1", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+        var incident2 = Incident.restore("inc-2", "user-2", "type-missing",
+                IncidentState.PENDIENTE, "c2", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+
+        when(incidentRepository.findAll(null, null, null, null, null, null, 0, 10, null))
+                .thenReturn(List.of(incident1, incident2));
+        when(incidentRepository.count(null, null, null, null, null, null)).thenReturn(2L);
+        when(typeRepository.findByIdIn(List.of("type-1", "type-missing")))
+                .thenReturn(List.of(sampleType()));
+        // Fallback for missing type
+        when(typeRepository.findById("type-missing"))
+                .thenReturn(Optional.of(IncidentType.restore("type-missing", "Permiso", "Desc", true,
+                        LocalDateTime.now(), LocalDateTime.now())));
+
+        var result = service.findAll(null, null, null, null, null, null,
+                null, null, null, 0, 10, null);
+
+        assertThat(result.content()).hasSize(2);
+        verify(typeRepository).findByIdIn(anyList());
+        verify(typeRepository).findById("type-missing");
+    }
+
+    @Test
+    void findAll_handlesNullTypeIds() {
+        var incident = Incident.restore("inc-1", "user-1", "type-x",
+                IncidentState.PENDIENTE, "c", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+
+        when(incidentRepository.findAll(null, null, null, null, null, null, 0, 10, null))
+                .thenReturn(List.of(incident));
+        when(incidentRepository.count(null, null, null, null, null, null)).thenReturn(1L);
+        when(typeRepository.findByIdIn(List.of("type-x"))).thenReturn(List.of());
+
+        var result = service.findAll(null, null, null, null, null, null,
+                null, null, null, 0, 10, null);
+
+        assertThat(result.content()).hasSize(1);
+    }
+
+    @Test
+    void toResult_includesTenantUserInfo() {
+        var incident = Incident.restore("inc-1", "123", "type-1",
+                IncidentState.PENDIENTE, "comment", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(tenantUserPort.findBasicInfoById(123L)).thenReturn(
+                Optional.of(new trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserBasicInfo(
+                        123L, "Juan", "Perez", "Lopez", "juan@test.com", "5551234")));
+
+        var result = service.findById("inc-1");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().tenantUser()).isNotNull();
+        assertThat(result.get().tenantUser().nombre()).isEqualTo("Juan");
+    }
+
+    @Test
+    void toResult_handlesInvalidTenantUserId() {
+        var incident = Incident.restore("inc-1", "not-a-number", "type-1",
+                IncidentState.PENDIENTE, "comment", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(incident));
+
+        var result = service.findById("inc-1");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().tenantUser()).isNull();
+    }
+
+    @Test
+    void changeState_approveWithZeroDays_setsApprovedWithoutPermission() {
+        var cmd = new IncidentStateChangeCommand(IncidentState.APROBADO, 0, null);
+        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
+        when(incidentRepository.save(any(Incident.class))).thenAnswer(i -> i.getArgument(0));
+
+        var result = service.changeState("inc-1", cmd);
+
+        assertThat(result.state()).isEqualTo(IncidentState.APROBADO);
+        assertThat(result.permiso()).isNull();
+    }
+
+    @Test
+    void toResult_includesEvidenceWithUrl() {
+        var incident = Incident.restore("inc-1", "user-1", "type-1",
+                IncidentState.PENDIENTE, "comment", null, null, null,
+                Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
+        incident.addEvidence(trazzo.back.incidents.domain.model.IncidentEvidence.create(
+                "inc-1", "file.pdf", "key-1", "application/pdf", 1024));
+
+        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(evidenceUrlResolver.buildPublicUrl("key-1")).thenReturn("http://storage/key-1");
+
+        var result = service.findById("inc-1");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().evidencias()).hasSize(1);
+        assertThat(result.get().evidencias().get(0).fileUrl()).isEqualTo("http://storage/key-1");
+    }
 }

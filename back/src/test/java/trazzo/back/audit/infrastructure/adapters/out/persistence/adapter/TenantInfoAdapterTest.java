@@ -56,4 +56,31 @@ class TenantInfoAdapterTest {
     void findByUserIdsFiltersInvalidUuids() {
         assertThat(adapter.findByUserIds(List.of("not-a-uuid", "also-bad"))).isEmpty();
     }
+
+    @Test
+    void findByUserIdsFiltersNullEntries() {
+        assertThat(adapter.findByUserIds(java.util.Arrays.asList(null, ""))).isEmpty();
+    }
+
+    @Test
+    void findByUserIdReturnsEmptyForNonExistentUser() {
+        when(jdbcTemplate.queryForObject(anyString(), any(RowMapper.class), any(SqlParameterValue.class)))
+                .thenReturn(null);
+        assertThat(adapter.findByUserId("00000000-0000-0000-0000-000000000001")).isEmpty();
+    }
+
+    @Test
+    void findByUserIdReturnsInfoWhenFound() {
+        var info = new trazzo.back.audit.application.port.out.TenantInfoPort.TenantInfo("tenant-1", "acme");
+        when(jdbcTemplate.queryForObject(anyString(), any(RowMapper.class), any(SqlParameterValue.class)))
+                .thenReturn(info);
+        var result = adapter.findByUserId("00000000-0000-0000-0000-000000000001");
+        assertThat(result).isPresent();
+        assertThat(result.get().tenantName()).isEqualTo("acme");
+    }
+
+    @Test
+    void findByUserIdsReturnsEmptyForMixOfValidAndInvalidUuids() {
+        assertThat(adapter.findByUserIds(java.util.Arrays.asList("not-a-uuid", null, ""))).isEmpty();
+    }
 }

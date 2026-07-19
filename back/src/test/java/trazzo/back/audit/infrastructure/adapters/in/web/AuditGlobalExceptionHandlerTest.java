@@ -2,6 +2,8 @@ package trazzo.back.audit.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.MediaType;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.authorization.AuthorizationDecision;
@@ -40,6 +42,7 @@ class AuditGlobalExceptionHandlerTest {
                 case "validation" -> throw new AuditValidationException("Validation failed");
                 case "auth-denied" -> throw new AuthorizationDeniedException(
                         "Access Denied", new AuthorizationDecision(false));
+                case "data-access" -> throw new DataAccessResourceFailureException("Connection failed");
                 default -> throw new RuntimeException("Unexpected error");
             }
         }
@@ -110,5 +113,13 @@ class AuditGlobalExceptionHandlerTest {
         mockMvc.perform(get("/throw/not-found"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    void dataAccessException_returns500() throws Exception {
+        mockMvc.perform(get("/throw/data-access"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.error").value("Internal Server Error"));
     }
 }

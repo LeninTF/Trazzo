@@ -161,4 +161,115 @@ class AuditRepositoryAdapterTest {
     void deserializeJson_shouldHandleEmptyString() {
         assertThat(AuditRepositoryAdapter.deserializeJson("")).isNotNull();
     }
+
+    @Test
+    void deserializeJson_shouldHandleValidJson() {
+        var result = AuditRepositoryAdapter.deserializeJson("{\"key\":\"value\"}");
+        assertThat(result).containsEntry("key", "value");
+    }
+
+    @Test
+    void deserializeJson_shouldHandleInvalidJson() {
+        assertThat(AuditRepositoryAdapter.deserializeJson("not json")).isEmpty();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withTenantUuidAppendsClause() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, "00000000-0000-0000-0000-000000000001", null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("user_id IN"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withAllFiltersComposed() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll("search", "00000000-0000-0000-0000-000000000001",
+                Action.CREATE, "User", now, now.plusDays(1),
+                org.springframework.data.domain.PageRequest.of(0, 10));
+
+        verify(jdbcTemplate).query(contains("LOWER(a.entity) LIKE"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("a.action = ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("a.entity = ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("created_at >= ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("created_at <= ?"), any(RowMapper.class), any(Object[].class));
+        verify(jdbcTemplate).query(contains("user_id IN"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withCustomSort() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "action")));
+
+        verify(jdbcTemplate).query(contains("ORDER BY a.action ASC"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withSortOnWhitelistedField_ipAddress() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "ip_address")));
+
+        verify(jdbcTemplate).query(contains("ORDER BY a.ip_address DESC"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_withNonWhitelistedSortFallsBackToDefault() {
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAll(null, null, null, null, null, null,
+                org.springframework.data.domain.PageRequest.of(0, 10,
+                        org.springframework.data.domain.Sort.by("nonExistentField")));
+
+        verify(jdbcTemplate).query(contains("ORDER BY a.created_at DESC"), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void count_withAllFiltersComposed() {
+        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
+                .thenReturn(3L);
+
+        var result = adapter.count("search", "00000000-0000-0000-0000-000000000001",
+                Action.DELETE, "User", now, now.plusDays(1));
+
+        assertThat(result).isEqualTo(3L);
+    }
+
+    @Test
+    void count_withOnlySearchTerm() {
+        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
+                .thenReturn(2L);
+
+        var result = adapter.count("test", null, null, null, null, null);
+
+        assertThat(result).isEqualTo(2L);
+    }
+
+    @Test
+    void count_withInvalidTenantUuidSkipsClause() {
+        when(jdbcTemplate.queryForObject(anyString(), any(Class.class), any(Object[].class)))
+                .thenReturn(1L);
+
+        var result = adapter.count(null, "invalid", null, null, null, null);
+
+        assertThat(result).isEqualTo(1L);
+    }
 }
