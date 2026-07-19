@@ -356,11 +356,18 @@ public sealed class RemoteEnrollmentServiceTests
             CancellationToken cancellationToken)
             => Task.FromResult(FingerprintMatchResult.Failed("No usado."));
 
+        public string? LastUserReference { get; private set; }
+        public int LastFingerIndex { get; private set; }
+
         public Task<FingerprintEnrollResult> EnrollFingerprintAsync(
             Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string? userReference = null,
+            int fingerIndex = 0)
         {
             EnrollCalls++;
+            LastUserReference = userReference;
+            LastFingerIndex = fingerIndex;
             return Task.FromResult(EnrollResult);
         }
 

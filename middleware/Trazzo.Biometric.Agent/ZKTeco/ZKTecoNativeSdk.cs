@@ -68,6 +68,11 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
         return InvokeStatic<int>("DBMatch", databaseHandle, template1, template2);
     }
 
+    public int DBAdd(IntPtr databaseHandle, int fingerId, byte[] registeredTemplate)
+    {
+        return InvokeStatic<int>("DBAdd", databaseHandle, fingerId, registeredTemplate);
+    }
+
     public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score)
     {
         EnsureLoaded();

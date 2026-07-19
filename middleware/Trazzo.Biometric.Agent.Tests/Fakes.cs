@@ -184,7 +184,28 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
     public int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2)
         => DBMatchResultSequence is { Count: > 0 } ? DBMatchResultSequence.Dequeue() : DBMatchResult;
 
-    public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score) => 0;
+    public int DBAddResult { get; init; }
+
+    public List<int> AddedFingerIds { get; } = [];
+
+    public int DBAdd(IntPtr databaseHandle, int fingerId, byte[] registeredTemplate)
+    {
+        if (DBAddResult == 0)
+            AddedFingerIds.Add(fingerId);
+        return DBAddResult;
+    }
+
+    // Default -1 = "no identificado" (padrón sin coincidencia). Los tests de match lo configuran.
+    public int DBIdentifyResult { get; init; } = -1;
+    public int DBIdentifyFid { get; init; }
+    public int DBIdentifyScore { get; init; }
+
+    public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score)
+    {
+        fingerId = DBIdentifyFid;
+        score = DBIdentifyScore;
+        return DBIdentifyResult;
+    }
 
     public int DBMerge(IntPtr databaseHandle, byte[] template1, byte[] template2, byte[] template3, byte[] registeredTemplate, ref int registeredTemplateSize)
     {
@@ -284,10 +305,17 @@ internal sealed class FakeBiometricScannerService : IBiometricScannerService
         return Task.FromResult(IdentifyResult);
     }
 
+    public string? LastEnrollUserReference { get; private set; }
+    public int LastEnrollFingerIndex { get; private set; }
+
     public async Task<FingerprintEnrollResult> EnrollFingerprintAsync(
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? userReference = null,
+        int fingerIndex = 0)
     {
+        LastEnrollUserReference = userReference;
+        LastEnrollFingerIndex = fingerIndex;
         if (EnrollmentProgress is not null)
             await progressCallback(EnrollmentProgress, cancellationToken);
 

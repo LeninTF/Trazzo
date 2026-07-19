@@ -194,6 +194,69 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task IdentifyFingerprintAsync_ConMatchLocal_CuandoHuellaEnrolada_Identifica()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBAddResult = 0,
+            DBIdentifyResult = 0,     // encontrado
+            DBIdentifyFid = 1,        // primer fingerId asignado por DBAdd
+            DBIdentifyScore = 90      // ≥ umbral (50)
+        };
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?> { ["Biometric:Identify:RequireLocalMatch"] = "true" });
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(result.Matched);
+        Assert.Equal("user-1", result.MatchedUserReference);
+        Assert.Equal(90, result.MatchScore);
+    }
+
+    [Fact]
+    public async Task IdentifyFingerprintAsync_ConMatchLocal_CuandoNoCoincide_RechazaComoNoReconocida()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBAddResult = 0,
+            DBIdentifyResult = 0,
+            DBIdentifyFid = 1,
+            DBIdentifyScore = 10      // < umbral (50): no reconocida (p. ej. la palma)
+        };
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?> { ["Biometric:Identify:RequireLocalMatch"] = "true" });
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.False(result.Matched);
+        Assert.Contains("no coincide", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task IdentifyFingerprintAsync_CuandoSinLector_RetornaFallo()
     {
         FakeZKTecoNativeSdk sdk = new() { DeviceCount = 0 };

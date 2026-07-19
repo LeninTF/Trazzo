@@ -485,7 +485,7 @@ public sealed class LocalWebSocketServerService(
                 "fingerprint.capture" => await CaptureAndEnqueueAsync(cancellationToken),
                 "fingerprint.identify" => await IdentifyAndEnqueueAsync(cancellationToken),
                 "fingerprint.match" => await MatchAndEnqueueAsync(json, cancellationToken),
-                "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, cancellationToken),
+                "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, message.UserRef, message.FingerIndex, cancellationToken),
                 "fingerprint.enroll.cancel" => scannerService.CancelEnrollment(),
                 "queue.status" => new
                 {
@@ -630,9 +630,12 @@ public sealed class LocalWebSocketServerService(
     }
 
     private async Task<FingerprintEnrollResult> EnrollAndEnqueueAsync(
-        Func<FingerprintEnrollProgress, CancellationToken, Task> callback, CancellationToken ct)
+        Func<FingerprintEnrollProgress, CancellationToken, Task> callback,
+        string? userRef,
+        int fingerIndex,
+        CancellationToken ct)
     {
-        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(callback, ct);
+        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(callback, ct, userRef, fingerIndex);
         return result;
     }
 

@@ -338,4 +338,89 @@ public sealed class FingerprintQualityAnalyzerTests
         Assert.Equal("La superficie no tiene estructura de huella. Coloque la yema del dedo sobre el lector.", result.Message);
         Assert.True(result.RidgeCoherencePercent < 35);
     }
+
+    [Fact]
+    public void Analyze_CuandoCrestasCurvadasComoYema_ConSpreadActivo_Acepta()
+    {
+        // Crestas concéntricas (núcleo de la yema): la orientación varía en todas direcciones
+        // → variación de orientación alta.
+        const int size = 64;
+        byte[] buffer = BuildConcentricRidges(size, center: size / 2.0, period: 6);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeOrientationSpreadPercent: 22);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.True(result.RidgeOrientationSpreadPercent >= 22);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCrestasParalelasComoPalma_ConSpreadActivo_Rechaza()
+    {
+        // Bandas paralelas (parche de palma): una sola orientación dominante → variación baja.
+        const int size = 64;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                buffer[y * size + x] = (byte)((y % 6) < 3 ? 30 : 200);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeOrientationSpreadPercent: 22);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.False(result.IsAcceptable);
+        Assert.Equal("No parece la yema de un dedo. Coloque la yema (no la palma) centrada sobre el lector.", result.Message);
+        Assert.True(result.RidgeOrientationSpreadPercent < 22);
+    }
+
+    [Fact]
+    public void Analyze_CuandoSpreadDesactivado_NoRechazaCrestasParalelas()
+    {
+        // Sin el criterio (default 0), las crestas paralelas pasan como antes.
+        const int size = 64;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                buffer[y * size + x] = (byte)((y % 6) < 3 ? 30 : 200);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(0, result.RidgeOrientationSpreadPercent);
+    }
+
+    private static byte[] BuildConcentricRidges(int size, double center, int period)
+    {
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                double dist = Math.Sqrt((x - center) * (x - center) + (y - center) * (y - center));
+                bool dark = ((int)(dist / period)) % 2 == 0;
+                buffer[y * size + x] = (byte)(dark ? 30 : 200);
+            }
+        }
+        return buffer;
+    }
 }

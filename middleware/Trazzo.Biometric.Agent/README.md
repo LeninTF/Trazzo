@@ -148,6 +148,9 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
     "PostCaptureCooldownMilliseconds": 200,
     "TemplateBufferSize": 2048,
     "IncludeFingerprintImageInResponses": false,
+    "Identify": {
+      "RequireLocalMatch": true
+    },
     "Match": {
       "MinScore": 50
     },
@@ -159,7 +162,8 @@ Archivo: `Trazzo.Biometric.Agent\appsettings.json`
       "RequireCenteredFingerprint": true,
       "CenterTolerancePercent": 28,
       "ContrastThresholdOffset": 15,
-      "MinimumRidgeCoherencePercent": 35
+      "MinimumRidgeCoherencePercent": 35,
+      "MinimumRidgeOrientationSpreadPercent": 0
     }
   },
   "Enrollment": {
@@ -202,6 +206,21 @@ Cobertura, contraste y centrado no bastan: un codo o una palma también son manc
 - Se controla con `Biometric:Quality:MinimumRidgeCoherencePercent` (0-100). Producción viene con **35**.
 - `0` desactiva el control (útil solo para pruebas). Si se elimina la clave, el control queda desactivado.
 - Calibrar con el ZK9500 real: el log `Calidad de huella` incluye la coherencia medida; subir el umbral si algún codo aún pasa, bajarlo si rechaza dedos válidos.
+
+### Rechazo de la palma de la mano — identificación 1:N on-device (profesional)
+
+La palma **sí tiene crestas** (dermatoglifos), igual que la yema, así que **ningún umbral de imagen** (cobertura, contraste, coherencia, orientación) la separa de forma fiable en un sensor FAP20 pequeño. La forma profesional/industrial de rechazarla es la misma que usan los terminales ZKTeco: **identificación 1:N contra el padrón enrolado usando el motor del propio SDK** (`DBAdd` + `DBIdentify`), no heurísticos de píxeles.
+
+Cómo funciona en el agente (`Biometric:Identify:RequireLocalMatch = true`):
+
+1. **Enrolar** (`fingerprint.enroll.start` con `userRef` + `fingerIndex`): tras el `DBMerge`, el template crudo se guarda en un **padrón local cifrado** (SQLite + DPAPI en `%PROGRAMDATA%\TrazzoAgent\enrolled.db`) y se agrega al motor de identificación con `DBAdd`.
+2. **Al arrancar**, el agente recarga el padrón en el motor (`DBAdd`), así identifica offline tras un reinicio.
+3. **Identificar** (`fingerprint.identify`): captura y ejecuta `DBIdentify` (1:N). Si el score supera `Biometric:Match:MinScore`, devuelve `matched: true` con `matchedUserReference`. Si **no coincide** (palma, o dedo no enrolado) → `success: false`, `matched: false`, *"Huella no reconocida"* → **no se registra asistencia**.
+
+Notas:
+- Con el padrón vacío (nadie enrolado), toda identificación se rechaza — es lo correcto: no hay a quién marcarle asistencia.
+- El gate de imagen `MinimumRidgeOrientationSpreadPercent` queda en **0 (desactivado)** por defecto: el filtro real de la palma es la identificación 1:N, no el % de orientación. El código y su config siguen disponibles por si se quiere una primera barrera opcional en captura.
+- `fingerprint.capture` sigue siendo diagnóstico (captura cualquier superficie con crestas); la decisión de identidad es de `fingerprint.identify`.
 
 ### Distinción de huellas (matching 1:N local)
 
@@ -524,10 +543,10 @@ Captura para asistencia. Intenta `POST /asistencia/marcar` inmediatamente; si el
 ### fingerprint.enroll.start
 
 ```json
-{ "type": "fingerprint.enroll.start" }
+{ "type": "fingerprint.enroll.start", "userRef": "42", "fingerIndex": 1 }
 ```
 
-Enrolamiento de 3 muestras con DBMerge. Envía mensajes de progreso durante el proceso:
+Enrolamiento de 3 muestras con DBMerge. `userRef` (referencia del usuario) y `fingerIndex` son opcionales pero **necesarios para el matching on-device**: con ellos la huella se guarda en el padrón local y se agrega al motor 1:N (`DBAdd`), para que `fingerprint.identify` pueda reconocerla. Envía mensajes de progreso durante el proceso:
 
 ```json
 { "type": "fingerprint.enroll.progress", "sampleNumber": 1, "totalSamples": 3 }

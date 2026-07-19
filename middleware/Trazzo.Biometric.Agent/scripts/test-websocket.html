@@ -537,9 +537,9 @@
     return ws && ws.readyState === WebSocket.OPEN;
   }
 
-  function sendMsg(type) {
+  function sendMsg(type, extra) {
     if (!isOpen()) return;
-    const payload = JSON.stringify({ type });
+    const payload = JSON.stringify(extra ? { type, ...extra } : { type });
     log(`→ ${payload}`);
     ws.send(payload);
   }
@@ -641,7 +641,11 @@
           payload.success ? `${payload.capturedSamples ?? 0}/3` : "—";
       }
 
-      finishOp(payload.message || (payload.success ? "Operación completada." : "Operación fallida."));
+      let statusMsg = payload.message || (payload.success ? "Operación completada." : "Operación fallida.");
+      if (payload.type === "fingerprint.identify.result" && payload.matched) {
+        statusMsg = `✔ Identificado: ${payload.matchedUserReference} (score ${payload.matchScore}).`;
+      }
+      finishOp(statusMsg);
     }
   }
 
@@ -702,7 +706,12 @@
     document.getElementById("enrollmentProgress").textContent = "0/3";
     setOperation("Enrolando huella…", true, true);
     document.getElementById("fpStatus").textContent = "Iniciando enrolamiento…";
-    sendMsg("fingerprint.enroll.start");
+    // userRef/fingerIndex: el agente guarda la huella en su padrón local para la
+    // identificación 1:N on-device. Sin userRef, la huella no se registra y
+    // fingerprint.identify no reconocerá a nadie.
+    const userRef = (window.prompt("Referencia de usuario para enrolar:", "test-user") || "").trim();
+    if (!userRef) { setOperation("", false); return; }
+    sendMsg("fingerprint.enroll.start", { userRef, fingerIndex: 1 });
   }
 
   function handleCancelEnroll() {

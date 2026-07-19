@@ -151,7 +151,10 @@ public sealed class RemoteEnrollmentService : BackgroundService
                         progress.Message);
                 return Task.CompletedTask;
             },
-            cancellationToken);
+            cancellationToken,
+            // Puebla el padrón local de identificación 1:N con la referencia del usuario del backend.
+            userReference: pending.TenantUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            fingerIndex: pending.FingerIndex);
 
         if (!enrollResult.Success || enrollResult.EncryptedRegisteredTemplate is null)
         {
