@@ -1,5 +1,7 @@
 package trazzo.back.audit.application.usecase;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
@@ -9,6 +11,8 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 
 public class AuditMetricsService implements AuditMetricsUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(AuditMetricsService.class);
 
     private final JdbcTemplate jdbcTemplate;
     private final Clock clock;
@@ -29,7 +33,7 @@ public class AuditMetricsService implements AuditMetricsUseCase {
         Long previousCount = safeCount("SELECT COUNT(*) FROM audit WHERE created_at >= ? AND created_at < ?",
                 sixtyDaysAgo, thirtyDaysAgo);
         Long errores = safeCount("SELECT COUNT(*) FROM audit WHERE action = 'DELETE'");
-        Long sesionesActivas = safeCount("SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'");
+        Long sesionesActivas = safeCount("SELECT COUNT(*) FROM sesion WHERE state = TRUE");
 
         double crecimiento = 0.0;
         if (previousCount != null && previousCount > 0 && recentCount != null) {
@@ -57,6 +61,7 @@ public class AuditMetricsService implements AuditMetricsUseCase {
                     : jdbcTemplate.queryForObject(sql, Long.class, args);
             return result != null ? result : 0L;
         } catch (DataAccessException e) {
+            log.warn("Failed to execute metric query: {}", sql, e);
             return 0L;
         }
     }
