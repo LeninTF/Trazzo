@@ -1198,6 +1198,12 @@ function handleReportsClosures(
     const raw = req.body as { month: number | string; year: number | string };
     const month = Number(raw.month);
     const year = Number(raw.year);
+    if (!Number.isFinite(month) || !Number.isInteger(month) || month < 1 || month > 12) {
+      return _error(400, 'Invalid month: must be an integer between 1 and 12');
+    }
+    if (!Number.isFinite(year) || !Number.isInteger(year) || year < 2000) {
+      return _error(400, 'Invalid year: must be an integer >= 2000');
+    }
     const exists = mockMonthlyClosures.some(c => c.month === month && c.year === year);
     if (exists) {
       return _error(409, `Monthly closure already exists for ${month}/${year}`);

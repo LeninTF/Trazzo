@@ -64,7 +64,7 @@ public class AuditLogService implements AuditLogUseCase {
                 userInfo.map(u -> u.userEmail()).orElse(null),
                 audit.getAction().name(), tipo,
                 audit.getEntity(), audit.getEntityId(),
-                audit.getIpAdress(), audit.getUserAgent(),
+                audit.getIpAddress(), audit.getUserAgent(),
                 audit.getPreviousValue(), audit.getNewValue()
         );
     }
@@ -72,7 +72,7 @@ public class AuditLogService implements AuditLogUseCase {
     private AuditLogDetailResult toDetailResult(Audit audit) {
         return new AuditLogDetailResult(
                 audit.getId(), audit.getEntity(), audit.getEntityId(), audit.getAction(),
-                audit.getUserId(), audit.getEndpoint(), audit.getIpAdress(),
+                audit.getUserId(), audit.getEndpoint(), audit.getIpAddress(),
                 audit.getUserAgent(), audit.getPreviousValue(), audit.getNewValue(),
                 audit.getCreatedAt()
         );

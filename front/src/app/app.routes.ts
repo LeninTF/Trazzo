@@ -120,11 +120,13 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/cierres-mensuales',
-        component: CierresMensuales
+        component: CierresMensuales,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/cierres-mensuales/:id',
-        component: DetalleCierre
+        component: DetalleCierre,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario',

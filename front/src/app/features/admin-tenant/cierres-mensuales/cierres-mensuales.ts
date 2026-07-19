@@ -6,12 +6,8 @@ import { PaginationComponent } from '../../../shared/pagination/pagination.compo
 import { ToastService } from '../../../services/toast.service';
 import { ExportService } from '../../../services/export.service';
 import { ReportsService } from '../../../api/services/reports.service';
+import { getMonthName } from '../../../api/services/helpers';
 import type { MonthlyClosure } from '../../../api/types';
-
-const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
 
 @Component({
   selector: 'app-cierres-mensuales',
@@ -90,7 +86,7 @@ export class CierresMensuales implements OnInit {
   }
 
   getMonthName(month: number): string {
-    return MONTH_NAMES[month - 1] ?? '';
+    return getMonthName(month);
   }
 
   filtrar(): void {

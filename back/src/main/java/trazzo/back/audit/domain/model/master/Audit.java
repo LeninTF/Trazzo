@@ -10,7 +10,7 @@ public class Audit {
     private Action action;
     private String userId;
     private String endpoint;
-    private String ipAdress;
+    private String ipAddress;
     private String userAgent;
     private Map<String, Object> previousValue;
     private Map<String, Object> newValue;
@@ -20,7 +20,7 @@ public class Audit {
 
     public static Audit restore(
             String id, String entity, String entityId, Action action,
-            String userId, String endpoint, String ipAdress,
+            String userId, String endpoint, String ipAddress,
             String userAgent, Map<String, Object> previousValue,
             Map<String, Object> newValue, LocalDateTime createdAt) {
         Audit audit = new Audit();
@@ -30,7 +30,7 @@ public class Audit {
         audit.action = action;
         audit.userId = userId;
         audit.endpoint = endpoint;
-        audit.ipAdress = ipAdress;
+        audit.ipAddress = ipAddress;
         audit.userAgent = userAgent;
         audit.previousValue = previousValue;
         audit.newValue = newValue;
@@ -44,7 +44,7 @@ public class Audit {
     public Action getAction() { return action; }
     public String getUserId() { return userId; }
     public String getEndpoint() { return endpoint; }
-    public String getIpAdress() { return ipAdress; }
+    public String getIpAddress() { return ipAddress; }
     public String getUserAgent() { return userAgent; }
     public Map<String, Object> getPreviousValue() { return previousValue; }
     public Map<String, Object> getNewValue() { return newValue; }

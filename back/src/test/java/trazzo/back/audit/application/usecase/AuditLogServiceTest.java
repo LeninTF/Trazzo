@@ -51,7 +51,7 @@ class AuditLogServiceTest {
         assertEquals(Action.CREATE, result.action());
         assertEquals("user-1", result.userId());
         assertEquals("/api/test", result.endpoint());
-        assertEquals("192.168.1.1", result.ipAdress());
+        assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals(Map.of(), result.previousValue());
         assertEquals(Map.of(), result.newValue());

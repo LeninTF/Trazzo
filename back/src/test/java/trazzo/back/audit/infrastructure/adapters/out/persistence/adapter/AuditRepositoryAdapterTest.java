@@ -38,7 +38,7 @@ class AuditRepositoryAdapterTest {
         e.setAction(Action.CREATE);
         e.setUserId(UUID.randomUUID());
         e.setEndpoint("/api/users");
-        e.setIpAdress("192.168.1.1");
+        e.setIpAddress("192.168.1.1");
         e.setUserAgent("Mozilla/5.0");
         e.setCreatedAt(now);
         return e;

@@ -39,7 +39,7 @@ public class AuditEntity {
     private String endpoint;
 
     @Column(name = "ip_address", length = 45)
-    private String ipAdress;
+    private String ipAddress;
 
     @Column(name = "user_agent")
     private String userAgent;

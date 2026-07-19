@@ -38,3 +38,12 @@ export function tenantUserToPersonal(u: TenantUserProfile): PersonalItem {
     imagenUrl: u.persona.img_url,
   };
 }
+
+export const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+export function getMonthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? '';
+}

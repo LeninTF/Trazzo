@@ -2,12 +2,8 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReportsService } from '../../../../api/services/reports.service';
+import { getMonthName } from '../../../../api/services/helpers';
 import type { MonthlyClosureWithDetails } from '../../../../api/types';
-
-const MONTH_NAMES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
 
 @Component({
   selector: 'app-detalle-cierre',
@@ -54,6 +50,7 @@ export class DetalleCierre implements OnInit {
 
   cargarReporte(id: string): void {
     this.loading.set(true);
+    this.error.set('');
     this.reportsService.getFullReport(id).subscribe({
       next: data => {
         this.report = data;
@@ -67,7 +64,7 @@ export class DetalleCierre implements OnInit {
   }
 
   getMonthName(month: number): string {
-    return MONTH_NAMES[month - 1] ?? '';
+    return getMonthName(month);
   }
 
   volver(): void {
