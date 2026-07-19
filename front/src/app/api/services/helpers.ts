@@ -8,7 +8,7 @@ export function params(opts?: Record<string, string | number | boolean | undefin
   let p = new HttpParams();
   if (opts) {
     for (const [k, v] of Object.entries(opts)) {
-      if (v !== undefined && v !== null && v !== '') {
+      if (v !== undefined && v !== null && v !== '' && !(typeof v === 'number' && !Number.isFinite(v))) {
         p = p.set(k, String(v));
       }
     }

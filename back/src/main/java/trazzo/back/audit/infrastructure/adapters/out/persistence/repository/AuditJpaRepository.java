@@ -35,4 +35,18 @@ public interface AuditJpaRepository extends JpaRepository<AuditEntity, UUID> {
             @Param("fechaDesde") LocalDateTime fechaDesde,
             @Param("fechaHasta") LocalDateTime fechaHasta,
             Pageable pageable);
+
+    @Query("SELECT COUNT(a) FROM AuditEntity a WHERE " +
+           "(CAST(:searchTerm AS string) IS NULL OR LOWER(a.entity) LIKE LOWER(CONCAT('%', CAST(:searchTerm AS string), '%')) " +
+           "OR LOWER(a.ipAdress) LIKE LOWER(CONCAT('%', CAST(:searchTerm AS string), '%'))) " +
+           "AND (CAST(:action AS string) IS NULL OR a.action = :action) " +
+           "AND (CAST(:entity AS string) IS NULL OR a.entity = :entity) " +
+           "AND (CAST(CAST(:fechaDesde AS string) AS timestamp) IS NULL OR a.createdAt >= CAST(CAST(:fechaDesde AS string) AS timestamp)) " +
+           "AND (CAST(CAST(:fechaHasta AS string) AS timestamp) IS NULL OR a.createdAt <= CAST(CAST(:fechaHasta AS string) AS timestamp))")
+    long countByFilters(
+            @Param("searchTerm") String searchTerm,
+            @Param("action") Action action,
+            @Param("entity") String entity,
+            @Param("fechaDesde") LocalDateTime fechaDesde,
+            @Param("fechaHasta") LocalDateTime fechaHasta);
 }

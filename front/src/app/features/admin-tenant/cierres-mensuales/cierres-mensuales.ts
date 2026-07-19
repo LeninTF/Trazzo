@@ -66,8 +66,14 @@ export class CierresMensuales implements OnInit {
     this.loading.set(true);
     this.error.set('');
     const opts: { year?: number; month?: number } = {};
-    if (this.filtroYear) opts.year = Number.parseInt(this.filtroYear, 10);
-    if (this.filtroMonth) opts.month = Number.parseInt(this.filtroMonth, 10);
+    if (this.filtroYear) {
+      const year = Number.parseInt(this.filtroYear, 10);
+      if (Number.isFinite(year)) opts.year = year;
+    }
+    if (this.filtroMonth) {
+      const month = Number.parseInt(this.filtroMonth, 10);
+      if (Number.isFinite(month) && month >= 1 && month <= 12) opts.month = month;
+    }
 
     this.reportsService.listClosures(opts).subscribe({
       next: data => {

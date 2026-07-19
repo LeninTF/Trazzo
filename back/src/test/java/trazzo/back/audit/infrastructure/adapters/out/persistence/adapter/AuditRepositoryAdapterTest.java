@@ -8,13 +8,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import trazzo.back.audit.domain.model.master.Action;
-import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.AuditEntity;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.AuditJpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,10 +68,8 @@ class AuditRepositoryAdapterTest {
 
     @Test
     void count_shouldReturnTotalElements() {
-        var page = mock(org.springframework.data.domain.Page.class);
-        when(page.getTotalElements()).thenReturn(5L);
-        when(jpaRepository.findByFilters(any(), any(), any(), any(), any(), any()))
-                .thenReturn(page);
+        when(jpaRepository.countByFilters(any(), any(), any(), any(), any()))
+                .thenReturn(5L);
 
         var result = adapter.count("search", Action.CREATE, "User",
                 now, now.plusDays(1));
