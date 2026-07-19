@@ -10,7 +10,7 @@
 	<div class="page-header">
 		<div>
 			<h1 class="page-title">Gestión de Solicitudes</h1>
-			<p class="page-desc">Revisa, aprueba o rechaza las solicitudes de las instituciones.</p>
+			<p class="page-desc">Revisa, aprueba, observa o rechaza las solicitudes recibidas por el formulario de contacto.</p>
 		</div>
 	</div>
 
@@ -20,8 +20,18 @@
 				<i class="bi bi-clock"></i>
 			</div>
 			<div class="metric-card__info">
-				<span class="metric-card__label">Solicitudes Pendientes</span>
-				<strong class="metric-card__value">{{ totalPendientes() }}</strong>
+				<span class="metric-card__label">Pendientes</span>
+				<strong class="metric-card__value">{{ counts().PENDING }}</strong>
+			</div>
+		</div>
+
+		<div class="metric-card metric-card--pending">
+			<div class="metric-card__icon">
+				<i class="bi bi-eye"></i>
+			</div>
+			<div class="metric-card__info">
+				<span class="metric-card__label">Observadas</span>
+				<strong class="metric-card__value">{{ counts().OBSERVADO }}</strong>
 			</div>
 		</div>
 
@@ -30,8 +40,8 @@
 				<i class="bi bi-check-circle"></i>
 			</div>
 			<div class="metric-card__info">
-				<span class="metric-card__label">Aprobadas (Mes)</span>
-				<strong class="metric-card__value">{{ totalAprobadas() }}</strong>
+				<span class="metric-card__label">Aprobadas</span>
+				<strong class="metric-card__value">{{ counts().APPROVED }}</strong>
 			</div>
 		</div>
 
@@ -41,7 +51,7 @@
 			</div>
 			<div class="metric-card__info">
 				<span class="metric-card__label">Rechazadas</span>
-				<strong class="metric-card__value">{{ totalRechazadas() }}</strong>
+				<strong class="metric-card__value">{{ counts().REJECTED }}</strong>
 			</div>
 		</div>
 	</div>
@@ -49,22 +59,22 @@
 	<div class="filters-card">
 		<div class="filters-row">
 			<div class="filter-group filter-group--search">
-				<label for="solicitudes-busqueda" class="visually-hidden">Buscar por institución o contacto</label>
+				<label for="solicitudes-busqueda" class="visually-hidden">Buscar por empresa o contacto</label>
 				<i class="bi bi-search filter-group__icon"></i>
-				<input type="text" id="solicitudes-busqueda" class="filter-input" placeholder="Buscar por institución o contacto..." [formControl]="filterSearch">
+				<input type="text" id="solicitudes-busqueda" class="filter-input" placeholder="Buscar por empresa o mensaje..." [formControl]="filterSearch">
 			</div>
 
-			<div class="custom-select" (click)="toggleDropdown('estado', $event)" (keydown.enter)="toggleDropdown('estado', $event)" role="button" tabindex="0">
+			<div class="custom-select" (click)="toggleDropdown('tipo', $event)" (keydown.enter)="toggleDropdown('tipo', $event)" role="button" tabindex="0">
 				<div class="custom-select__trigger">
 					<i class="bi bi-funnel filter-group__icon"></i>
-					<span class="custom-select__label">{{ estadoLabel() }}</span>
-					<i class="bi bi-chevron-down custom-select__arrow" [class.is-open]="dropdownOpen() === 'estado'"></i>
+					<span class="custom-select__label">{{ tipoLabel() }}</span>
+					<i class="bi bi-chevron-down custom-select__arrow" [class.is-open]="dropdownOpen() === 'tipo'"></i>
 				</div>
-				@if (dropdownOpen() === 'estado') {
+				@if (dropdownOpen() === 'tipo') {
 					<div class="custom-select__menu">
-						@for (opt of estadoOptions; track opt.value) {
-							<button type="button" class="custom-select__option" [class.is-selected]="filterEstado.value === opt.value" (click)="selectEstado(opt.value); $event.stopPropagation()">
-								@if (filterEstado.value === opt.value) {
+						@for (opt of tipoOptions; track opt.value) {
+							<button type="button" class="custom-select__option" [class.is-selected]="filterTipo.value === opt.value" (click)="selectTipo(opt.value); $event.stopPropagation()">
+								@if (filterTipo.value === opt.value) {
 									<i class="bi bi-check-lg custom-select__check"></i>
 								} @else {
 									<span class="custom-select__check-placeholder"></span>
@@ -75,48 +85,10 @@
 					</div>
 				}
 			</div>
-
-			<div class="custom-select" (click)="toggleDropdown('periodo', $event)" (keydown.enter)="toggleDropdown('periodo', $event)" role="button" tabindex="0">
-				<div class="custom-select__trigger">
-					<i class="bi bi-calendar3 filter-group__icon"></i>
-					<span class="custom-select__label">{{ periodoLabel() }}</span>
-					<i class="bi bi-chevron-down custom-select__arrow" [class.is-open]="dropdownOpen() === 'periodo'"></i>
-				</div>
-				@if (dropdownOpen() === 'periodo') {
-					<div class="custom-select__menu">
-						@for (opt of periodoOptions; track opt.value) {
-							<button type="button" class="custom-select__option" [class.is-selected]="filterPeriodo.value === opt.value" (click)="selectPeriodo(opt.value); $event.stopPropagation()">
-								@if (filterPeriodo.value === opt.value) {
-									<i class="bi bi-check-lg custom-select__check"></i>
-								} @else {
-									<span class="custom-select__check-placeholder"></span>
-								}
-								{{ opt.label }}
-							</button>
-						}
-					</div>
-				}
-			</div>
-
-			@if (filterPeriodoSig() === 'personalizado') {
-				<div class="filter-group">
-					<label for="solicitudes-fecha-desde" class="filter-date-label">Desde</label>
-					<input type="date" id="solicitudes-fecha-desde" class="filter-input filter-input--date" [formControl]="filterFechaDesde">
-				</div>
-				<div class="filter-group">
-					<label for="solicitudes-fecha-hasta" class="filter-date-label">Hasta</label>
-					<input type="date" id="solicitudes-fecha-hasta" class="filter-input filter-input--date" [formControl]="filterFechaHasta">
-				</div>
-			}
 
 			<button type="button" class="filter-clear-btn" (click)="limpiarFiltros()" title="Limpiar filtros">
 				<i class="bi bi-arrow-counterclockwise"></i>
 			</button>
-		</div>
-
-		<div class="filters-result">
-			<span class="filters-result__badge">{{ filtered().length }}</span>
-			<span class="filters-result__text">{{ filtroCountText() }}</span>
 		</div>
 	</div>
 
@@ -125,120 +97,58 @@
 	}
 
 	<ul class="nav nav-tabs solicitudes-tabs" role="tablist">
-		<li class="nav-item" role="presentation">
-			<button type="button" class="nav-link" [class.active]="activeTab() === 'pendiente'" (click)="setTab('pendiente')" role="tab">
-				<span class="tab-badge tab-badge--pending">{{ totalPendientes() }}</span>
-				Pendientes
-			</button>
-		</li>
-		<li class="nav-item" role="presentation">
-			<button type="button" class="nav-link" [class.active]="activeTab() === 'aprobado'" (click)="setTab('aprobado')" role="tab">
-				<span class="tab-badge tab-badge--approved">{{ totalAprobadas() }}</span>
-				Aprobadas
-			</button>
-		</li>
-		<li class="nav-item" role="presentation">
-			<button type="button" class="nav-link" [class.active]="activeTab() === 'rechazado'" (click)="setTab('rechazado')" role="tab">
-				<span class="tab-badge tab-badge--rejected">{{ totalRechazadas() }}</span>
-				Rechazadas
-			</button>
-		</li>
+		@for (tab of statusTabs; track tab.value) {
+			<li class="nav-item" role="presentation">
+				<button type="button" class="nav-link" [class.active]="activeTab() === tab.value" (click)="setTab(tab.value)" role="tab">
+					<span class="tab-badge">{{ counts()[tab.value] }}</span>
+					{{ tab.label }}
+				</button>
+			</li>
+		}
 	</ul>
 
 	<div class="tab-content">
-		@if (activeTab() === 'pendiente') {
-			<div class="table-shell">
+		<div class="table-shell">
+			@if (loading()) {
+				<p class="td-empty">Cargando...</p>
+			} @else {
 				<table class="solicitudes-table">
 					<thead>
-						<tr><th>Institución</th><th>Contacto</th><th>Plan</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
+						<tr><th>Empresa</th><th>Contacto</th><th>RUC</th><th>Tipo</th><th>Fecha</th><th>Acciones</th></tr>
 					</thead>
 					<tbody>
-						@for (s of paginated('pendiente'); track s.id) {
+						@for (s of items(); track s.id) {
 							<tr>
-								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
-								<td data-label="Contacto">{{ s.contacto }}</td>
-								<td data-label="Plan">{{ s.plan }}</td>
-								<td data-label="Fecha">{{ s.fecha }}</td>
-								<td data-label="Estado"><span class="status-badge status-badge--pending">Pendiente</span></td>
+								<td class="td-primary" data-label="Empresa">{{ s.contact?.companyName }}</td>
+								<td data-label="Contacto">{{ s.contact?.name }} {{ s.contact?.lastName }}</td>
+								<td data-label="RUC">{{ s.contact?.taxId }}</td>
+								<td data-label="Tipo">{{ typeLabel(s.type) }}</td>
+								<td data-label="Fecha">{{ s.createdAt | slice:0:10 }}</td>
 								<td class="td-actions" data-label="Acciones">
-									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
-									<button type="button" class="btn-action btn-action--approve" (click)="confirmarAprobar(s.id)" title="Aprobar"><i class="bi bi-check-lg"></i></button>
-									<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
+									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s.id)" title="Ver"><i class="bi bi-eye"></i></button>
+									@if (s.status === 'PENDING' || s.status === 'OBSERVADO') {
+										<button type="button" class="btn-action btn-action--approve" (click)="confirmarAprobar(s.id)" title="Aprobar"><i class="bi bi-check-lg"></i></button>
+										<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
+									}
+									@if (s.status === 'PENDING') {
+										<button type="button" class="btn-action btn-action--view" (click)="confirmarObservar(s.id)" title="Observar"><i class="bi bi-flag"></i></button>
+									}
+									@if (s.status === 'REJECTED') {
+										<button type="button" class="btn-action btn-action--approve" (click)="confirmarReconsiderar(s.id)" title="Reconsiderar"><i class="bi bi-arrow-counterclockwise"></i></button>
+									}
 								</td>
 							</tr>
 						} @empty {
-							<tr><td colspan="6" class="td-empty">No hay solicitudes pendientes</td></tr>
+							<tr><td colspan="6" class="td-empty">No hay solicitudes en este estado</td></tr>
 						}
 					</tbody>
 				</table>
-				@if (paginated('pendiente').length) {
-					<span class="pagination-info">Página {{ currentPage()['pendiente'] || 1 }} de {{ totalPages('pendiente') }}</span>
-					<app-pagination [currentPage]="currentPage()['pendiente'] || 1" [totalPages]="totalPages('pendiente')" (pageChange)="goToPage('pendiente', $event)"/>
+				@if (items().length) {
+					<span class="pagination-info">Página {{ currentPage()[activeTab()] || 1 }} de {{ totalPages() }}</span>
+					<app-pagination [currentPage]="currentPage()[activeTab()] || 1" [totalPages]="totalPages()" (pageChange)="goToPage($event)"/>
 				}
-			</div>
-		}
-
-		@if (activeTab() === 'aprobado') {
-			<div class="table-shell">
-				<table class="solicitudes-table">
-					<thead>
-						<tr><th>Institución</th><th>Contacto</th><th>Plan</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
-					</thead>
-					<tbody>
-						@for (s of paginated('aprobado'); track s.id) {
-							<tr>
-								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
-								<td data-label="Contacto">{{ s.contacto }}</td>
-								<td data-label="Plan">{{ s.plan }}</td>
-								<td data-label="Fecha">{{ s.fecha }}</td>
-								<td data-label="Estado"><span class="status-badge status-badge--approved">Aprobado</span></td>
-								<td class="td-actions" data-label="Acciones">
-									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
-									<button type="button" class="btn-action btn-action--reject" (click)="confirmarRechazar(s.id)" title="Rechazar"><i class="bi bi-x-lg"></i></button>
-								</td>
-							</tr>
-						} @empty {
-							<tr><td colspan="6" class="td-empty">No hay solicitudes aprobadas</td></tr>
-						}
-					</tbody>
-				</table>
-				@if (paginated('aprobado').length) {
-					<span class="pagination-info">Página {{ currentPage()['aprobado'] || 1 }} de {{ totalPages('aprobado') }}</span>
-					<app-pagination [currentPage]="currentPage()['aprobado'] || 1" [totalPages]="totalPages('aprobado')" (pageChange)="goToPage('aprobado', $event)"/>
-				}
-			</div>
-		}
-
-		@if (activeTab() === 'rechazado') {
-			<div class="table-shell">
-				<table class="solicitudes-table">
-					<thead>
-						<tr><th>Institución</th><th>Contacto</th><th>Plan</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr>
-					</thead>
-					<tbody>
-						@for (s of paginated('rechazado'); track s.id) {
-							<tr>
-								<td class="td-primary" data-label="Institución">{{ s.institucion }}</td>
-								<td data-label="Contacto">{{ s.contacto }}</td>
-								<td data-label="Plan">{{ s.plan }}</td>
-								<td data-label="Fecha">{{ s.fecha }}</td>
-								<td data-label="Estado"><span class="status-badge status-badge--rejected">Rechazado</span></td>
-								<td class="td-actions" data-label="Acciones">
-									<button type="button" class="btn-action btn-action--view" (click)="verDetalle(s)" title="Ver"><i class="bi bi-eye"></i></button>
-									<button type="button" class="btn-action btn-action--approve" (click)="confirmarReconsiderar(s.id)" title="Reconsiderar"><i class="bi bi-arrow-counterclockwise"></i></button>
-								</td>
-							</tr>
-						} @empty {
-							<tr><td colspan="6" class="td-empty">No hay solicitudes rechazadas</td></tr>
-						}
-					</tbody>
-				</table>
-				@if (paginated('rechazado').length) {
-					<span class="pagination-info">Página {{ currentPage()['rechazado'] || 1 }} de {{ totalPages('rechazado') }}</span>
-					<app-pagination [currentPage]="currentPage()['rechazado'] || 1" [totalPages]="totalPages('rechazado')" (pageChange)="goToPage('rechazado', $event)"/>
-				}
-			</div>
-		}
+			}
+		</div>
 	</div>
 
 	<div class="modal fade" id="modalDetalle" tabindex="-1" data-bs-backdrop="static">
@@ -246,46 +156,75 @@
 			<div class="modal-content modal-content--custom">
 				<div class="modal-header-custom">
 					<h5 class="modal-title-custom">Detalle de Solicitud</h5>
-					<button type="button" class="btn-close-custom" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button>
+					<button type="button" class="btn-close-custom" (click)="cerrarDetalle()"><i class="bi bi-x-lg"></i></button>
 				</div>
-				@if (selectedSolicitud(); as s) {
+				@if (selectedDetail(); as d) {
 					<div class="modal-body-custom">
 						<div class="detail-grid">
 							<div class="detail-field">
-								<span class="detail-label">Institución</span>
-								<span class="detail-value">{{ s.institucion }}</span>
+								<span class="detail-label">Empresa</span>
+								<span class="detail-value">{{ d.contact?.companyName }}</span>
+							</div>
+							<div class="detail-field">
+								<span class="detail-label">RUC</span>
+								<span class="detail-value">{{ d.contact?.taxId }}</span>
 							</div>
 							<div class="detail-field">
 								<span class="detail-label">Contacto</span>
-								<span class="detail-value">{{ s.contacto }}</span>
+								<span class="detail-value">{{ d.contact?.name }} {{ d.contact?.lastName }}</span>
 							</div>
 							<div class="detail-field">
-								<span class="detail-label">Plan solicitado</span>
-								<span class="detail-value">{{ s.plan }}</span>
+								<span class="detail-label">Email</span>
+								<span class="detail-value">{{ d.contact?.email }}</span>
+							</div>
+							<div class="detail-field">
+								<span class="detail-label">Teléfono</span>
+								<span class="detail-value">{{ d.contact?.phoneNumber }}</span>
+							</div>
+							<div class="detail-field">
+								<span class="detail-label">Tipo</span>
+								<span class="detail-value">{{ typeLabel(d.type) }}</span>
 							</div>
 							<div class="detail-field">
 								<span class="detail-label">Fecha de solicitud</span>
-								<span class="detail-value">{{ s.fecha }}</span>
+								<span class="detail-value">{{ d.createdAt | slice:0:10 }}</span>
 							</div>
 							<div class="detail-field">
 								<span class="detail-label">Estado actual</span>
-								<span class="status-badge" [class.status-badge--pending]="s.estado === 'pendiente'" [class.status-badge--approved]="s.estado === 'aprobado'" [class.status-badge--rejected]="s.estado === 'rechazado'">
-									{{ s.estado === 'pendiente' ? 'Pendiente' : s.estado === 'aprobado' ? 'Aprobado' : 'Rechazado' }}
-								</span>
+								<span class="status-badge">{{ statusLabel(d.status) }}</span>
+							</div>
+							<div class="detail-field">
+								<span class="detail-label">Mensaje</span>
+								<span class="detail-value">{{ d.message }}</span>
+							</div>
+						</div>
+
+						<div class="comment-thread">
+							<h6>Comentarios</h6>
+							@for (c of d.comments; track c.id) {
+								<div class="comment-item">
+									<p class="comment-text">{{ c.comment }}</p>
+									<span class="comment-meta">{{ c.createdAt | slice:0:16 }}</span>
+								</div>
+							} @empty {
+								<p class="text-muted">Sin comentarios todavía.</p>
+							}
+
+							<div class="comment-new">
+								<label for="nuevo-comentario" class="visually-hidden">Agregar un comentario</label>
+								<textarea id="nuevo-comentario" rows="2" placeholder="Agregar un comentario..." [value]="newComment()" (input)="newComment.set($any($event.target).value)"></textarea>
+								<button type="button" class="btn btn-primary-custom" (click)="enviarComentario()">Comentar</button>
 							</div>
 						</div>
 					</div>
 					<div class="modal-footer-custom">
-						<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cerrar</button>
-						@if (s.estado === 'pendiente') {
-							<button type="button" class="btn btn-approve-custom" data-bs-dismiss="modal" (click)="confirmarAprobar(s.id)"><i class="bi bi-check-lg me-1"></i>Aprobar</button>
-							<button type="button" class="btn btn-reject-custom" data-bs-dismiss="modal" (click)="confirmarRechazar(s.id)"><i class="bi bi-x-lg me-1"></i>Rechazar</button>
+						<button type="button" class="btn btn-secondary-custom" (click)="cerrarDetalle()">Cerrar</button>
+						@if (d.status === 'PENDING' || d.status === 'OBSERVADO') {
+							<button type="button" class="btn btn-approve-custom" (click)="confirmarAprobar(d.id)"><i class="bi bi-check-lg me-1"></i>Aprobar</button>
+							<button type="button" class="btn btn-reject-custom" (click)="confirmarRechazar(d.id)"><i class="bi bi-x-lg me-1"></i>Rechazar</button>
 						}
-						@if (s.estado === 'aprobado') {
-							<button type="button" class="btn btn-reject-custom" data-bs-dismiss="modal" (click)="confirmarRechazar(s.id)"><i class="bi bi-x-lg me-1"></i>Rechazar</button>
-						}
-						@if (s.estado === 'rechazado') {
-							<button type="button" class="btn btn-approve-custom" data-bs-dismiss="modal" (click)="confirmarReconsiderar(s.id)"><i class="bi bi-arrow-counterclockwise me-1"></i>Reconsiderar</button>
+						@if (d.status === 'REJECTED') {
+							<button type="button" class="btn btn-approve-custom" (click)="confirmarReconsiderar(d.id)"><i class="bi bi-arrow-counterclockwise me-1"></i>Reconsiderar</button>
 						}
 					</div>
 				}
@@ -301,10 +240,12 @@
 				</div>
 				<div class="modal-body-custom">
 					<p class="confirm-text">{{ confirmAction()?.label }}</p>
+					<label for="motivo-accion" class="visually-hidden">Motivo (opcional)</label>
+					<textarea id="motivo-accion" rows="2" placeholder="Motivo (opcional)" [value]="motivoAccion()" (input)="motivoAccion.set($any($event.target).value)"></textarea>
 				</div>
 				<div class="modal-footer-custom">
-					<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-primary-custom" data-bs-dismiss="modal" (click)="ejecutarAccion()">Confirmar</button>
+					<button type="button" class="btn btn-secondary-custom" (click)="cancelarAccion()">Cancelar</button>
+					<button type="button" class="btn btn-primary-custom" (click)="ejecutarAccion()">Confirmar</button>
 				</div>
 			</div>
 		</div>

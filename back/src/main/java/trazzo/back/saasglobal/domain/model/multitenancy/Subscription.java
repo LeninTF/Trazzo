@@ -27,6 +27,7 @@ public class Subscription {
     private LocalDate dateEnd;
     private SubscriptionStatus status;
     private BigDecimal purchasePrice;
+    private String mpPreapprovalId;
     private LocalDateTime createdAt;
     private List<SaasGlobalDomainEvent> domainEvents = new ArrayList<>();
     Clock clock = Clock.systemDefaultZone();
@@ -40,6 +41,7 @@ public class Subscription {
             LocalDate dateEnd,
             SubscriptionStatus status,
             BigDecimal purchasePrice,
+            String mpPreapprovalId,
             LocalDateTime createdAt
     ) {
         this.id = id != null ? id : UUID.randomUUID().toString();
@@ -49,6 +51,7 @@ public class Subscription {
         this.dateEnd = dateEnd;
         this.status = requireNonNull(status, "status");
         this.purchasePrice = requirePositive(purchasePrice);
+        this.mpPreapprovalId = mpPreapprovalId;
         this.createdAt = createdAt;
     }
 
@@ -59,7 +62,7 @@ public class Subscription {
             LocalDate dateStart
     ) {
         return new Subscription(null, planId, tenantId, dateStart, null,
-                SubscriptionStatus.TRIAL, purchasePrice, LocalDateTime.now(Clock.systemDefaultZone()));
+                SubscriptionStatus.TRIAL, purchasePrice, null, LocalDateTime.now(Clock.systemDefaultZone()));
     }
 
     @SuppressWarnings("java:S107")
@@ -71,9 +74,10 @@ public class Subscription {
             LocalDate dateEnd,
             SubscriptionStatus status,
             BigDecimal purchasePrice,
+            String mpPreapprovalId,
             LocalDateTime createdAt
     ) {
-        return new Subscription(id, planId, tenantId, dateStart, dateEnd, status, purchasePrice, createdAt);
+        return new Subscription(id, planId, tenantId, dateStart, dateEnd, status, purchasePrice, mpPreapprovalId, createdAt);
     }
 
     public void activate(LocalDate dateEnd) {
@@ -84,6 +88,10 @@ public class Subscription {
         this.dateEnd = requireNonNull(dateEnd, "dateEnd");
         this.status = SubscriptionStatus.ACTIVE;
         recordEvent(new SubscriptionActivatedEvent(id, tenantId, planId, LocalDateTime.now(clock)));
+    }
+
+    public void linkMercadoPago(String mpPreapprovalId) {
+        this.mpPreapprovalId = requireText(mpPreapprovalId, "mpPreapprovalId");
     }
 
     public void suspend() {

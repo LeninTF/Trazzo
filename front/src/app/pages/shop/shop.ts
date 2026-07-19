@@ -1,5 +1,9 @@
 import { CommonModule, Location } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { SaasService } from '../../api/services/saas.service';
+import { RedirectService } from '../../services/redirect.service';
+import type { SaasPlanResult, ShopCheckoutRequest } from '../../api/types';
 
 type PaymentFormState = {
   firstName: string;
@@ -31,9 +35,17 @@ type PaymentFormState = {
   styleUrl: './shop.css',
 })
 export class Shop {
-  constructor(private readonly location: Location) {}
+  private readonly location = inject(Location);
+  private readonly route = inject(ActivatedRoute);
+  private readonly saasService = inject(SaasService);
+  private readonly redirectService = inject(RedirectService);
 
   protected readonly activeSection = signal(1);
+  protected readonly plan = signal<SaasPlanResult | null>(null);
+  protected readonly submitting = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
+
+  private readonly planId: number | null;
 
   protected readonly formState = signal<PaymentFormState>({
     firstName: '',
@@ -57,6 +69,21 @@ export class Shop {
     anotherAdmin: false,
     terms: false,
   });
+
+  constructor() {
+    const planIdParam = this.route.snapshot.queryParamMap.get('planId');
+    this.planId = planIdParam ? Number(planIdParam) : null;
+    this.loadPlan();
+  }
+
+  private loadPlan(): void {
+    this.saasService.listPublicPlans().subscribe({
+      next: (plans) => {
+        const match = this.planId != null ? plans.find((p) => p.id === this.planId) : undefined;
+        this.plan.set(match ?? plans[0] ?? null);
+      },
+    });
+  }
 
   protected readonly completedFields = computed(() => {
     const state = this.formState();
@@ -154,5 +181,60 @@ export class Shop {
     if (field === 'anotherAdmin') {
       this.activeSection.set(checked ? 4 : 3);
     }
+  }
+
+  protected submitCheckout(event: Event): void {
+    event.preventDefault();
+    this.errorMessage.set(null);
+
+    const plan = this.plan();
+    const state = this.formState();
+
+    if (!plan) {
+      this.errorMessage.set('No se pudo cargar el plan seleccionado.');
+      return;
+    }
+    if (!state.terms) {
+      this.errorMessage.set('Debes aceptar los términos y condiciones para continuar.');
+      return;
+    }
+
+    const request: ShopCheckoutRequest = {
+      planId: plan.id,
+      firstName: state.firstName,
+      lastNamePaterno: state.lastNamePaterno,
+      lastNameMaterno: state.lastNameMaterno,
+      documentType: state.documentType,
+      documentNumber: state.documentNumber,
+      email: state.email,
+      phone: state.phone,
+      ruc: state.ruc,
+      companyName: state.companyName,
+      businessName: state.businessName,
+      address: state.address,
+      anotherAdmin: state.anotherAdmin,
+      ...(state.anotherAdmin
+        ? {
+            adminFirstName: state.adminFirstName,
+            adminLastNamePaterno: state.adminLastNamePaterno,
+            adminLastNameMaterno: state.adminLastNameMaterno,
+            adminDocumentType: state.adminDocumentType,
+            adminDocumentNumber: state.adminDocumentNumber,
+            adminEmail: state.adminEmail,
+            adminPhone: state.adminPhone,
+          }
+        : {}),
+    };
+
+    this.submitting.set(true);
+    this.saasService.checkout(request).subscribe({
+      next: (response) => {
+        this.redirectService.redirectTo(response.initPoint);
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.errorMessage.set('No se pudo iniciar el pago. Verifica los datos e inténtalo nuevamente.');
+      },
+    });
   }
 }

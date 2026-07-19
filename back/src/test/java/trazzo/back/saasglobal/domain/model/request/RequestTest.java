@@ -47,8 +47,8 @@ class RequestTest {
         Request r = Request.create(Request.Type.TRIAL, "titulo", "mensaje");
         assertEquals(Request.Status.PENDING, r.getStatus());
 
-        r.transition(Request.Status.IN_REVIEW);
-        assertEquals(Request.Status.IN_REVIEW, r.getStatus());
+        r.transition(Request.Status.OBSERVADO);
+        assertEquals(Request.Status.OBSERVADO, r.getStatus());
 
         r.transition(Request.Status.APPROVED);
         assertEquals(Request.Status.APPROVED, r.getStatus());

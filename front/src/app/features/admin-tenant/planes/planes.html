@@ -38,26 +38,30 @@
         <div class="planes-card__body">
           <div class="planes-grid-cards">
             @for (plan of planes(); track plan.id) {
-              <div class="plan-card" [class.plan-card--featured]="planActualId === plan.id" [class.plan-card--active]="planSeleccionadoId === plan.id" (click)="seleccionarPlan(plan)" (keydown.enter)="seleccionarPlan(plan)" tabindex="0" role="button">
-                @if (planActualId === plan.id) {
+              <div class="plan-card" [class.plan-card--featured]="planActual()?.id === plan.id" [class.plan-card--active]="planSeleccionadoId === plan.id" (click)="seleccionarPlan(plan)" (keydown.enter)="seleccionarPlan(plan)" tabindex="0" role="button">
+                @if (planActual()?.id === plan.id) {
                   <span class="plan-card__badge">Tu plan actual</span>
                 }
                 <div class="plan-card__header">
-                  <h4 class="plan-card__title">{{ plan.nombre }}</h4>
+                  <h4 class="plan-card__title">{{ plan.name }}</h4>
                   <div class="plan-card__price">
-                    <h2 class="plan-card__amount">{{ plan.precio | currency:'S/':'symbol':'1.0-0' }}</h2>
+                    <h2 class="plan-card__amount">{{ plan.price | currency:'S/':'symbol':'1.0-0' }}</h2>
                     <small class="plan-card__period">/ mes</small>
                   </div>
                 </div>
-                <p class="plan-card__description">{{ plan.descripcion }}</p>
                 <ul class="plan-card__features">
-                  @for (feature of plan.caracteristicas; track feature) {
+                  @for (feature of featureLabel(plan); track feature) {
                     <li class="plan-card__feature">
                       <i class="bi bi-check-circle-fill me-2"></i>
                       {{ feature }}
                     </li>
                   }
                 </ul>
+              </div>
+            } @empty {
+              <div class="empty-state">
+                <i class="bi bi-stars"></i>
+                <p>No hay planes disponibles</p>
               </div>
             }
           </div>
@@ -78,22 +82,14 @@
             <div class="metric-usage__item">
               <div class="metric-usage__header">
                 <span>Usuarios activos</span>
-                <strong>{{ metricas.usuariosActivos }} / {{ planActual?.limiteUsuarios || metricas.limiteUsuarios }}</strong>
+                <strong>{{ usuariosActivos() }}{{ limiteUsuarios ? ' / ' + limiteUsuarios : '' }}</strong>
               </div>
-              <small class="text-muted">{{ porcentajeUsuarios }}% uso</small>
-              <div class="progress mt-2">
-                <div class="progress-bar bg-success" [style.width]="porcentajeUsuarios + '%'"></div>
-              </div>
-            </div>
-            <div class="metric-usage__item mt-4">
-              <div class="metric-usage__header">
-                <span>Almacenamiento</span>
-                <strong>{{ metricas.almacenamientoUsado }} GB / {{ planActual?.limiteAlmacenamiento || metricas.limiteAlmacenamiento }} GB</strong>
-              </div>
-              <small class="text-muted">{{ porcentajeAlmacenamiento }}% uso</small>
-              <div class="progress mt-2">
-                <div class="progress-bar bg-primary" [style.width]="porcentajeAlmacenamiento + '%'"></div>
-              </div>
+              @if (porcentajeUsuarios !== null) {
+                <small class="text-muted">{{ porcentajeUsuarios }}% uso</small>
+                <div class="progress mt-2">
+                  <div class="progress-bar bg-success" [style.width]="porcentajeUsuarios + '%'"></div>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -125,19 +121,19 @@
           @for (factura of facturas(); track factura.id) {
             <div class="factura-card" [class.factura-card--active]="facturaSeleccionadaId === factura.id" (click)="seleccionarFactura(factura)" (keydown.enter)="seleccionarFactura(factura)" tabindex="0" role="button">
               <div class="factura-card__header">
-                <h6 class="factura-card__title">{{ factura.codigo }}</h6>
-                <span class="factura-card__plan">{{ factura.plan }}</span>
+                <h6 class="factura-card__title">{{ factura.invoiceSeries }}-{{ factura.consecutiveNumber }}</h6>
+                <span class="factura-card__plan">{{ factura.clientName }}</span>
               </div>
               <div class="factura-card__body">
                 <p class="factura-card__date">
-                  <i class="bi bi-calendar3 me-2"></i> {{ factura.fecha | date:'dd MMM, yyyy' }}
+                  <i class="bi bi-calendar3 me-2"></i> {{ factura.createdAt | date:'dd MMM, yyyy' }}
                 </p>
                 <p class="factura-card__amount">
-                  <i class="bi bi-cash-stack me-2"></i> {{ factura.monto | currency:'S/':'symbol':'1.2-2' }}
+                  <i class="bi bi-cash-stack me-2"></i> {{ factura.total | currency:'S/':'symbol':'1.2-2' }}
                 </p>
-                <span class="estado-badge" [class.estado-pagada]="factura.estado === 'Pagada'" [class.estado-pendiente]="factura.estado === 'Pendiente'" [class.estado-vencida]="factura.estado === 'Vencida'">
+                <span class="estado-badge" [class.estado-pagada]="factura.paymentStatus === 'COMPLETADO'" [class.estado-pendiente]="factura.paymentStatus === 'PENDIENTE'" [class.estado-vencida]="factura.paymentStatus === 'FALLIDO' || factura.paymentStatus === 'REEMBOLSADO'">
                   <span class="estado-dot"></span>
-                  {{ factura.estado }}
+                  {{ estadoLabels[factura.paymentStatus] ?? factura.paymentStatus }}
                 </span>
               </div>
             </div>
@@ -175,11 +171,11 @@
         </button>
       </div>
       <div class="modal-body">
-        <p>¿Está seguro de que desea cambiar al plan <strong>{{ planSeleccionado.nombre }}</strong>?</p>
-        <p class="text-muted small">El nuevo precio será de <strong>{{ planSeleccionado.precio | currency:'S/':'symbol':'1.2-2' }}/mes</strong> y se aplicará a partir del próximo ciclo de facturación.</p>
+        <p>¿Está seguro de que desea cambiar al plan <strong>{{ planSeleccionado.name }}</strong>?</p>
+        <p class="text-muted small">El nuevo precio será de <strong>{{ planSeleccionado.price | currency:'S/':'symbol':'1.2-2' }}/mes</strong>.</p>
         <div class="alert alert-info mt-3">
           <i class="bi bi-info-circle me-2"></i>
-          El cambio de plan no afectará los datos existentes de su organización.
+          El cambio de plan de autoservicio aún no está disponible; se te indicará cómo contactar a soporte.
         </div>
       </div>
       <div class="modal-footer">
@@ -203,7 +199,7 @@
           </div>
           <div>
             <h2 class="modal-title">Detalle de Factura</h2>
-            <span class="modal-id">{{ facturaSeleccionada.codigo }}</span>
+            <span class="modal-id">{{ facturaSeleccionada.invoiceSeries }}-{{ facturaSeleccionada.consecutiveNumber }}</span>
           </div>
         </div>
         <button class="modal-close" (click)="cerrarModalFactura()">
@@ -213,38 +209,38 @@
       <div class="modal-body">
         <div class="detail-grid">
           <div class="detail-field">
-            <span class="detail-label">Plan</span>
-            <span class="detail-value">{{ facturaSeleccionada.plan }}</span>
+            <span class="detail-label">Cliente</span>
+            <span class="detail-value">{{ facturaSeleccionada.clientName }}</span>
           </div>
           <div class="detail-field">
             <span class="detail-label">Estado</span>
-            <span class="estado-badge" [class.estado-pagada]="facturaSeleccionada.estado === 'Pagada'" [class.estado-pendiente]="facturaSeleccionada.estado === 'Pendiente'">
+            <span class="estado-badge" [class.estado-pagada]="facturaSeleccionada.paymentStatus === 'COMPLETADO'" [class.estado-pendiente]="facturaSeleccionada.paymentStatus === 'PENDIENTE'">
               <span class="estado-dot"></span>
-              {{ facturaSeleccionada.estado }}
+              {{ estadoLabels[facturaSeleccionada.paymentStatus] ?? facturaSeleccionada.paymentStatus }}
             </span>
           </div>
           <div class="detail-field">
             <span class="detail-label">Fecha de emisión</span>
-            <span class="detail-value">{{ facturaSeleccionada.fecha | date:'dd/MM/yyyy' }}</span>
+            <span class="detail-value">{{ facturaSeleccionada.createdAt | date:'dd/MM/yyyy' }}</span>
           </div>
           <div class="detail-field">
             <span class="detail-label">Monto total</span>
-            <span class="detail-value">{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</span>
-          </div>
-          <div class="detail-field detail-field--full">
-            <span class="detail-label">Método de pago</span>
-            <span class="detail-value">Tarjeta de crédito ···· 4242</span>
+            <span class="detail-value">{{ facturaSeleccionada.total | currency:'S/':'symbol':'1.2-2' }}</span>
           </div>
         </div>
         <div class="detail-section">
           <h3 class="detail-section-title">Resumen de cargos</h3>
           <div class="summary-item">
-            <span>Suscripción mensual - {{ facturaSeleccionada.plan }}</span>
-            <strong>{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</strong>
+            <span>Subtotal</span>
+            <strong>{{ facturaSeleccionada.subTotal | currency:'S/':'symbol':'1.2-2' }}</strong>
+          </div>
+          <div class="summary-item">
+            <span>IGV</span>
+            <strong>{{ facturaSeleccionada.taxAmount | currency:'S/':'symbol':'1.2-2' }}</strong>
           </div>
           <div class="summary-item summary-item--total">
             <span>Total</span>
-            <strong>{{ facturaSeleccionada.monto | currency:'S/':'symbol':'1.2-2' }}</strong>
+            <strong>{{ facturaSeleccionada.total | currency:'S/':'symbol':'1.2-2' }}</strong>
           </div>
         </div>
       </div>

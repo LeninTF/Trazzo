@@ -282,8 +282,8 @@
 					<p class="confirm-text">¿Estás seguro de eliminar el plan <strong>{{ planSeleccionado()?.nombre }}</strong>? Esta acción no se puede deshacer.</p>
 				</div>
 				<div class="modal-footer-custom">
-					<button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancelar</button>
-					<button type="button" class="btn btn-reject-custom" data-bs-dismiss="modal" (click)="eliminarPlan()">Eliminar</button>
+					<button type="button" class="btn btn-secondary-custom" (click)="cancelarEliminar()">Cancelar</button>
+					<button type="button" class="btn btn-reject-custom" (click)="eliminarPlan()">Eliminar</button>
 				</div>
 			</div>
 		</div>
@@ -294,7 +294,7 @@
 			<div class="modal-content modal-content--custom">
 				<div class="modal-header-custom">
 					<h5 class="modal-title-custom">Detalle de Suscripción</h5>
-					<button type="button" class="btn-cancel" data-bs-dismiss="modal">
+					<button type="button" class="btn-cancel" (click)="cerrarDetalleSuscripcion()">
 						<i class="bi bi-x-lg"></i>
 					</button>
 				</div>
@@ -332,7 +332,7 @@
 					}
 				</div>
 				<div class="modal-footer-custom">
-					<button type="button" class="btn-primary" data-bs-dismiss="modal">
+					<button type="button" class="btn-primary" (click)="cerrarDetalleSuscripcion()">
 						<i class="bi bi-check-lg"></i> Cerrar
 					</button>
 				</div>

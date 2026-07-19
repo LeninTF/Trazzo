@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,26 +16,21 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
-import trazzo.back.shared.security.EncryptionService;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class TenantJdbcRepositoryAdapterTest {
 
     @Mock JdbcTemplate jdbc;
-    @Mock EncryptionService encryptionService;
+    @Mock NamedParameterJdbcTemplate namedJdbc;
     @InjectMocks TenantJdbcRepositoryAdapter adapter;
 
-    @BeforeEach
-    void setUp() {
-        when(encryptionService.encrypt(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(encryptionService.decrypt(any())).thenAnswer(inv -> inv.getArgument(0));
-    }
-
     private static TenantSettings settings() {
-        return TenantSettings.of("t-1", "localhost", "5432", "db", "user", "pass");
+        return TenantSettings.of("t-1", "tenant_acme");
     }
 
     @Test
@@ -97,5 +92,105 @@ class TenantJdbcRepositoryAdapterTest {
         when(jdbc.queryForObject(anyString(), eq(Integer.class), eq("acme"))).thenReturn(null);
 
         assertFalse(adapter.existsBySubDomain("acme"));
+    }
+
+    @Test
+    void purgeById_deletesById() {
+        adapter.purgeById("tenant-1");
+
+        verify(jdbc).update(anyString(), eq("tenant-1"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAbandonedTrials_returnsEmptyListWhenNoneFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        List<Tenant> result = adapter.findAbandonedTrials(LocalDateTime.now());
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findAll_returnsEmptyListWhenNoRows() {
+        when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+
+        List<Tenant> result = adapter.findAll(null, null, null, 0, 20);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void countAll_returnsZeroWhenNull() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(null);
+
+        assertEquals(0L, adapter.countAll(null, null, null));
+    }
+
+    @Test
+    void countAll_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(4L);
+
+        assertEquals(4L, adapter.countAll("acme", 1, "ACTIVE"));
+    }
+
+    @Test
+    void countTotal_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(10L);
+
+        assertEquals(10L, adapter.countTotal());
+    }
+
+    @Test
+    void countActive_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(7L);
+
+        assertEquals(7L, adapter.countActive());
+    }
+
+    @Test
+    void countCreatedSince_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(3L);
+
+        assertEquals(3L, adapter.countCreatedSince(LocalDateTime.now().minusDays(30)));
+    }
+
+    @Test
+    void countTotalBefore_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(6L);
+
+        assertEquals(6L, adapter.countTotalBefore(LocalDateTime.now().minusDays(30)));
+    }
+
+    @Test
+    void countExistedBefore_returnsCount() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(8L);
+
+        assertEquals(8L, adapter.countExistedBefore(LocalDateTime.now().minusDays(30)));
+    }
+
+    @Test
+    void countDeletedBetween_returnsCountWithOpenUpperBound() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(2L);
+
+        assertEquals(2L, adapter.countDeletedBetween(LocalDateTime.now().minusDays(30), null));
+    }
+
+    @Test
+    void countDeletedBetween_returnsZeroWhenNull() {
+        when(namedJdbc.queryForObject(anyString(), any(MapSqlParameterSource.class), eq(Long.class)))
+                .thenReturn(null);
+
+        assertEquals(0L, adapter.countDeletedBetween(LocalDateTime.now().minusDays(60), LocalDateTime.now().minusDays(30)));
     }
 }
