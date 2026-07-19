@@ -20,6 +20,7 @@ import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.RequestCommentResult;
 import trazzo.back.saasglobal.application.dto.result.RequestDetailResult;
 import trazzo.back.saasglobal.application.dto.result.RequestResult;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.RequestCommentRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.RequestContactRepositoryPort;
@@ -42,6 +43,7 @@ class RequestServiceTest {
     @Mock UserRequestCommentRepositoryPort userRequestCommentRepository;
     @Mock RequestRecordRepositoryPort requestRecordRepository;
     @Mock EmailService emailService;
+    @Mock AppConfigPort appConfig;
 
     @InjectMocks RequestService service;
 
@@ -78,6 +80,29 @@ class RequestServiceTest {
         assertEquals("TRIAL", result.type());
         assertEquals("ana@example.com", result.contact().email());
         verify(emailService).send(any(), anyString(), anyString());
+    }
+
+    @Test
+    void submit_escapesHtmlInNotificationEmailBody() {
+        when(requestContactRepository.existsRecentByTaxId(anyString(), any())).thenReturn(false);
+        when(requestContactRepository.countByTaxId(anyString())).thenReturn(0L);
+        when(requestRepository.save(any())).thenAnswer(inv -> {
+            Request r = inv.getArgument(0);
+            return Request.restore(1, r.getType(), r.getTitle(), r.getMessage(), r.getStatus(), r.getCreatedAt(), r.getUpdatedAt());
+        });
+        when(requestContactRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var command = new SubmitRequestCommand("trial", "<script>alert(1)</script>", "Perez",
+                "ana@example.com", "999999999", "20123456789", "Acme SAC",
+                "Hola <img src=x onerror=alert(1)>");
+        service.submit(command);
+
+        var bodyCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).send(any(), anyString(), bodyCaptor.capture());
+        String body = bodyCaptor.getValue();
+        assertFalse(body.contains("<script>"));
+        assertFalse(body.contains("<img"));
+        assertTrue(body.contains("&lt;script&gt;"));
     }
 
     @Test
@@ -275,6 +300,24 @@ class RequestServiceTest {
         assertEquals("admin-1", result.authorUserId());
         verify(userRequestCommentRepository).save(any());
         verify(emailService).send(org.mockito.ArgumentMatchers.eq("ana@example.com"), anyString(), anyString());
+    }
+
+    @Test
+    void addComment_escapesHtmlInNotificationEmailBody() {
+        when(requestCommentRepository.save(any())).thenAnswer(inv -> {
+            RequestComments c = inv.getArgument(0);
+            return RequestComments.restore(7, c.getRequestId(), c.getRequestContactId(), c.getComment(), c.getCreatedAt());
+        });
+        when(requestContactRepository.findByRequestId(1)).thenReturn(Optional.of(contact(1)));
+
+        var command = new AddCommentCommand(1, "admin-1", "<script>alert(1)</script>");
+        service.addComment(command);
+
+        var bodyCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).send(org.mockito.ArgumentMatchers.eq("ana@example.com"), anyString(), bodyCaptor.capture());
+        String body = bodyCaptor.getValue();
+        assertFalse(body.contains("<script>"));
+        assertTrue(body.contains("&lt;script&gt;"));
     }
 
     @Test

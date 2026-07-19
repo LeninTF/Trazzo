@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import type { SaasPlanResult, CreateSaasPlanRequest, UpdateSaasPlanRequest, InvoiceProfile, InvoiceListResponse, SubscriptionListResponse, HoldingProfile } from '../types';
+import type { SaasPlanResult, CreateSaasPlanRequest, UpdateSaasPlanRequest, InvoiceProfile, InvoiceListResponse, SubscriptionListResponse, HoldingProfile, ShopCheckoutRequest, ShopCheckoutResponse } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
 @Injectable({ providedIn: 'root' })
@@ -14,6 +14,13 @@ export class SaasService {
   /** Public, unauthenticated: used by the marketing-site pricing section. */
   listPublicPlans(): Observable<SaasPlanResult[]> {
     return this.http.get<SaasPlanResult[]>(`${this.apiBase}/public/plans`);
+  }
+
+  // ========== SHOP CHECKOUT ==========
+
+  /** Public, unauthenticated: self-signup flow at /shop. */
+  checkout(body: ShopCheckoutRequest): Observable<ShopCheckoutResponse> {
+    return this.http.post<ShopCheckoutResponse>(`${this.apiBase}/shop/checkout`, body);
   }
 
   listPlans(): Observable<SaasPlanResult[]> {

@@ -35,7 +35,8 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
         TenantBillingController.class,
         SubscriptionController.class,
         PublicPlanController.class,
-        SaasTenantController.class
+        SaasTenantController.class,
+        ShopCheckoutController.class
 })
 public class SaasGlobalExceptionHandler {
 

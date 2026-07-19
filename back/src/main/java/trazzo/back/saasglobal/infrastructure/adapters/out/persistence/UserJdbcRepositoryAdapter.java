@@ -64,6 +64,21 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
     }
 
     @Override
+    public Optional<User> findByTenantId(String tenantId) {
+        List<User> rows = jdbc.query(
+                BASE_SELECT + "WHERE u.tenant_id = ?::uuid AND u.deleted_at IS NULL\n" + GROUP_BY,
+                this::mapRow, tenantId);
+        return rows.stream().findFirst();
+    }
+
+    @Override
+    public List<User> findAllByTenantId(String tenantId) {
+        return jdbc.query(
+                BASE_SELECT + "WHERE u.tenant_id = ?::uuid\n" + GROUP_BY,
+                this::mapRow, tenantId);
+    }
+
+    @Override
     public List<User> findAll(String search, int page, int size) {
         MapSqlParameterSource params = filterParams(search)
                 .addValue("limit", size)
@@ -85,7 +100,7 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
         jdbc.update("""
                 INSERT INTO users (id, person_id, tenant_id, email, phone,
                                    password, must_change_password, created_at, updated_at)
-                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?::uuid, ?, ?::uuid, ?, ?, ?, ?, ?, ?)
                 """,
                 user.getId(), user.getPersonId(), user.getTenantId(), user.getEmail(),
                 user.getPhone(), user.getPassword(), user.isMustChangePassword(),

@@ -33,7 +33,7 @@ class SubscriptionJdbcRepositoryAdapterTest {
 
     private static Subscription trialSub() {
         return Subscription.restore("sub-1", 1, "tenant-1",
-                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, LocalDateTime.now());
+                LocalDate.now(), null, SubscriptionStatus.TRIAL, BigDecimal.ZERO, null, LocalDateTime.now());
     }
 
     @Test
@@ -49,7 +49,7 @@ class SubscriptionJdbcRepositoryAdapterTest {
     void save_withDateEndReturnsSameSubscription() {
         var sub = Subscription.restore("sub-2", 1, "tenant-1",
                 LocalDate.now(), LocalDate.now().plusMonths(1),
-                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), LocalDateTime.now());
+                SubscriptionStatus.ACTIVE, new BigDecimal("29.99"), "mp-preapproval-1", LocalDateTime.now());
 
         var result = adapter.save(sub);
 
@@ -78,6 +78,28 @@ class SubscriptionJdbcRepositoryAdapterTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_returnsEmptyWhenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+
+        Optional<Subscription> result = adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void findActiveByTenantIdForUpdate_locksTheRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any())).thenReturn(List.of());
+        var sqlCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+
+        adapter.findActiveByTenantIdForUpdate("tenant-1");
+
+        verify(jdbc).query(sqlCaptor.capture(), any(RowMapper.class), any());
+        assertTrue(sqlCaptor.getValue().contains("FOR UPDATE"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void findAll_returnsEmptyListWhenNoRows() {
         when(namedJdbc.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn(List.of());
@@ -99,5 +121,12 @@ class SubscriptionJdbcRepositoryAdapterTest {
         when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(5L);
 
         assertEquals(5L, adapter.countAll());
+    }
+
+    @Test
+    void deleteByTenantId_deletesByTenantId() {
+        adapter.deleteByTenantId("tenant-1");
+
+        verify(jdbc).update(anyString(), eq("tenant-1"));
     }
 }

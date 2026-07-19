@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.dto.command.AssignSaasUserRolesCommand;
 import trazzo.back.saasglobal.application.dto.command.CreateSaasUserCommand;
@@ -14,6 +13,7 @@ import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.SaasUserResult;
 import trazzo.back.saasglobal.application.port.in.SaasUserUseCase;
 import trazzo.back.saasglobal.application.port.out.EmailService;
+import trazzo.back.saasglobal.application.port.out.PasswordHasherPort;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.RoleMasterRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
@@ -36,7 +36,7 @@ public class SaasUserService implements SaasUserUseCase {
     private final PersonRepositoryPort personRepository;
     private final UserRolesMasterRepositoryPort userRolesRepository;
     private final RoleMasterRepositoryPort roleRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHasherPort passwordHasher;
     private final EmailService emailService;
     private final SecureRandom random = new SecureRandom();
 
@@ -63,7 +63,7 @@ public class SaasUserService implements SaasUserUseCase {
 
         boolean generated = command.password() == null || command.password().isBlank();
         String rawPassword = generated ? generateTempPassword() : command.password();
-        String encodedPassword = passwordEncoder.encode(rawPassword);
+        String encodedPassword = passwordHasher.hash(rawPassword);
 
         User user = userRepository.save(User.create(
                 person.getId(), null, command.email(), command.phone(), encodedPassword, generated));

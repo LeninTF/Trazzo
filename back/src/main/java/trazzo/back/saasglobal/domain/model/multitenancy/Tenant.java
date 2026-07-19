@@ -109,6 +109,11 @@ public class Tenant {
         this.updatedAt = LocalDateTime.now(clock);
     }
 
+    public void changePlan(Integer planId) {
+        this.planId = requireNonNull(planId, "planId");
+        this.updatedAt = LocalDateTime.now(clock);
+    }
+
     public void assignBranding(TenantBranding branding) {
         this.branding = branding;
         this.updatedAt = LocalDateTime.now(clock);

@@ -256,4 +256,19 @@ class TenantTest {
         tenant.activate();
         assertThrows(InvalidTenantTransitionException.class, tenant::reactivate);
     }
+
+    /* == changePlan == */
+
+    @Test
+    void changePlan_updatesPlanId() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.changePlan(2);
+        assertEquals(2, tenant.getPlanId());
+    }
+
+    @Test
+    void changePlan_throwsWhenPlanIdNull() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        assertThrows(TenantValidationException.class, () -> tenant.changePlan(null));
+    }
 }

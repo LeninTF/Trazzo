@@ -72,6 +72,25 @@ class TenantSchemaProvisioningAdapterTest {
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
+
+        // The schema wasn't created by this call (it already existed), so it must not be
+        // dropped — that would destroy the other tenant's schema on a name collision.
+        verify(statement, never()).execute("DROP SCHEMA IF EXISTS \"tenant_acme\" CASCADE");
+    }
+
+    @Test
+    void provisionExisting_dropsSchemaWhenPopulatingItFailsAfterCreation() throws SQLException {
+        when(rawDataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.execute("SET search_path TO \"tenant_acme\", public"))
+                .thenThrow(new SQLException("boom"));
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        var settings = TenantSettings.of("t-1", "tenant_acme");
+
+        assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
+
+        verify(statement).execute("CREATE SCHEMA \"tenant_acme\"");
+        verify(statement).execute("DROP SCHEMA IF EXISTS \"tenant_acme\" CASCADE");
     }
 
     @Test

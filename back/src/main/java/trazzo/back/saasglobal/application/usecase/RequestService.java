@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.dto.command.AddCommentCommand;
 import trazzo.back.saasglobal.application.dto.command.ChangeRequestStatusCommand;
@@ -16,6 +15,7 @@ import trazzo.back.saasglobal.application.dto.result.RequestDetailResult;
 import trazzo.back.saasglobal.application.dto.result.RequestRecordResult;
 import trazzo.back.saasglobal.application.dto.result.RequestResult;
 import trazzo.back.saasglobal.application.port.in.RequestUseCase;
+import trazzo.back.saasglobal.application.port.out.AppConfigPort;
 import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.RequestCommentRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.RequestContactRepositoryPort;
@@ -42,9 +42,7 @@ public class RequestService implements RequestUseCase {
     private final UserRequestCommentRepositoryPort userRequestCommentRepository;
     private final RequestRecordRepositoryPort requestRecordRepository;
     private final EmailService emailService;
-
-    @Value("${trazzo.requests.notification-email:solicitudes@trazzo.pe}")
-    private String notificationEmail;
+    private final AppConfigPort appConfig;
 
     @Override
     public RequestResult submit(SubmitRequestCommand command) {
@@ -60,11 +58,12 @@ public class RequestService implements RequestUseCase {
                 request.getId(), command.name(), command.lastName(), command.email(),
                 command.phoneNumber(), taxId, command.companyName()));
 
-        emailService.send(notificationEmail,
+        emailService.send(appConfig.requestsNotificationEmail(),
                 "Nueva solicitud: " + contact.getCompanyName(),
                 "Nueva solicitud de %s recibida.<br>Empresa: %s<br>Contacto: %s %s (%s)<br>Mensaje: %s".formatted(
-                        type, contact.getCompanyName(), contact.getName(), contact.getLastName(),
-                        contact.getEmail(), request.getMessage()));
+                        type, escapeHtml(contact.getCompanyName()), escapeHtml(contact.getName()),
+                        escapeHtml(contact.getLastName()), escapeHtml(contact.getEmail()),
+                        escapeHtml(request.getMessage())));
 
         return toResult(request, contact);
     }
@@ -156,7 +155,7 @@ public class RequestService implements RequestUseCase {
         if (contact != null) {
             emailService.send(contact.getEmail(),
                     "Nuevo comentario en tu solicitud",
-                    "Se agregó un comentario a tu solicitud:<br>" + commentText);
+                    "Se agregó un comentario a tu solicitud:<br>" + escapeHtml(commentText));
         }
 
         return comment;
@@ -175,5 +174,17 @@ public class RequestService implements RequestUseCase {
         }
         return new RequestContactResult(contact.getName(), contact.getLastName(), contact.getEmail(),
                 contact.getPhoneNumber(), contact.getTaxId(), contact.getCompanyName());
+    }
+
+    // These emails are built as raw HTML (see ResendEmailAdapter), and the interpolated fields
+    // come from the public, unauthenticated /requests submit form — without escaping, an
+    // attacker-supplied name/message could inject markup (fake links, iframes) into an email
+    // read by Trazzo staff or the requester.
+    private static String escapeHtml(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#x27;");
     }
 }

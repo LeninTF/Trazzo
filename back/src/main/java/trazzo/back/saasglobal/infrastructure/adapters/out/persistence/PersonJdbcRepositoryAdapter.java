@@ -54,6 +54,11 @@ public class PersonJdbcRepositoryAdapter implements PersonRepositoryPort {
         }
     }
 
+    @Override
+    public void deleteById(Integer id) {
+        jdbc.update("DELETE FROM persons WHERE id = ?", id);
+    }
+
     private static class PersonRowMapper implements RowMapper<Person> {
         @Override
         public Person mapRow(ResultSet rs, int rowNum) throws SQLException {

@@ -13,13 +13,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.saasglobal.application.dto.command.AssignSaasUserRolesCommand;
 import trazzo.back.saasglobal.application.dto.command.CreateSaasUserCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdateSaasUserCommand;
 import trazzo.back.saasglobal.application.dto.result.PaginatedResult;
 import trazzo.back.saasglobal.application.dto.result.SaasUserResult;
 import trazzo.back.saasglobal.application.port.out.EmailService;
+import trazzo.back.saasglobal.application.port.out.PasswordHasherPort;
 import trazzo.back.saasglobal.application.port.out.PersonRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.RoleMasterRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
@@ -36,7 +36,7 @@ class SaasUserServiceTest {
     @Mock PersonRepositoryPort personRepository;
     @Mock UserRolesMasterRepositoryPort userRolesRepository;
     @Mock RoleMasterRepositoryPort roleRepository;
-    @Mock PasswordEncoder passwordEncoder;
+    @Mock PasswordHasherPort passwordHasher;
     @Mock EmailService emailService;
     @InjectMocks SaasUserService service;
 
@@ -54,7 +54,7 @@ class SaasUserServiceTest {
     @Test
     void create_withExplicitPassword_doesNotSendEmail() {
         when(personRepository.save(any())).thenReturn(person(1));
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenReturn(user("user-1"));
         when(userRepository.findById("user-1")).thenReturn(Optional.of(user("user-1")));
         when(roleRepository.findAll()).thenReturn(List.of());
@@ -72,7 +72,7 @@ class SaasUserServiceTest {
     @Test
     void create_withoutPassword_generatesTempPasswordAndSendsEmail() {
         when(personRepository.save(any())).thenReturn(person(1));
-        when(passwordEncoder.encode(anyString())).thenReturn("encoded");
+        when(passwordHasher.hash(anyString())).thenReturn("encoded");
         when(userRepository.save(any())).thenReturn(user("user-1"));
         when(userRepository.findById("user-1")).thenReturn(Optional.of(user("user-1")));
         when(roleRepository.findAll()).thenReturn(List.of());

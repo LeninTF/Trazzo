@@ -92,6 +92,25 @@ public class TenantJdbcRepositoryAdapter implements TenantRepositoryPort {
     }
 
     @Override
+    public void purgeById(String id) {
+        jdbc.update("DELETE FROM tenants WHERE id = ?::uuid", id);
+    }
+
+    @Override
+    public List<Tenant> findAbandonedTrials(LocalDateTime cutoff) {
+        return jdbc.query(
+                SELECT_COLUMNS + """
+                 WHERE t.deleted_at IS NULL
+                   AND t.created_at < ?
+                   AND EXISTS (SELECT 1 FROM subscriptions s WHERE s.tenant_id = t.id AND s.status = 'TRIAL')
+                   AND NOT EXISTS (
+                       SELECT 1 FROM subscriptions s WHERE s.tenant_id = t.id AND s.status IN ('ACTIVE', 'SUSPENDED')
+                   )
+                """,
+                this::mapRow, cutoff);
+    }
+
+    @Override
     public List<Tenant> findAll(String search, Integer planId, String status, int page, int size) {
         MapSqlParameterSource params = listFilterParams(search, planId, status)
                 .addValue("limit", size)

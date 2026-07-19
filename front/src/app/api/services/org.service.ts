@@ -12,6 +12,7 @@ import type {
   OrgUserRoleResult,
   SaasPlanResult,
   InvoiceListResponse,
+  SubscribeResponse,
 } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
@@ -148,5 +149,9 @@ export class OrgService {
 
   listMyInvoices(opts?: { paymentStatus?: string; dateFrom?: string; dateTo?: string; page?: number; size?: number }): Observable<InvoiceListResponse> {
     return this.http.get<InvoiceListResponse>(`${this.apiBase}/org/billing/invoices`, { params: params(opts) });
+  }
+
+  subscribeToPlan(planId: number): Observable<SubscribeResponse> {
+    return this.http.post<SubscribeResponse>(`${this.apiBase}/org/billing/subscribe`, { planId });
   }
 }
