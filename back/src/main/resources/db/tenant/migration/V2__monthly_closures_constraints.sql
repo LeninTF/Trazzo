@@ -1,6 +1,6 @@
--- Idempotent migration: re-apply NOT NULL and UNIQUE constraints on monthly_closures
--- tables. V2 applies the same constraints; both scripts use idempotent guards and are
--- safe to re-run on every startup via TenantSchemaMigrator.
+-- Idempotent migration: enforce NOT NULL and UNIQUE constraints on monthly_closures
+-- tables that may have been created without them in early tenant provisions.
+-- V4 re-applies these same guards; both scripts are safe to re-run.
 
 -- 1. Backfill created_by_user_id with a sentinel UUID where NULL, then enforce NOT NULL
 UPDATE monthly_closures SET created_by_user_id = '00000000-0000-0000-0000-000000000000'
