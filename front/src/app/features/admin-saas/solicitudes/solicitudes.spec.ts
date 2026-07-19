@@ -209,7 +209,7 @@ describe('Solicitudes', () => {
   describe('ejecutarAccion', () => {
     it('should do nothing if no confirmAction', () => {
       component.confirmAction.set(null);
-      const estadoAntes = component.allSolicitudes.map(s => s.estado);
+      const estadoAntes = component.items().map((s: RequestSummary) => s.status);
 
       component.ejecutarAccion();
 
