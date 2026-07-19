@@ -139,7 +139,7 @@
             <i class="bi bi-plus-circle"></i>
             <h4>Nueva Sede</h4>
             <p>Registre un nuevo centro operativo en su organización.</p>
-            <button class="btn btn--success" data-bs-toggle="modal" data-bs-target="#modalSede">
+            <button class="btn btn--success" (click)="abrirModalSede()">
               <i class="bi bi-building-add me-2"></i> Registrar Sede
             </button>
           </div>
@@ -190,7 +190,7 @@
         <h4 class="sede-modal__title">
           <i class="bi bi-building-add me-2"></i> {{ sedeEditando ? 'Editar Sede' : 'Registrar Nueva Sede' }}
         </h4>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cancelarModalSede()" aria-label="Close"></button>
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
@@ -210,7 +210,7 @@
         </div>
       </div>
       <div class="sede-modal__footer">
-        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--secondary" (click)="cancelarModalSede()">Cancelar</button>
         <button type="button" class="btn btn--primary" (click)="guardarSede()">
           <i class="bi bi-check-lg me-2"></i> {{ sedeEditando ? 'Actualizar' : 'Registrar' }}
         </button>
@@ -227,7 +227,7 @@
         <h4 class="sede-modal__title">
           <i class="bi bi-diagram-2 me-2"></i> {{ areaEditando ? 'Editar Área' : 'Añadir Área' }}
         </h4>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cancelarModalArea()" aria-label="Close"></button>
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
@@ -247,7 +247,7 @@
         </div>
       </div>
       <div class="sede-modal__footer">
-        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--secondary" (click)="cancelarModalArea()">Cancelar</button>
         <button type="button" class="btn btn--primary" (click)="guardarArea()">
           <i class="bi bi-check-lg me-2"></i> {{ areaEditando ? 'Actualizar' : 'Añadir' }}
         </button>
@@ -264,7 +264,7 @@
         <h4 class="sede-modal__title">
           <i class="bi bi-diagram-3 me-2"></i> {{ deptoEditando ? 'Editar Departamento' : 'Añadir Departamento' }}
         </h4>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cancelarModalDepartamento()" aria-label="Close"></button>
       </div>
       <div class="sede-modal__body">
         <div class="form-group">
@@ -291,7 +291,7 @@
         </div>
       </div>
       <div class="sede-modal__footer">
-        <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn--secondary" (click)="cancelarModalDepartamento()">Cancelar</button>
         <button type="button" class="btn btn--primary" (click)="guardarDepartamento()">
           <i class="bi bi-check-lg me-2"></i> {{ deptoEditando ? 'Actualizar' : 'Añadir' }}
         </button>

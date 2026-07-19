@@ -1,8 +1,24 @@
-@if (error()) {
+@if (loading()) {
+<div class="roles-page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <output class="spinner-border text-primary">
+            <span class="visually-hidden">Cargando...</span>
+        </output>
+        <p class="mt-2 text-muted small">Cargando roles...</p>
+    </div>
+</div>
+} @else if (error()) {
 <div class="roles-page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
     <div class="text-center">
         <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
         <p class="mt-3 text-muted">{{ error() }}</p>
+    </div>
+</div>
+} @else if (roles.length === 0) {
+<div class="roles-page" style="min-height: 400px; display: flex; justify-content: center; align-items: center;">
+    <div class="text-center">
+        <i class="bi bi-inboxes text-muted" style="font-size: 3rem;"></i>
+        <p class="mt-3 text-muted">No hay roles configurados todav&iacute;a.</p>
     </div>
 </div>
 } @else {

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class Request {
 
     public enum Type   { TRIAL, INFO }
-    public enum Status { PENDING, IN_REVIEW, APPROVED, REJECTED }
+    public enum Status { PENDING, OBSERVADO, APPROVED, REJECTED }
 
     private Integer id;
     private Type type;

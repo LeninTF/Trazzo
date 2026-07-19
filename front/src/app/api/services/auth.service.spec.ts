@@ -68,4 +68,17 @@ describe('AuthService', () => {
     const req = httpMock.expectOne(`${apiBase}/auth/login`);
     req.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
   });
+
+  describe('logout', () => {
+    it('should remove the JWT token from localStorage', () => {
+      localStorage.setItem('trazzo_token', 'fake-jwt');
+      service.logout();
+      expect(localStorage.getItem('trazzo_token')).toBeNull();
+    });
+
+    it('should not throw when there is no token to clear', () => {
+      localStorage.removeItem('trazzo_token');
+      expect(() => service.logout()).not.toThrow();
+    });
+  });
 });

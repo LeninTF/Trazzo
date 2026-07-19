@@ -8,7 +8,7 @@ import { Perfil } from './perfil';
 const CURRENT_PASSWORD = 'admin123';
 
 const mockUser: MasterUserProfile = {
-  id: 1, email: 'jose.alata@trazzo.com', phone: '999888777',
+  id: 'user-1', email: 'jose.alata@trazzo.com', phone: '999888777',
   tenant_id: null, must_change_password: false,
   created_at: '2024-01-15T00:00:00Z',
   persona: {

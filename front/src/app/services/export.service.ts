@@ -15,6 +15,16 @@ export class ExportService {
     URL.revokeObjectURL(url);
   }
 
+  /** Downloads a Blob returned by the backend (Excel/PDF exports), reusing exportCSV's anchor-click pattern. */
+  downloadBlob(filename: string, blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   escCSV(value: string): string {
     return `"${(value ?? '').replace(/"/g, '""')}"`;
   }

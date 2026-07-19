@@ -249,7 +249,7 @@
             </div>
           </div>
 
-          <button class="btn-registrar-nuevo w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalRegistrarEscaner">
+          <button class="btn-registrar-nuevo w-100 mb-3" (click)="abrirModalRegistrarEscaner()">
             <i class="bi bi-plus-circle me-2"></i> REGISTRAR NUEVO ESCÁNER
           </button>
 
@@ -276,7 +276,7 @@
             <i class="bi bi-upc-scan me-2"></i>Registrar Nuevo Escáner
           </h2>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" (click)="cerrarModalRegistrarEscaner()" aria-label="Close"></button>
       </div>
 
       <div class="modal-body registrar-modal-body">
@@ -327,7 +327,7 @@
           <button type="button" class="btn-registrar-dispositivo" (click)="registrarEscaner()">
             <i class="bi bi-check-lg me-2"></i>REGISTRAR ESCÁNER
           </button>
-          <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">
+          <button type="button" class="btn-cancelar-dispositivo" (click)="cerrarModalRegistrarEscaner()">
             CANCELAR
           </button>
         </div>
@@ -347,14 +347,14 @@
             <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación
           </h2>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" (click)="cancelarEliminarEscaner()"></button>
       </div>
       <div class="modal-body registrar-modal-body">
         <p>¿Está seguro de que desea eliminar el escáner <strong>{{ escanerAEliminar?.nombre }}</strong>?</p>
         <p class="text-muted small">Esta acción eliminará el escáner de la lista y no podrá ser recuperado.</p>
       </div>
       <div class="registrar-actions p-4 pt-0">
-        <button type="button" class="btn-cancelar-dispositivo" data-bs-dismiss="modal">CANCELAR</button>
+        <button type="button" class="btn-cancelar-dispositivo" (click)="cancelarEliminarEscaner()">CANCELAR</button>
         <button type="button" class="btn-registrar-dispositivo" style="background: var(--danger);"
           (click)="confirmarEliminarEscaner()">ELIMINAR</button>
       </div>

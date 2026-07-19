@@ -37,10 +37,12 @@ class UserTest {
     void restore_setsAllFields() {
         LocalDateTime now = LocalDateTime.now();
         var user = User.restore("id-1", 2, "tenant-1", "u@test.com", null,
-                "pass", List.of("ADMIN"), now, now, null);
+                "pass", List.of("ADMIN"), List.of("gestion-tenants.crear"), true, now, now, null);
 
         assertThat(user.getId()).isEqualTo("id-1");
         assertThat(user.getRoles()).containsExactly("ADMIN");
+        assertThat(user.getPermissionCodes()).containsExactly("gestion-tenants.crear");
+        assertThat(user.isMustChangePassword()).isTrue();
         assertThat(user.isActive()).isTrue();
     }
 
@@ -48,7 +50,7 @@ class UserTest {
     void isActive_falseWhenDeletedAtSet() {
         LocalDateTime now = LocalDateTime.now();
         var user = User.restore("id-1", 1, null, "u@test.com", null,
-                "pass", List.of(), now, now, now);
+                "pass", List.of(), List.of(), false, now, now, now);
 
         assertThat(user.isActive()).isFalse();
     }
@@ -69,7 +71,7 @@ class UserTest {
     void delete_throwsWhenAlreadyDeleted() {
         LocalDateTime now = LocalDateTime.now();
         var user = User.restore("id-1", 1, null, "u@test.com", null,
-                "pass", List.of(), now, now, now);
+                "pass", List.of(), List.of(), false, now, now, now);
 
         assertThatThrownBy(user::delete)
                 .isInstanceOf(UserValidationException.class)
