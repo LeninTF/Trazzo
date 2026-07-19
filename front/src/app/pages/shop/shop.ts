@@ -40,18 +40,6 @@ export class Shop {
   private readonly saasService = inject(SaasService);
   private readonly redirectService = inject(RedirectService);
 
-  constructor(private readonly location: Location) {
-    const planIdParam = this.route.snapshot.queryParamMap.get('planId');
-    const planId = planIdParam ? Number(planIdParam) : null;
-    this.saasService.listPublicPlans().subscribe({
-      next: (plans) => {
-        const match = planId != null ? plans.find((p) => p.id === planId) : undefined;
-        this.plan.set(match ?? plans[0] ?? null);
-      },
-    });
-  }
-
-  protected readonly plan = signal<SaasPlanResult | null>(null);
   protected readonly activeSection = signal(1);
   protected readonly plan = signal<SaasPlanResult | null>(null);
   protected readonly submitting = signal(false);
