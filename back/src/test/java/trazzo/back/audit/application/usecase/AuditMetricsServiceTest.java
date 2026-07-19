@@ -47,7 +47,7 @@ class AuditMetricsServiceTest {
                 Long.class))
                 .thenReturn(0L);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
+                "SELECT COUNT(*) FROM sesion WHERE state = TRUE",
                 Long.class))
                 .thenReturn(0L);
 
@@ -81,7 +81,7 @@ class AuditMetricsServiceTest {
                 Long.class))
                 .thenReturn(5L);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
+                "SELECT COUNT(*) FROM sesion WHERE state = TRUE",
                 Long.class))
                 .thenReturn(10L);
 
@@ -115,7 +115,7 @@ class AuditMetricsServiceTest {
                 Long.class))
                 .thenReturn(null);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
+                "SELECT COUNT(*) FROM sesion WHERE state = TRUE",
                 Long.class))
                 .thenReturn(null);
 
@@ -149,7 +149,7 @@ class AuditMetricsServiceTest {
                 Long.class))
                 .thenReturn(1L);
         when(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM sesion WHERE state = 'ACTIVE'",
+                "SELECT COUNT(*) FROM sesion WHERE state = TRUE",
                 Long.class))
                 .thenThrow(new DataAccessResourceFailureException("Table not found"));
 
