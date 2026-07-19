@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,6 +18,7 @@ import trazzo.back.saasglobal.application.dto.result.TenantResultDto;
 import trazzo.back.saasglobal.application.port.in.CreateTrialTenantUseCase;
 
 @WebMvcTest(TenantController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class TenantControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -51,13 +53,16 @@ class TenantControllerTest {
     }
 
     @Test
-    void createTrial_returns401WhenUnauthenticated() throws Exception {
+    void createTrial_worksWithoutAuthentication() throws Exception {
+        var result = new TenantResultDto("id-3", "acme", 1, true, null, null);
+        when(createTrialTenantUseCase.createTrial(any())).thenReturn(result);
+
         mockMvc.perform(post("/tenants/trial")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"subDomain":"acme","planId":1,"holdingId":10}
                                 """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isCreated());
     }
 
     @Test
