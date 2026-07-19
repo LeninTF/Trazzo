@@ -80,9 +80,8 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
 
     @Override
     public String generatePdfReport(MonthlyClosure closure, List<MonthlyClosureDetail> details) {
-        Document document = new Document();
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             Document document = new Document()) {
             PdfWriter.getInstance(document, baos);
 
             document.open();
@@ -123,10 +122,6 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
             return fileStoragePort.buildPublicUrl(objectKey);
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF report", e);
-        } finally {
-            if (document.isOpen()) {
-                document.close();
-            }
         }
     }
 }

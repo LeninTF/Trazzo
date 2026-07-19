@@ -211,13 +211,12 @@ describe('GestionPlanes', () => {
   });
 
   it('should exportarCSV using suscripciones, not planes', () => {
-    const exportService = TestBed.inject(ExportService);
-    const exportSpy = spyOn(exportService, 'exportCSV');
+    mockExport.exportCSV.calls.reset();
 
     component.exportarCSV();
 
-    expect(exportSpy).toHaveBeenCalled();
-    const [, headers, rows] = exportSpy.calls.mostRecent().args;
+    expect(mockExport.exportCSV).toHaveBeenCalled();
+    const [, headers, rows] = mockExport.exportCSV.calls.mostRecent().args;
     expect(headers).toEqual(['Tenant', 'Plan', 'Fecha Inicio', 'Fecha Fin', 'Monto', 'Estado']);
     expect(rows).toEqual([['demo', 'Plan Demo', '2026-01-01', '2026-12-31', '29.99', 'activo']]);
   });
@@ -225,12 +224,11 @@ describe('GestionPlanes', () => {
   it('should exportarCSV with no rows when there are no suscripciones', () => {
     mockSaas.listSubscriptions.and.returnValue(of({ content: [], page: 0, size: 100, totalElements: 0, totalPages: 0 }));
     component.cargarSuscripciones();
-    const exportService = TestBed.inject(ExportService);
-    const exportSpy = spyOn(exportService, 'exportCSV');
+    mockExport.exportCSV.calls.reset();
 
     component.exportarCSV();
 
-    const [, , rows] = exportSpy.calls.mostRecent().args;
+    const [, , rows] = mockExport.exportCSV.calls.mostRecent().args;
     expect(rows).toEqual([]);
   });
 
