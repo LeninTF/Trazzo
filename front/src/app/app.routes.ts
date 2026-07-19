@@ -18,6 +18,8 @@ import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenan
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
 import { Perfil } from './features/admin-tenant/perfil/perfil';
+import { CierresMensuales } from './features/admin-tenant/cierres-mensuales/cierres-mensuales';
+import { DetalleCierre } from './features/admin-tenant/cierres-mensuales/detalle-cierre/detalle-cierre';
 import { Perfil as PerfilSass } from './features/admin-saas/perfil/perfil';
 import { Tenants } from './features/admin-saas/tenants/tenants';
 import { GestionPlanes } from './features/admin-saas/gestion-planes/gestion-planes';
@@ -114,6 +116,16 @@ export const routes: Routes = [
     {
         path: 'tenant/perfil',
         component: Perfil,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'tenant/cierres-mensuales',
+        component: CierresMensuales,
+        canActivate: [authGuard]
+    },
+    {
+        path: 'tenant/cierres-mensuales/:id',
+        component: DetalleCierre,
         canActivate: [authGuard]
     },
     {

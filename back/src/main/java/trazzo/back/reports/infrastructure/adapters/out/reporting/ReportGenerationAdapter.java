@@ -80,9 +80,8 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
 
     @Override
     public String generatePdfReport(MonthlyClosure closure, List<MonthlyClosureDetail> details) {
-        try {
-            Document document = new Document();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             Document document = new Document()) {
             PdfWriter.getInstance(document, baos);
 
             document.open();

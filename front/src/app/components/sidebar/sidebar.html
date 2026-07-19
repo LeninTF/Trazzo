@@ -60,6 +60,11 @@
 				<i class="bi bi-calendar2-week"></i>
 				<span>Gestión De Horarios</span>
 			</a>
+
+			<a class="sidebar-nav__item" routerLink="/tenant/cierres-mensuales" routerLinkActive="is-active">
+				<i class="bi bi-clipboard2-data"></i>
+				<span>Cierres Mensuales</span>
+			</a>
 		}
 
 		@if (roleService.role() === 'usuario') {

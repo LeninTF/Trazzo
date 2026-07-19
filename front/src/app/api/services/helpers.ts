@@ -8,7 +8,7 @@ export function params(opts?: Record<string, string | number | boolean | undefin
   let p = new HttpParams();
   if (opts) {
     for (const [k, v] of Object.entries(opts)) {
-      if (v !== undefined && v !== null && v !== '') {
+      if (v !== undefined && v !== null && v !== '' && !(typeof v === 'number' && !Number.isFinite(v))) {
         p = p.set(k, String(v));
       }
     }
@@ -37,4 +37,13 @@ export function tenantUserToPersonal(u: TenantUserProfile): PersonalItem {
     fechaIngreso: u.created_at.slice(0, 10),
     imagenUrl: u.persona.img_url,
   };
+}
+
+export const MONTH_NAMES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+export function getMonthName(month: number): string {
+  return MONTH_NAMES[month - 1] ?? '';
 }

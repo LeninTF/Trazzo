@@ -55,7 +55,7 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
-    public AuditMetricsUseCase auditMetricsUseCase() {
-        return new AuditMetricsService();
+    public AuditMetricsUseCase auditMetricsUseCase(AuditRepositoryPort auditRepositoryPort) {
+        return new AuditMetricsService(auditRepositoryPort);
     }
 }

@@ -54,27 +54,37 @@ describe('ApiService', () => {
     it('should bind login to auth.login', () => {
       const credentials = { email: 'test@test.com', password: '123' };
       service.login(credentials).subscribe();
-      httpMock.expectOne('https://api.trazzo.pe/api/v1/auth/login').flush({} as any);
+      const req = httpMock.expectOne('https://api.trazzo.pe/api/v1/auth/login');
+      expect(req.request.method).toBe('POST');
+      req.flush({} as any);
     });
 
     it('should bind getMe to users.getMe', () => {
       service.getMe().subscribe();
-      httpMock.expectOne('https://api.trazzo.pe/api/v1/usuarios/me').flush({} as any);
+      const req = httpMock.expectOne('https://api.trazzo.pe/api/v1/usuarios/me');
+      expect(req.request.method).toBe('GET');
+      req.flush({} as any);
     });
 
     it('should bind listIncidents to incidents.list', () => {
       service.listIncidents({}).subscribe();
-      httpMock.expectOne('https://api.trazzo.pe/api/v1/incidentes').flush({ data: [], meta: { total: 0 } });
+      const req = httpMock.expectOne('https://api.trazzo.pe/api/v1/incidentes');
+      expect(req.request.method).toBe('GET');
+      req.flush({ data: [], meta: { total: 0 } });
     });
 
     it('should bind listShifts to horarios.listShifts', () => {
       service.listShifts({}).subscribe();
-      httpMock.expectOne('https://api.trazzo.pe/api/v1/corehr/shifts').flush({ data: [], meta: { total: 0 } });
+      const req = httpMock.expectOne('https://api.trazzo.pe/api/v1/corehr/shifts');
+      expect(req.request.method).toBe('GET');
+      req.flush({ data: [], meta: { total: 0 } });
     });
 
     it('should bind listDevices to corehr.listDevices', () => {
       service.listDevices({}).subscribe();
-      httpMock.expectOne('https://api.trazzo.pe/api/v1/corehr/devices').flush({ data: [], meta: { total: 0 } });
+      const req = httpMock.expectOne('https://api.trazzo.pe/api/v1/corehr/devices');
+      expect(req.request.method).toBe('GET');
+      req.flush({ data: [], meta: { total: 0 } });
     });
 
     it('should expose static tenantUserToPersonal', () => {

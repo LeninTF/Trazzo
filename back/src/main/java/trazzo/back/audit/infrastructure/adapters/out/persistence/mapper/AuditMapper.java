@@ -27,7 +27,7 @@ public final class AuditMapper {
         entity.setAction(domain.getAction());
         entity.setUserId(domain.getUserId() != null ? UUID.fromString(domain.getUserId()) : null);
         entity.setEndpoint(domain.getEndpoint());
-        entity.setIpAdress(domain.getIpAdress());
+        entity.setIpAddress(domain.getIpAddress());
         entity.setUserAgent(domain.getUserAgent());
         entity.setOldValue(serializeJson(domain.getPreviousValue()));
         entity.setNewValue(serializeJson(domain.getNewValue()));
@@ -43,7 +43,7 @@ public final class AuditMapper {
                 entity.getAction(),
                 entity.getUserId() != null ? entity.getUserId().toString() : null,
                 entity.getEndpoint(),
-                entity.getIpAdress(),
+                entity.getIpAddress(),
                 entity.getUserAgent(),
                 deserializeJson(entity.getOldValue()),
                 deserializeJson(entity.getNewValue()),

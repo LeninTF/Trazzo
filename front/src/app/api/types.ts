@@ -949,6 +949,44 @@ export interface UpdateTenantBrandingPayload {
 }
 
 // ==========================================
+// SECCIÓN: REPORTS - CIERRES MENSUALES
+// ==========================================
+
+export interface MonthlyClosure {
+  id: string;
+  month: number;
+  year: number;
+  totalEmployees: number;
+  excelReportUrl: string | null;
+  pdfReportUrl: string | null;
+  createdAt: string;
+}
+
+export interface MonthlyClosureDetail {
+  id: string;
+  monthClosureId: string;
+  tenantUserId: number;
+  tenantUserFullName: string;
+  tenantUserDocument: string;
+  departmentName: string | null;
+  roleName: string | null;
+  totalWorkedHours: number;
+  totalTardinessMinutes: number;
+  totalAbsences: number;
+  totalOvertimeHours: number;
+  createdAt: string;
+}
+
+export interface MonthlyClosureWithDetails extends MonthlyClosure {
+  details: MonthlyClosureDetail[];
+}
+
+export interface CreateMonthlyClosureRequest {
+  month: number;
+  year: number;
+}
+
+// ==========================================
 // SECCIÓN: AUDITORÍA
 // ==========================================
 

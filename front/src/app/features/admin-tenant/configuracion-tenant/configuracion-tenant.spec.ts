@@ -148,11 +148,10 @@ describe('ConfiguracionTenant', () => {
   it('should open file selector for logo', () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.id = 'fake-file-input';
-    document.body.appendChild(input);
+    spyOn(document, 'querySelector').and.returnValue(input);
     spyOn(input, 'click');
     component.abrirSelectorLogo();
-    document.body.removeChild(input);
+    expect(input.click).toHaveBeenCalled();
   });
 
   it('should handle logo file too large', () => {
