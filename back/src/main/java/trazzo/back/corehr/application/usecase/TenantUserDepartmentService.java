@@ -3,6 +3,7 @@ package trazzo.back.corehr.application.usecase;
 import lombok.RequiredArgsConstructor;
 import trazzo.back.corehr.application.dto.command.CreateTenantUserDepartmentCommand;
 import trazzo.back.corehr.application.dto.command.PatchTenantUserDepartmentCommand;
+import trazzo.back.corehr.application.dto.result.PaginatedResult;
 import trazzo.back.corehr.application.dto.result.TenantUserDepartmentResult;
 import trazzo.back.corehr.application.port.in.TenantUserDepartmentUseCase;
 import trazzo.back.corehr.application.port.out.TenantUserDepartmentRepositoryPort;
@@ -45,6 +46,16 @@ public class TenantUserDepartmentService implements TenantUserDepartmentUseCase 
         }
         return departmentRepository.findAllByTenantUserId(tenantUserId)
                 .stream().map(this::toResult).toList();
+    }
+
+    @Override
+    public PaginatedResult<TenantUserDepartmentResult> findAllByTenantUserId(Long tenantUserId, int page, int size) {
+        if (!tenantUserPort.existsById(tenantUserId)) {
+            throw new IllegalArgumentException("TenantUser no encontrado: " + tenantUserId);
+        }
+        var items = departmentRepository.findAllByTenantUserId(tenantUserId, page, size);
+        var content = items.getContent().stream().map(this::toResult).toList();
+        return new PaginatedResult<>(content, page, size, items.getTotalElements(), items.getTotalPages());
     }
 
     @Override

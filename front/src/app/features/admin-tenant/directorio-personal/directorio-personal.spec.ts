@@ -566,4 +566,622 @@ describe('DirectorioPersonal', () => {
       expect(component.paginaActual).toBe(1);
     });
   });
+
+  describe('personalFiltrado - uncovered branches', () => {
+    beforeEach(() => {
+      setMockPersonal();
+    });
+
+    it('should return all when no filters applied', () => {
+      component.searchTerm = '';
+      component.filtroSede = '';
+      component.filtroArea = '';
+      component.filtroDepartamento = '';
+      expect(component.personalFiltrado.length).toBe(2);
+    });
+
+    it('should match by nombre when searchTerm hits first operand of OR', () => {
+      component.searchTerm = 'José';
+      const result = component.personalFiltrado;
+      expect(result.length).toBe(1);
+      expect(result[0].nombre).toContain('José');
+    });
+
+    it('should match by idPersonal when first operand of OR is false', () => {
+      component.searchTerm = '87654321';
+      const result = component.personalFiltrado;
+      expect(result.length).toBe(1);
+      expect(result[0].idPersonal).toBe('87654321');
+    });
+
+    it('should return empty when searchTerm matches neither nombre nor idPersonal', () => {
+      component.searchTerm = 'ZZZZZ999';
+      expect(component.personalFiltrado.length).toBe(0);
+    });
+
+    it('should combine all four filters simultaneously', () => {
+      component.searchTerm = 'Ana';
+      component.filtroSede = 'Sede Miraflores';
+      component.filtroArea = 'Administración';
+      component.filtroDepartamento = 'Comunicación';
+      expect(component.personalFiltrado.length).toBe(1);
+      expect(component.personalFiltrado[0].id).toBe(2);
+    });
+
+    it('should return empty when combined filters have no match', () => {
+      component.searchTerm = 'Ana';
+      component.filtroSede = 'Sede San Isidro';
+      component.filtroArea = 'Administración';
+      component.filtroDepartamento = 'Comunicación';
+      expect(component.personalFiltrado.length).toBe(0);
+    });
+
+    it('should filter by departamento only without other filters', () => {
+      component.filtroDepartamento = 'Comunicación';
+      expect(component.personalFiltrado.length).toBe(1);
+      expect(component.personalFiltrado[0].id).toBe(2);
+    });
+
+    it('should filter by sede + departamento combined', () => {
+      component.filtroSede = 'Sede Miraflores';
+      component.filtroDepartamento = 'Comunicación';
+      expect(component.personalFiltrado.length).toBe(1);
+    });
+  });
+
+  describe('cambiarPagina - boundary branches', () => {
+    beforeEach(() => {
+      setMockPersonal();
+      component.itemsPerPage = 1;
+    });
+
+    it('should not change page to negative value', () => {
+      component.paginaActual = 1;
+      component.cambiarPagina(-5);
+      expect(component.paginaActual).toBe(1);
+    });
+
+    it('should not change page above totalPaginas', () => {
+      component.paginaActual = 1;
+      component.cambiarPagina(3);
+      expect(component.paginaActual).toBe(1);
+    });
+
+    it('should change page to last valid page', () => {
+      component.cambiarPagina(2);
+      expect(component.paginaActual).toBe(2);
+    });
+  });
+
+  describe('onFileSelected - size boundary branches', () => {
+    it('should reject file exceeding 2MB', () => {
+      const largeFile = new File([new ArrayBuffer(2 * 1024 * 1024 + 1)], 'over.jpg', { type: 'image/jpeg' });
+      const event = { target: { files: [largeFile] } } as any;
+      component.onFileSelected(event);
+      expect(mockToast.info).toHaveBeenCalledWith('El archivo no puede superar los 2MB');
+    });
+
+    it('should accept file exactly at 2MB without rejection toast', () => {
+      const exactFile = new File([new ArrayBuffer(2 * 1024 * 1024)], 'exact.jpg', { type: 'image/jpeg' });
+      const event = { target: { files: [exactFile] } } as any;
+      mockToast.info.calls.reset();
+      component.onFileSelected(event);
+      const rejectionCalls = mockToast.info.calls.allArgs().filter((args: any[]) => args[0] === 'El archivo no puede superar los 2MB');
+      expect(rejectionCalls.length).toBe(0);
+    });
+
+    it('should do nothing when no file selected', () => {
+      const prev = component.imagenPreviewUrl;
+      const event = { target: { files: [] } } as any;
+      component.onFileSelected(event);
+      expect(component.imagenPreviewUrl).toBe(prev);
+    });
+  });
+
+  describe('cerrarModalEnrolar - branch coverage', () => {
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    it('should reset awaitingReference and referenceData when closing', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolAwaitingReference.set(true);
+      spyOn(middlewareWs, 'send');
+      component.cerrarModalEnrolar();
+      expect(component.enrolAwaitingReference()).toBeFalse();
+      expect(component.modalEnrolarOpen).toBeFalse();
+      expect(component.personaEnrolar).toBeNull();
+    });
+
+    it('should send cancel when enrolInProgress is true', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cerrarModalEnrolar();
+      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
+    });
+
+    it('should not send cancel when enrolInProgress is false', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.cerrarModalEnrolar();
+      expect(sendSpy).not.toHaveBeenCalledWith('fingerprint.enroll.cancel');
+    });
+  });
+
+  describe('iniciarEnrolamiento - guard branch', () => {
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    it('should early return when enrolInProgress is true', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.iniciarEnrolamiento();
+      expect(sendSpy).not.toHaveBeenCalled();
+      expect(component.enrolOperationLabel()).not.toBe('Capturando referencia...');
+    });
+
+    it('should proceed normally when enrolInProgress is false', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.enrolInProgress.set(false);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.iniciarEnrolamiento();
+      expect(sendSpy).toHaveBeenCalledWith('fingerprint.capture');
+      expect(component.enrolInProgress()).toBeTrue();
+      expect(component.enrolAwaitingReference()).toBeTrue();
+    });
+  });
+
+  describe('inicioRegistro and finRegistro getters', () => {
+    beforeEach(() => {
+      setMockPersonal();
+    });
+
+    it('should compute correct inicioRegistro and finRegistro on page 1', () => {
+      component.itemsPerPage = 1;
+      component.paginaActual = 1;
+      expect(component.inicioRegistro).toBe(1);
+      expect(component.finRegistro).toBe(1);
+    });
+
+    it('should compute correct inicioRegistro and finRegistro on page 2', () => {
+      component.itemsPerPage = 1;
+      component.paginaActual = 2;
+      expect(component.inicioRegistro).toBe(2);
+      expect(component.finRegistro).toBe(2);
+    });
+
+    it('should cap finRegistro at filtered list length on last page', () => {
+      component.itemsPerPage = 5;
+      component.paginaActual = 1;
+      expect(component.inicioRegistro).toBe(1);
+      expect(component.finRegistro).toBe(2);
+    });
+
+    it('should return 0 finRegistro when filtered list is empty', () => {
+      component.searchTerm = 'NONEXISTENT';
+      expect(component.finRegistro).toBe(0);
+      expect(component.inicioRegistro).toBe(1);
+    });
+  });
+
+  describe('enrollment result handler - fingerprint.enroll.result', () => {
+    let handlers: Record<string, (msg: any) => void>;
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: 'Sede San Isidro', area: 'Dirección', departamento: 'Matemáticas', cargo: '', estado: 'ACTIVO' as const };
+
+    beforeEach(() => {
+      handlers = {};
+      spyOn(middlewareWs, 'connect');
+      spyOn(middlewareWs, 'send');
+      spyOn(middlewareWs, 'on').and.callFake((type: string, handler: (msg: any) => void) => {
+        handlers[type] = handler;
+        return () => {};
+      });
+    });
+
+    it('should save to fingerprintStore on success with personaEnrolar', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'Enrolamiento completado',
+        registeredTemplateBase64: 'abc123template',
+        encryptedRegisteredTemplate: {
+          encryptedTemplateBase64: 'encTemplate',
+          encryptedAesKeyBase64: 'encKey',
+          ivBase64: 'iv',
+          tagBase64: 'tag',
+        },
+        registeredTemplateSize: 512,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeTrue();
+      expect(component.enrolInProgress()).toBeFalse();
+      expect(component.enrolTemplateSize()).toBe(512);
+      expect(component.enrolOperationLabel()).toBe('Completado');
+      expect(fingerprintStore.count).toBe(1);
+      expect(mockToast.success).toHaveBeenCalled();
+    });
+
+    it('should save to fingerprintStore with null encryptedRegisteredTemplate', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'OK',
+        registeredTemplateBase64: 'tpl',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(fingerprintStore.count).toBe(1);
+      expect(mockToast.success).toHaveBeenCalled();
+    });
+
+    it('should save with fallback when registeredTemplateBase64 is null', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'OK',
+        registeredTemplateBase64: null,
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 0,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(fingerprintStore.count).toBe(1);
+      expect(component.enrolTemplatePreview()).toBe('(cifrado)');
+    });
+
+    it('should show template preview when registeredTemplateBase64 is present', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'OK',
+        registeredTemplateBase64: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolTemplatePreview()).toContain('…');
+    });
+
+    it('should use capturedSamples in progress display', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'OK',
+        registeredTemplateBase64: 'tpl',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: 2,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolProgress()).toBe('2/3');
+    });
+
+    it('should default capturedSamples to 0 when null', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'OK',
+        registeredTemplateBase64: 'tpl',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: null,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolProgress()).toBe('0/3');
+    });
+
+    it('should use message fallback when message is empty on success', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: '',
+        registeredTemplateBase64: 'tpl',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolFpStatus()).toBe('Enrolamiento completado.');
+    });
+
+    it('should use message fallback when message is empty on failure', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: false,
+        message: '',
+        registeredTemplateBase64: null,
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 0,
+        deviceId: 'dev1',
+        capturedSamples: 0,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolFpStatus()).toBe('Enrolamiento fallido.');
+      expect(component.enrolOperationLabel()).toBe('Fallido');
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it('should handle failure when personaEnrolar is null', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.personaEnrolar = null;
+      const resultData = {
+        type: 'fingerprint.enroll.result',
+        success: true,
+        message: 'Done',
+        registeredTemplateBase64: 'tpl',
+        encryptedRegisteredTemplate: null,
+        registeredTemplateSize: 100,
+        deviceId: 'dev1',
+        capturedSamples: 3,
+        capturedAtUtc: new Date().toISOString(),
+      };
+      handlers['fingerprint.enroll.result'](resultData);
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeTrue();
+      expect(fingerprintStore.count).toBe(0);
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it('should show enrol progress on enroll.progress event', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const progressData = {
+        type: 'fingerprint.enroll.progress',
+        step: 2,
+        totalSteps: 3,
+        message: 'Coloca el dedo',
+      };
+      handlers['fingerprint.enroll.progress'](progressData);
+      expect(component.enrolProgress()).toBe('2/3');
+      expect(component.enrolFpStatus()).toBe('Coloca el dedo');
+      expect(component.enrolInProgress()).toBeTrue();
+      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
+    });
+
+    it('should default progress message when message is empty', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const progressData = {
+        type: 'fingerprint.enroll.progress',
+        step: 1,
+        totalSteps: 3,
+        message: '',
+      };
+      handlers['fingerprint.enroll.progress'](progressData);
+      expect(component.enrolFpStatus()).toBe('Coloca el dedo en el lector...');
+    });
+  });
+
+  describe('enrollment capture result handler - fingerprint.capture.result', () => {
+    let handlers: Record<string, (msg: any) => void>;
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    beforeEach(() => {
+      handlers = {};
+      spyOn(middlewareWs, 'connect');
+      spyOn(middlewareWs, 'send');
+      spyOn(middlewareWs, 'on').and.callFake((type: string, handler: (msg: any) => void) => {
+        handlers[type] = handler;
+        return () => {};
+      });
+    });
+
+    it('should set fingerprint image url when data.fingerprintImageDataUrl is present', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateBase64: null,
+        templateSize: 0,
+        fingerprintImageDataUrl: 'data:image/png;base64,abc',
+        quality: null,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,abc');
+    });
+
+    it('should set quality when data.quality is present', () => {
+      component.abrirModalEnrolar(mockPersona);
+      const quality = { isAcceptable: true, foregroundPixelCount: 100, foregroundCoveragePercent: 50, contrastScore: 80, isCentered: true, message: 'Good' };
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateBase64: null,
+        templateSize: 0,
+        fingerprintImageDataUrl: null,
+        quality,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+      expect(component.enrolQuality()).toEqual(quality);
+    });
+
+    it('should store reference when awaiting reference with success and templateBase64', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.iniciarEnrolamiento();
+      expect(component.enrolAwaitingReference()).toBeTrue();
+
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateBase64: 'refTemplate123',
+        templateSize: 256,
+        fingerprintImageDataUrl: null,
+        quality: null,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+
+      expect(component.enrolAwaitingReference()).toBeFalse();
+      expect(middlewareWs.send).toHaveBeenCalledWith('fingerprint.enroll.start');
+      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
+      expect(component.enrolFpStatus()).toBe('Coloca el dedo para captura 1 de 3...');
+    });
+
+    it('should handle reference capture failure when not success', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.iniciarEnrolamiento();
+
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: false,
+        message: 'No se detectó dedo',
+        templateBase64: null,
+        templateSize: 0,
+        fingerprintImageDataUrl: null,
+        quality: null,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+
+      expect(component.enrolAwaitingReference()).toBeFalse();
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeFalse();
+      expect(component.enrolInProgress()).toBeFalse();
+      expect(component.enrolOperationLabel()).toBe('Error');
+      expect(component.enrolFpStatus()).toBe('No se detectó dedo');
+    });
+
+    it('should handle reference capture failure when success but no templateBase64', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.iniciarEnrolamiento();
+
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'Captured',
+        templateBase64: null,
+        templateSize: 0,
+        fingerprintImageDataUrl: null,
+        quality: null,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+
+      expect(component.enrolAwaitingReference()).toBeFalse();
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeFalse();
+      expect(component.enrolInProgress()).toBeFalse();
+    });
+
+    it('should use fallback message when capture reference fails with empty message', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.iniciarEnrolamiento();
+
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: false,
+        message: '',
+        templateBase64: null,
+        templateSize: 0,
+        fingerprintImageDataUrl: null,
+        quality: null,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+      expect(component.enrolFpStatus()).toBe('Error capturando referencia.');
+    });
+
+    it('should not process reference logic when not awaiting reference', () => {
+      component.abrirModalEnrolar(mockPersona);
+      expect(component.enrolAwaitingReference()).toBeFalse();
+
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateBase64: 'tpl',
+        templateSize: 100,
+        fingerprintImageDataUrl: 'data:image/png;base64,xyz',
+        quality: { isAcceptable: true, foregroundPixelCount: 50, foregroundCoveragePercent: 30, contrastScore: 70, isCentered: true, message: 'OK' },
+      };
+      handlers['fingerprint.capture.result'](captureData);
+      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,xyz');
+      expect(middlewareWs.send).not.toHaveBeenCalledWith('fingerprint.enroll.start');
+    });
+
+    it('should handle capture with both image and quality and template together', () => {
+      component.abrirModalEnrolar(mockPersona);
+      component.iniciarEnrolamiento();
+
+      const quality = { isAcceptable: false, foregroundPixelCount: 10, foregroundCoveragePercent: 5, contrastScore: 20, isCentered: false, message: 'Poor' };
+      const captureData = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateBase64: 'refTpl',
+        templateSize: 128,
+        fingerprintImageDataUrl: 'data:image/png;base64,fullData',
+        quality,
+      };
+      handlers['fingerprint.capture.result'](captureData);
+      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,fullData');
+      expect(component.enrolQuality()).toEqual(quality);
+      expect(component.enrolAwaitingReference()).toBeFalse();
+      expect(middlewareWs.send).toHaveBeenCalledWith('fingerprint.enroll.start');
+    });
+  });
+
+  describe('enrollment progress handler', () => {
+    let handlers: Record<string, (msg: any) => void>;
+    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+
+    beforeEach(() => {
+      handlers = {};
+      spyOn(middlewareWs, 'connect');
+      spyOn(middlewareWs, 'send');
+      spyOn(middlewareWs, 'on').and.callFake((type: string, handler: (msg: any) => void) => {
+        handlers[type] = handler;
+        return () => {};
+      });
+    });
+
+    it('should update progress, status and operation label on progress event', () => {
+      component.abrirModalEnrolar(mockPersona);
+      handlers['fingerprint.enroll.progress']({
+        type: 'fingerprint.enroll.progress',
+        step: 1,
+        totalSteps: 3,
+        message: 'Coloca el dedo',
+      });
+      expect(component.enrolProgress()).toBe('1/3');
+      expect(component.enrolFpStatus()).toBe('Coloca el dedo');
+      expect(component.enrolInProgress()).toBeTrue();
+      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
+    });
+
+    it('should default message on progress event with empty message', () => {
+      component.abrirModalEnrolar(mockPersona);
+      handlers['fingerprint.enroll.progress']({
+        type: 'fingerprint.enroll.progress',
+        step: 2,
+        totalSteps: 3,
+        message: '',
+      });
+      expect(component.enrolFpStatus()).toBe('Coloca el dedo en el lector...');
+    });
+  });
 });

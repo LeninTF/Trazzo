@@ -147,4 +147,95 @@ describe('TurnosComponent', () => {
     expect(mockApi.horarios.patchSchedule).toHaveBeenCalledWith(1, { entry_time: '09:00', departure_time: '13:00' });
     expect(component.editingHorarioKey).toBeNull();
   });
+
+  it('should handle cargarTurnos error', async () => {
+    mockApi.horarios.listShifts.and.callFake(() => { throw new Error('fail'); });
+    await component.cargarTurnos();
+    expect(component.error()).toBe('Error al cargar turnos');
+    expect(mockToast.error).toHaveBeenCalledWith('Error al cargar turnos');
+  });
+
+  it('should not add turno if form is invalid via addTurno call', async () => {
+    mockApi.horarios.createShift.calls.reset();
+    component.openNewTurnoModal();
+    component.turnoForm.setValue({ nombre: '' });
+    await component.addTurno();
+    expect(mockApi.horarios.createShift).not.toHaveBeenCalled();
+  });
+
+  it('should handle addTurno error', async () => {
+    mockApi.horarios.createShift.and.callFake(() => { throw new Error('fail'); });
+    component.openNewTurnoModal();
+    component.turnoForm.setValue({ nombre: 'Fallo' });
+    await component.addTurno();
+    expect(mockToast.error).toHaveBeenCalledWith('Error al crear turno');
+  });
+
+  it('should not save edit turno if form is invalid', async () => {
+    mockApi.horarios.listShifts.and.returnValue(of(mockShifts));
+    await component.cargarTurnos();
+    mockApi.horarios.patchShift.calls.reset();
+    const turno = component.turnos[0];
+    component.startEditTurno(turno);
+    component.editTurnoForm.setValue({ nombre: '' });
+    await component.saveEditTurno(turno);
+    expect(mockApi.horarios.patchShift).not.toHaveBeenCalled();
+  });
+
+  it('should handle saveEditTurno error', async () => {
+    mockApi.horarios.listShifts.and.returnValue(of(mockShifts));
+    await component.cargarTurnos();
+    mockApi.horarios.patchShift.and.callFake(() => { throw new Error('fail'); });
+    const turno = component.turnos[0];
+    component.startEditTurno(turno);
+    component.editTurnoForm.setValue({ nombre: 'Fallo' });
+    await component.saveEditTurno(turno);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al actualizar turno');
+  });
+
+  it('should handle deleteTurno error', async () => {
+    mockApi.horarios.deleteShift.and.callFake(() => { throw new Error('fail'); });
+    await component.deleteTurno(1);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al eliminar turno');
+  });
+
+  it('should not add horario if form is invalid via addHorario call', async () => {
+    mockApi.horarios.createSchedule.calls.reset();
+    component.showAddHorario(1);
+    component.horarioForm.setValue({ inicio: '', fin: '' });
+    await component.addHorario(1);
+    expect(mockApi.horarios.createSchedule).not.toHaveBeenCalled();
+  });
+
+  it('should handle addHorario error', async () => {
+    mockApi.horarios.createSchedule.and.callFake(() => { throw new Error('fail'); });
+    component.showAddHorario(1);
+    component.horarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    await component.addHorario(1);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al agregar horario');
+  });
+
+  it('should not save edit horario if form is invalid', async () => {
+    mockApi.horarios.patchSchedule.calls.reset();
+    const horario = { id: 1, inicio: '08:00', fin: '12:00' };
+    component.startEditHorario(1, horario);
+    component.editHorarioForm.setValue({ inicio: '', fin: '' });
+    await component.saveEditHorario(1, horario);
+    expect(mockApi.horarios.patchSchedule).not.toHaveBeenCalled();
+  });
+
+  it('should handle saveEditHorario error', async () => {
+    mockApi.horarios.patchSchedule.and.callFake(() => { throw new Error('fail'); });
+    const horario = { id: 1, inicio: '08:00', fin: '12:00' };
+    component.startEditHorario(1, horario);
+    component.editHorarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    await component.saveEditHorario(1, horario);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al actualizar horario');
+  });
+
+  it('should handle deleteHorario error', async () => {
+    mockApi.horarios.deleteSchedule.and.callFake(() => { throw new Error('fail'); });
+    await component.deleteHorario(1, 1);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al eliminar horario');
+  });
 });

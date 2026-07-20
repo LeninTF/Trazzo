@@ -135,12 +135,17 @@ export class Sedes implements OnInit {
   abrirModalSede(): void {
     this.sedeEditando = false;
     this.sedeForm = { id: 0, nombre: '', descripcion: '', estado: 'activo' };
+    this.modalService.show('modalSede');
   }
 
   editarSede(sede: Sede): void {
     this.sedeEditando = true;
     this.sedeForm = { id: sede.id, nombre: sede.nombre, descripcion: sede.descripcion, estado: sede.estado };
     this.modalService.show('modalSede');
+  }
+
+  cancelarModalSede(): void {
+    this.cerrarModal('modalSede');
   }
 
   guardarSede(): void {
@@ -217,6 +222,10 @@ export class Sedes implements OnInit {
     });
   }
 
+  cancelarModalArea(): void {
+    this.cerrarModal('modalArea');
+  }
+
   eliminarArea(sedeId: number, areaId: number): void {
     this.orgService.deleteArea(areaId).subscribe({
       next: () => this.cargarSedes(),
@@ -263,6 +272,10 @@ export class Sedes implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  cancelarModalDepartamento(): void {
+    this.cerrarModal('modalDepartamento');
   }
 
   eliminarDepartamento(sedeId: number, areaId: number, deptoId: number): void {

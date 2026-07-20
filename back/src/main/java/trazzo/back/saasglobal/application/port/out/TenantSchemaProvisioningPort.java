@@ -5,19 +5,27 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 public interface TenantSchemaProvisioningPort {
 
     /**
-     * PAID flow: creates a new isolated database + user, runs the tenant schema script,
-     * and returns the generated connection settings.
+     * PAID flow: creates the tenant's PostgreSQL schema, runs the tenant schema script
+     * against it, and returns the generated settings.
      */
     TenantSettings provisionNew(String tenantId, String subDomain);
 
     /**
-     * TRIAL flow: runs the tenant schema script against an existing database.
+     * TRIAL flow: creates the schema named in the given settings and runs the tenant
+     * schema script against it.
      */
     void provisionExisting(TenantSettings settings);
 
     /**
-     * Best-effort cleanup: drops the database and user created by provisionNew().
+     * Best-effort cleanup: drops the schema created by provisionNew().
      * Called as compensation if the master transaction fails after provisioning.
      */
-    void deprovision(String dbName, String dbUser);
+    void deprovision(String schemaName);
+
+    /**
+     * Drops the schema if it exists and creates a fresh empty one.
+     * Used during local development to recover from orphaned schemas
+     * left behind by a previous failed provisioning attempt.
+     */
+    void recreateSchema(String schemaName);
 }

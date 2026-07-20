@@ -87,7 +87,7 @@ class AttendanceTest {
         var a = Attendance.restore(
                 "test-id", 1L, 1L, 1L,
                 now.minusHours(8), now, now.toLocalDate(),
-                0, AttendanceState.PUNTUAL, now, now
+                0, AttendanceState.PUNTUAL, null, null, now, now
         );
         assertEquals("test-id", a.getId());
         assertTrue(a.isComplete());

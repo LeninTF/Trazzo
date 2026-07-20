@@ -16,6 +16,8 @@ import java.util.Objects;
 @Service
 public class JwtService implements TokenValidator {
 
+    private static final String TENANT_CLAIM = "tenant";
+
     private final SecretKey key;
     private final long expirationMs;
 
@@ -39,18 +41,30 @@ public class JwtService implements TokenValidator {
     }
 
     public String generateToken(UserDetails userDetails) {
+        return generateToken(userDetails, null);
+    }
+
+    /** @param tenantSchema the tenant's PostgreSQL schema, or null for SaaS-admin users */
+    public String generateToken(UserDetails userDetails, String tenantSchema) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusMillis(expirationMs)))
-                .signWith(key)
-                .compact();
+                .expiration(Date.from(now.plusMillis(expirationMs)));
+        if (tenantSchema != null && !tenantSchema.isBlank()) {
+            builder.claim(TENANT_CLAIM, tenantSchema);
+        }
+        return builder.signWith(key).compact();
     }
 
     @Override
     public String extractUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    @Override
+    public String extractTenantSchema(String token) {
+        return parseClaims(token).get(TENANT_CLAIM, String.class);
     }
 
     @Override

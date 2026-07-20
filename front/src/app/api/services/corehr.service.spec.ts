@@ -204,4 +204,81 @@ describe('CorehrService', () => {
       req.flush({ message: 'Synced' });
     });
   });
+
+  describe('pendingEnroll', () => {
+    it('should get pending enroll', () => {
+      service.pendingEnroll('DEV-001').subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/biometria/enroll/pendiente`);
+      expect(req.request.params.get('device_code')).toBe('DEV-001');
+      req.flush({ session_id: 's1' });
+    });
+  });
+
+  describe('completeEnroll', () => {
+    it('should complete enroll', () => {
+      const body = { session_id: 's1', template_base64: 'abc' } as any;
+      service.completeEnroll(body).subscribe();
+      const req = httpMock.expectOne(`${apiBase}/corehr/biometria/enroll/completar`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(body);
+      req.flush({ id: 1 });
+    });
+  });
+
+  describe('listDevices with no params', () => {
+    it('should list devices without params', () => {
+      service.listDevices().subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/devices`);
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
+
+  describe('listBiometria with no params', () => {
+    it('should list biometria without params', () => {
+      service.listBiometria().subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/biometria`);
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
+
+  describe('listAttendance with all params', () => {
+    it('should pass all params', () => {
+      service.listAttendance({
+        scope: 'ALL', branch_id: 1, area_id: 2, departamento_id: 3,
+        date_from: '2024-01-01', date_to: '2024-12-31', state: 'PUNTUAL',
+        tenant_user_id: 5, page: 0, size: 20, sort: 'check_in',
+      }).subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/attendance`);
+      expect(req.request.params.get('scope')).toBe('ALL');
+      expect(req.request.params.get('branch_id')).toBe('1');
+      expect(req.request.params.get('sort')).toBe('check_in');
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
+
+  describe('listNonWorkingDays with no params', () => {
+    it('should list without params', () => {
+      service.listNonWorkingDays().subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/non-working-days`);
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
+
+  describe('listTenantContacts with no params', () => {
+    it('should list without params', () => {
+      service.listTenantContacts().subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/tenant-contacts`);
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
+
+  describe('listUserDepartments with opts', () => {
+    it('should pass opts', () => {
+      service.listUserDepartments(5, { activa: true, page: 0, size: 10 }).subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/corehr/usuarios/5/departamentos`);
+      expect(req.request.params.get('activa')).toBe('true');
+      expect(req.request.params.get('page')).toBe('0');
+      req.flush({ data: [], meta: { total: 0 } });
+    });
+  });
 });

@@ -53,6 +53,11 @@ public class DeviceRepositoryAdapter implements DeviceRepositoryPort {
     }
 
     @Override
+    public Optional<Device> findByCode(String code) {
+        return deviceRepo.findByCode(code).map(DeviceMapper::toDomain);
+    }
+
+    @Override
     @Transactional
     public void deleteById(Long id) {
         deviceRepo.deleteById(id);

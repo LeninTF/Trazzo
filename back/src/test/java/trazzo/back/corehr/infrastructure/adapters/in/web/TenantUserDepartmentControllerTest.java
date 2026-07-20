@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import trazzo.back.corehr.application.dto.command.CreateTenantUserDepartmentCommand;
 import trazzo.back.corehr.application.dto.command.PatchTenantUserDepartmentCommand;
+import trazzo.back.corehr.application.dto.result.PaginatedResult;
 import trazzo.back.corehr.application.dto.result.TenantUserDepartmentResult;
 import trazzo.back.corehr.application.port.in.TenantUserDepartmentUseCase;
 
@@ -40,7 +41,8 @@ class TenantUserDepartmentControllerTest {
 
     @Test
     void listByUser_shouldReturn200() throws Exception {
-        when(tenantUserDepartmentUseCase.findAllByTenantUserId(10L)).thenReturn(List.of(aResult()));
+        var paginated = new PaginatedResult<TenantUserDepartmentResult>(List.of(aResult()), 0, 20, 1, 1);
+        when(tenantUserDepartmentUseCase.findAllByTenantUserId(eq(10L), anyInt(), anyInt())).thenReturn(paginated);
 
         mockMvc.perform(get("/corehr/usuarios/10/departamentos"))
                 .andExpect(status().isOk())
@@ -50,7 +52,8 @@ class TenantUserDepartmentControllerTest {
 
     @Test
     void listByUser_shouldReturnEmptyList() throws Exception {
-        when(tenantUserDepartmentUseCase.findAllByTenantUserId(99L)).thenReturn(List.of());
+        var empty = new PaginatedResult<TenantUserDepartmentResult>(List.of(), 0, 20, 0, 0);
+        when(tenantUserDepartmentUseCase.findAllByTenantUserId(eq(99L), anyInt(), anyInt())).thenReturn(empty);
 
         mockMvc.perform(get("/corehr/usuarios/99/departamentos"))
                 .andExpect(status().isOk())

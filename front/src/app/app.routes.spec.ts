@@ -1,4 +1,5 @@
 import { routes } from './app.routes';
+import { authGuard } from './auth/auth.guard';
 
 describe('app.routes', () => {
   it('should have 36 route definitions', () => {
@@ -84,6 +85,31 @@ describe('app.routes', () => {
     const nonRedirectRoutes = routes.filter(r => !r.redirectTo);
     nonRedirectRoutes.forEach(r => {
       expect(r.component).toBeDefined();
+    });
+  });
+
+  describe('authGuard coverage', () => {
+    const PUBLIC_PATHS = new Set([
+      '', 'shop', 'login', 'contacto', 'legal/privacy-policy', 'legal/terms-and-conditions',
+      'ayuda/:seccion', 'ayuda',
+    ]);
+
+    it('should apply authGuard to every tenant/usuario/saas data route', () => {
+      const protectedRoutes = routes.filter(r =>
+        (r.path?.startsWith('tenant/') || r.path?.startsWith('usuario/') || r.path?.startsWith('saas/'))
+        && !r.redirectTo,
+      );
+      expect(protectedRoutes.length).toBeGreaterThan(0);
+      protectedRoutes.forEach(r => {
+        expect(r.canActivate).toEqual([authGuard]);
+      });
+    });
+
+    it('should not guard public routes', () => {
+      const publicRoutes = routes.filter(r => r.path !== undefined && PUBLIC_PATHS.has(r.path));
+      publicRoutes.forEach(r => {
+        expect(r.canActivate).toBeUndefined();
+      });
     });
   });
 });

@@ -1,136 +1,128 @@
 package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+import java.util.regex.Pattern;
+import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
-import trazzo.back.saasglobal.infrastructure.config.ProvisioningProperties;
 
+/**
+ * Provisions a per-tenant PostgreSQL schema within the single physical application
+ * database (as opposed to a separate physical database per tenant). Uses the raw,
+ * un-wrapped DataSource directly so it can manage {@code search_path} for the schema
+ * being provisioned without depending on (or mutating) the ambient per-request
+ * {@code TenantContext}.
+ */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioningPort {
 
     private static final String SCHEMA_SCRIPT = "db/tenant/V1__tenant_db.sql";
-    private static final int MAX_SAFE_LENGTH = 40;
+    private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
-    private final ProvisioningProperties props;
+    private final DataSource rawDataSource;
 
-    /**
-     * PAID flow: creates a new isolated PostgreSQL database + user, runs the schema script,
-     * and returns the generated connection settings for the new tenant.
-     * The dbName and dbUser include a tenantId-derived suffix to prevent collisions
-     * when different subdomains sanitize to the same identifier.
-     */
+    public TenantSchemaProvisioningAdapter(@Qualifier("rawDataSource") DataSource rawDataSource) {
+        this.rawDataSource = rawDataSource;
+    }
+
     @Override
     public TenantSettings provisionNew(String tenantId, String subDomain) {
-        String safe = subDomain.toLowerCase().replaceAll("[^a-z0-9]", "_");
-        String truncated = safe.length() > MAX_SAFE_LENGTH ? safe.substring(0, MAX_SAFE_LENGTH) : safe;
-        String tenantSuffix = tenantId.replace("-", "").substring(0, 8);
-        String dbName = "tenant_" + truncated + "_" + tenantSuffix;
-        String dbUser = "user_" + truncated + "_" + tenantSuffix;
-        String dbPassword = generatePassword();
-
-        createDatabaseAndUser(dbName, dbUser, dbPassword);
-
-        String tenantJdbcUrl = buildJdbcUrl(props.dbHost(), props.dbPort(), dbName);
-        runSchemaScript(tenantJdbcUrl, props.adminUsername(), props.adminPassword());
-        grantPrivilegesToUser(tenantJdbcUrl, dbUser);
-
-        return TenantSettings.of(tenantId, props.dbHost(), props.dbPort(), dbName, dbUser, dbPassword);
+        String schemaName = TenantSettings.deriveSchemaName(subDomain);
+        provisionSchema(schemaName);
+        return TenantSettings.of(tenantId, schemaName);
     }
 
-    /**
-     * TRIAL flow: runs the schema script against an existing database using provided credentials.
-     */
     @Override
     public void provisionExisting(TenantSettings settings) {
-        String url = buildJdbcUrl(settings.getDbHost(), settings.getDbPort(), settings.getDbName());
-        runSchemaScript(url, settings.getDbUser(), settings.getDbPassword());
+        provisionSchema(settings.getSchemaName());
     }
 
     /**
-     * Best-effort compensation: drops database and user if provisioning succeeded
-     * but the master transaction failed afterward. Errors are logged, not rethrown.
+     * Best-effort compensation: drops the schema if provisioning succeeded but the
+     * master transaction failed afterward. Errors are logged, not rethrown.
      */
     @Override
     @SuppressWarnings("java:S2077")
-    public void deprovision(String dbName, String dbUser) {
+    public void deprovision(String schemaName) {
         try {
-            validateIdentifier(dbName);
-            validateIdentifier(dbUser);
-            try (Connection conn = DriverManager.getConnection(
-                    props.adminUrl(), props.adminUsername(), props.adminPassword())) {
-                conn.setAutoCommit(true);
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.execute("DROP DATABASE IF EXISTS \"" + dbName + "\"");
-                    stmt.execute("DROP USER IF EXISTS \"" + dbUser + "\"");
-                }
+            validateIdentifier(schemaName);
+            try (Connection conn = rawDataSource.getConnection();
+                    Statement stmt = conn.createStatement()) {
+                stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
             }
         } catch (Exception e) {
-            log.warn("Best-effort deprovision failed for DB '{}', user '{}': {}", dbName, dbUser, e.getMessage());
+            log.warn("Best-effort deprovision failed for schema '{}': {}", schemaName, e.getMessage());
         }
     }
 
-    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only
+    // Identifier is sanitized to [a-z0-9_] by validateIdentifier() before this ever runs.
     @SuppressWarnings("java:S2077")
-    private void createDatabaseAndUser(String dbName, String dbUser, String dbPassword) {
-        validateIdentifier(dbName);
-        validateIdentifier(dbUser);
-        try (Connection conn = DriverManager.getConnection(props.adminUrl(), props.adminUsername(), props.adminPassword())) {
-            conn.setAutoCommit(true); // CREATE DATABASE cannot run inside a transaction
+    private void provisionSchema(String schemaName) {
+        validateIdentifier(schemaName);
+        createSchema(schemaName);
+        try (Connection conn = rawDataSource.getConnection()) {
             try (Statement stmt = conn.createStatement()) {
-                stmt.execute("CREATE DATABASE \"" + dbName + "\"");
-                stmt.execute("CREATE USER \"" + dbUser + "\" WITH ENCRYPTED PASSWORD '" + dbPassword + "'");
-                stmt.execute("GRANT ALL PRIVILEGES ON DATABASE \"" + dbName + "\" TO \"" + dbUser + "\"");
+                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
+                // since PG13, always implicitly searched first) but kept for defense in depth
+                // and to match TenantAwareDataSource's runtime search_path exactly.
+                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
             }
-        } catch (SQLException e) {
-            throw new TenantProvisioningException("Failed to create database/user for tenant: " + dbName, e);
-        }
-    }
-
-    private void runSchemaScript(String jdbcUrl, String user, String password) {
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, user, password)) {
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
-        } catch (SQLException e) {
-            throw new TenantProvisioningException("Failed to run tenant schema script on: " + jdbcUrl, e);
+        } catch (Exception e) {
+            // The schema was created by us (createSchema() above already succeeded), so a
+            // failure past this point must not leave it behind half-populated — that would
+            // block retrying the same subDomain (CREATE SCHEMA no longer tolerates a collision).
+            dropSchemaBestEffort(schemaName);
+            throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
         }
     }
 
     @SuppressWarnings("java:S2077")
-    private void grantPrivilegesToUser(String tenantJdbcUrl, String dbUser) {
-        validateIdentifier(dbUser);
-        try (Connection conn = DriverManager.getConnection(tenantJdbcUrl, props.adminUsername(), props.adminPassword())) {
-            conn.setAutoCommit(true);
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute("GRANT ALL ON ALL TABLES IN SCHEMA public TO \"" + dbUser + "\"");
-                stmt.execute("GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO \"" + dbUser + "\"");
-                stmt.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"" + dbUser + "\"");
-                stmt.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO \"" + dbUser + "\"");
-            }
+    private void createSchema(String schemaName) {
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
         } catch (SQLException e) {
-            throw new TenantProvisioningException("Failed to grant privileges to user: " + dbUser, e);
+            throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
         }
     }
 
-    private static String buildJdbcUrl(String host, String port, String dbName) {
-        return "jdbc:postgresql://" + host + ":" + port + "/" + dbName;
+    /**
+     * Drops the schema if it exists. Used by {@code TenantDataSeeder} to remove
+     * orphaned schemas before {@link #provisionExisting} creates them fresh.
+     */
+    @SuppressWarnings("java:S2077")
+    public void recreateSchema(String schemaName) {
+        validateIdentifier(schemaName);
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
+        } catch (SQLException e) {
+            throw new TenantProvisioningException("Failed to drop schema: " + schemaName, e);
+        }
     }
 
-    private static String generatePassword() {
-        return UUID.randomUUID().toString().replace("-", "");
+    @SuppressWarnings("java:S2077")
+    private void dropSchemaBestEffort(String schemaName) {
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
+        } catch (SQLException dropEx) {
+            log.warn("Failed to drop orphaned schema '{}' after provisioning failure: {}",
+                    schemaName, dropEx.getMessage());
+        }
     }
 
     private static void validateIdentifier(String value) {
-        if (value == null || !value.matches("[a-z0-9_]+")) {
+        if (value == null || !VALID_SCHEMA.matcher(value).matches()) {
             throw new TenantProvisioningException(
                     "Identifier contains unsafe characters: " + value, null);
         }

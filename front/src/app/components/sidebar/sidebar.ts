@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnDestroy } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { RoleService } from '../../services/role.service';
+import { AuthService } from '../../api/services/auth.service';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
@@ -11,6 +12,7 @@ import { filter, Subscription } from 'rxjs';
 })
 export class Sidebar implements OnDestroy {
   protected readonly roleService = inject(RoleService);
+  private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly sub: Subscription;
 
@@ -39,4 +41,10 @@ export class Sidebar implements OnDestroy {
     if (role === 'admin-saas') return 'ADMINISTRADOR SAAS';
     return 'USUARIO';
   });
+
+  protected cerrarSesion(): void {
+    this.authService.logout();
+    this.roleService.clearSession();
+    this.router.navigateByUrl('/login');
+  }
 }

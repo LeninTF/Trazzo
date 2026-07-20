@@ -1,318 +1,207 @@
-import { fakeAsync, tick } from '@angular/core/testing';
-import { BaseGestionRoles } from './role-management-base';
-import type { Rol, Modulo } from './role-management-base';
+import {
+  togglePermisoAccion,
+  toggleModuloAcciones,
+  estadoModulo,
+  resumenModulo,
+  restablecerPermisos,
+  RoleMatrixComponent,
+  Modulo,
+} from './role-management-base';
 
-class InstanciaRoles extends BaseGestionRoles {
-  roles: Rol[] = [
-    { id: 'admin', nombre: 'Admin', descripcion: 'Full access', color: '#ff0000', icono: 'bi-shield' },
-    { id: 'user', nombre: 'User', descripcion: 'Basic access', color: '#00ff00', icono: 'bi-person' },
+class TestRoleMatrix extends RoleMatrixComponent {
+  readonly modulos: Modulo[] = [
+    { id: 'mod-a', nombre: 'Mod A', icono: 'bi-a', acciones: [
+      { id: 'accion-1', nombre: 'Accion 1', icono: 'bi-1' },
+      { id: 'accion-2', nombre: 'Accion 2', icono: 'bi-2' },
+    ]},
+    { id: 'mod-b', nombre: 'Mod B', icono: 'bi-b', acciones: [
+      { id: 'accion-3', nombre: 'Accion 3', icono: 'bi-3' },
+    ]},
   ];
-
-  modulos: Modulo[] = [
-    {
-      id: 'dashboard',
-      nombre: 'Dashboard',
-      icono: 'bi-grid',
-      acciones: [
-        { id: 'view', nombre: 'Ver', icono: 'bi-eye' },
-        { id: 'export', nombre: 'Exportar', icono: 'bi-download' },
-      ],
-    },
-    {
-      id: 'users',
-      nombre: 'Usuarios',
-      icono: 'bi-people',
-      acciones: [
-        { id: 'create', nombre: 'Crear', icono: 'bi-plus' },
-        { id: 'edit', nombre: 'Editar', icono: 'bi-pencil' },
-        { id: 'delete', nombre: 'Eliminar', icono: 'bi-trash' },
-      ],
-    },
-  ];
-
-  protected readonly PERMISOS_DEFAULT: Record<string, Record<string, boolean>> = {
-    admin: {
-      'dashboard.view': true,
-      'dashboard.export': true,
-      'users.create': true,
-      'users.edit': true,
-      'users.delete': true,
-    },
-    user: {
-      'dashboard.view': true,
-      'dashboard.export': false,
-    },
-  };
-
-  constructor() {
-    super();
-    this.inicializarPermisos();
-    this.rolSeleccionado = 'admin';
-  }
+  guardarCambios(): void {}
+  guardarRol(): void {}
+  eliminarRol(_rolId: string): void {}
 }
 
-describe('BaseGestionRoles', () => {
-  let component: InstanciaRoles;
+describe('role-management-base standalone functions', () => {
+  const modulos: Modulo[] = [
+    { id: 'gestion', nombre: 'Gestion', icono: 'bi-x', acciones: [
+      { id: 'crear', nombre: 'Crear', icono: 'bi-plus' },
+      { id: 'editar', nombre: 'Editar', icono: 'bi-pencil' },
+    ]},
+  ];
+
+  const permisos: Record<string, Record<string, boolean>> = {
+    'role-1': { 'gestion.crear': true, 'gestion.editar': false },
+  };
+
+  it('togglePermisoAccion should toggle a permission value', () => {
+    expect(permisos['role-1']['gestion.crear']).toBeTrue();
+    togglePermisoAccion(permisos, 'role-1', 'gestion', 'crear');
+    expect(permisos['role-1']['gestion.crear']).toBeFalse();
+    togglePermisoAccion(permisos, 'role-1', 'gestion', 'crear');
+    expect(permisos['role-1']['gestion.crear']).toBeTrue();
+  });
+
+  it('toggleModuloAcciones should set all actions of a modulo', () => {
+    toggleModuloAcciones(modulos, permisos, 'role-1', 'gestion', true);
+    expect(permisos['role-1']['gestion.crear']).toBeTrue();
+    expect(permisos['role-1']['gestion.editar']).toBeTrue();
+  });
+
+  it('toggleModuloAcciones should early return for non-existent modulo', () => {
+    toggleModuloAcciones(modulos, permisos, 'role-1', 'noexiste', true);
+    expect(permisos['role-1']['gestion.crear']).toBeTrue();
+  });
+
+  it('estadoModulo should return completo when all actions active', () => {
+    expect(estadoModulo(modulos, permisos, 'role-1', 'gestion')).toBe('completo');
+  });
+
+  it('estadoModulo should return parcial when some actions active', () => {
+    permisos['role-1']['gestion.crear'] = true;
+    permisos['role-1']['gestion.editar'] = false;
+    expect(estadoModulo(modulos, permisos, 'role-1', 'gestion')).toBe('parcial');
+  });
+
+  it('estadoModulo should return vacio when no actions active', () => {
+    permisos['role-1']['gestion.crear'] = false;
+    permisos['role-1']['gestion.editar'] = false;
+    expect(estadoModulo(modulos, permisos, 'role-1', 'gestion')).toBe('vacio');
+  });
+
+  it('estadoModulo should return vacio for non-existent modulo', () => {
+    expect(estadoModulo(modulos, permisos, 'role-1', 'noexiste')).toBe('vacio');
+  });
+
+  it('resumenModulo should return activos/total', () => {
+    permisos['role-1']['gestion.crear'] = true;
+    permisos['role-1']['gestion.editar'] = false;
+    expect(resumenModulo(modulos, permisos, 'role-1', 'gestion')).toBe('1/2');
+  });
+
+  it('resumenModulo should return 0/0 for non-existent modulo', () => {
+    expect(resumenModulo(modulos, permisos, 'role-1', 'noexiste')).toBe('0/0');
+  });
+
+  it('restablecerPermisos should copy backup values back', () => {
+    permisos['role-1']['gestion.crear'] = false;
+    permisos['role-1']['gestion.editar'] = true;
+    const backup: Record<string, Record<string, boolean>> = {
+      'role-1': { 'gestion.crear': true, 'gestion.editar': false },
+    };
+    restablecerPermisos(permisos, backup, 'role-1');
+    expect(permisos['role-1']['gestion.crear']).toBeTrue();
+    expect(permisos['role-1']['gestion.editar']).toBeFalse();
+  });
+});
+
+describe('RoleMatrixComponent', () => {
+  let component: TestRoleMatrix;
 
   beforeEach(() => {
-    component = new InstanciaRoles();
+    component = new TestRoleMatrix();
+    component.permisos = {
+      'role-1': { 'mod-a.accion-1': true, 'mod-a.accion-2': false, 'mod-b.accion-3': true },
+      'role-2': { 'mod-a.accion-1': false, 'mod-a.accion-2': false, 'mod-b.accion-3': false },
+    };
+    component.respaldoPermisos = {
+      'role-1': { 'mod-a.accion-1': true, 'mod-a.accion-2': false, 'mod-b.accion-3': true },
+      'role-2': { 'mod-a.accion-1': false, 'mod-a.accion-2': false, 'mod-b.accion-3': false },
+    };
+    component.roles = [
+      { id: 'role-1', nombre: 'Admin', descripcion: 'desc', color: '#000', icono: 'bi-shield' },
+      { id: 'role-2', nombre: 'Viewer', descripcion: '', color: '#111', icono: 'bi-eye' },
+    ];
+    component.rolSeleccionado = 'role-1';
   });
 
-  it('sets default signal values on construction', () => {
-    expect(component.loading()).toBeFalse();
-    expect(component.error()).toBe('');
+  it('rolActual should return matching role', () => {
+    expect(component.rolActual.id).toBe('role-1');
+    expect(component.rolActual.nombre).toBe('Admin');
   });
 
-  it('provides 2 test roles', () => {
-    expect(component.roles.length).toBe(2);
+  it('rolActual should fall back to roles[0] when rolSeleccionado has no match', () => {
+    component.rolSeleccionado = 'nonexistent';
+    expect(component.rolActual.id).toBe('role-1');
   });
 
-  it('provides 2 test modules', () => {
-    expect(component.modulos.length).toBe(2);
+  it('permisosActuales should return permissions for selected role', () => {
+    expect(component.permisosActuales['mod-a.accion-1']).toBeTrue();
+    expect(component.permisosActuales['mod-a.accion-2']).toBeFalse();
   });
 
-  describe('inicializarPermisos', () => {
-    it('should initialize permissions from defaults', () => {
-      expect(component.permisos['admin']['dashboard.view']).toBeTrue();
-      expect(component.permisos['admin']['dashboard.export']).toBeTrue();
-      expect(component.permisos['admin']['users.create']).toBeTrue();
-      expect(component.permisos['user']['dashboard.view']).toBeTrue();
-      expect(component.permisos['user']['dashboard.export']).toBeFalse();
-    });
+  it('permisosActuales should return empty object for unknown role', () => {
+    component.rolSeleccionado = 'unknown-role';
+    expect(component.permisosActuales).toEqual({});
   });
 
-  describe('rolActual', () => {
-    it('should return the selected role', () => {
-      expect(component.rolActual.id).toBe('admin');
-    });
-
-    it('should return first role if selected role not found', () => {
-      component.rolSeleccionado = 'nonexistent';
-      expect(component.rolActual.id).toBe('admin');
-    });
+  it('togglePermiso should toggle the permission value', () => {
+    component.togglePermiso('mod-a', 'accion-2');
+    expect(component.permisosActuales['mod-a.accion-2']).toBeTrue();
+    component.togglePermiso('mod-a', 'accion-2');
+    expect(component.permisosActuales['mod-a.accion-2']).toBeFalse();
   });
 
-  describe('permisosActuales', () => {
-    it('should return permissions for selected role', () => {
-      component.rolSeleccionado = 'user';
-      expect(component.permisosActuales['dashboard.view']).toBeTrue();
-      expect(component.permisosActuales['dashboard.export']).toBeFalse();
-    });
-
-    it('should return empty object for unknown role', () => {
-      component.rolSeleccionado = 'unknown';
-      expect(component.permisosActuales).toEqual({});
-    });
+  it('toggleModulo should set all actions in a modulo', () => {
+    component.toggleModulo('mod-a', true);
+    expect(component.permisosActuales['mod-a.accion-1']).toBeTrue();
+    expect(component.permisosActuales['mod-a.accion-2']).toBeTrue();
   });
 
-  describe('modulosVisibles', () => {
-    it('should return all modulos', () => {
-      expect(component.modulosVisibles()).toEqual(component.modulos);
-    });
+  it('getEstadoModulo should return correct state', () => {
+    expect(component.getEstadoModulo('mod-a')).toBe('parcial');
+    component.toggleModulo('mod-a', true);
+    expect(component.getEstadoModulo('mod-a')).toBe('completo');
+    component.toggleModulo('mod-a', false);
+    expect(component.getEstadoModulo('mod-a')).toBe('vacio');
   });
 
-  describe('togglePermiso', () => {
-    it('should toggle a single permission', () => {
-      const initial = component.permisos['admin']['dashboard.view'];
-      component.togglePermiso('dashboard', 'view');
-      expect(component.permisos['admin']['dashboard.view']).toBe(!initial);
-    });
+  it('getResumenModulo should return activos/total', () => {
+    expect(component.getResumenModulo('mod-a')).toBe('1/2');
+    expect(component.getResumenModulo('mod-b')).toBe('1/1');
   });
 
-  describe('toggleModulo', () => {
-    it('should set all module actions to true', () => {
-      component.rolSeleccionado = 'user';
-      component.toggleModulo('users', true);
-      expect(component.permisos['user']['users.create']).toBeTrue();
-      expect(component.permisos['user']['users.edit']).toBeTrue();
-      expect(component.permisos['user']['users.delete']).toBeTrue();
-    });
-
-    it('should set all module actions to false', () => {
-      component.toggleModulo('dashboard', false);
-      expect(component.permisos['admin']['dashboard.view']).toBeFalse();
-      expect(component.permisos['admin']['dashboard.export']).toBeFalse();
-    });
-
-    it('should do nothing for unknown module', () => {
-      component.toggleModulo('unknown', true);
-    });
+  it('seleccionarRol should change role and reset mensajeGuardado', () => {
+    component.mensajeGuardado = true;
+    component.seleccionarRol('role-2');
+    expect(component.rolSeleccionado).toBe('role-2');
+    expect(component.mensajeGuardado).toBeFalse();
   });
 
-  describe('getEstadoModulo', () => {
-    it('should return completo when all actions active', () => {
-      expect(component.getEstadoModulo('dashboard')).toBe('completo');
-    });
-
-    it('should return vacio when no actions active', () => {
-      component.rolSeleccionado = 'user';
-      component.toggleModulo('users', false);
-      expect(component.getEstadoModulo('users')).toBe('vacio');
-    });
-
-    it('should return parcial when some actions active', () => {
-      component.rolSeleccionado = 'user';
-      expect(component.getEstadoModulo('dashboard')).toBe('parcial');
-    });
-
-    it('should return vacio for unknown module', () => {
-      expect(component.getEstadoModulo('unknown')).toBe('vacio');
-    });
+  it('restablecer should revert permissions from backup', () => {
+    component.togglePermiso('mod-a', 'accion-2');
+    expect(component.permisosActuales['mod-a.accion-2']).toBeTrue();
+    component.restablecer();
+    expect(component.permisosActuales['mod-a.accion-2']).toBeFalse();
   });
 
-  describe('getResumenModulo', () => {
-    it('should return active/total for known module', () => {
-      component.rolSeleccionado = 'user';
-      expect(component.getResumenModulo('dashboard')).toBe('1/2');
-    });
-
-    it('should return 0/0 for unknown module', () => {
-      expect(component.getResumenModulo('unknown')).toBe('0/0');
-    });
+  it('abrirModalNuevoRol should reset form state', () => {
+    component.editandoRol = component.roles[0];
+    component.nuevoRolNombre = 'old';
+    component.abrirModalNuevoRol();
+    expect(component.mostrarModalRol).toBeTrue();
+    expect(component.editandoRol).toBeNull();
+    expect(component.nuevoRolNombre).toBe('');
+    expect(component.nuevoRolDescripcion).toBe('');
   });
 
-  describe('seleccionarRol', () => {
-    it('should select role and clear guardado message', () => {
-      component.rolSeleccionado = 'admin';
-      component.mensajeGuardado = true;
-      component.seleccionarRol('user');
-      expect(component.rolSeleccionado).toBe('user');
-      expect(component.mensajeGuardado).toBeFalse();
-    });
+  it('abrirModalEditarRol should prefill form with role data', () => {
+    component.abrirModalEditarRol(component.roles[0]);
+    expect(component.mostrarModalRol).toBeTrue();
+    expect(component.editandoRol).toBe(component.roles[0]);
+    expect(component.nuevoRolNombre).toBe('Admin');
+    expect(component.nuevoRolDescripcion).toBe('desc');
   });
 
-  describe('restablecer', () => {
-    it('should restore permissions from backup', () => {
-      component.permisos['admin']['dashboard.view'] = false;
-      component.restablecer();
-      expect(component.permisos['admin']['dashboard.view']).toBeTrue();
-    });
+  it('cerrarModalNuevoRol should close modal and clear editandoRol', () => {
+    component.abrirModalNuevoRol();
+    component.cerrarModalNuevoRol();
+    expect(component.mostrarModalRol).toBeFalse();
+    expect(component.editandoRol).toBeNull();
   });
 
-  describe('guardarCambios', () => {
-    it('should save current permissions to backup', () => {
-      component.permisos['admin']['dashboard.view'] = false;
-      component.guardarCambios();
-      expect(component.respaldoPermisos['admin']['dashboard.view']).toBeFalse();
-      expect(component.mensajeGuardado).toBeTrue();
-    });
-
-    it('should reset mensajeGuardado after timeout', fakeAsync(() => {
-      component.guardarCambios();
-      tick(3000);
-      expect(component.mensajeGuardado).toBeFalse();
-    }));
-  });
-
-  describe('abrirModalNuevoRol', () => {
-    it('should reset fields and show modal', () => {
-      component.editandoRol = { id: 'x', nombre: 'X', descripcion: 'X', color: '#000', icono: 'bi-x' };
-      component.nuevoRolNombre = 'old';
-      component.nuevoRolDescripcion = 'old';
-
-      component.abrirModalNuevoRol();
-
-      expect(component.editandoRol).toBeNull();
-      expect(component.nuevoRolNombre).toBe('');
-      expect(component.nuevoRolDescripcion).toBe('');
-      expect(component.mostrarModalRol).toBeTrue();
-    });
-  });
-
-  describe('abrirModalEditarRol', () => {
-    it('should populate fields from role and show modal', () => {
-      const rol: Rol = { id: 'test', nombre: 'Test', descripcion: 'Test role', color: '#fff', icono: 'bi-star' };
-      component.abrirModalEditarRol(rol);
-
-      expect(component.editandoRol).toEqual(rol);
-      expect(component.nuevoRolNombre).toBe('Test');
-      expect(component.nuevoRolDescripcion).toBe('Test role');
-      expect(component.mostrarModalRol).toBeTrue();
-    });
-  });
-
-  describe('cerrarModalNuevoRol', () => {
-    it('should hide modal and clear editandoRol', () => {
-      component.mostrarModalRol = true;
-      component.editandoRol = { id: 'x', nombre: 'X', descripcion: 'X', color: '#000', icono: 'bi-x' };
-
-      component.cerrarModalNuevoRol();
-
-      expect(component.mostrarModalRol).toBeFalse();
-      expect(component.editandoRol).toBeNull();
-    });
-  });
-
-  describe('guardarRol', () => {
-    it('should add new role when not editing', () => {
-      component.abrirModalNuevoRol();
-      component.nuevoRolNombre = 'New Role';
-      component.nuevoRolDescripcion = 'A new role';
-
-      component.guardarRol();
-
-      expect(component.roles.length).toBe(3);
-      expect(component.roles[2].id).toBe('new-role');
-      expect(component.roles[2].nombre).toBe('New Role');
-      expect(component.rolSeleccionado).toBe('new-role');
-      expect(component.mostrarModalRol).toBeFalse();
-    });
-
-    it('should edit existing role when editing', () => {
-      component.abrirModalEditarRol(component.roles[1]);
-      component.nuevoRolNombre = 'Updated User';
-      component.nuevoRolDescripcion = 'Updated description';
-
-      component.guardarRol();
-
-      expect(component.roles[1].nombre).toBe('Updated User');
-      expect(component.roles[1].descripcion).toBe('Updated description');
-      expect(component.mostrarModalRol).toBeFalse();
-      expect(component.editandoRol).toBeNull();
-    });
-
-    it('should not add role with duplicate id', () => {
-      component.abrirModalNuevoRol();
-      component.nuevoRolNombre = 'Admin';
-      component.guardarRol();
-      expect(component.roles.length).toBe(2);
-    });
-
-    it('should not add role with empty name', () => {
-      component.abrirModalNuevoRol();
-      component.guardarRol();
-      expect(component.roles.length).toBe(2);
-    });
-  });
-
-  describe('eliminarRol', () => {
-    it('should remove role and its permissions', () => {
-      const initialLength = component.roles.length;
-      component.eliminarRol('user');
-
-      expect(component.roles.length).toBe(initialLength - 1);
-      expect(component.roles.find(r => r.id === 'user')).toBeUndefined();
-      expect(component.permisos['user']).toBeUndefined();
-    });
-
-    it('should select first role if selected role is deleted', () => {
-      component.rolSeleccionado = 'user';
-      component.eliminarRol('user');
-      expect(component.rolSeleccionado).toBe('admin');
-    });
-
-    it('should do nothing for non-existent role', () => {
-      const initialLength = component.roles.length;
-      component.eliminarRol('nonexistent');
-      expect(component.roles.length).toBe(initialLength);
-    });
-
-    it('should handle deleting last role', () => {
-      component.roles = [{ id: 'only', nombre: 'Only', descripcion: 'Only', color: '#000', icono: 'bi-person' }];
-      component.rolSeleccionado = 'only';
-      component.eliminarRol('only');
-      expect(component.roles.length).toBe(0);
-      expect(component.rolSeleccionado).toBe('');
-    });
+  it('modulosVisibles should return all modulos by default', () => {
+    expect(component.modulosVisibles()).toHaveSize(2);
   });
 });

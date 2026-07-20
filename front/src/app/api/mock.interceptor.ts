@@ -90,8 +90,9 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
 
   // Skip non-API requests
   if (!url.startsWith('/auth/') && !url.startsWith('/usuarios') && !url.startsWith('/saas/')
-    && !url.startsWith('/incidentes') && !url.startsWith('/corehr/')
+    && !url.startsWith('/incidentes')
     && !url.startsWith('/asistencia/') && !url.startsWith('/security/')
+    && !url.startsWith('/corehr/')
     && !url.startsWith('/ws/')) {
     return next(req);
   }
@@ -335,7 +336,7 @@ function handleSaasUsers(
     const body = req.body as Record<string, unknown>;
     return created({
       ...mockMasterUsers[0],
-      id: mockMasterUsers.length + 1,
+      id: `mock-${Date.now()}`,
       email: body['email'] as string ?? '',
       persona: {
         ...mockMasterUsers[0].persona,
@@ -348,19 +349,18 @@ function handleSaasUsers(
 
   if (u === '/saas/users/me' && method === 'GET') return ok(mockMasterUsers[0]);
 
-  const mUidMatch = /^\/saas\/users\/(\d+)$/.exec(u);
-  if (mUidMatch) {
-    const id = Number.parseInt(mUidMatch[1], 10);
+  const mUidMatch = /^\/saas\/users\/([^/]+)$/.exec(u);
+  if (mUidMatch && mUidMatch[1] !== 'me') {
+    const id = mUidMatch[1];
     const user = mockMasterUsers.find(u => u.id === id);
     if (!user) return _error(404, 'Usuario no encontrado');
     if (method === 'GET') return ok(user);
     if (method === 'PATCH') return ok({ ...user, ...(req.body as object), id });
     if (method === 'DELETE') {
-      return ok<SoftDeleteResponse>({
+      return ok({
         id: user.id,
         status: 'INACTIVO',
         deleted_at: new Date().toISOString(),
-        deleted_by: 1,
       });
     }
   }

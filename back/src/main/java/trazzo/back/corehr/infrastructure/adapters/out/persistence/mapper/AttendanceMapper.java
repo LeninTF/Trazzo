@@ -19,6 +19,8 @@ public final class AttendanceMapper {
         entity.setAttendanceDate(domain.getAttendanceDate());
         entity.setMinutesLate(domain.getMinutesLate());
         entity.setState(domain.getState());
+        entity.setOfflineEventId(domain.getOfflineEventId());
+        entity.setDeviceCode(domain.getDeviceCode());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         return entity;
@@ -35,6 +37,8 @@ public final class AttendanceMapper {
                 entity.getAttendanceDate(),
                 entity.getMinutesLate(),
                 entity.getState(),
+                entity.getOfflineEventId(),
+                entity.getDeviceCode(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

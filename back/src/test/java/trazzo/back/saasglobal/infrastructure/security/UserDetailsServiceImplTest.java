@@ -31,17 +31,45 @@ class UserDetailsServiceImplTest {
     void loadUserByUsername_returnsUserDetails_whenUserExists() {
         LocalDateTime now = LocalDateTime.now();
         User user = User.restore(USER_ID.toString(), 1, null, "admin@test.com", null,
-                "hashed_pass", List.of("ADMIN"), now, now, null);
+                "hashed_pass", List.of("ADMIN"), List.of(), false, now, now, null);
         when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("admin@test.com");
 
         assertThat(details.getUsername()).isEqualTo("admin@test.com");
         assertThat(details.getPassword()).isEqualTo("hashed_pass");
-        assertThat(details.getAuthorities()).hasSize(1);
-        assertThat(details.getAuthorities().iterator().next().getAuthority())
-                .isEqualTo("ROLE_ADMIN");
+        var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        assertThat(authorities).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_SAAS_ADMIN");
         assertThat(details.isEnabled()).isTrue();
+    }
+
+    @Test
+    void loadUserByUsername_grantsPermissionAuthorities() {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.restore(USER_ID.toString(), 1, null, "financiero@test.com", null,
+                "hashed_pass", List.of("financiero"),
+                List.of("billing-suscripciones.gestionar-pagos", "monitoreo-sistema.dashboard-global"),
+                false, now, now, null);
+        when(userRepository.findByEmail("financiero@test.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("financiero@test.com");
+
+        var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        assertThat(authorities).containsExactlyInAnyOrder(
+                "ROLE_financiero", "ROLE_SAAS_ADMIN",
+                "billing-suscripciones.gestionar-pagos", "monitoreo-sistema.dashboard-global");
+    }
+
+    @Test
+    void loadUserByUsername_doesNotGrantSaasAdmin_whenUserHasNoRoles() {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.restore(USER_ID.toString(), 1, "tenant-1", "employee@test.com", null,
+                "hashed_pass", List.of(), List.of(), false, now, now, null);
+        when(userRepository.findByEmail("employee@test.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("employee@test.com");
+
+        assertThat(details.getAuthorities()).isEmpty();
     }
 
     @Test
@@ -57,7 +85,7 @@ class UserDetailsServiceImplTest {
     void loadUserByUsername_setsDisabledWhenUserDeleted() {
         LocalDateTime now = LocalDateTime.now();
         User deletedUser = User.restore(DELETED_USER_ID.toString(), 1, null, "deleted@test.com", null,
-                "pass", List.of(), now, now, now);
+                "pass", List.of(), List.of(), false, now, now, now);
         when(userRepository.findByEmail("deleted@test.com")).thenReturn(Optional.of(deletedUser));
 
         UserDetails details = service.loadUserByUsername("deleted@test.com");

@@ -1,25 +1,35 @@
-import { Component, computed, signal, inject } from '@angular/core';
+import { Component, computed, signal, inject, effect } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { SlicePipe } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { forkJoin } from 'rxjs';
 import { PaginationComponent } from '../../../shared/pagination/pagination.component';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
-
-interface Solicitud {
-  id: number;
-  institucion: string;
-  contacto: string;
-  plan: string;
-  fecha: string;
-  estado: 'pendiente' | 'aprobado' | 'rechazado';
-}
+import { ApiService } from '../../../api/services/api.service';
+import type { RequestDetail, RequestStatus, RequestType } from '../../../api/types';
 
 type ToastType = 'success' | 'error' | 'info';
+type ActionType = 'aprobar' | 'rechazar' | 'observar' | 'reconsiderar';
+
+const STATUS_TABS: { value: RequestStatus; label: string }[] = [
+  { value: 'PENDING', label: 'Pendientes' },
+  { value: 'OBSERVADO', label: 'Observadas' },
+  { value: 'APPROVED', label: 'Aprobadas' },
+  { value: 'REJECTED', label: 'Rechazadas' },
+];
+
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  PENDING: 'Pendiente',
+  OBSERVADO: 'Observada',
+  APPROVED: 'Aprobada',
+  REJECTED: 'Rechazada',
+};
 
 @Component({
   selector: 'app-solicitudes',
   standalone: true,
-  imports: [ReactiveFormsModule, PaginationComponent],
+  imports: [ReactiveFormsModule, PaginationComponent, SlicePipe],
   templateUrl: './solicitudes.html',
   styleUrl: './solicitudes.css',
 })
@@ -29,49 +39,32 @@ export class Solicitudes {
 
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
+  private readonly api = inject(ApiService);
+
+  readonly statusTabs = STATUS_TABS;
 
   readonly filterSearch = new FormControl('');
-  readonly filterEstado = new FormControl('todos');
-  readonly filterPeriodo = new FormControl('30');
-  readonly filterFechaDesde = new FormControl('');
-  readonly filterFechaHasta = new FormControl('');
-
+  readonly filterTipo = new FormControl('todos');
   readonly filterSearchSig = toSignal(this.filterSearch.valueChanges, { initialValue: '' });
-  readonly filterEstadoSig = toSignal(this.filterEstado.valueChanges, { initialValue: 'todos' });
-  readonly filterPeriodoSig = toSignal(this.filterPeriodo.valueChanges, { initialValue: '30' });
-  readonly filterFechaDesdeSig = toSignal(this.filterFechaDesde.valueChanges, { initialValue: '' });
-  readonly filterFechaHastaSig = toSignal(this.filterFechaHasta.valueChanges, { initialValue: '' });
+  readonly filterTipoSig = toSignal(this.filterTipo.valueChanges, { initialValue: 'todos' });
 
   dropdownOpen = signal<string | null>(null);
 
-  readonly estadoOptions = [
-    { value: 'todos', label: 'Todos los estados' },
-    { value: 'pendiente', label: 'Pendiente' },
-    { value: 'aprobado', label: 'Aprobado' },
-    { value: 'rechazado', label: 'Rechazado' },
+  readonly tipoOptions = [
+    { value: 'todos', label: 'Todos los tipos' },
+    { value: 'TRIAL', label: 'Trial' },
+    { value: 'INFO', label: 'Más información' },
   ];
 
-  readonly periodoOptions = [
-    { value: '7', label: 'Últimos 7 días' },
-    { value: '30', label: 'Últimos 30 días' },
-    { value: 'personalizado', label: 'Personalizado' },
-  ];
-
-  readonly estadoLabel = computed(() => this.estadoOptions.find(o => o.value === this.filterEstadoSig())?.label ?? 'Todos los estados');
-  readonly periodoLabel = computed(() => this.periodoOptions.find(o => o.value === this.filterPeriodoSig())?.label ?? 'Últimos 30 días');
+  readonly tipoLabel = computed(() => this.tipoOptions.find(o => o.value === this.filterTipoSig())?.label ?? 'Todos los tipos');
 
   toggleDropdown(name: string, event: Event): void {
     event.stopPropagation();
     this.dropdownOpen.update(v => v === name ? null : name);
   }
 
-  selectEstado(value: string): void {
-    this.filterEstado.setValue(value);
-    this.dropdownOpen.set(null);
-  }
-
-  selectPeriodo(value: string): void {
-    this.filterPeriodo.setValue(value);
+  selectTipo(value: string): void {
+    this.filterTipo.setValue(value);
     this.dropdownOpen.set(null);
   }
 
@@ -79,212 +72,186 @@ export class Solicitudes {
     this.dropdownOpen.set(null);
   }
 
-  private refreshTrigger = signal(0);
+  readonly pageSize = 5;
+  activeTab = signal<RequestStatus>('PENDING');
+  currentPage = signal<Record<RequestStatus, number>>({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
 
-  currentPage = signal<Record<string, number>>({ pendiente: 1, aprobado: 1, rechazado: 1 });
-  pageSize = 5;
-  activeTab = signal<'pendiente' | 'aprobado' | 'rechazado'>('pendiente');
+  readonly items = signal<import('../../../api/types').RequestSummary[]>([]);
+  readonly totalElements = signal(0);
+  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalElements() / this.pageSize)));
 
-  selectedSolicitud = signal<Solicitud | null>(null);
-  confirmAction = signal<{ id: number; action: 'aprobar' | 'rechazar' | 'reconsiderar'; label: string } | null>(null);
+  readonly counts = signal<Record<RequestStatus, number>>({ PENDING: 0, OBSERVADO: 0, APPROVED: 0, REJECTED: 0 });
 
-  private static daysAgo(offset: number): string {
-    const d = new Date();
-    d.setDate(d.getDate() - offset);
-    return d.toISOString().slice(0, 10);
+  selectedDetail = signal<RequestDetail | null>(null);
+  confirmAction = signal<{ id: number; action: ActionType; label: string } | null>(null);
+  motivoAccion = signal('');
+  newComment = signal('');
+
+  constructor() {
+    effect(() => this.fetchList());
+    this.fetchCounts();
   }
 
-  readonly allSolicitudes: Solicitud[] = [
-    { id: 1, institucion: 'Universidad Nacional de Ingeniería', contacto: 'Carlos Mendoza', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(0), estado: 'pendiente' },
-    { id: 2, institucion: 'Colegio San Agustín', contacto: 'María López', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(0), estado: 'aprobado' },
-    { id: 3, institucion: 'Instituto Tecnológico del Sur', contacto: 'Pedro García', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(1), estado: 'rechazado' },
-    { id: 4, institucion: 'Universidad Católica de Santa María', contacto: 'Ana Torres', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(1), estado: 'pendiente' },
-    { id: 5, institucion: 'Colegio La Salle', contacto: 'Luis Fernández', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(2), estado: 'aprobado' },
-    { id: 6, institucion: 'Universidad San Martín', contacto: 'Rosa Díaz', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(2), estado: 'pendiente' },
-    { id: 7, institucion: 'Colegio Santa María', contacto: 'José Ramírez', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(3), estado: 'rechazado' },
-    { id: 8, institucion: 'Instituto Peruano de Marketing', contacto: 'Patricia Vega', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(3), estado: 'pendiente' },
-    { id: 9, institucion: 'Universidad del Pacífico', contacto: 'Diego Castillo', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(5), estado: 'aprobado' },
-    { id: 10, institucion: 'Colegio San José', contacto: 'Gabriela Ríos', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(5), estado: 'pendiente' },
-    { id: 11, institucion: 'Universidad de Lima', contacto: 'Fernando Paredes', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(6), estado: 'rechazado' },
-    { id: 12, institucion: 'Colegio Santo Domingo', contacto: 'Carmen Flores', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(6), estado: 'aprobado' },
-    { id: 13, institucion: 'Instituto Gauss', contacto: 'Miguel Ángel', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(7), estado: 'pendiente' },
-    { id: 14, institucion: 'Universidad Científica del Sur', contacto: 'Valeria Castro', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(7), estado: 'aprobado' },
-    { id: 15, institucion: 'Colegio Champagnat', contacto: 'Ricardo Guerra', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(8), estado: 'pendiente' },
-    { id: 16, institucion: 'Universidad Tecnológica del Perú', contacto: 'Jose Alata', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(8), estado: 'aprobado' },
-    { id: 17, institucion: 'Colegio San Ignacio', contacto: 'Sofía Delgado', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(9), estado: 'pendiente' },
-    { id: 18, institucion: 'Instituto Peruano de Negocios', contacto: 'Andrés Núñez', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(9), estado: 'rechazado' },
-    { id: 19, institucion: 'Universidad Ricardo Palma', contacto: 'Mónica Salazar', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(10), estado: 'pendiente' },
-    { id: 20, institucion: 'Colegio San Antonio', contacto: 'Jorge Campos', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(10), estado: 'aprobado' },
-    { id: 21, institucion: 'Universidad Nacional Mayor de San Marcos', contacto: 'Luisa Huertas', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(11), estado: 'aprobado' },
-    { id: 22, institucion: 'Colegio Mater Admirabilis', contacto: 'Raúl Zúñiga', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(11), estado: 'rechazado' },
-    { id: 23, institucion: 'Instituto Tecnológico del Norte', contacto: 'Cecilia Maldonado', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(12), estado: 'pendiente' },
-    { id: 24, institucion: 'Universidad Nacional de Trujillo', contacto: 'Héctor Bravo', plan: 'Plan Empresarial', fecha: Solicitudes.daysAgo(12), estado: 'pendiente' },
-    { id: 25, institucion: 'Colegio San Pablo', contacto: 'Diana Quispe', plan: 'Plan Premium', fecha: Solicitudes.daysAgo(13), estado: 'rechazado' },
-    { id: 26, institucion: 'Universidad Nacional del Altiplano', contacto: 'Pablo Huamán', plan: 'Plan Básico', fecha: Solicitudes.daysAgo(13), estado: 'aprobado' },
-  ];
+  private fetchList(): void {
+    this.loading.set(true);
+    this.error.set('');
+    const status = this.activeTab();
+    const type = this.filterTipoSig();
 
-  readonly pendientes = computed(() => this.filtered().filter(s => s.estado === 'pendiente'));
-  readonly aprobadas = computed(() => this.filtered().filter(s => s.estado === 'aprobado'));
-  readonly rechazadas = computed(() => this.filtered().filter(s => s.estado === 'rechazado'));
-
-  readonly totalPendientes = computed(() => this.pendientes().length);
-  readonly totalAprobadas = computed(() => this.aprobadas().length);
-  readonly totalRechazadas = computed(() => this.rechazadas().length);
-
-  readonly filtered = computed(() => {
-    this.refreshTrigger();
-    const search = (this.filterSearchSig() || '').toLowerCase().trim();
-    const estado = this.filterEstadoSig();
-    const periodo = this.filterPeriodoSig();
-    const fechaDesde = this.filterFechaDesdeSig();
-    const fechaHasta = this.filterFechaHastaSig();
-
-    return this.allSolicitudes.filter(s => {
-      if (search && !s.institucion.toLowerCase().includes(search) && !s.contacto.toLowerCase().includes(search)) return false;
-      if (estado !== 'todos' && s.estado !== estado) return false;
-
-      const fecha = new Date(s.fecha);
-      if (periodo === 'personalizado') {
-        if (fechaDesde && fecha < new Date(fechaDesde)) return false;
-        if (fechaHasta && fecha > new Date(fechaHasta + 'T23:59:59')) return false;
-      } else {
-        const days = Number(periodo);
-        if (!isNaN(days) && days > 0) {
-          const cutoff = new Date(Date.now() - days * 86400000);
-          if (fecha < cutoff) return false;
-        }
-      }
-      return true;
+    this.api.requests.list({
+      status,
+      type: type && type !== 'todos' ? type : undefined,
+      search: this.filterSearchSig() || undefined,
+      page: (this.currentPage()[status] || 1) - 1,
+      size: this.pageSize,
+    }).subscribe({
+      next: (res) => {
+        this.items.set(res.content);
+        this.totalElements.set(res.totalElements);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('No se pudieron cargar las solicitudes.');
+        this.loading.set(false);
+      },
     });
-  });
-
-  readonly filtroCountText = computed(() => {
-    const total = this.filtered().length;
-    return `Mostrando ${total} solicitud${total !== 1 ? 'es' : ''}`;
-  });
-
-  paginated(estado: 'pendiente' | 'aprobado' | 'rechazado'): Solicitud[] {
-    const list = this.listFor(estado);
-    const page = this.clampPage(estado);
-    return list.slice((page - 1) * this.pageSize, page * this.pageSize);
   }
 
-  totalPages(estado: 'pendiente' | 'aprobado' | 'rechazado'): number {
-    return Math.max(1, Math.ceil(this.listFor(estado).length / this.pageSize));
+  private fetchCounts(): void {
+    forkJoin({
+      PENDING: this.api.requests.list({ status: 'PENDING', page: 0, size: 1 }),
+      OBSERVADO: this.api.requests.list({ status: 'OBSERVADO', page: 0, size: 1 }),
+      APPROVED: this.api.requests.list({ status: 'APPROVED', page: 0, size: 1 }),
+      REJECTED: this.api.requests.list({ status: 'REJECTED', page: 0, size: 1 }),
+    }).subscribe(res => {
+      this.counts.set({
+        PENDING: res.PENDING.totalElements,
+        OBSERVADO: res.OBSERVADO.totalElements,
+        APPROVED: res.APPROVED.totalElements,
+        REJECTED: res.REJECTED.totalElements,
+      });
+    });
   }
 
-  pageNumbers(estado: 'pendiente' | 'aprobado' | 'rechazado'): number[] {
-    return Array.from({ length: this.totalPages(estado) }, (_, i) => i + 1);
+  private refresh(): void {
+    this.fetchList();
+    this.fetchCounts();
   }
 
-  goToPage(estado: 'pendiente' | 'aprobado' | 'rechazado', page: number): void {
-    this.currentPage.update(p => ({ ...p, [estado]: page }));
+  goToPage(page: number): void {
+    this.currentPage.update(p => ({ ...p, [this.activeTab()]: page }));
   }
 
-  prevPage(estado: 'pendiente' | 'aprobado' | 'rechazado'): void {
-    const page = this.clampPage(estado);
-    if (page > 1) this.goToPage(estado, page - 1);
-  }
-
-  nextPage(estado: 'pendiente' | 'aprobado' | 'rechazado'): void {
-    const page = this.clampPage(estado);
-    if (page < this.totalPages(estado)) this.goToPage(estado, page + 1);
-  }
-
-  private listFor(estado: 'pendiente' | 'aprobado' | 'rechazado'): Solicitud[] {
-    return estado === 'pendiente' ? this.pendientes() : estado === 'aprobado' ? this.aprobadas() : this.rechazadas();
-  }
-
-  private clampPage(estado: 'pendiente' | 'aprobado' | 'rechazado'): number {
-    const p = this.currentPage()[estado] || 1;
-    const max = this.totalPages(estado);
-    if (p > max) {
-      this.currentPage.update(pages => ({ ...pages, [estado]: max }));
-      return max;
-    }
-    return p;
-  }
-
-  setTab(tab: 'pendiente' | 'aprobado' | 'rechazado'): void {
+  setTab(tab: RequestStatus): void {
     this.activeTab.set(tab);
   }
 
   limpiarFiltros(): void {
     this.filterSearch.setValue('');
-    this.filterEstado.setValue('todos');
-    this.filterPeriodo.setValue('30');
-    this.filterFechaDesde.setValue('');
-    this.filterFechaHasta.setValue('');
-    this.currentPage.set({ pendiente: 1, aprobado: 1, rechazado: 1 });
+    this.filterTipo.setValue('todos');
+    this.currentPage.set({ PENDING: 1, OBSERVADO: 1, APPROVED: 1, REJECTED: 1 });
   }
 
-  verDetalle(s: Solicitud): void {
-    this.selectedSolicitud.set(s);
-    this.modalService.show('modalDetalle');
+  cerrarDetalle(): void {
+    this.modalService.hide('modalDetalle');
+  }
+
+  cancelarAccion(): void {
+    this.confirmAction.set(null);
+    this.motivoAccion.set('');
+    this.modalService.hide('modalConfirmar');
+  }
+
+  verDetalle(id: number): void {
+    this.api.requests.getById(id).subscribe({
+      next: (detail) => {
+        this.selectedDetail.set(detail);
+        this.modalService.show('modalDetalle');
+      },
+      error: () => this.toastService.error('No se pudo cargar el detalle de la solicitud.'),
+    });
   }
 
   confirmarAprobar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (!s) return;
-    this.confirmAction.set({ id, action: 'aprobar', label: `¿Aprobar solicitud de "${s.institucion}"?` });
+    this.motivoAccion.set('');
+    this.confirmAction.set({ id, action: 'aprobar', label: '¿Aprobar esta solicitud?' });
     this.modalService.show('modalConfirmar');
   }
 
   confirmarRechazar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (!s) return;
-    this.confirmAction.set({ id, action: 'rechazar', label: `¿Rechazar solicitud de "${s.institucion}"?` });
+    this.motivoAccion.set('');
+    this.confirmAction.set({ id, action: 'rechazar', label: '¿Rechazar esta solicitud?' });
+    this.modalService.show('modalConfirmar');
+  }
+
+  confirmarObservar(id: number): void {
+    this.motivoAccion.set('');
+    this.confirmAction.set({ id, action: 'observar', label: '¿Marcar esta solicitud como observada?' });
     this.modalService.show('modalConfirmar');
   }
 
   confirmarReconsiderar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (!s) return;
-    this.confirmAction.set({ id, action: 'reconsiderar', label: `¿Reconsiderar solicitud de "${s.institucion}"?` });
+    this.motivoAccion.set('');
+    this.confirmAction.set({ id, action: 'reconsiderar', label: '¿Reconsiderar esta solicitud?' });
     this.modalService.show('modalConfirmar');
+  }
+
+  private static targetStatus(action: ActionType): RequestStatus {
+    switch (action) {
+      case 'aprobar': return 'APPROVED';
+      case 'rechazar': return 'REJECTED';
+      case 'observar': return 'OBSERVADO';
+      case 'reconsiderar': return 'PENDING';
+    }
   }
 
   ejecutarAccion(): void {
     const action = this.confirmAction();
     if (!action) return;
 
-    if (action.action === 'aprobar') {
-      this.aprobar(action.id);
-    } else if (action.action === 'rechazar') {
-      this.rechazar(action.id);
-    } else if (action.action === 'reconsiderar') {
-      this.reconsiderar(action.id);
-    }
+    const motivo = this.motivoAccion().trim();
+    const body = { status: Solicitudes.targetStatus(action.action), ...(motivo && { comment: motivo }) };
 
-    this.refreshTrigger.update(v => v + 1);
-    this.cerrarModal('modalConfirmar');
-    this.confirmAction.set(null);
+    this.api.requests.changeStatus(action.id, body).subscribe({
+      next: () => {
+        this.modalService.hide('modalConfirmar');
+        this.confirmAction.set(null);
+        this.motivoAccion.set('');
+        this.refresh();
 
-    const msgs: Record<string, string> = {
-      aprobar: 'Solicitud aprobada correctamente',
-      rechazar: 'Solicitud rechazada correctamente',
-      reconsiderar: 'Solicitud reconsiderada correctamente',
-    };
-    this.mostrarToast(msgs[action.action], 'success');
+        const msgs: Record<ActionType, string> = {
+          aprobar: 'Solicitud aprobada correctamente',
+          rechazar: 'Solicitud rechazada correctamente',
+          observar: 'Solicitud marcada como observada',
+          reconsiderar: 'Solicitud reconsiderada correctamente',
+        };
+        this.mostrarToast(msgs[action.action], 'success');
+      },
+      error: () => this.mostrarToast('No se pudo actualizar la solicitud.', 'error'),
+    });
   }
 
-  private aprobar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (s) s.estado = 'aprobado';
+  enviarComentario(): void {
+    const detail = this.selectedDetail();
+    const comment = this.newComment().trim();
+    if (!detail || !comment) return;
+
+    this.api.requests.addComment(detail.id, comment).subscribe({
+      next: () => {
+        this.newComment.set('');
+        this.api.requests.getById(detail.id).subscribe(updated => this.selectedDetail.set(updated));
+        this.mostrarToast('Comentario agregado', 'success');
+      },
+      error: () => this.mostrarToast('No se pudo agregar el comentario.', 'error'),
+    });
   }
 
-  private rechazar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (s) s.estado = 'rechazado';
+  typeLabel(type: RequestType): string {
+    return type === 'TRIAL' ? 'Trial' : 'Más información';
   }
 
-  private reconsiderar(id: number): void {
-    const s = this.allSolicitudes.find(x => x.id === id);
-    if (s) s.estado = 'pendiente';
-  }
-
-  private cerrarModal(id: string): void {
-    this.modalService.hide(id);
+  statusLabel(status: RequestStatus): string {
+    return STATUS_LABELS[status] ?? status;
   }
 
   private mostrarToast(message: string, type: ToastType): void {

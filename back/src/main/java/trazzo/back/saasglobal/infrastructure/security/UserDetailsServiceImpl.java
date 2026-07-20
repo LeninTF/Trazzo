@@ -1,7 +1,10 @@
 package trazzo.back.saasglobal.infrastructure.security;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -23,9 +26,20 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("user not found: " + normalizedEmail));
 
-        var authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                .toList();
+        List<GrantedAuthority> authorities = new ArrayList<>(user.getRoles().stream()
+                .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+                .toList());
+
+        // Blanket marker granted to any SaaS-role-bearing user, regardless of which specific
+        // role: this is the outer path-level gate in SecurityConfig ("/saas/**" requires
+        // hasRole("SAAS_ADMIN")). It guarantees a tenant user (zero roles_master roles) can
+        // never reach /saas/** even if a specific endpoint's @PreAuthorize was forgotten.
+        if (!user.getRoles().isEmpty()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"));
+        }
+
+        // Unprefixed authority per granted permission code, for hasAuthority(...) checks.
+        user.getPermissionCodes().forEach(code -> authorities.add(new SimpleGrantedAuthority(code)));
 
         return new AuthenticatedUser(
                 UUID.fromString(user.getId()),

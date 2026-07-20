@@ -21,6 +21,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class EnrollServiceTest {
 
+    private static final String TEMPLATE = "YmFzZTY0dGVtcGxhdGU=";
+    private static final String AES_KEY = "YmFzZTY0YWVzS2V5";
+    private static final String IV = "YmFzZTY0aXY=";
+    private static final String TAG = "YmFzZTY0dGFn";
+
     @Mock
     private TenantUserPort tenantUserPort;
 
@@ -109,7 +114,7 @@ class EnrollServiceTest {
     void completeEnroll_whenTokenInvalid_shouldThrow() {
         when(enrollSessionStore.findAndConsume("invalid-token")).thenReturn(null);
 
-        assertThatThrownBy(() -> enrollService.completeEnroll("invalid-token", "template", "key", 1, "DEV-001", LocalDateTime.now()))
+        assertThatThrownBy(() -> enrollService.completeEnroll("invalid-token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Token de enrolamiento inválido");
     }
@@ -119,7 +124,7 @@ class EnrollServiceTest {
         var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
 
-        assertThatThrownBy(() -> enrollService.completeEnroll("token", "template", "key", 2, "DEV-001", LocalDateTime.now()))
+        assertThatThrownBy(() -> enrollService.completeEnroll("token", "DEV-001", 2, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("índice de huella no coincide");
     }
@@ -129,7 +134,7 @@ class EnrollServiceTest {
         var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
 
-        assertThatThrownBy(() -> enrollService.completeEnroll("token", "template", "key", 1, "WRONG-DEVICE", LocalDateTime.now()))
+        assertThatThrownBy(() -> enrollService.completeEnroll("token", "WRONG-DEVICE", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("código de dispositivo no coincide");
     }
@@ -138,13 +143,13 @@ class EnrollServiceTest {
     void completeEnroll_whenValidAndExistingBiometria_shouldDeactivateOldAndCreateNew() {
         var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
         var existingBiometria = mock(UserBiometria.class);
-        var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, 1, "template", "key", LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
+        var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
 
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
         when(userBiometriaRepository.findByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(Optional.of(existingBiometria));
         when(userBiometriaRepository.save(any())).thenReturn(savedBiometria);
 
-        var result = enrollService.completeEnroll("token", "template", "key", 1, "DEV-001", LocalDateTime.now());
+        var result = enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
 
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(1L);
@@ -154,15 +159,37 @@ class EnrollServiceTest {
     }
 
     @Test
+    void findPendingSession_shouldReturnSession() {
+        var deviceCode = "DEV-001";
+        var session = new EnrollSession("token", tenantUserId, deviceId, fingerIndex, deviceCode, LocalDateTime.now().plusMinutes(1));
+        when(enrollSessionStore.findPendingByDeviceCode(deviceCode)).thenReturn(Optional.of(session));
+
+        var result = enrollService.findPendingSession(deviceCode);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().enrollToken()).isEqualTo("token");
+    }
+
+    @Test
+    void findPendingSession_shouldReturnEmptyWhenNotFound() {
+        var deviceCode = "UNKNOWN";
+        when(enrollSessionStore.findPendingByDeviceCode(deviceCode)).thenReturn(Optional.empty());
+
+        var result = enrollService.findPendingSession(deviceCode);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void completeEnroll_whenValidAndNoExistingBiometria_shouldCreateNew() {
         var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
-        var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, 1, "template", "key", LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
+        var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
 
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
         when(userBiometriaRepository.findByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(Optional.empty());
         when(userBiometriaRepository.save(any())).thenReturn(savedBiometria);
 
-        var result = enrollService.completeEnroll("token", "template", "key", 1, "DEV-001", LocalDateTime.now());
+        var result = enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
 
         assertThat(result).isNotNull();
         assertThat(result.id()).isEqualTo(1L);

@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './auth/auth.guard';
 import { Index } from './pages/public/index/index';
 import { Form } from './pages/public/form/form';
 import { Shop } from './pages/shop/shop';
@@ -63,15 +64,18 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/dashboard',
-        component: Dashboard
+        component: Dashboard,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/monitoreo',
-        component: Monitoreo
+        component: Monitoreo,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/incidencias',
-        component: Incidencias
+        component: Incidencias,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/tipos-incidencia',
@@ -79,35 +83,43 @@ export const routes: Routes = [
     },
     {
         path: 'tenant/reglas-asistencia',
-        component: ReglasAsistencia
+        component: ReglasAsistencia,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/sedes',
-        component: Sedes
+        component: Sedes,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/gestion-roles',
-        component: GestionRoles
+        component: GestionRoles,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/configuracion-tenant',
-        component: ConfiguracionTenant
+        component: ConfiguracionTenant,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/planes',
-        component: Planes
+        component: Planes,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/directorio-personal',
-        component: DirectorioPersonal
+        component: DirectorioPersonal,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/gestion-horarios',
-        component: GestionHorarios
+        component: GestionHorarios,
+        canActivate: [authGuard]
     },
     {
         path: 'tenant/perfil',
-        component: Perfil
+        component: Perfil,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario',
@@ -116,61 +128,74 @@ export const routes: Routes = [
     },
     {
         path: 'usuario/dashboard',
-        component: DashboardUsuario
+        component: DashboardUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/calendario',
-        component: CalendarioUsuario
+        component: CalendarioUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/historial-asistencia',
-        component: HistorialAsistenciaUsuario
+        component: HistorialAsistenciaUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/incidencias',
-        component: IncidenciasUsuario
+        component: IncidenciasUsuario,
+        canActivate: [authGuard]
     },
     {
         path: 'saas',
         pathMatch: 'full',
         redirectTo: 'saas/tenants'
     },
-    
+
     {
         path: 'saas/tenants',
-        component: Tenants
+        component: Tenants,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/gestion-planes',
-        component: GestionPlanes
+        component: GestionPlanes,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/solicitudes',
-        component: Solicitudes
+        component: Solicitudes,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/log-auditoria',
-        component: LogAuditoria
+        component: LogAuditoria,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/facturas',
-        component: Facturas
+        component: Facturas,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/gestion-usuarios',
-        component: GestionUsuarios
+        component: GestionUsuarios,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/gestion-roles',
-        component: GestionRolesSaas
+        component: GestionRolesSaas,
+        canActivate: [authGuard]
     },
     {
         path: 'saas/perfil',
-        component: PerfilSass
+        component: PerfilSass,
+        canActivate: [authGuard]
     },
     {
         path: 'usuario/perfil',
-        component: Perfil
+        component: Perfil,
+        canActivate: [authGuard]
     },
     {
         path: 'ayuda/:seccion',

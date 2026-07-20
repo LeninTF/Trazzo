@@ -8,13 +8,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import trazzo.back.saasglobal.domain.event.TenantActivatedEvent;
+import trazzo.back.saasglobal.domain.exception.InvalidTenantTransitionException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 
 class TenantTest {
 
     private static TenantSettings validSettings() {
-        return TenantSettings.of(null, "localhost", "5432", "testdb", "user", "pass");
+        return TenantSettings.of(null, "tenant_testdb");
     }
 
     /* == createTrial == */
@@ -191,7 +192,7 @@ class TenantTest {
     void restore_setsAllFields() {
         var now = LocalDateTime.now();
         var settings = validSettings();
-        var tenant = Tenant.restore("id-1", 5, "acme", 2, settings, null, now, now, now, null);
+        var tenant = Tenant.restore("id-1", 5, "acme", 2, settings, null, now, null, now, now, null);
 
         assertEquals("id-1", tenant.getId());
         assertEquals(5, tenant.getHoldingId());
@@ -200,5 +201,74 @@ class TenantTest {
         assertSame(settings, tenant.getSettings());
         assertEquals(now, tenant.getActivatedAt());
         assertTrue(tenant.isActivated());
+        assertNull(tenant.getSuspendedAt());
+        assertFalse(tenant.isSuspended());
+    }
+
+    /* == suspend == */
+
+    @Test
+    void suspend_setsSuspendedAt() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.activate();
+
+        var before = LocalDateTime.now();
+        tenant.suspend();
+        var after = LocalDateTime.now();
+
+        assertTrue(tenant.isSuspended());
+        assertNotNull(tenant.getSuspendedAt());
+        assertFalse(tenant.getSuspendedAt().isBefore(before));
+        assertFalse(tenant.getSuspendedAt().isAfter(after));
+    }
+
+    @Test
+    void suspend_throwsWhenNotActivated() {
+        var tenant = Tenant.createPending("beta", 2, null);
+        assertThrows(InvalidTenantTransitionException.class, tenant::suspend);
+    }
+
+    @Test
+    void suspend_throwsWhenAlreadySuspended() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.activate();
+        tenant.suspend();
+        assertThrows(InvalidTenantTransitionException.class, tenant::suspend);
+    }
+
+    /* == reactivate == */
+
+    @Test
+    void reactivate_clearsSuspendedAt() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.activate();
+        tenant.suspend();
+
+        tenant.reactivate();
+
+        assertFalse(tenant.isSuspended());
+        assertNull(tenant.getSuspendedAt());
+    }
+
+    @Test
+    void reactivate_throwsWhenNotSuspended() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.activate();
+        assertThrows(InvalidTenantTransitionException.class, tenant::reactivate);
+    }
+
+    /* == changePlan == */
+
+    @Test
+    void changePlan_updatesPlanId() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        tenant.changePlan(2);
+        assertEquals(2, tenant.getPlanId());
+    }
+
+    @Test
+    void changePlan_throwsWhenPlanIdNull() {
+        var tenant = Tenant.createTrial("acme", 1, null, validSettings(), null);
+        assertThrows(TenantValidationException.class, () -> tenant.changePlan(null));
     }
 }
