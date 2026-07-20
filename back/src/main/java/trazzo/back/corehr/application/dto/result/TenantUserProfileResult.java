@@ -1,5 +1,6 @@
 package trazzo.back.corehr.application.dto.result;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -8,9 +9,9 @@ public record TenantUserProfileResult(
     String email,
     String phone,
     String estado,
-    boolean mustChangePassword,
-    LocalDateTime createdAt,
-    LocalDateTime updatedAt,
+    @JsonProperty("must_change_password") boolean mustChangePassword,
+    @JsonProperty("created_at") LocalDateTime createdAt,
+    @JsonProperty("updated_at") LocalDateTime updatedAt,
     PersonaResult persona,
     RoleInfoResult rol,
     List<OrgAssignment> sedes,
@@ -19,12 +20,13 @@ public record TenantUserProfileResult(
 ) {
   public record PersonaResult(
       Integer id,
-      String documentType,
-      String documentValue,
+      @JsonProperty("document_type") String documentType,
+      @JsonProperty("document_value") String documentValue,
       String name,
-      String fatherSurname,
-      String motherSurname,
-      String birthDate
+      @JsonProperty("father_surname") String fatherSurname,
+      @JsonProperty("mother_surname") String motherSurname,
+      @JsonProperty("birth_date") String birthDate,
+      @JsonProperty("img_url") String imgUrl
   ) {}
 
   public record RoleInfoResult(
