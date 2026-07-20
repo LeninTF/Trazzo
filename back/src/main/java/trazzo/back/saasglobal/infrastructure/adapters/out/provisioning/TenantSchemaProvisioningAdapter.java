@@ -96,9 +96,8 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
     }
 
     /**
-     * Drops and recreates the schema from scratch. Used by {@code TenantDataSeeder}
-     * to recover from orphaned schemas left behind by a previous failed provisioning
-     * attempt during local development.
+     * Drops the schema if it exists. Used by {@code TenantDataSeeder} to remove
+     * orphaned schemas before {@link #provisionExisting} creates them fresh.
      */
     @SuppressWarnings("java:S2077")
     public void recreateSchema(String schemaName) {
@@ -106,9 +105,8 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         try (Connection conn = rawDataSource.getConnection();
                 Statement stmt = conn.createStatement()) {
             stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
-            stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
         } catch (SQLException e) {
-            throw new TenantProvisioningException("Failed to recreate schema: " + schemaName, e);
+            throw new TenantProvisioningException("Failed to drop schema: " + schemaName, e);
         }
     }
 

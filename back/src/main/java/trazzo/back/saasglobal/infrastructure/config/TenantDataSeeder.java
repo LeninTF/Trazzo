@@ -109,7 +109,7 @@ public class TenantDataSeeder implements CommandLineRunner {
                     """, tenantUser.getId());
 
             Long tenantUserId = jdbc.queryForObject("SELECT currval('tenant_user_id_seq')", Long.class);
-            String roleId = jdbc.queryForObject("SELECT id FROM role WHERE name = 'administrador'", String.class);
+            String roleId = ensureAdminRoleExists();
 
             jdbc.update("""
                     INSERT INTO tenant_user_role (tenant_user_id, role_id, created_at)
@@ -142,6 +142,20 @@ public class TenantDataSeeder implements CommandLineRunner {
                 VALUES (?, 0, 'SOLES', 'MONTHLY', TRUE)
                 RETURNING id
                 """, Integer.class, DEMO_PLAN_NAME);
+    }
+
+    /**
+     * Ensures the 'administrador' role exists in the tenant schema and returns its ID.
+     * TenantSchemaMigrator (@Order(2)) will later run V3__seed_default_roles_permissions.sql
+     * which also seeds this role idempotently (WHERE NOT EXISTS).
+     */
+    private String ensureAdminRoleExists() {
+        return jdbc.queryForObject("""
+                INSERT INTO role (id, name, description)
+                SELECT gen_random_uuid(), 'administrador', 'El Administrador tiene acceso total a la configuración y seguridad del sistema'
+                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'administrador')
+                RETURNING id
+                """, String.class);
     }
 
     private static String requireNonBlank(String value, String propertyName) {
