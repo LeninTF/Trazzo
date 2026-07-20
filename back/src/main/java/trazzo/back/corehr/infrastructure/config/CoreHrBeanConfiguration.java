@@ -3,6 +3,7 @@ package trazzo.back.corehr.infrastructure.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
 import trazzo.back.corehr.application.port.out.AttendanceNotificationPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
@@ -28,12 +29,14 @@ import trazzo.back.corehr.application.usecase.ShiftService;
 import trazzo.back.corehr.application.usecase.SyncAttendanceUseCase;
 import trazzo.back.corehr.application.usecase.TenantContactService;
 import trazzo.back.corehr.application.usecase.TenantUserDepartmentService;
+import trazzo.back.corehr.application.usecase.TenantUserService;
 import trazzo.back.corehr.application.usecase.ToleranciaService;
 import trazzo.back.corehr.application.usecase.UserBiometriaService;
 import trazzo.back.corehr.application.usecase.UserScheduleService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionStore;
 import trazzo.back.corehr.infrastructure.adapters.out.reporting.CoreHrAttendanceSummaryJdbcAdapter;
+import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 
 @Configuration
 public class CoreHrBeanConfiguration {
@@ -110,6 +113,11 @@ public class CoreHrBeanConfiguration {
     @Bean
     public TenantUserDepartmentService tenantUserDepartmentUseCase(TenantUserDepartmentRepositoryPort deptRepo, TenantUserPort tenantUserPort) {
         return new TenantUserDepartmentService(deptRepo, tenantUserPort);
+    }
+
+    @Bean
+    public TenantUserService tenantUserUseCase(TenantUserPort tenantUserPort, UserRepositoryPort userRepository, PasswordEncoder passwordEncoder) {
+        return new TenantUserService(tenantUserPort, userRepository, passwordEncoder);
     }
 
     @Bean

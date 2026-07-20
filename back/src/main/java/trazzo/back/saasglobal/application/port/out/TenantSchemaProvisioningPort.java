@@ -21,4 +21,11 @@ public interface TenantSchemaProvisioningPort {
      * Called as compensation if the master transaction fails after provisioning.
      */
     void deprovision(String schemaName);
+
+    /**
+     * Drops the schema if it exists and creates a fresh empty one.
+     * Used during local development to recover from orphaned schemas
+     * left behind by a previous failed provisioning attempt.
+     */
+    void recreateSchema(String schemaName);
 }

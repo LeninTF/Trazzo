@@ -85,11 +85,6 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         }
     }
 
-    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only.
-    // No IF NOT EXISTS: a name collision (e.g. two tenants deriving the same schema name) must
-    // fail loudly here rather than silently reusing another tenant's schema. Not wrapped in
-    // cleanup: if this itself fails, the schema was never created by us, so there is nothing to
-    // drop — dropping here on a collision would destroy the other tenant's existing schema.
     @SuppressWarnings("java:S2077")
     private void createSchema(String schemaName) {
         try (Connection conn = rawDataSource.getConnection();
@@ -97,6 +92,23 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
             stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
         } catch (SQLException e) {
             throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
+        }
+    }
+
+    /**
+     * Drops and recreates the schema from scratch. Used by {@code TenantDataSeeder}
+     * to recover from orphaned schemas left behind by a previous failed provisioning
+     * attempt during local development.
+     */
+    @SuppressWarnings("java:S2077")
+    public void recreateSchema(String schemaName) {
+        validateIdentifier(schemaName);
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
+            stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
+        } catch (SQLException e) {
+            throw new TenantProvisioningException("Failed to recreate schema: " + schemaName, e);
         }
     }
 
