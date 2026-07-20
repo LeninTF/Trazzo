@@ -1,10 +1,11 @@
 version: 2
 
 secret:
-  ignores:
-    - name: "Generic Password - demo123 (local dev seeder, externalized to property)"
+  ignored_matches:
+    - name: "Local dev seeder password (demo123, profile=local only)"
       match: "demo123"
-      paths:
-        - back/src/main/java/trazzo/back/saasglobal/infrastructure/config/TenantDataSeeder.java
-        - back/src/test/java/trazzo/back/saasglobal/infrastructure/config/TenantDataSeederTest.java
-        - back/src/main/resources/application-local.properties
+    - name: "Local dev admin password (admin123, profile=local only)"
+      match: "admin123"
+
+  ignored_paths:
+    - 'back/src/main/resources/application-local.properties'
