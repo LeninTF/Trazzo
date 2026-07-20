@@ -38,6 +38,7 @@ public class TenantDataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final UserRepositoryPort userRepository;
     private final String subDomain;
+    private final String tenantPassword;
 
     public TenantDataSeeder(
             TenantRepositoryPort tenantRepository,
@@ -45,7 +46,8 @@ public class TenantDataSeeder implements CommandLineRunner {
             JdbcTemplate jdbc,
             PasswordEncoder passwordEncoder,
             UserRepositoryPort userRepository,
-            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain
+            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain,
+            @Value("${trazzo.seed.tenant.password}") String tenantPassword
     ) {
         this.tenantRepository = tenantRepository;
         this.schemaProvisioning = schemaProvisioning;
@@ -53,6 +55,7 @@ public class TenantDataSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.subDomain = requireNonBlank(subDomain, "trazzo.seed.tenant.sub-domain");
+        this.tenantPassword = requireNonBlank(tenantPassword, "trazzo.seed.tenant.password");
     }
 
     @Override
@@ -90,7 +93,7 @@ public class TenantDataSeeder implements CommandLineRunner {
         log.info("Creating tenant user for '{}'...", subDomain);
 
         Integer personId = insertPerson();
-        String encodedPassword = passwordEncoder.encode("demo123");
+        String encodedPassword = passwordEncoder.encode(tenantPassword);
 
         User tenantUser = User.create(
                 personId,
