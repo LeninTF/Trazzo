@@ -15,6 +15,7 @@ import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionRespon
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -108,14 +109,39 @@ class UserBiometriaControllerTest {
     }
 
     @Test
+    void pendingEnroll_shouldReturn200WhenFound() throws Exception {
+        var pendingResponse = new trazzo.back.corehr.infrastructure.adapters.in.web.dto.PendingEnrollSessionResponse(
+                "token-abc", 10L, "DVC-001", 5L, 2, NOW.plusSeconds(120));
+        when(userBiometriaUseCase.findPendingEnrollSession("DVC-001"))
+                .thenReturn(Optional.of(
+                        new trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSession("token-abc", 5L, 10L, 2, "DVC-001", NOW.plusSeconds(120))));
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente")
+                        .param("device_code", "DVC-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enroll_token").value("token-abc"))
+                .andExpect(jsonPath("$.device_code").value("DVC-001"));
+    }
+
+    @Test
+    void pendingEnroll_shouldReturn404WhenNotFound() throws Exception {
+        when(userBiometriaUseCase.findPendingEnrollSession("UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente")
+                        .param("device_code", "UNKNOWN"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void completeEnroll_shouldReturn201() throws Exception {
-        when(enrollService.completeEnroll(anyString(), anyString(), anyString(), anyInt(),
-                anyString(), any())).thenReturn(aBioResult());
+        when(enrollService.completeEnroll(anyString(), anyString(), anyInt(),
+                anyString(), anyString(), anyString(), anyString(), any())).thenReturn(aBioResult());
 
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "tok", "template_cifrado": "tpl", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "tok", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "iv_base64": "aXY=", "tag_base64": "dGFn", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.finger_index").value(2));
@@ -126,7 +152,7 @@ class UserBiometriaControllerTest {
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "", "template_cifrado": "tpl", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isBadRequest());
     }
@@ -136,7 +162,7 @@ class UserBiometriaControllerTest {
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "tok", "template_cifrado": "", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "tok", "encrypted_template_base64": "", "encrypted_aes_key_base64": "a2V5", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isBadRequest());
     }

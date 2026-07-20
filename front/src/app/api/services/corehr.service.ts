@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   DeviceProfile, DeviceListResponse,
-  UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
+  UserBiometriaProfile, UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
+  CompleteEnrollHttpRequest,
   AttendanceProfile, AttendanceListResponse, PatchAttendanceRequest,
   NonWorkingDayProfile, NonWorkingDayListResponse,
   TenantContactProfile, TenantContactListResponse,
@@ -49,6 +50,16 @@ export class CorehrService {
 
   initEnroll(body: InitEnrollRequest): Observable<EnrollSessionResponse> {
     return this.http.post<EnrollSessionResponse>(`${this.apiBase}/corehr/biometria/enroll/iniciar`, body);
+  }
+
+  pendingEnroll(deviceCode: string): Observable<EnrollSessionResponse> {
+    return this.http.get<EnrollSessionResponse>(`${this.apiBase}/corehr/biometria/enroll/pendiente`, {
+      params: params({ device_code: deviceCode }),
+    });
+  }
+
+  completeEnroll(body: CompleteEnrollHttpRequest): Observable<UserBiometriaProfile> {
+    return this.http.post<UserBiometriaProfile>(`${this.apiBase}/corehr/biometria/enroll/completar`, body);
   }
 
   // ========== ATTENDANCE ==========

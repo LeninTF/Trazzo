@@ -108,6 +108,72 @@ class ShiftRepositoryAdapterTest {
     }
 
     @Test
+    void findAll_withSortByCreatedAt_shouldApplySort() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 20, "createdAt,desc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void findAll_withSortByCreatedAtSnake_shouldApplySort() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 20, "created_at,asc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void findAll_withSortByUpdatedAt_shouldApplySort() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 20, "updatedAt");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("updatedAt")).isNotNull();
+    }
+
+    @Test
+    void findAll_withSortByUpdatedAtSnake_shouldApplySort() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 20, "updated_at,desc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("updatedAt")).isNotNull();
+    }
+
+    @Test
+    void findAll_withUnknownSortField_shouldDefaultToCreatedAt() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 20, "unknownField,asc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(shiftRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt")).isNotNull();
+    }
+
+    @Test
+    void findAll_withBlankSearch_shouldReturnAll() {
+        when(shiftRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(entity())));
+
+        var result = adapter.findAll("  ", 0, 20, null);
+
+        assertThat(result).hasSize(1);
+        verify(shiftRepo).findAll(any(PageRequest.class));
+        verify(shiftRepo, never()).findByNameContainingIgnoreCase(anyString(), any());
+    }
+
+    @Test
     void count_withoutSearch_returnsAll() {
         when(shiftRepo.count()).thenReturn(10L);
         assertThat(adapter.count(null)).isEqualTo(10L);

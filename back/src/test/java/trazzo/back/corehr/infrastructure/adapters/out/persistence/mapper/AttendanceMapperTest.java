@@ -16,7 +16,7 @@ class AttendanceMapperTest {
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
         var domain = Attendance.restore("id-1", 1L, 2L, 3L, now, now.plusHours(8),
-                LocalDate.now(), 5, AttendanceState.PUNTUAL, now, now);
+                LocalDate.now(), 5, AttendanceState.PUNTUAL, null, null, now, now);
 
         var entity = AttendanceMapper.toEntity(domain);
 
@@ -87,7 +87,7 @@ class AttendanceMapperTest {
     void shouldMapRoundTrip() {
         var now = LocalDateTime.now();
         var original = Attendance.restore("id-3", 1L, 2L, 3L, now, now.plusHours(8),
-                LocalDate.now(), 10, AttendanceState.TARDANZA, now, now);
+                LocalDate.now(), 10, AttendanceState.TARDANZA, null, null, now, now);
 
         var entity = AttendanceMapper.toEntity(original);
         var restored = AttendanceMapper.toDomain(entity);

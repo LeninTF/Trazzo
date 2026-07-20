@@ -114,6 +114,25 @@ class DeviceRepositoryAdapterTest {
     }
 
     @Test
+    void findByCode_shouldReturnDomainWhenFound() {
+        when(deviceRepo.findByCode("D-001")).thenReturn(Optional.of(entity()));
+
+        var result = adapter.findByCode("D-001");
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getCode()).isEqualTo("D-001");
+    }
+
+    @Test
+    void findByCode_shouldReturnEmptyWhenNotFound() {
+        when(deviceRepo.findByCode("UNKNOWN")).thenReturn(Optional.empty());
+
+        var result = adapter.findByCode("UNKNOWN");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void deleteById_shouldDelegate() {
         adapter.deleteById(1L);
         verify(deviceRepo).deleteById(1L);

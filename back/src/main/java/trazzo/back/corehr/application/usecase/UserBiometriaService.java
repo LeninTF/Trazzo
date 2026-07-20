@@ -6,11 +6,16 @@ import trazzo.back.corehr.application.dto.result.UserBiometriaResult;
 import trazzo.back.corehr.application.port.in.UserBiometriaUseCase;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
+import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSession;
+import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
+
+import java.util.Optional;
 
 @RequiredArgsConstructor
 public class UserBiometriaService implements UserBiometriaUseCase {
 
     private final UserBiometriaRepositoryPort userBiometriaRepository;
+    private final EnrollService enrollService;
 
     @Override
     public PaginatedResult<UserBiometriaResult> findAll(Long tenantUserId, Long deviceId, Boolean activo, int page, int size) {
@@ -34,12 +39,17 @@ public class UserBiometriaService implements UserBiometriaUseCase {
         return toResult(saved);
     }
 
+    @Override
+    public Optional<EnrollSession> findPendingEnrollSession(String deviceCode) {
+        return enrollService.findPendingSession(deviceCode);
+    }
+
     private UserBiometriaResult toResult(UserBiometria ub) {
         return new UserBiometriaResult(
                 ub.getId(),
                 ub.getTenantUserId(),
                 ub.getDeviceId(),
-                null,
+                ub.getDeviceCode(),
                 ub.getFingerIndex(),
                 ub.isActivo(),
                 ub.getCapturadoEn(),
