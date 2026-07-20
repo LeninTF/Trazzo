@@ -259,4 +259,62 @@ describe('Tenants', () => {
     fecha.setMonth(fecha.getMonth() - 3);
     expect(component.mesesDesde(fecha.toISOString())).toBeGreaterThanOrEqual(2);
   });
+
+  it('should guardarBranding early return when tenantSeleccionado is null', () => {
+    component.tenantSeleccionado.set(null);
+    component.guardarBranding();
+    expect(mockApi.tenants.updateBranding).not.toHaveBeenCalled();
+  });
+
+  it('should ejecutarSuspension early return when tenantSeleccionado is null', () => {
+    component.tenantSeleccionado.set(null);
+    component.ejecutarSuspension();
+    expect(mockApi.tenants.suspend).not.toHaveBeenCalled();
+  });
+
+  it('should guardarNuevoTenant pass optional fields when populated', () => {
+    component.abrirModalAgregar();
+    component.nuevoTenantForm.subDomain = 'nuevo-tenant';
+    component.nuevoTenantForm.holdingId = 10;
+    component.nuevoTenantForm.planId = 1;
+    component.nuevoTenantForm.logoUrl = 'https://logo.png';
+    component.nuevoTenantForm.slogan = 'Mi slogan';
+    component.nuevoTenantForm.primaryColor = '#FF0000';
+    component.nuevoTenantForm.secondaryColor = '#00FF00';
+    component.guardarNuevoTenant();
+    expect(mockApi.tenants.createTrial).toHaveBeenCalledWith(jasmine.objectContaining({
+      logoUrl: 'https://logo.png', slogan: 'Mi slogan',
+      primaryColor: '#FF0000', secondaryColor: '#00FF00',
+    }));
+  });
+
+  it('should iniciales split on dashes', () => {
+    const tenant = { ...mockTenant('1'), holdingName: 'Acme-SAC-Peru' };
+    expect(component.iniciales(tenant)).toBe('AS');
+  });
+
+  it('should featureLabels include max_sedes and almacenamiento_gb', () => {
+    const planWithExtras: SaasPlanResult = {
+      ...mockPlan, features: { max_trabajadores: 5, max_sedes: 3, almacenamiento_gb: 10 },
+    };
+    mockApi.saas.getPlan.and.returnValue(of(planWithExtras));
+    component.abrirModalDetalle(mockTenant('1'));
+    expect(component.planFeaturesSeleccionado()).toContain('Hasta 3 sedes');
+    expect(component.planFeaturesSeleccionado()).toContain('10GB de almacenamiento');
+  });
+
+  it('should mesesDesde return 0 for future dates', () => {
+    const future = new Date();
+    future.setMonth(future.getMonth() + 3);
+    expect(component.mesesDesde(future.toISOString())).toBe(0);
+  });
+
+  it('should abrirModalBranding reset branding form fields', () => {
+    const tenant = mockTenant('1');
+    component.abrirModalBranding(tenant);
+    expect(component.brandingForm.logoUrl).toBe('');
+    expect(component.brandingForm.slogan).toBe('');
+    expect(component.brandingForm.primaryColor).toBe('');
+    expect(component.brandingForm.secondaryColor).toBe('');
+  });
 });

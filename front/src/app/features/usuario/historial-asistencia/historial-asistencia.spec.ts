@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { HistorialAsistencia } from './historial-asistencia';
 import { CorehrService } from '../../../api/services/corehr.service';
 import type { AttendanceListResponse, AttendanceProfile } from '../../../api/types';
@@ -130,6 +130,73 @@ describe('HistorialAsistencia', () => {
       expect(clickSpy).toHaveBeenCalled();
       expect(link.download).toContain('asistencia_');
       expect(link.download).toMatch(/asistencia_\d{8}\.csv/);
+    });
+  });
+
+  describe('cargarHistorial error', () => {
+    it('should set error message when listAttendance fails', () => {
+      corehrServiceSpy.listAttendance.and.returnValue(throwError(() => new Error('fail')));
+      component['cargarHistorial']();
+      expect(component.error()).toBe('No fue posible cargar el historial de asistencia.');
+      expect(component.loading()).toBeFalse();
+    });
+  });
+
+  describe('mapEstado with unknown state', () => {
+    it('should return Falta for an unrecognized state', () => {
+      const att = makeAtt('att-x', 15, 'PUNTUAL');
+      att.state = 'JUSTIFICADO' as any;
+      corehrServiceSpy.listAttendance.and.returnValue(of({
+        content: [att], page: 0, size: 50, totalElements: 1, totalPages: 1,
+      }));
+      component['cargarHistorial']();
+      expect(component.registros()[0].estado).toBe('Falta');
+    });
+  });
+
+  describe('toRegistro with null fields', () => {
+    it('should display dashes when check_in and check_out are null', () => {
+      const att = makeAtt('att-null', 20, 'PUNTUAL');
+      att.check_in = null as any;
+      att.check_out = null as any;
+      corehrServiceSpy.listAttendance.and.returnValue(of({
+        content: [att], page: 0, size: 50, totalElements: 1, totalPages: 1,
+      }));
+      component['cargarHistorial']();
+      expect(component.registros()[0].ingreso).toBe('—');
+      expect(component.registros()[0].salida).toBe('—');
+    });
+
+    it('should display dash when schedule is null', () => {
+      const att = makeAtt('att-nosched', 21, 'PUNTUAL');
+      att.schedule = null as any;
+      corehrServiceSpy.listAttendance.and.returnValue(of({
+        content: [att], page: 0, size: 50, totalElements: 1, totalPages: 1,
+      }));
+      component['cargarHistorial']();
+      expect(component.registros()[0].turno).toBe('—');
+    });
+  });
+
+  describe('eficiencia with empty registros', () => {
+    it('should return 0 when there are no registros', () => {
+      corehrServiceSpy.listAttendance.and.returnValue(of({
+        content: [], page: 0, size: 50, totalElements: 0, totalPages: 0,
+      }));
+      component['cargarHistorial']();
+      expect(component.eficiencia).toBe(0);
+    });
+  });
+
+  describe('formatearMes with empty content', () => {
+    it('should use current date when response content is empty', () => {
+      corehrServiceSpy.listAttendance.and.returnValue(of({
+        content: [], page: 0, size: 50, totalElements: 0, totalPages: 0,
+      }));
+      component['cargarHistorial']();
+      const now = new Date();
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+      expect(component.mesActual).toBe(`${meses[now.getMonth()]} ${now.getFullYear()}`);
     });
   });
 });
