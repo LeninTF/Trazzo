@@ -1,4 +1,0 @@
--- No-op: V1__init_master_db.sql already defines tenant_settings with
--- the final schema (schema_name column, no db_* columns).
--- This migration is kept only so Flyway's schema_history table
--- continues to track it as applied.

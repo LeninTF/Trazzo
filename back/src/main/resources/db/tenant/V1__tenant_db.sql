@@ -204,12 +204,18 @@ CREATE TABLE attendances (
     device_id INT REFERENCES device(id) ON DELETE SET NULL,
     check_in TIMESTAMP,
     check_out TIMESTAMP,
+    offline_event_id INT,
+    device_code VARCHAR(100),
     attendance_date DATE NOT NULL,
     minutes_late INT DEFAULT 0,
     state attendance_status_enum NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX idx_attendances_offline_event_device
+    ON attendances (offline_event_id, device_code)
+    WHERE offline_event_id IS NOT NULL AND device_code IS NOT NULL;
 
 -- ==============================================================================
 -- 6. GESTIÓN DE INCIDENCIAS Y PERMISOS

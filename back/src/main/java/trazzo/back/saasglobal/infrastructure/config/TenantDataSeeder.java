@@ -150,11 +150,15 @@ public class TenantDataSeeder implements CommandLineRunner {
      * which also seeds this role idempotently (WHERE NOT EXISTS).
      */
     private String ensureAdminRoleExists() {
+        List<String> existing = jdbc.queryForList(
+                "SELECT id::text FROM role WHERE name = 'administrador'", String.class);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
         return jdbc.queryForObject("""
                 INSERT INTO role (id, name, description)
-                SELECT gen_random_uuid(), 'administrador', 'El Administrador tiene acceso total a la configuración y seguridad del sistema'
-                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'administrador')
-                RETURNING id
+                VALUES (gen_random_uuid(), 'administrador', 'El Administrador tiene acceso total a la configuración y seguridad del sistema')
+                RETURNING id::text
                 """, String.class);
     }
 
