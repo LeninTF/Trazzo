@@ -10,6 +10,8 @@ import java.util.Optional;
 public interface AttendanceRepositoryPort {
     Attendance save(Attendance attendance);
     Optional<Attendance> findById(String id);
+    Optional<Attendance> findByTenantUserIdAndDate(Long tenantUserId, LocalDate date);
+    boolean existsByOfflineEventIdAndDeviceCode(Integer offlineEventId, String deviceCode);
     List<Attendance> findAll(String scope, Long branchId, Long areaId, Long departamentoId,
                              LocalDate dateFrom, LocalDate dateTo, AttendanceState state,
                              Long tenantUserId, int page, int size, String sort);

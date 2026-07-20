@@ -312,4 +312,51 @@ describe('Solicitudes', () => {
       expect(component.loading()).toBeFalse();
     });
   });
+
+  describe('cancelarAccion', () => {
+    it('should reset confirmAction, motivoAccion and hide modal', () => {
+      component.confirmAction.set({ id: 1, action: 'aprobar', label: 'Aprobar?' });
+      component.motivoAccion.set('motivo test');
+      component.cancelarAccion();
+      expect(component.confirmAction()).toBeNull();
+      expect(component.motivoAccion()).toBe('');
+      expect(mockModal.hide).toHaveBeenCalledWith('modalConfirmar');
+    });
+  });
+
+  describe('cerrarDetalle', () => {
+    it('should hide modalDetalle', () => {
+      component.cerrarDetalle();
+      expect(mockModal.hide).toHaveBeenCalledWith('modalDetalle');
+    });
+  });
+
+  describe('statusLabel', () => {
+    it('should return fallback status string for unknown status', () => {
+      expect(component.statusLabel('UNKNOWN' as any)).toBe('UNKNOWN');
+    });
+  });
+
+  describe('fetchList with type filter', () => {
+    it('should pass type parameter when filterTipoSig is not todos', () => {
+      mockRequests.list.calls.reset();
+      component.filterTipo.setValue('TRIAL');
+      fixture.detectChanges();
+      expect(mockRequests.list).toHaveBeenCalledWith(jasmine.objectContaining({ type: 'TRIAL' }));
+    });
+  });
+
+  describe('ejecutarAccion toast messages', () => {
+    it('should show observar-specific success toast', () => {
+      component.confirmAction.set({ id: 1, action: 'observar', label: 'Observar?' });
+      component.ejecutarAccion();
+      expect(mockToast.show).toHaveBeenCalledWith('Solicitud marcada como observada', 'success');
+    });
+
+    it('should show reconsiderar-specific success toast', () => {
+      component.confirmAction.set({ id: 1, action: 'reconsiderar', label: 'Reconsiderar?' });
+      component.ejecutarAccion();
+      expect(mockToast.show).toHaveBeenCalledWith('Solicitud reconsiderada correctamente', 'success');
+    });
+  });
 });

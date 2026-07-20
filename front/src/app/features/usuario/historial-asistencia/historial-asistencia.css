@@ -23,6 +23,17 @@
   min-height: 100%;
 }
 
+.ha-wrapper--error {
+  min-height: 400px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ha-error-icon {
+  font-size: 3rem;
+}
+
 /* ── Header ── */
 
 .ha-header {
@@ -198,6 +209,14 @@
   margin: 0;
   display: flex;
   align-items: center;
+}
+
+.ha-title-icon--primary {
+  color: var(--primary);
+}
+
+.ha-title-icon--success {
+  color: var(--success);
 }
 
 .ha-card__count {
@@ -400,6 +419,22 @@
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.ha-eficiencia__dot--success {
+  background: var(--success);
+}
+
+.ha-eficiencia__dot--warning {
+  background: var(--warning);
+}
+
+.ha-eficiencia__dot--info {
+  background: var(--info);
+}
+
+.ha-eficiencia__dot--danger {
+  background: var(--danger);
 }
 
 /* ── Responsive ── */
