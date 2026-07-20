@@ -1,0 +1,11 @@
+version: 2
+
+secret:
+  ignored_matches:
+    - name: "Local dev seeder password (demo123, profile=local only)"
+      match: "demo123"
+    - name: "Local dev admin password (admin123, profile=local only)"
+      match: "admin123"
+
+  ignored_paths:
+    - 'back/src/main/resources/application-local.properties'

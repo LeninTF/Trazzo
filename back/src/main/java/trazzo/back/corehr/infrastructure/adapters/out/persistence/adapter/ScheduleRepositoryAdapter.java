@@ -9,6 +9,7 @@ import trazzo.back.corehr.application.port.out.ScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.Schedule;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.mapper.ScheduleMapper;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.ScheduleJpaRepository;
+import trazzo.back.shared.util.SortUtils;
 
 import java.util.List;
 import java.util.Optional;

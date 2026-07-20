@@ -37,7 +37,7 @@ class LogInHistoryRepositoryAdapterTest {
         e.setId(UUID.randomUUID());
         e.setUserId(UUID.randomUUID());
         e.setAttemptedEmail("test@example.com");
-        e.setStatus(StatusLogin.SUCCES);
+        e.setStatus(StatusLogin.SUCCESS);
         e.setIpAddress("192.168.1.1");
         e.setUserAgent("Mozilla/5.0");
         e.setCreatedAt(now);

@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "incident_evidences")
+@Table(name = "incidencia_evidencia")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,7 +20,7 @@ public class IncidentEvidenceEntity {
     @Column(length = 36)
     private String id;
 
-    @Column(name = "incident_id", nullable = false, length = 36)
+    @Column(name = "incidencia_id", nullable = false, length = 36)
     private String incidentId;
 
     @Column(name = "file_name", nullable = false, length = 255)

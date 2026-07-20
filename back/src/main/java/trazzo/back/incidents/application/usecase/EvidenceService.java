@@ -1,6 +1,7 @@
 package trazzo.back.incidents.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.incidents.application.dto.command.CreateEvidenceCommand;
 import trazzo.back.incidents.application.dto.result.IncidentEvidenceResult;
 import trazzo.back.incidents.application.port.in.EvidenceUseCase;
@@ -12,6 +13,7 @@ import trazzo.back.shared.application.port.out.FileStoragePort;
 import java.util.List;
 
 @RequiredArgsConstructor
+@Transactional
 public class EvidenceService implements EvidenceUseCase {
 
     private final IncidentRepositoryPort incidentRepository;

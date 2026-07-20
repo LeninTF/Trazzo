@@ -12,19 +12,15 @@ public class NotificationService implements NotificationUseCase {
 
     @Override
     public void notify(String incidentId, NotifyIncidentCommand command) {
-        var incident = incidentRepository.findById(incidentId)
-                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
-        if (incident == null) {
-            return;
-        }
+        incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada"));
+        throw new UnsupportedOperationException("Notification logic not yet implemented");
     }
 
     @Override
     public void justifyAttendance(String incidentId) {
-        var incident = incidentRepository.findById(incidentId)
-                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
-        if (incident == null) {
-            return;
-        }
+        incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada"));
+        throw new UnsupportedOperationException("Attendance justification logic not yet implemented");
     }
 }

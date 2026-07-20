@@ -11,8 +11,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TYPE currency_enum AS ENUM ('SOLES', 'DOLAR', 'EURO');
 CREATE TYPE tipo_dato_enum AS ENUM ('INT', 'CHAR', 'STRING', 'DOUBLE', 'FLOAT', 'LONG', 'BOOLEAN');
 CREATE TYPE type_enum AS ENUM ('TRIAL', 'INFO');
-CREATE TYPE status_enum AS ENUM ('PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED');
-CREATE TYPE action_enum AS ENUM ('CREATE', 'UPDATE', 'DELETE');
+CREATE TYPE status_enum AS ENUM ('PENDING', 'OBSERVADO', 'APPROVED', 'REJECTED');
 CREATE TYPE status_payment_enum AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE estado_pago_comprobante_enum AS ENUM ('PENDIENTE', 'COMPLETADO', 'FALLIDO', 'REEMBOLSADO');
 CREATE TYPE subscription_status_enum AS ENUM ('ACTIVE', 'SUSPENDED', 'CANCELED', 'TRIAL');
@@ -29,6 +28,7 @@ CREATE TABLE plans (
     id             SERIAL PRIMARY KEY,
     name           VARCHAR(100) UNIQUE NOT NULL,
     price          DECIMAL(10,2) NOT NULL,
+    price_annual   DECIMAL(10,2),
     currency       currency_enum NOT NULL,
     billing_period VARCHAR(50),
     is_active      BOOLEAN DEFAULT TRUE,
@@ -87,6 +87,7 @@ CREATE TABLE tenants (
     sub_domain   VARCHAR(100) UNIQUE NOT NULL,
     plan_id      INT REFERENCES plans(id),
     activated_at TIMESTAMP,
+    suspended_at TIMESTAMP,
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at   TIMESTAMP
@@ -103,26 +104,25 @@ CREATE TABLE tenant_branding (
 );
 
 CREATE TABLE tenant_settings (
-    tenant_id   UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
-    db_name     VARCHAR(100) NOT NULL,
-    db_host     VARCHAR(255) NOT NULL,
-    db_port     VARCHAR(10) NOT NULL,
-    db_user     VARCHAR(100) NOT NULL,
-    db_password VARCHAR(255) NOT NULL,
-    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    tenant_id    UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+    schema_name  VARCHAR(63) NOT NULL,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE subscriptions (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    plan_id        INT REFERENCES plans(id),
-    tenant_id      UUID REFERENCES tenants(id) ON DELETE RESTRICT,
-    date_start     DATE NOT NULL,
-    date_end       DATE,
-    status         subscription_status_enum DEFAULT 'TRIAL',
-    purchase_price DECIMAL(10,2) NOT NULL,
-    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id           INT REFERENCES plans(id),
+    tenant_id         UUID REFERENCES tenants(id) ON DELETE RESTRICT,
+    date_start        DATE NOT NULL,
+    date_end          DATE,
+    status            subscription_status_enum DEFAULT 'TRIAL',
+    purchase_price    DECIMAL(10,2) NOT NULL,
+    mp_preapproval_id VARCHAR(255),
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_subscriptions_mp_preapproval_id ON subscriptions (mp_preapproval_id) WHERE mp_preapproval_id IS NOT NULL;
 
 -- ==============================================================================
 -- 4. PAGOS Y FACTURACIÓN
@@ -210,21 +210,23 @@ CREATE TABLE persons (
 );
 
 CREATE TABLE users (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    person_id  INT REFERENCES persons(id) ON DELETE CASCADE,
-    tenant_id  UUID REFERENCES tenants(id),
-    email      VARCHAR(150) UNIQUE NOT NULL,
-    phone      VARCHAR(20),
-    password   VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    person_id             INT REFERENCES persons(id) ON DELETE CASCADE,
+    tenant_id             UUID REFERENCES tenants(id),
+    email                 VARCHAR(150) UNIQUE NOT NULL,
+    phone                 VARCHAR(20),
+    password              VARCHAR(255) NOT NULL,
+    must_change_password  BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at            TIMESTAMP
 );
 
 CREATE TABLE roles_master (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(50) UNIQUE NOT NULL,
-    description TEXT
+    id           SERIAL PRIMARY KEY,
+    name         VARCHAR(50) UNIQUE NOT NULL,
+    display_name VARCHAR(100),
+    description  TEXT
 );
 
 CREATE TABLE user_roles_master (
@@ -272,7 +274,7 @@ CREATE TABLE request_contacts (
     request_id   INT PRIMARY KEY REFERENCES requests(id) ON DELETE CASCADE,
     name         VARCHAR(100) NOT NULL,
     last_name    VARCHAR(100) NOT NULL,
-    email        VARCHAR(150) UNIQUE NOT NULL,
+    email        VARCHAR(150) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
     tax_id       VARCHAR(20) NOT NULL,
     company_name VARCHAR(255) NOT NULL,
@@ -325,7 +327,7 @@ CREATE TABLE audit (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity     VARCHAR(100) NOT NULL,
     entity_id  VARCHAR(255) NOT NULL,
-    action     action_enum NOT NULL,
+    action     VARCHAR(20) NOT NULL,
     user_id    UUID REFERENCES users(id) ON DELETE SET NULL,
     endpoint   VARCHAR(255),
     ip_address VARCHAR(45),
@@ -362,3 +364,115 @@ CREATE TABLE SPRING_SESSION_ATTRIBUTES (
     CONSTRAINT SPRING_SESSION_ATTRIBUTES_FK FOREIGN KEY (SESSION_PRIMARY_ID)
         REFERENCES SPRING_SESSION (PRIMARY_ID) ON DELETE CASCADE
 );
+
+-- ==============================================================================
+-- 9. CATÁLOGO DE FEATURES
+-- ==============================================================================
+
+INSERT INTO features (name, description) VALUES
+    ('max_trabajadores',      'Máximo de trabajadores permitidos'),
+    ('max_sedes',              'Máximo de sedes permitidas'),
+    ('almacenamiento_gb',      'Almacenamiento en GB'),
+    ('reportes',               'Reportes Avanzados'),
+    ('api-externa',            'API Externa'),
+    ('facturacion-auto',       'Facturación Automática'),
+    ('control-huella',         'Control por Huella'),
+    ('escaneo-codigo',         'Escaneo de Código'),
+    ('soporte-24-7',           'Soporte 24/7'),
+    ('multi-sede',             'Multi-sede'),
+    ('trial-gratuito',         'Trial Gratuito'),
+    ('facturacion-publica',    'Facturación Pública')
+ON CONFLICT (name) DO NOTHING;
+
+-- ==============================================================================
+-- 10. RBAC SaaS (permisos, roles y permisos maestros)
+-- ==============================================================================
+
+CREATE TABLE permissions_master (
+    id          SERIAL PRIMARY KEY,
+    code        VARCHAR(80) UNIQUE NOT NULL,
+    module_id   VARCHAR(50) NOT NULL,
+    action_id   VARCHAR(50) NOT NULL,
+    description TEXT,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE role_permissions_master (
+    role_id       INT REFERENCES roles_master(id) ON DELETE CASCADE,
+    permission_id INT REFERENCES permissions_master(id) ON DELETE CASCADE,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (role_id, permission_id)
+);
+
+-- Permiso seed (15 permisos)
+INSERT INTO permissions_master (code, module_id, action_id, description)
+SELECT code, split_part(code, '.', 1), split_part(code, '.', 2), description
+FROM (VALUES
+    ('gestion-tenants.crear',                       'Crear tenants'),
+    ('gestion-tenants.editar',                       'Editar tenants'),
+    ('gestion-tenants.eliminar',                     'Eliminar tenants'),
+    ('gestion-tenants.activar-suspender',            'Activar / suspender tenants'),
+    ('gestion-tenants.configurar-identidad',         'Configurar identidad de tenant'),
+    ('gestion-tenants.zonas-horarias',                'Configurar zonas horarias'),
+    ('gestion-tenants.asignacion-planes',             'Asignar planes a tenants'),
+    ('gestion-tenants.tipos-marcacion',                'Configurar tipos de marcación'),
+    ('billing-suscripciones.gestionar-pagos',          'Gestionar pagos'),
+    ('billing-suscripciones.historial-facturacion',    'Ver historial de facturación'),
+    ('billing-suscripciones.bloqueo-impago',           'Bloquear tenants por impago'),
+    ('configuracion-global.modulos-por-plan',          'Gestión de módulos por plan'),
+    ('monitoreo-sistema.dashboard-global',             'Ver dashboard global'),
+    ('monitoreo-sistema.logs-sistema',                 'Ver logs del sistema'),
+    ('monitoreo-sistema.auditoria-acciones',           'Ver auditoría de acciones')
+) AS seed(code, description)
+ON CONFLICT (code) DO NOTHING;
+
+-- Roles seed (6 roles)
+INSERT INTO roles_master (name, display_name, description) VALUES
+    ('admin_trazzo',          'Administrador Trazzo',         'Administrator with full access'),
+    ('super-administrador',   'Super Administrador',          'Acceso total a la plataforma SASS: gestión completa de tenants, billing, configuración global y monitoreo del sistema.'),
+    ('soporte',               'Administrador de Soporte',     'Gestión operativa de tenants y monitoreo del sistema. Sin acceso a billing ni configuración global de planes.'),
+    ('operaciones',           'Administrador de Operaciones', 'Administración de tenants, configuración de identidad, zonas horarias y tipos de marcación. Acceso de solo lectura a monitoreo.'),
+    ('financiero',            'Administrador Financiero',     'Gestión completa de billing y suscripciones: pagos, facturación y bloqueo por impago. Acceso de solo lectura a tenants.'),
+    ('consultor',             'Consultor / Vista',            'Acceso de solo lectura a dashboards, logs y auditoría del sistema. Sin permisos de escritura en ningún módulo.')
+ON CONFLICT (name) DO NOTHING;
+
+-- admin_trazzo y super-administrador: los 15 permisos.
+INSERT INTO role_permissions_master (role_id, permission_id)
+SELECT r.id, p.id FROM roles_master r CROSS JOIN permissions_master p
+WHERE r.name IN ('admin_trazzo', 'super-administrador')
+ON CONFLICT DO NOTHING;
+
+-- soporte (10 permisos)
+INSERT INTO role_permissions_master (role_id, permission_id)
+SELECT r.id, p.id FROM roles_master r CROSS JOIN permissions_master p
+WHERE r.name = 'soporte' AND p.code IN (
+    'gestion-tenants.crear', 'gestion-tenants.editar', 'gestion-tenants.activar-suspender',
+    'gestion-tenants.configurar-identidad', 'gestion-tenants.zonas-horarias', 'gestion-tenants.tipos-marcacion',
+    'billing-suscripciones.historial-facturacion',
+    'monitoreo-sistema.dashboard-global', 'monitoreo-sistema.logs-sistema', 'monitoreo-sistema.auditoria-acciones'
+) ON CONFLICT DO NOTHING;
+
+-- operaciones (7 permisos)
+INSERT INTO role_permissions_master (role_id, permission_id)
+SELECT r.id, p.id FROM roles_master r CROSS JOIN permissions_master p
+WHERE r.name = 'operaciones' AND p.code IN (
+    'gestion-tenants.crear', 'gestion-tenants.editar', 'gestion-tenants.activar-suspender',
+    'gestion-tenants.configurar-identidad', 'gestion-tenants.zonas-horarias', 'gestion-tenants.tipos-marcacion',
+    'monitoreo-sistema.dashboard-global'
+) ON CONFLICT DO NOTHING;
+
+-- financiero (6 permisos)
+INSERT INTO role_permissions_master (role_id, permission_id)
+SELECT r.id, p.id FROM roles_master r CROSS JOIN permissions_master p
+WHERE r.name = 'financiero' AND p.code IN (
+    'gestion-tenants.asignacion-planes',
+    'billing-suscripciones.gestionar-pagos', 'billing-suscripciones.historial-facturacion', 'billing-suscripciones.bloqueo-impago',
+    'monitoreo-sistema.dashboard-global', 'monitoreo-sistema.auditoria-acciones'
+) ON CONFLICT DO NOTHING;
+
+-- consultor (3 permisos)
+INSERT INTO role_permissions_master (role_id, permission_id)
+SELECT r.id, p.id FROM roles_master r CROSS JOIN permissions_master p
+WHERE r.name = 'consultor' AND p.code IN (
+    'monitoreo-sistema.dashboard-global', 'monitoreo-sistema.logs-sistema', 'monitoreo-sistema.auditoria-acciones'
+) ON CONFLICT DO NOTHING;

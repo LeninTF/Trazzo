@@ -4,6 +4,9 @@
     <div class="text-center">
         <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
         <p class="mt-3 text-muted">{{ error() }}</p>
+        <button class="btn btn-primary mt-3" (click)="cargarLogs()">
+          <i class="bi bi-arrow-clockwise me-2"></i> Reintentar
+        </button>
     </div>
 </div>
 } @else {
@@ -62,12 +65,17 @@
         <div class="search-input">
           <label for="log-busqueda" class="visually-hidden">Buscar</label>
           <i class="bi bi-search search-input__icon"></i>
-          <input type="text" class="form-control" id="log-busqueda" placeholder="Filtrar por descripción o entidad..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
+          <input type="text" class="form-control" id="log-busqueda" placeholder="Filtrar por entidad, usuario o endpoint..." [(ngModel)]="searchTerm" (input)="filtrarLogs()">
         </div>
         <div class="date-filter">
-          <label for="log-fecha" class="visually-hidden">Filtrar por fecha</label>
+          <label for="log-fecha-desde" class="visually-hidden">Desde</label>
           <i class="bi bi-calendar3 date-filter__icon"></i>
-          <input type="date" class="form-control" id="log-fecha" [(ngModel)]="filtroFecha" (change)="filtrarLogs()" placeholder="Filtrar por fecha">
+          <input type="date" class="form-control" id="log-fecha-desde" [(ngModel)]="filtroFechaDesde" (change)="filtrarLogs()" placeholder="Fecha desde">
+        </div>
+        <div class="date-filter">
+          <label for="log-fecha-hasta" class="visually-hidden">Hasta</label>
+          <i class="bi bi-calendar3 date-filter__icon"></i>
+          <input type="date" class="form-control" id="log-fecha-hasta" [(ngModel)]="filtroFechaHasta" (change)="filtrarLogs()" placeholder="Fecha hasta">
         </div>
         <button class="btn btn-primary" (click)="aplicarFiltros()">
           <i class="bi bi-funnel me-2"></i> Filtrar
@@ -81,6 +89,14 @@
 
   <!-- TABLA DE LOGS -->
   <div class="table-card">
+    @if (loading()) {
+      <div class="loading-state">
+        <output class="spinner-border text-primary" aria-label="Cargando">
+          Cargando...
+        </output>
+        <p class="mt-3 text-muted">Cargando logs de auditoría...</p>
+      </div>
+    } @else {
     <div class="table-responsive">
       <table class="log-table">
         <thead>
@@ -94,7 +110,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (log of logsPaginado; track log.id) {
+          @for (log of logs; track log.id) {
             <tr class="log-row" [class.log-row--active]="logSeleccionado?.id === log.id" (click)="seleccionarLog(log)" (keydown.enter)="seleccionarLog(log)" role="button" tabindex="0">
               <td class="log-table__date" data-label="Fecha/Hora">
                 <strong>{{ log.fecha | date:'dd/MM/yyyy' }}</strong>
@@ -128,17 +144,25 @@
                 </button>
               </td>
             </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty-state">
+                <i class="bi bi-inbox" style="font-size: 2rem; color: var(--text-muted);"></i>
+                <p class="mt-2 text-muted">No hay logs de auditoría registrados</p>
+              </td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
 
     <!-- PAGINACIÓN -->
-    @if (logsFiltrado.length > 0) {
+    @if (totalElementos > 0) {
       <div class="table-card__footer">
-        <span class="text-muted">Mostrando {{ inicioRegistro }} - {{ finRegistro }} de {{ logsFiltrado.length }} eventos</span>
+        <span class="text-muted">Mostrando {{ inicioRegistro }} - {{ finRegistro }} de {{ totalElementos }} eventos</span>
         <app-pagination [currentPage]="paginaActual" [totalPages]="totalPaginas" (pageChange)="cambiarPagina($event)"/>
       </div>
+    }
     }
   </div>
 </div>

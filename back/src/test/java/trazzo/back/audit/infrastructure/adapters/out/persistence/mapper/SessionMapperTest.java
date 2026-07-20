@@ -5,18 +5,23 @@ import trazzo.back.audit.domain.model.tenant.Session;
 import trazzo.back.audit.domain.model.tenant.SessionState;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.SessionEntity;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class SessionMapperTest {
+
+    private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-01-15T00:00:00Z"), ZoneId.of("UTC"));
 
     @Test
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
         var domain = new Session(1L, "user-1", "hash123", "192.168.1.1",
                 "Mozilla/5.0", "fp-001", now, now.plusHours(1), null,
-                now.plusDays(7), SessionState.ACTIVE, now, now);
+                now.plusDays(7), SessionState.ACTIVE, now, now, now);
 
         var entity = SessionMapper.toEntity(domain);
 
@@ -53,7 +58,7 @@ class SessionMapperTest {
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
 
-        var domain = SessionMapper.toDomain(entity);
+        var domain = SessionMapper.toDomain(entity, CLOCK);
 
         assertEquals(1L, domain.getId());
         assertEquals("user-2", domain.getTenantUserId());
@@ -62,7 +67,7 @@ class SessionMapperTest {
         assertEquals("curl/7.68", domain.getUserAgent());
         assertEquals("fp-002", domain.getDeviceFingerprint());
         assertEquals(now, domain.getLoginAt());
-        assertEquals(now.plusHours(2), domain.getLasActivityAt());
+        assertEquals(now.plusHours(2), domain.getLastActivityAt());
         assertNull(domain.getLogoutAt());
         assertEquals(now.plusDays(30), domain.getExpiresAt());
         assertEquals(SessionState.ACTIVE, domain.getState());
@@ -75,10 +80,10 @@ class SessionMapperTest {
         var now = LocalDateTime.now();
         var original = new Session(2L, "user-3", "hash789", "192.168.1.3",
                 "Edge/100", "fp-003", now, now.plusMinutes(30), null,
-                now.plusDays(1), SessionState.ACTIVE, now, now);
+                now.plusDays(1), SessionState.ACTIVE, now, now, now);
 
         var entity = SessionMapper.toEntity(original);
-        var restored = SessionMapper.toDomain(entity);
+        var restored = SessionMapper.toDomain(entity, CLOCK);
 
         assertEquals(original.getId(), restored.getId());
         assertEquals(original.getTenantUserId(), restored.getTenantUserId());
@@ -87,7 +92,7 @@ class SessionMapperTest {
         assertEquals(original.getUserAgent(), restored.getUserAgent());
         assertEquals(original.getDeviceFingerprint(), restored.getDeviceFingerprint());
         assertEquals(original.getLoginAt(), restored.getLoginAt());
-        assertEquals(original.getLasActivityAt(), restored.getLasActivityAt());
+        assertEquals(original.getLastActivityAt(), restored.getLastActivityAt());
         assertEquals(original.getLogoutAt(), restored.getLogoutAt());
         assertEquals(original.getExpiresAt(), restored.getExpiresAt());
         assertEquals(SessionState.ACTIVE, restored.getState());
@@ -113,7 +118,7 @@ class SessionMapperTest {
         entity.setCreatedAt(now.minusDays(1));
         entity.setUpdatedAt(now);
 
-        var domain = SessionMapper.toDomain(entity);
+        var domain = SessionMapper.toDomain(entity, CLOCK);
 
         assertEquals(SessionState.LOGGED_OUT, domain.getState());
     }

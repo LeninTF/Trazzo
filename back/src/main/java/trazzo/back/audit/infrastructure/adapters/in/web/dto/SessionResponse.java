@@ -24,7 +24,7 @@ public record SessionResponse(
         return new SessionResponse(
             result.id(), result.tenantUserId(), result.refreshTokenHash(),
             result.ipAddress(), result.userAgent(), result.deviceFingerprint(),
-            result.loginAt(), result.lasActivityAt(), result.logoutAt(),
+            result.loginAt(), result.lastActivityAt(), result.logoutAt(),
             result.expiresAt(), result.state(),
             result.createdAt(), result.updatedAt()
         );

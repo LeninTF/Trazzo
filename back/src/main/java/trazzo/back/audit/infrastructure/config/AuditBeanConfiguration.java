@@ -2,6 +2,7 @@ package trazzo.back.audit.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.audit.application.port.in.AuditLogUseCase;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 import trazzo.back.audit.application.port.in.LoginHistoryUseCase;
@@ -22,8 +23,15 @@ import trazzo.back.audit.application.usecase.SessionService;
 import trazzo.back.audit.application.usecase.SystemAuditService;
 import trazzo.back.audit.application.usecase.TenantSettingsService;
 
+import java.time.Clock;
+
 @Configuration
 public class AuditBeanConfiguration {
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone();
+    }
 
     @Bean
     public AuditLogUseCase auditLogUseCase(
@@ -55,7 +63,7 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
-    public AuditMetricsUseCase auditMetricsUseCase() {
-        return new AuditMetricsService();
+    public AuditMetricsUseCase auditMetricsUseCase(JdbcTemplate jdbcTemplate, Clock clock) {
+        return new AuditMetricsService(jdbcTemplate, clock);
     }
 }

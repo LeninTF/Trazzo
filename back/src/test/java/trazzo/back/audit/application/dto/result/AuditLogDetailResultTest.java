@@ -13,22 +13,22 @@ class AuditLogDetailResultTest {
     @Test
     void shouldCreate() {
         var now = LocalDateTime.now();
-        var previousValue = Map.<String, Object>of("field", "old");
+        var oldValue = Map.<String, Object>of("field", "old");
         var newValue = Map.<String, Object>of("field", "new");
         var result = new AuditLogDetailResult(
                 "1", "User", "42", Action.UPDATE, "user-1",
                 "/api/users/42", "192.168.1.1", "curl/7.68",
-                previousValue, newValue, now
+                oldValue, newValue, now
         );
         assertEquals("1", result.id());
-        assertEquals("User", result.entity());
-        assertEquals("42", result.entityId());
-        assertEquals(Action.UPDATE, result.action());
+        assertEquals("User", result.entidad());
+        assertEquals("42", result.entidadId());
+        assertEquals(Action.UPDATE, result.accion());
         assertEquals("user-1", result.userId());
         assertEquals("/api/users/42", result.endpoint());
-        assertEquals("192.168.1.1", result.ipAdress());
+        assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("curl/7.68", result.userAgent());
-        assertEquals(previousValue, result.previousValue());
+        assertEquals(oldValue, result.oldValue());
         assertEquals(newValue, result.newValue());
         assertEquals(now, result.createdAt());
     }
@@ -41,7 +41,7 @@ class AuditLogDetailResultTest {
                 "/api/users", "10.0.0.1", null, null, null, now
         );
         assertNull(result.userAgent());
-        assertNull(result.previousValue());
+        assertNull(result.oldValue());
         assertNull(result.newValue());
     }
 

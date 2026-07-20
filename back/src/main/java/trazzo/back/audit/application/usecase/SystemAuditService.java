@@ -7,7 +7,7 @@ import trazzo.back.audit.application.port.in.SystemAuditUseCase;
 import trazzo.back.audit.application.port.out.SystemAuditRepositoryPort;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.tenant.SystemAudit;
-import trazzo.back.audit.infrastructure.adapters.out.persistence.adapter.SortUtils;
+import trazzo.back.shared.util.SortUtils;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;

@@ -1,15 +1,22 @@
-package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
+package trazzo.back.shared.util;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
 
+import java.util.Map;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 class SortUtilsTest {
 
     private static final Function<String, String> IDENTITY = Function.identity();
+    private static final Function<String, String> AUDIT_MAPPER = Map.of(
+            "createdAt", "created_at",
+            "ipAddress", "ip_address",
+            "entityId", "entity_id"
+    )::get;
     private static final Function<String, String> FIELD_MAPPER = f -> switch (f) {
         case "name" -> "name";
         case "createdAt", "created_at" -> "createdAt";
@@ -52,6 +59,25 @@ class SortUtilsTest {
     void parseSort_unknownField_defaultsViaMapper() {
         var sort = SortUtils.parseSort("unknown,asc", FIELD_MAPPER);
         assertThat(sort.getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void parseSort_customDefaultField() {
+        var sort = SortUtils.parseSort(null, IDENTITY, "date");
+        assertThat(sort.getOrderFor("date").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void parseSort_auditFieldMapper() {
+        var sort = SortUtils.parseSort("createdAt,asc", AUDIT_MAPPER);
+        assertThat(sort.getOrderFor("created_at")).isNotNull();
+        assertThat(sort.getOrderFor("created_at").getDirection()).isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void parseSort_throwsWhenMapperReturnsNull() {
+        assertThrows(IllegalArgumentException.class,
+                () -> SortUtils.parseSort("unknown,asc", s -> null));
     }
 
     @Test

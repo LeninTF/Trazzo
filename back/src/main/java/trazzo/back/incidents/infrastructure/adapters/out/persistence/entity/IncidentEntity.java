@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "incidents")
+@Table(name = "incidencias")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +26,7 @@ public class IncidentEntity {
     @Column(name = "tenant_user_id", nullable = false, length = 36)
     private String tenantUserId;
 
-    @Column(name = "incident_type_id", nullable = false, length = 36)
+    @Column(name = "incidencia_type_id", nullable = false, length = 36)
     private String incidentTypeId;
 
     @Enumerated(EnumType.STRING)
@@ -46,7 +46,7 @@ public class IncidentEntity {
     private LocalDateTime updatedAt;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "incident_id")
+    @JoinColumn(name = "incidencia_id")
     private List<IncidentEvidenceEntity> evidences = new ArrayList<>();
 
     @Transient

@@ -78,4 +78,44 @@ class JwtServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("at least 256 bits");
     }
+
+    @Test
+    void generateTokenWithTenantSchema_includesClaim() {
+        String token = jwtService.generateToken(user("user@test.com"), "tenant_acme");
+        assertThat(jwtService.extractTenantSchema(token)).isEqualTo("tenant_acme");
+    }
+
+    @Test
+    void generateTokenWithBlankTenantSchema_doesNotIncludeClaim() {
+        String token = jwtService.generateToken(user("user@test.com"), "  ");
+        assertThat(jwtService.extractTenantSchema(token)).isNull();
+    }
+
+    @Test
+    void generateTokenWithNullTenantSchema_doesNotIncludeClaim() {
+        String token = jwtService.generateToken(user("user@test.com"), null);
+        assertThat(jwtService.extractTenantSchema(token)).isNull();
+    }
+
+    @Test
+    void generateTokenWithoutTenantSchema_doesNotIncludeClaim() {
+        String token = jwtService.generateToken(user("user@test.com"));
+        assertThat(jwtService.extractTenantSchema(token)).isNull();
+    }
+
+    @Test
+    void extractUsername_roundTripsCorrectly() {
+        var u = user("admin@trazzo.com");
+        String token = jwtService.generateToken(u, "tenant_test");
+        assertThat(jwtService.extractUsername(token)).isEqualTo("admin@trazzo.com");
+    }
+
+    @Test
+    void isTokenValid_expiredToken_throwsExpiredJwtException() {
+        var shortLived = new JwtService(SECRET, 1);
+        String token = shortLived.generateToken(user("user@test.com"));
+        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+        assertThatThrownBy(() -> shortLived.isTokenValid(token, user("user@test.com")))
+                .isInstanceOf(io.jsonwebtoken.ExpiredJwtException.class);
+    }
 }

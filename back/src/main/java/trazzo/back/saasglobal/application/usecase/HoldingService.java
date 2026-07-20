@@ -3,6 +3,7 @@ package trazzo.back.saasglobal.application.usecase;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.dto.command.CreateHoldingCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdateHoldingCommand;
 import trazzo.back.saasglobal.application.dto.result.HoldingResult;
@@ -13,6 +14,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.HoldingType;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class HoldingService implements HoldingUseCase {
 
     private static final String NOT_FOUND_MSG = "Holding not found: ";

@@ -31,7 +31,7 @@ class LoginHistoryServiceTest {
     @Test
     void findByIdReturnsLogInHistory() {
         var now = LocalDateTime.now();
-        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCES,
+        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCESS,
                 "192.168.1.1", "Mozilla/5.0", now);
         when(loginHistoryRepository.findById("1")).thenReturn(Optional.of(log));
 
@@ -40,7 +40,7 @@ class LoginHistoryServiceTest {
         assertEquals("1", result.id());
         assertEquals("user-1", result.userId());
         assertEquals("email@test.com", result.attemptedEmail());
-        assertEquals(StatusLogin.SUCCES, result.status());
+        assertEquals(StatusLogin.SUCCESS, result.status());
         assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals(now, result.createdAt());
@@ -56,7 +56,7 @@ class LoginHistoryServiceTest {
     @Test
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
-        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCES,
+        var log = new LogInHistory("1", "user-1", "email@test.com", StatusLogin.SUCCESS,
                 "192.168.1.1", "Mozilla/5.0", now);
         when(loginHistoryRepository.findAll(eq(null), eq(null), eq(null), eq(null), eq(null), any())).thenReturn(List.of(log));
         when(loginHistoryRepository.count(null, null, null, null, null)).thenReturn(1L);

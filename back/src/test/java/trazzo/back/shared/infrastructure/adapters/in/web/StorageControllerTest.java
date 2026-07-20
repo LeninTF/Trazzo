@@ -31,7 +31,7 @@ class StorageControllerTest {
         when(fileStoragePort.generatePresignedPutUrl(anyString(), anyString(), any()))
                 .thenReturn("https://r2.example.com/presigned");
 
-        mockMvc.perform(get("/api/v1/storage/presigned-url")
+        mockMvc.perform(get("/storage/presigned-url")
                         .param("fileName", "photo.jpg")
                         .param("contentType", "image/jpeg"))
                 .andExpect(status().isOk())

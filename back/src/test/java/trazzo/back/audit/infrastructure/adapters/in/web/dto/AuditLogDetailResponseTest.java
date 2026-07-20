@@ -22,14 +22,14 @@ class AuditLogDetailResponseTest {
         var response = AuditLogDetailResponse.from(result);
 
         assertThat(response.id()).isEqualTo("1");
-        assertThat(response.entity()).isEqualTo("User");
-        assertThat(response.entityId()).isEqualTo("usr-1");
-        assertThat(response.action()).isEqualTo(Action.CREATE);
+        assertThat(response.entidad()).isEqualTo("User");
+        assertThat(response.entidadId()).isEqualTo("usr-1");
+        assertThat(response.accion()).isEqualTo(Action.CREATE);
         assertThat(response.userId()).isEqualTo("uid-1");
         assertThat(response.endpoint()).isEqualTo("/api/users");
         assertThat(response.ipAddress()).isEqualTo("10.0.0.1");
         assertThat(response.userAgent()).isEqualTo("curl/7.0");
-        assertThat(response.previousValue()).containsEntry("name", "old");
+        assertThat(response.oldValue()).containsEntry("name", "old");
         assertThat(response.newValue()).containsEntry("name", "new");
         assertThat(response.createdAt()).isEqualTo(now);
     }

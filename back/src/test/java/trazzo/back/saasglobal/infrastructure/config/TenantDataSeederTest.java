@@ -33,13 +33,13 @@ class TenantDataSeederTest {
         jdbc = mock(JdbcTemplate.class);
         passwordEncoder = mock(PasswordEncoder.class);
         userRepository = mock(UserRepositoryPort.class);
-        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "demo");
+        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "demo", "demo123");
     }
 
     @Test
     void constructor_throwsWhenSubDomainBlank() {
         assertThrows(IllegalStateException.class,
-                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "  "));
+                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "  ", "pass"));
     }
 
     @Test

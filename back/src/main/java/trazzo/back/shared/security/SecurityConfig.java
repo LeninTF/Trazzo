@@ -36,6 +36,8 @@ public class SecurityConfig {
     private static final String SUBMIT_REQUEST_URL = "/requests";
     // Public marketing-site pricing section (PublicPlanController) — unauthenticated by design.
     private static final String PUBLIC_PLANS_URL = "/public/plans";
+    // Public self-signup trial (TenantController) — unauthenticated by design.
+    private static final String TENANTS_TRIAL_URL = "/tenants/trial";
     // Public self-signup checkout (ShopCheckoutController) — unauthenticated by design.
     private static final String SHOP_CHECKOUT_URL = "/shop/checkout";
     // Mercado Pago webhook receiver — unauthenticated (verified via WebhookSignatureValidator
@@ -75,7 +77,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {
                 auth.requestMatchers(LOGIN_URL, PUBLIC_KEY_URL, ERROR_URL, SUBMIT_REQUEST_URL, PUBLIC_PLANS_URL,
-                        SHOP_CHECKOUT_URL, MERCADOPAGO_WEBHOOK_URL, ACTUATOR_HEALTH_URL).permitAll();
+                        TENANTS_TRIAL_URL, SHOP_CHECKOUT_URL, MERCADOPAGO_WEBHOOK_URL, ACTUATOR_HEALTH_URL).permitAll();
                 if (h2ConsoleEnabled) {
                     auth.requestMatchers(h2Console).hasRole("ADMIN");
                 }

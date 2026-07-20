@@ -13,13 +13,13 @@ class LogInHistoryResultTest {
     void shouldCreateWithSuccessStatus() {
         var now = LocalDateTime.now();
         var result = new LogInHistoryResult(
-                "1", "user-1", "jdoe@test.com", StatusLogin.SUCCES,
+                "1", "user-1", "jdoe@test.com", StatusLogin.SUCCESS,
                 "192.168.1.1", "Mozilla/5.0", now
         );
         assertEquals("1", result.id());
         assertEquals("user-1", result.userId());
         assertEquals("jdoe@test.com", result.attemptedEmail());
-        assertEquals(StatusLogin.SUCCES, result.status());
+        assertEquals(StatusLogin.SUCCESS, result.status());
         assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals(now, result.createdAt());
@@ -50,7 +50,7 @@ class LogInHistoryResultTest {
     void shouldHandleNullId() {
         var now = LocalDateTime.now();
         var result = new LogInHistoryResult(
-                null, "user-1", "test@test.com", StatusLogin.SUCCES,
+                null, "user-1", "test@test.com", StatusLogin.SUCCESS,
                 "127.0.0.1", "agent", now
         );
         assertNull(result.id());
@@ -59,8 +59,8 @@ class LogInHistoryResultTest {
     @Test
     void shouldTestEquality() {
         var now = LocalDateTime.now();
-        var r1 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
-        var r2 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCES, "ip", "ua", now);
+        var r1 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCESS, "ip", "ua", now);
+        var r2 = new LogInHistoryResult("1", "u", "e@m.com", StatusLogin.SUCCESS, "ip", "ua", now);
         assertEquals(r1, r2);
         assertEquals(r1.hashCode(), r2.hashCode());
     }

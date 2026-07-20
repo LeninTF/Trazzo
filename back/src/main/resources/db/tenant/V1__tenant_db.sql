@@ -204,12 +204,18 @@ CREATE TABLE attendances (
     device_id INT REFERENCES device(id) ON DELETE SET NULL,
     check_in TIMESTAMP,
     check_out TIMESTAMP,
+    offline_event_id INT,
+    device_code VARCHAR(100),
     attendance_date DATE NOT NULL,
     minutes_late INT DEFAULT 0,
     state attendance_status_enum NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX idx_attendances_offline_event_device
+    ON attendances (offline_event_id, device_code)
+    WHERE offline_event_id IS NOT NULL AND device_code IS NOT NULL;
 
 -- ==============================================================================
 -- 6. GESTIÓN DE INCIDENCIAS Y PERMISOS
@@ -333,3 +339,135 @@ CREATE TABLE auditoria_sistema (
     resultado VARCHAR(100),
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ==============================================================================
+-- 9. PERMISOS Y ROLES DEL TENANT
+-- ==============================================================================
+
+INSERT INTO permissions (id, name, description)
+SELECT gen_random_uuid(), seed.name, seed.description
+FROM (VALUES
+    ('gestion-trabajadores.crear', 'Crear trabajadores'),
+    ('gestion-trabajadores.editar', 'Editar trabajadores'),
+    ('gestion-trabajadores.eliminar', 'Eliminar trabajadores'),
+    ('gestion-trabajadores.asignar-roles', 'Asignar roles a trabajadores'),
+    ('estructura-organizacional.crear-editar-areas', 'Crear/editar áreas'),
+    ('estructura-organizacional.crear-editar-sedes', 'Crear/editar sedes'),
+    ('estructura-organizacional.asignar-personal', 'Asignar personal'),
+    ('gestion-horarios.configurar-turnos', 'Configurar turnos'),
+    ('gestion-horarios.configurar-tolerancias', 'Configurar tolerancias'),
+    ('gestion-horarios.asignacion-masiva', 'Asignación masiva de horarios'),
+    ('control-asistencia.corregir-marcaciones', 'Corregir marcaciones'),
+    ('control-asistencia.justificar-marcaciones', 'Justificar marcaciones'),
+    ('control-asistencia.operador-asistencia', 'Operador de asistencia'),
+    ('reportes.exportar-excel', 'Exportar reportes a Excel'),
+    ('reportes.exportar-pdf', 'Exportar reportes a PDF'),
+    ('permisos-licencias.aprobar-incidencias', 'Aprobar incidencias'),
+    ('permisos-licencias.rechazar-incidencias', 'Rechazar incidencias'),
+    ('notificaciones.enviar-avisos', 'Enviar avisos'),
+    ('notificaciones.configurar-reportes', 'Configurar reportes automáticos'),
+    ('configuracion-tenant.gestionar-metodos', 'Gestionar métodos de marcación'),
+    ('auditoria-seguridad.acceso-logs', 'Acceso a logs'),
+    ('auditoria-seguridad.historial-cambios', 'Historial de cambios'),
+    ('asistencia-docente.registrar-entrada-salida', 'Registrar entrada/salida con huella'),
+    ('asistencia-docente.ver-historial', 'Ver historial de asistencia'),
+    ('asistencia-docente.ver-tardanzas-faltas', 'Ver tardanzas/faltas'),
+    ('horarios-docente.ver-turnos', 'Ver turnos asignados'),
+    ('horarios-docente.ver-calendario', 'Ver calendario laboral'),
+    ('solicitudes.solicitar-correccion', 'Solicitar corrección de marcación'),
+    ('solicitudes.ver-estado', 'Ver estado de solicitudes'),
+    ('notificaciones-docente.recibir-alertas', 'Recibir alertas'),
+    ('notificaciones-docente.ver-cambios-horario', 'Ver cambios de horario'),
+    ('perfil.ver-actualizar-datos', 'Ver/actualizar datos personales'),
+    ('perfil.cambiar-contrasena', 'Cambiar contraseña')
+) AS seed(name, description)
+WHERE NOT EXISTS (SELECT 1 FROM permissions p WHERE p.name = seed.name);
+
+INSERT INTO role (id, name, description)
+SELECT gen_random_uuid(), seed.name, seed.description
+FROM (VALUES
+    ('administrador', 'El Administrador tiene acceso total a la configuración y seguridad del sistema, incluyendo gestión de trabajadores, horarios, reportes y auditoría.'),
+    ('director', 'El Director puede supervisar la estructura organizacional, revisar reportes y aprobar incidencias, con acceso a la mayoría de módulos operativos.'),
+    ('coordinador', 'El Coordinador gestiona horarios, control de asistencia y trabajadores a su cargo, con permisos limitados a módulos operativos.'),
+    ('recursos-humanos', 'RRHH administra trabajadores, corrige marcaciones, gestiona permisos y licencias, y puede exportar reportes.'),
+    ('docente', 'El Docente puede registrar su asistencia, consultar horarios, realizar solicitudes de corrección y gestionar su perfil personal.')
+) AS seed(name, description)
+WHERE NOT EXISTS (SELECT 1 FROM role r WHERE r.name = seed.name);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM (VALUES
+    ('administrador', 'gestion-trabajadores.crear'),
+    ('administrador', 'gestion-trabajadores.editar'),
+    ('administrador', 'gestion-trabajadores.eliminar'),
+    ('administrador', 'gestion-trabajadores.asignar-roles'),
+    ('administrador', 'estructura-organizacional.crear-editar-areas'),
+    ('administrador', 'estructura-organizacional.crear-editar-sedes'),
+    ('administrador', 'estructura-organizacional.asignar-personal'),
+    ('administrador', 'gestion-horarios.configurar-turnos'),
+    ('administrador', 'gestion-horarios.configurar-tolerancias'),
+    ('administrador', 'gestion-horarios.asignacion-masiva'),
+    ('administrador', 'control-asistencia.corregir-marcaciones'),
+    ('administrador', 'control-asistencia.justificar-marcaciones'),
+    ('administrador', 'control-asistencia.operador-asistencia'),
+    ('administrador', 'reportes.exportar-excel'),
+    ('administrador', 'reportes.exportar-pdf'),
+    ('administrador', 'permisos-licencias.aprobar-incidencias'),
+    ('administrador', 'permisos-licencias.rechazar-incidencias'),
+    ('administrador', 'notificaciones.enviar-avisos'),
+    ('administrador', 'notificaciones.configurar-reportes'),
+    ('administrador', 'configuracion-tenant.gestionar-metodos'),
+    ('administrador', 'auditoria-seguridad.acceso-logs'),
+    ('administrador', 'auditoria-seguridad.historial-cambios'),
+
+    ('director', 'gestion-trabajadores.crear'),
+    ('director', 'gestion-trabajadores.editar'),
+    ('director', 'estructura-organizacional.crear-editar-areas'),
+    ('director', 'estructura-organizacional.crear-editar-sedes'),
+    ('director', 'estructura-organizacional.asignar-personal'),
+    ('director', 'gestion-horarios.configurar-turnos'),
+    ('director', 'gestion-horarios.configurar-tolerancias'),
+    ('director', 'control-asistencia.corregir-marcaciones'),
+    ('director', 'control-asistencia.justificar-marcaciones'),
+    ('director', 'reportes.exportar-excel'),
+    ('director', 'reportes.exportar-pdf'),
+    ('director', 'permisos-licencias.aprobar-incidencias'),
+    ('director', 'permisos-licencias.rechazar-incidencias'),
+    ('director', 'notificaciones.enviar-avisos'),
+    ('director', 'auditoria-seguridad.acceso-logs'),
+
+    ('coordinador', 'gestion-trabajadores.crear'),
+    ('coordinador', 'gestion-trabajadores.editar'),
+    ('coordinador', 'gestion-horarios.configurar-turnos'),
+    ('coordinador', 'gestion-horarios.asignacion-masiva'),
+    ('coordinador', 'control-asistencia.corregir-marcaciones'),
+    ('coordinador', 'reportes.exportar-excel'),
+    ('coordinador', 'notificaciones.enviar-avisos'),
+
+    ('recursos-humanos', 'gestion-trabajadores.crear'),
+    ('recursos-humanos', 'gestion-trabajadores.editar'),
+    ('recursos-humanos', 'gestion-trabajadores.eliminar'),
+    ('recursos-humanos', 'estructura-organizacional.asignar-personal'),
+    ('recursos-humanos', 'control-asistencia.corregir-marcaciones'),
+    ('recursos-humanos', 'control-asistencia.justificar-marcaciones'),
+    ('recursos-humanos', 'reportes.exportar-excel'),
+    ('recursos-humanos', 'reportes.exportar-pdf'),
+    ('recursos-humanos', 'permisos-licencias.aprobar-incidencias'),
+    ('recursos-humanos', 'permisos-licencias.rechazar-incidencias'),
+    ('recursos-humanos', 'notificaciones.enviar-avisos'),
+
+    ('docente', 'asistencia-docente.registrar-entrada-salida'),
+    ('docente', 'asistencia-docente.ver-historial'),
+    ('docente', 'asistencia-docente.ver-tardanzas-faltas'),
+    ('docente', 'horarios-docente.ver-turnos'),
+    ('docente', 'horarios-docente.ver-calendario'),
+    ('docente', 'solicitudes.solicitar-correccion'),
+    ('docente', 'solicitudes.ver-estado'),
+    ('docente', 'notificaciones-docente.recibir-alertas'),
+    ('docente', 'notificaciones-docente.ver-cambios-horario'),
+    ('docente', 'perfil.ver-actualizar-datos'),
+    ('docente', 'perfil.cambiar-contrasena')
+) AS grants(role_name, permission_name)
+JOIN role r ON r.name = grants.role_name
+JOIN permissions p ON p.name = grants.permission_name
+ON CONFLICT DO NOTHING;

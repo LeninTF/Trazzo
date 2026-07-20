@@ -10,6 +10,7 @@ import trazzo.back.audit.domain.model.tenant.SessionState;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.mapper.SessionMapper;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.SessionJpaRepository;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,13 +20,14 @@ import java.util.Optional;
 public class SessionRepositoryAdapter implements SessionRepositoryPort {
 
     private final SessionJpaRepository jpaRepository;
+    private final Clock clock;
 
     @Override
     public List<Session> findAll(String tenantUserId, SessionState state, String ipAddress, Pageable pageable) {
         Boolean stateBool = state != null ? state == SessionState.ACTIVE : null;
         return jpaRepository.findByFilters(tenantUserId, stateBool, ipAddress, pageable)
                 .stream()
-                .map(SessionMapper::toDomain)
+                .map(e -> SessionMapper.toDomain(e, clock))
                 .toList();
     }
 
@@ -38,6 +40,6 @@ public class SessionRepositoryAdapter implements SessionRepositoryPort {
     @Override
     public Optional<Session> findById(Long id) {
         return jpaRepository.findById(id)
-                .map(SessionMapper::toDomain);
+                .map(e -> SessionMapper.toDomain(e, clock));
     }
 }

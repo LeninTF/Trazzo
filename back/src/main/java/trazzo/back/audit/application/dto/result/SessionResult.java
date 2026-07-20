@@ -11,7 +11,7 @@ public record SessionResult(
     String userAgent,
     String deviceFingerprint,
     LocalDateTime loginAt,
-    LocalDateTime lasActivityAt,
+    LocalDateTime lastActivityAt,
     LocalDateTime logoutAt,
     LocalDateTime expiresAt,
     SessionState state,

@@ -1,5 +1,8 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.mapper;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 import trazzo.back.audit.domain.model.tenant.Session;
 import trazzo.back.audit.domain.model.tenant.SessionState;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.SessionEntity;
@@ -18,7 +21,7 @@ public final class SessionMapper {
         entity.setUserAgent(domain.getUserAgent());
         entity.setDeviceFingerprint(domain.getDeviceFingerprint());
         entity.setLoginAt(domain.getLoginAt());
-        entity.setLastActivityAt(domain.getLasActivityAt());
+        entity.setLastActivityAt(domain.getLastActivityAt());
         entity.setLogoutAt(domain.getLogoutAt());
         entity.setExpiresAt(domain.getExpiresAt());
         entity.setState(domain.getState());
@@ -27,7 +30,7 @@ public final class SessionMapper {
         return entity;
     }
 
-    public static Session toDomain(SessionEntity entity) {
+    public static Session toDomain(SessionEntity entity, Clock clock) {
         return new Session(
                 entity.getId(),
                 entity.getTenantUserId(),
@@ -41,7 +44,8 @@ public final class SessionMapper {
                 entity.getExpiresAt(),
                 entity.getState(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                LocalDateTime.now(clock)
         );
     }
 }

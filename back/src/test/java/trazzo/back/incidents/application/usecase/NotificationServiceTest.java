@@ -33,7 +33,7 @@ class NotificationServiceTest {
         when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
 
         var command = new NotifyIncidentCommand("JUSTIFICACION");
-        assertDoesNotThrow(() -> service.notify("inc-1", command));
+        assertThrows(UnsupportedOperationException.class, () -> service.notify("inc-1", command));
     }
 
     @Test
@@ -51,7 +51,7 @@ class NotificationServiceTest {
                 LocalDateTime.now(), LocalDateTime.now());
         when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
 
-        assertDoesNotThrow(() -> service.justifyAttendance("inc-1"));
+        assertThrows(UnsupportedOperationException.class, () -> service.justifyAttendance("inc-1"));
     }
 
     @Test
