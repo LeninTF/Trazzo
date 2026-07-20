@@ -5,7 +5,7 @@ import { CorehrService } from '../../../api/services/corehr.service';
 import type { AttendanceListResponse, AttendanceProfile } from '../../../api/types';
 
 function makeAtt(id: string, day: number, state: AttendanceProfile['state'], minutesLate = 0): AttendanceProfile {
-  const date = `2026-06-${String(day).padStart(2, '0')}`;
+  const date = `2026-05-${String(day).padStart(2, '0')}`;
   const isLate = state === 'TARDANZA';
   return { id, tenant_user_id: 1, tenant_user: { id: 1, nombre: 'Test', apellido_paterno: 'User' }, schedule_id: 1, schedule: { id: 1, name: 'Mañana', entry_time: '07:00:00', departure_time: '13:00:00' }, device_id: 1, device_code: 'D1', check_in: isLate ? `${date}T07:25:00Z` : `${date}T06:55:00Z`, check_out: `${date}T13:00:00Z`, attendance_date: date, minutes_late: minutesLate, state, created_at: `${date}T06:30:00Z`, updated_at: `${date}T13:00:00Z` };
 }

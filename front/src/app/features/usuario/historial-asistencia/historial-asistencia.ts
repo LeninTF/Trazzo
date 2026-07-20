@@ -62,7 +62,7 @@ export class HistorialAsistencia implements OnInit {
     const fecha = new Date(attendance.attendance_date);
     const estado = this.mapEstado(attendance.state);
     return {
-      fecha: `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`,
+      fecha: `${String(fecha.getUTCDate()).padStart(2, '0')}/${String(fecha.getUTCMonth() + 1).padStart(2, '0')}/${fecha.getUTCFullYear()}`,
       ingreso: attendance.check_in?.slice(11, 16) ?? '—',
       salida: attendance.check_out?.slice(11, 16) ?? '—',
       turno: attendance.schedule?.name ?? '—',
@@ -83,7 +83,7 @@ export class HistorialAsistencia implements OnInit {
   private formatearMes(fechaIso: string): string {
     const fecha = new Date(fechaIso);
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
-    return `${meses[fecha.getMonth()]} ${fecha.getFullYear()}`;
+    return `${meses[fecha.getUTCMonth()]} ${fecha.getUTCFullYear()}`;
   }
 
   get completos(): number {
