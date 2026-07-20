@@ -4,7 +4,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
+import trazzo.back.corehr.application.port.out.AttendanceNotificationPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
+import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
+import trazzo.back.corehr.application.port.out.CryptoKeyProviderPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.NonWorkingDaysRepositoryPort;
@@ -18,9 +21,11 @@ import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.application.usecase.AttendanceService;
 import trazzo.back.corehr.application.usecase.DeviceService;
+import trazzo.back.corehr.application.usecase.MarkAttendanceUseCase;
 import trazzo.back.corehr.application.usecase.NonWorkingDayService;
 import trazzo.back.corehr.application.usecase.ScheduleService;
 import trazzo.back.corehr.application.usecase.ShiftService;
+import trazzo.back.corehr.application.usecase.SyncAttendanceUseCase;
 import trazzo.back.corehr.application.usecase.TenantContactService;
 import trazzo.back.corehr.application.usecase.TenantUserDepartmentService;
 import trazzo.back.corehr.application.usecase.ToleranciaService;
@@ -61,13 +66,35 @@ public class CoreHrBeanConfiguration {
     }
 
     @Bean
-    public UserBiometriaService userBiometriaUseCase(UserBiometriaRepositoryPort userBiometriaRepo) {
-        return new UserBiometriaService(userBiometriaRepo);
+    public UserBiometriaService userBiometriaUseCase(UserBiometriaRepositoryPort userBiometriaRepo, EnrollService enrollService) {
+        return new UserBiometriaService(userBiometriaRepo, enrollService);
     }
 
     @Bean
     public AttendanceService attendanceUseCase(AttendanceRepositoryPort attendanceRepo, EventPublisherPort eventPublisher) {
         return new AttendanceService(attendanceRepo, eventPublisher);
+    }
+
+    @Bean
+    public MarkAttendanceUseCase markAttendanceUseCase(
+            DeviceRepositoryPort deviceRepository,
+            CryptoKeyProviderPort cryptoKeyProvider,
+            BiometricMatchingPort biometricMatching,
+            UserBiometriaRepositoryPort biometriaRepository,
+            UserScheduleRepositoryPort userScheduleRepository,
+            AttendanceRepositoryPort attendanceRepository,
+            EventPublisherPort eventPublisher,
+            AttendanceNotificationPort notificationPort) {
+        return new MarkAttendanceUseCase(deviceRepository, cryptoKeyProvider, biometricMatching,
+                biometriaRepository, userScheduleRepository, attendanceRepository, eventPublisher, notificationPort);
+    }
+
+    @Bean
+    public SyncAttendanceUseCase syncAttendanceUseCase(
+            MarkAttendanceUseCase markAttendanceUseCase,
+            AttendanceRepositoryPort attendanceRepository,
+            EventPublisherPort eventPublisher) {
+        return new SyncAttendanceUseCase(markAttendanceUseCase, attendanceRepository, eventPublisher);
     }
 
     @Bean

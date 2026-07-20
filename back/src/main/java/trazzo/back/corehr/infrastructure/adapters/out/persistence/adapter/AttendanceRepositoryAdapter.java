@@ -43,6 +43,8 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
                     rs.getDate("attendance_date").toLocalDate(),
                     rs.getInt("minutes_late"),
                     AttendanceState.valueOf(rs.getString("state")),
+                    getNullableInt(rs, "offline_event_id"),
+                    rs.getString("device_code"),
                     rs.getTimestamp("created_at").toLocalDateTime(),
                     rs.getTimestamp("updated_at").toLocalDateTime()
             );
@@ -106,6 +108,17 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
             return attendanceRepo.countByFilters(tenantUserId, state, dateFrom, dateTo);
         }
         return attendanceRepo.count();
+    }
+
+    @Override
+    public Optional<Attendance> findByTenantUserIdAndDate(Long tenantUserId, LocalDate date) {
+        return attendanceRepo.findByTenantUserIdAndAttendanceDate(tenantUserId, date)
+                .map(AttendanceMapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByOfflineEventIdAndDeviceCode(Integer offlineEventId, String deviceCode) {
+        return attendanceRepo.existsByOfflineEventIdAndDeviceCode(offlineEventId, deviceCode);
     }
 
     private boolean hasOrganizationFilter(Long branchId, Long areaId, Long departamentoId) {
@@ -177,6 +190,11 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
 
     private static Long getNullableLong(ResultSet rs, String column) throws SQLException {
         long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
+    }
+
+    private static Integer getNullableInt(ResultSet rs, String column) throws SQLException {
+        int value = rs.getInt(column);
         return rs.wasNull() ? null : value;
     }
 }

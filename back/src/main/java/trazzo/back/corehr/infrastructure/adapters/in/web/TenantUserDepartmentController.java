@@ -21,8 +21,12 @@ public class TenantUserDepartmentController {
     private final TenantUserDepartmentUseCase tenantUserDepartmentUseCase;
 
     @GetMapping
-    public ResponseEntity<TenantUserDepartmentListResponse> listByUser(@PathVariable Long tenantUserId) {
-        var result = tenantUserDepartmentUseCase.findAllByTenantUserId(tenantUserId);
+    public ResponseEntity<TenantUserDepartmentListResponse> listByUser(
+            @PathVariable Long tenantUserId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        var result = tenantUserDepartmentUseCase.findAllByTenantUserId(tenantUserId, page, size);
         return ResponseEntity.ok(TenantUserDepartmentListResponse.from(result));
     }
 

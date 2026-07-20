@@ -17,7 +17,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
 /**
  * Local-dev only: provisions a demo tenant (its own PostgreSQL schema, running
- * db/tenant/schema.sql) so organization/corehr/incidents can be exercised via
+ * db/tenant/V1__tenant_db.sql) so organization/corehr/incidents can be exercised via
  * docker compose up without manually calling POST /tenants/trial first.
  */
 @Component

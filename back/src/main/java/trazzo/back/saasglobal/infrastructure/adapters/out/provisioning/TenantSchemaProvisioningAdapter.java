@@ -24,7 +24,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @Component
 public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioningPort {
 
-    private static final String SCHEMA_SCRIPT = "db/tenant/schema.sql";
+    private static final String SCHEMA_SCRIPT = "db/tenant/V1__tenant_db.sql";
     private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
     private final DataSource rawDataSource;

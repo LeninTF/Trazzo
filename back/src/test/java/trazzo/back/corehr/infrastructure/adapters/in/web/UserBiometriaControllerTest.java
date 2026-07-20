@@ -109,13 +109,13 @@ class UserBiometriaControllerTest {
 
     @Test
     void completeEnroll_shouldReturn201() throws Exception {
-        when(enrollService.completeEnroll(anyString(), anyString(), anyString(), anyInt(),
-                anyString(), any())).thenReturn(aBioResult());
+        when(enrollService.completeEnroll(anyString(), anyString(), anyInt(),
+                anyString(), anyString(), anyString(), anyString(), any())).thenReturn(aBioResult());
 
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "tok", "template_cifrado": "tpl", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "tok", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "iv_base64": "aXY=", "tag_base64": "dGFn", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.finger_index").value(2));
@@ -126,7 +126,7 @@ class UserBiometriaControllerTest {
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "", "template_cifrado": "tpl", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isBadRequest());
     }
@@ -136,7 +136,7 @@ class UserBiometriaControllerTest {
         mockMvc.perform(post("/corehr/biometria/enroll/completar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"enroll_token": "tok", "template_cifrado": "", "llave_cifrado": "key", "finger_index": 2, "device_code": "DVC-001"}
+                                {"enroll_token": "tok", "encrypted_template_base64": "", "encrypted_aes_key_base64": "a2V5", "finger_index": 2, "device_code": "DVC-001"}
                                 """))
                 .andExpect(status().isBadRequest());
     }

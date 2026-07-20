@@ -35,10 +35,26 @@ public class UserBiometriaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(EnrollSessionResponse.from(result));
     }
 
+    @GetMapping("/enroll/pendiente")
+    public ResponseEntity<PendingEnrollSessionResponse> pendingEnroll(@RequestParam("device_code") String deviceCode) {
+        return userBiometriaUseCase.findPendingEnrollSession(deviceCode)
+                .map(PendingEnrollSessionResponse::from)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/enroll/completar")
-    public ResponseEntity<UserBiometriaResponse> completeEnroll(@Valid @RequestBody CompleteEnrollRequest request) {
-        var result = enrollService.completeEnroll(request.enrollToken(), request.templateCifrado(),
-                request.llaveCifrado(), request.fingerIndex(), request.deviceCode(), request.capturadoEn());
+    public ResponseEntity<UserBiometriaResponse> completeEnroll(@Valid @RequestBody CompleteEnrollHttpRequest request) {
+        var result = enrollService.completeEnroll(
+                request.enrollToken(),
+                request.deviceCode(),
+                request.fingerIndex(),
+                request.encryptedTemplateBase64(),
+                request.encryptedAesKeyBase64(),
+                request.ivBase64(),
+                request.tagBase64(),
+                request.capturedAtUtc()
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(UserBiometriaResponse.from(result));
     }
 

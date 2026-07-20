@@ -26,14 +26,23 @@ public class UserBiometriaEntity extends AuditableEntity {
     @Column(name = "device_id")
     private Long deviceId;
 
+    @Column(name = "device_code", length = 100)
+    private String deviceCode;
+
     @Column(name = "finger_index")
     private Integer fingerIndex;
 
-    @Column(name = "template_cifrado", nullable = false, columnDefinition = "TEXT")
-    private String templateCifrado;
+    @Column(name = "encrypted_template_base64", nullable = false, columnDefinition = "TEXT")
+    private String encryptedTemplateBase64;
 
-    @Column(name = "llave_cifrado", length = 255)
-    private String llaveCifrado;
+    @Column(name = "encrypted_aes_key_base64", nullable = false, columnDefinition = "TEXT")
+    private String encryptedAesKeyBase64;
+
+    @Column(name = "iv_base64", columnDefinition = "TEXT")
+    private String ivBase64;
+
+    @Column(name = "tag_base64", columnDefinition = "TEXT")
+    private String tagBase64;
 
     @Column(name = "capturado_en")
     private LocalDateTime capturadoEn;

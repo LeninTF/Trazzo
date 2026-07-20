@@ -7,6 +7,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
 import trazzo.back.corehr.application.port.out.*;
+import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionStore;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,6 +31,7 @@ class CoreHrBeanConfigurationTest {
     @Mock private TenantUserDepartmentRepositoryPort deptRepo;
     @Mock private JdbcTemplate jdbcTemplate;
     @Mock private EnrollSessionStore enrollSessionStore;
+    @Mock private EnrollService enrollService;
 
     @Test
     void shouldCreateShiftUseCase() {
@@ -58,7 +60,7 @@ class CoreHrBeanConfigurationTest {
 
     @Test
     void shouldCreateUserBiometriaUseCase() {
-        assertNotNull(config.userBiometriaUseCase(userBiometriaRepo));
+        assertNotNull(config.userBiometriaUseCase(userBiometriaRepo, enrollService));
     }
 
     @Test
