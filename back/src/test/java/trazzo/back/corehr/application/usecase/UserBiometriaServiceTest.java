@@ -90,6 +90,28 @@ class UserBiometriaServiceTest {
     }
 
     @Test
+    void findPendingEnrollSession_shouldReturnSession() {
+        var deviceCode = "DVC-001";
+        var session = new trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSession("token", 10L, 5L, 1, deviceCode, LocalDateTime.now().plusMinutes(1));
+        when(enrollService.findPendingSession(deviceCode)).thenReturn(Optional.of(session));
+
+        var result = service.findPendingEnrollSession(deviceCode);
+
+        assertTrue(result.isPresent());
+        assertEquals("token", result.get().enrollToken());
+    }
+
+    @Test
+    void findPendingEnrollSession_shouldReturnEmptyWhenNotFound() {
+        var deviceCode = "UNKNOWN";
+        when(enrollService.findPendingSession(deviceCode)).thenReturn(Optional.empty());
+
+        var result = service.findPendingEnrollSession(deviceCode);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
     void patchActivoWithNotFoundIdThrowsException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 

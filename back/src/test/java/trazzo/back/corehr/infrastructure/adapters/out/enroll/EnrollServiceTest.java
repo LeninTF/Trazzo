@@ -159,6 +159,28 @@ class EnrollServiceTest {
     }
 
     @Test
+    void findPendingSession_shouldReturnSession() {
+        var deviceCode = "DEV-001";
+        var session = new EnrollSession("token", tenantUserId, deviceId, fingerIndex, deviceCode, LocalDateTime.now().plusMinutes(1));
+        when(enrollSessionStore.findPendingByDeviceCode(deviceCode)).thenReturn(Optional.of(session));
+
+        var result = enrollService.findPendingSession(deviceCode);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().enrollToken()).isEqualTo("token");
+    }
+
+    @Test
+    void findPendingSession_shouldReturnEmptyWhenNotFound() {
+        var deviceCode = "UNKNOWN";
+        when(enrollSessionStore.findPendingByDeviceCode(deviceCode)).thenReturn(Optional.empty());
+
+        var result = enrollService.findPendingSession(deviceCode);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void completeEnroll_whenValidAndNoExistingBiometria_shouldCreateNew() {
         var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
         var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());

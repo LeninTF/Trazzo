@@ -94,6 +94,35 @@ class EnrollSessionStoreTest {
     }
 
     @Test
+    void findPendingByDeviceCode_shouldReturnSession() {
+        var expires = LocalDateTime.now().plusSeconds(60);
+        var session = new EnrollSession("token", 10L, 5L, 3, "DVC-001", expires);
+        store.createSession(session);
+
+        var found = store.findPendingByDeviceCode("DVC-001");
+
+        assertThat(found).isPresent();
+        assertThat(found.get().enrollToken()).isEqualTo("token");
+    }
+
+    @Test
+    void findPendingByDeviceCode_shouldReturnEmptyWhenNotFound() {
+        var result = store.findPendingByDeviceCode("NONEXISTENT");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findPendingByDeviceCode_shouldReturnEmptyWhenExpired() {
+        var expires = LocalDateTime.now().minusSeconds(1);
+        store.createSession(new EnrollSession("expired", 10L, 5L, 3, "DVC", expires));
+
+        var result = store.findPendingByDeviceCode("DVC");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void multipleSessionsForDifferentUsers() {
         var expires = LocalDateTime.now().plusSeconds(60);
         store.createSession(new EnrollSession("t1", 1L, 1L, 0, "D1", expires));

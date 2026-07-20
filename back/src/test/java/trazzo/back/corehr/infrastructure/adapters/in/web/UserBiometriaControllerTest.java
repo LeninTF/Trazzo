@@ -15,6 +15,7 @@ import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionRespon
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -105,6 +106,31 @@ class UserBiometriaControllerTest {
                                 {"tenant_user_id": 10, "device_id": 5, "finger_index": -1}
                                 """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void pendingEnroll_shouldReturn200WhenFound() throws Exception {
+        var pendingResponse = new trazzo.back.corehr.infrastructure.adapters.in.web.dto.PendingEnrollSessionResponse(
+                "token-abc", 10L, "DVC-001", 5L, 2, NOW.plusSeconds(120));
+        when(userBiometriaUseCase.findPendingEnrollSession("DVC-001"))
+                .thenReturn(Optional.of(
+                        new trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSession("token-abc", 5L, 10L, 2, "DVC-001", NOW.plusSeconds(120))));
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente")
+                        .param("device_code", "DVC-001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enroll_token").value("token-abc"))
+                .andExpect(jsonPath("$.device_code").value("DVC-001"));
+    }
+
+    @Test
+    void pendingEnroll_shouldReturn404WhenNotFound() throws Exception {
+        when(userBiometriaUseCase.findPendingEnrollSession("UNKNOWN"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente")
+                        .param("device_code", "UNKNOWN"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

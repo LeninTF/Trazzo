@@ -138,6 +138,45 @@ class TenantSchemaProvisioningAdapterTest {
         verifyNoDataSourceInteraction();
     }
 
+    @Test
+    void provisionNew_failsWhenCreateSchemaThrows() throws SQLException {
+        when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+
+        assertThrows(TenantProvisioningException.class,
+                () -> adapter.provisionNew("t-1", "Acme"));
+    }
+
+    @Test
+    void recreateSchema_dropsSchema() throws SQLException {
+        when(rawDataSource.getConnection()).thenReturn(connection);
+        when(connection.createStatement()).thenReturn(statement);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+
+        adapter.recreateSchema("tenant_acme");
+
+        verify(statement).execute("DROP SCHEMA IF EXISTS \"tenant_acme\" CASCADE");
+    }
+
+    @Test
+    void recreateSchema_throwsOnSqlException() throws SQLException {
+        when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+
+        assertThrows(TenantProvisioningException.class,
+                () -> adapter.recreateSchema("tenant_acme"));
+    }
+
+    @Test
+    void recreateSchema_rejectsUnsafeIdentifier() {
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+
+        assertThrows(TenantProvisioningException.class,
+                () -> adapter.recreateSchema("tenant_acme; DROP TABLE users"));
+
+        verifyNoDataSourceInteraction();
+    }
+
     private void verifyNoDataSourceInteraction() {
         try {
             verify(rawDataSource, never()).getConnection();

@@ -12,6 +12,8 @@ import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.domain.model.employee.TenantUserDepartment;
 import trazzo.back.corehr.domain.model.employee.TenantUserDepartment;
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -88,10 +90,31 @@ class TenantUserDepartmentServiceTest {
     }
 
     @Test
+    void findAllByTenantUserIdPaginatedReturnsResult() {
+        var now = LocalDateTime.now();
+        var dept = TenantUserDepartment.restore(1L, 1L, 10L, true, LocalDate.of(2025, 1, 1), null, now, now);
+        var page = new PageImpl<>(List.of(dept));
+        when(tenantUserPort.existsById(1L)).thenReturn(true);
+        when(departmentRepository.findAllByTenantUserId(eq(1L), anyInt(), anyInt())).thenReturn(page);
+
+        var result = service.findAllByTenantUserId(1L, 0, 10);
+
+        assertEquals(1, result.content().size());
+        assertEquals(10L, result.content().get(0).departmentId());
+    }
+
+    @Test
     void findAllByTenantUserIdWithUserNotFoundThrowsException() {
         when(tenantUserPort.existsById(99L)).thenReturn(false);
         assertThrows(IllegalArgumentException.class, () -> service.findAllByTenantUserId(99L));
         verify(departmentRepository, never()).findAllByTenantUserId(any());
+    }
+
+    @Test
+    void findAllByTenantUserIdPaginatedWithUserNotFoundThrowsException() {
+        when(tenantUserPort.existsById(99L)).thenReturn(false);
+        assertThrows(IllegalArgumentException.class, () -> service.findAllByTenantUserId(99L, 0, 10));
+        verify(departmentRepository, never()).findAllByTenantUserId(anyLong(), anyInt(), anyInt());
     }
 
     @Test
