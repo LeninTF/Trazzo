@@ -14,6 +14,9 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 {
     // Prefijo de integridad para el cache: si el archivo no lo tiene, fue escrito por un atacante o versión previa.
     private const string CacheIntegrityMarker = "TRAZZO_KEY_CACHE_V1|";
+    // Dato asociado (AAD) de AES-GCM acordado con el backend: debe coincidir exactamente con
+    // `updateAAD("biometric-identify")` de MarkAttendanceUseCase/SourceAfisMatchingAdapter.
+    private static readonly byte[] BiometricAssociatedData = Encoding.UTF8.GetBytes("biometric-identify");
     // 32 KB alcanza para JSON con clave pública RSA-4096 en base64 (~800 bytes) con overhead de sobra.
     private static readonly HttpClient SharedKeyFetchClient = new()
     {
@@ -99,7 +102,10 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 
         using (AesGcm aes = new(aesKey, tagSizeInBytes: 16))
         {
-            aes.Encrypt(iv, plaintext, ciphertext, tag);
+            // AAD obligatorio: el backend descifra con updateAAD("biometric-identify").
+            // Sin este dato asociado la verificación del tag GCM falla y el backend
+            // no puede descifrar el template.
+            aes.Encrypt(iv, plaintext, ciphertext, tag, BiometricAssociatedData);
         }
 
         byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA256);
@@ -141,13 +147,39 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
 
     private const int MinimumRsaKeySize = 2048;
 
+    /// <summary>
+    /// Importa la llave pública aceptando los dos formatos posibles: PEM con cabeceras
+    /// (<c>-----BEGIN PUBLIC KEY-----</c>), que es lo que devuelve el backend actual, o Base64
+    /// puro del SubjectPublicKeyInfo (DER).
+    /// </summary>
+    internal static RSA ImportPublicKey(string key)
+    {
+        RSA rsa = RSA.Create();
+        try
+        {
+            string trimmed = key.Trim();
+            if (trimmed.Contains("-----BEGIN", StringComparison.Ordinal))
+            {
+                rsa.ImportFromPem(trimmed);
+            }
+            else
+            {
+                rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(trimmed), out _);
+            }
+            return rsa;
+        }
+        catch
+        {
+            rsa.Dispose();
+            throw;
+        }
+    }
+
     private void ApplyKey(string base64Key)
     {
         try
         {
-            byte[] keyBytes = Convert.FromBase64String(base64Key);
-            RSA newRsa = RSA.Create();
-            newRsa.ImportSubjectPublicKeyInfo(keyBytes, out _);
+            RSA newRsa = ImportPublicKey(base64Key);
 
             if (newRsa.KeySize < MinimumRsaKeySize)
             {

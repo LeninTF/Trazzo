@@ -78,15 +78,13 @@ public sealed class RemoteEnrollmentServiceTests
         Assert.Equal("enroll-token", root.GetProperty("enroll_token").GetString());
         Assert.Equal("ZK9500-REMOTE", root.GetProperty("device_code").GetString());
         Assert.Equal(2, root.GetProperty("finger_index").GetInt32());
-        // Nomenclatura del backend (CompleteEnrollRequest.java): llave_cifrado + template_cifrado + capturado_en.
-        Assert.Equal("aeskey", root.GetProperty("llave_cifrado").GetString());
-        byte[] packed = Convert.FromBase64String(root.GetProperty("template_cifrado").GetString()!);
-        Assert.Equal(iv.Length + cipher.Length + tag.Length, packed.Length);
-        Assert.Equal(iv, packed[..12]);
-        Assert.Equal(cipher, packed[12..(12 + cipher.Length)]);
-        Assert.Equal(tag, packed[^16..]);
-        // capturado_en: LocalDateTime ISO-8601 sin offset.
-        string capturado = root.GetProperty("capturado_en").GetString()!;
+        // Contrato del backend (CompleteEnrollHttpRequest): iv y tag SEPARADOS.
+        Assert.Equal("aeskey", root.GetProperty("encrypted_aes_key_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(cipher), root.GetProperty("encrypted_template_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(iv), root.GetProperty("iv_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(tag), root.GetProperty("tag_base64").GetString());
+        // captured_at_utc: LocalDateTime ISO-8601 sin offset.
+        string capturado = root.GetProperty("captured_at_utc").GetString()!;
         Assert.Matches(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$", capturado);
     }
 

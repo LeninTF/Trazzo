@@ -288,24 +288,20 @@ public sealed class EventForwarderServiceTests
 
         JsonElement item = root.EnumerateArray().Single();
         Assert.Equal("identify", item.GetProperty("event_type").GetString());
-        // Nomenclatura del backend (misma que enroll/completar).
-        Assert.Equal(llaveCifrada, item.GetProperty("llave_cifrado").GetString());
+        // Contrato del backend (BiometricIdentifyRequest): iv y tag SEPARADOS.
+        Assert.Equal(llaveCifrada, item.GetProperty("encrypted_aes_key_base64").GetString());
         Assert.Equal("ZK9500-12345", item.GetProperty("device_code").GetString());
-        Assert.Equal("2026-05-27T10:00:00.000", item.GetProperty("capturado_en").GetString());
+        Assert.Equal("2026-05-27T10:00:00.000", item.GetProperty("captured_at_utc").GetString());
         Assert.Equal(1, item.GetProperty("offline_event_id").GetInt64());
 
-        // template_cifrado = base64(iv || cipher || tag) — formato AES-GCM estándar.
-        byte[] packed = Convert.FromBase64String(item.GetProperty("template_cifrado").GetString()!);
-        Assert.Equal(iv.Length + ciphertext.Length + tag.Length, packed.Length);
-        Assert.Equal(iv, packed[..12]);
-        Assert.Equal(ciphertext, packed[12..(12 + ciphertext.Length)]);
-        Assert.Equal(tag, packed[^16..]);
+        Assert.Equal(Convert.ToBase64String(ciphertext), item.GetProperty("encrypted_template_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(iv), item.GetProperty("iv_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(tag), item.GetProperty("tag_base64").GetString());
 
-        // Los campos del openapi que el backend no acepta ya no se envían.
-        Assert.False(item.TryGetProperty("encrypted_template_base64", out _));
-        Assert.False(item.TryGetProperty("iv_base64", out _));
-        Assert.False(item.TryGetProperty("tag_base64", out _));
-        Assert.False(item.TryGetProperty("captured_at_utc", out _));
+        // Ya no se envía el formato empaquetado anterior.
+        Assert.False(item.TryGetProperty("template_cifrado", out _));
+        Assert.False(item.TryGetProperty("llave_cifrado", out _));
+        Assert.False(item.TryGetProperty("capturado_en", out _));
     }
 
     [Fact]

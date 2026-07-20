@@ -44,23 +44,20 @@ public sealed class AttendanceMarkingClientTests
         JsonElement root = document.RootElement;
         Assert.Equal(JsonValueKind.Object, root.ValueKind);
         Assert.Equal("identify", root.GetProperty("event_type").GetString());
-        // Nomenclatura del backend: template_cifrado / llave_cifrado / capturado_en.
-        Assert.Equal("aeskey", root.GetProperty("llave_cifrado").GetString());
+        // Contrato del backend (BiometricIdentifyRequest): iv y tag SEPARADOS.
+        Assert.Equal("aeskey", root.GetProperty("encrypted_aes_key_base64").GetString());
         Assert.Equal("ZK9500-CONFIG", root.GetProperty("device_code").GetString());
-        // capturado_en: LocalDateTime sin offset (UTC, milisegundos).
-        Assert.Equal("2026-07-01T12:30:00.000", root.GetProperty("capturado_en").GetString());
+        // captured_at_utc: LocalDateTime sin offset (UTC, milisegundos).
+        Assert.Equal("2026-07-01T12:30:00.000", root.GetProperty("captured_at_utc").GetString());
 
-        // template_cifrado = base64(iv || cipher || tag), formato estándar AES-GCM.
-        byte[] packed = Convert.FromBase64String(root.GetProperty("template_cifrado").GetString()!);
-        Assert.Equal(iv.Length + cipher.Length + tag.Length, packed.Length);
-        Assert.Equal(iv, packed[..12]);
-        Assert.Equal(cipher, packed[12..(12 + cipher.Length)]);
-        Assert.Equal(tag, packed[^16..]);
+        Assert.Equal(Convert.ToBase64String(cipher), root.GetProperty("encrypted_template_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(iv), root.GetProperty("iv_base64").GetString());
+        Assert.Equal(Convert.ToBase64String(tag), root.GetProperty("tag_base64").GetString());
 
-        // Los campos antiguos del openapi ya no se envían.
-        Assert.False(root.TryGetProperty("encrypted_template_base64", out _));
-        Assert.False(root.TryGetProperty("iv_base64", out _));
-        Assert.False(root.TryGetProperty("tag_base64", out _));
+        // Ya no se envía el formato empaquetado anterior.
+        Assert.False(root.TryGetProperty("template_cifrado", out _));
+        Assert.False(root.TryGetProperty("llave_cifrado", out _));
+        Assert.False(root.TryGetProperty("capturado_en", out _));
     }
 
     [Fact]

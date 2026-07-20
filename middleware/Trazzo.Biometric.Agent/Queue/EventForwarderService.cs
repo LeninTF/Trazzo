@@ -209,25 +209,16 @@ public sealed class EventForwarderService : BackgroundService
                 return false;
             }
 
-            // Nomenclatura alineada con el DTO real del backend (template_cifrado /
-            // llave_cifrado / capturado_en). Empaquetamos iv||cipher||tag dentro de
-            // template_cifrado. `offline_event_id`, `created_at_utc` y `retry_count`
-            // son campos de trazabilidad de la cola offline — el backend los ignora
-            // si no los conoce (Jackson default: FAIL_ON_UNKNOWN_PROPERTIES=false).
-            byte[] iv = Convert.FromBase64String(evt.IvBase64);
-            byte[] cipher = Convert.FromBase64String(evt.EncryptedTemplateBase64);
-            byte[] tag = Convert.FromBase64String(evt.TagBase64);
-            byte[] packed = new byte[iv.Length + cipher.Length + tag.Length];
-            Buffer.BlockCopy(iv, 0, packed, 0, iv.Length);
-            Buffer.BlockCopy(cipher, 0, packed, iv.Length, cipher.Length);
-            Buffer.BlockCopy(tag, 0, packed, iv.Length + cipher.Length, tag.Length);
-
+            // Contrato del backend: BiometricIdentifyRequest (iv y tag SEPARADOS).
+            // offline_event_id y retry_count son de trazabilidad de la cola offline.
             var payload = new
             {
                 event_type = "identify",
-                template_cifrado = Convert.ToBase64String(packed),
-                llave_cifrado = evt.EncryptedAesKeyBase64,
-                capturado_en = evt.CapturedAtUtc.UtcDateTime.ToString(
+                encrypted_template_base64 = evt.EncryptedTemplateBase64,
+                encrypted_aes_key_base64 = evt.EncryptedAesKeyBase64,
+                iv_base64 = evt.IvBase64,
+                tag_base64 = evt.TagBase64,
+                captured_at_utc = evt.CapturedAtUtc.UtcDateTime.ToString(
                     "yyyy-MM-ddTHH:mm:ss.fff",
                     System.Globalization.CultureInfo.InvariantCulture),
                 device_code = resolvedDeviceCode,
@@ -247,7 +238,19 @@ public sealed class EventForwarderService : BackgroundService
                 request.Headers.Add("X-Tenant-ID", tenantId);
 
             using HttpResponseMessage response = await httpClient.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode) return false;
+            if (!response.IsSuccessStatusCode)
+            {
+                int status = (int)response.StatusCode;
+                // 4xx = el backend rechazó el contenido (p. ej. 400 "Huella no reconocida").
+                // Reintentar no lo va a cambiar; se distingue en el log para soporte.
+                if (status is >= 400 and < 500 and not 408 and not 429)
+                {
+                    logger.LogWarning(
+                        "El backend rechazó el evento Id={Id} con {Status} (error de cliente: reintentar no ayudará).",
+                        evt.Id, status);
+                }
+                return false;
+            }
 
             await TryLogCorrelationIdAsync(response, evt.Id, logger, ct);
             return true;

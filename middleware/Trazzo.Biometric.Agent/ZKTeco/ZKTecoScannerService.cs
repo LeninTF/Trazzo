@@ -65,6 +65,11 @@ public sealed class ZKTecoScannerService(
     // enrolado (palma, dedo no enrolado). Default false en código para no romper pruebas que no
     // enrolan; producción lo activa en appsettings.json.
     private readonly bool _requireLocalIdentifyMatch = configuration.GetValue("Biometric:Identify:RequireLocalMatch", false);
+    // El backend matchea con SourceAFIS, que no entiende el template propietario de ZKFinger.
+    // Cuando está activo, lo que se cifra y envía al backend es un template SourceAFIS extraído
+    // de la imagen. Default false en código para no penalizar pruebas que no lo necesitan.
+    private readonly bool _sendSourceAfisTemplate = configuration.GetValue("Biometric:SendSourceAfisTemplate", false);
+    private readonly int _sourceAfisDpi = GetPositiveConfigurationValue(configuration, "Biometric:SourceAfisDpi", SourceAfisTemplateExtractor.DefaultDpi);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MaximumForegroundCoveragePercent", DefaultMaximumForegroundCoveragePercent),
@@ -265,7 +270,7 @@ public sealed class ZKTecoScannerService(
             logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
-            EncryptedPayload? encryptedTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+            EncryptedPayload? encryptedTemplate = EncryptForBackend(sample);
 
             return FingerprintCaptureResult.Succeeded(
                 sample.Template,
@@ -343,7 +348,7 @@ public sealed class ZKTecoScannerService(
                     return FingerprintIdentifyResult.NotIdentified(sample.Quality, _deviceSerial, score);
                 }
 
-                EncryptedPayload? encryptedMatched = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+                EncryptedPayload? encryptedMatched = EncryptForBackend(sample);
                 return FingerprintIdentifyResult.Identified(
                     sample.Template,
                     sample.TemplateSize,
@@ -354,7 +359,7 @@ public sealed class ZKTecoScannerService(
                     score);
             }
 
-            EncryptedPayload? encryptedIdentifyTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+            EncryptedPayload? encryptedIdentifyTemplate = EncryptForBackend(sample);
 
             return FingerprintIdentifyResult.Succeeded(
                 sample.Template,
@@ -471,6 +476,7 @@ public sealed class ZKTecoScannerService(
 
         Guid? operationId = null;
         List<byte[]> samples = [];
+        List<byte[]> sourceAfisSamples = [];
 
         try
         {
@@ -485,6 +491,7 @@ public sealed class ZKTecoScannerService(
             FingerprintEnrollResult? captureFailure = await CaptureEnrollmentSamplesAsync(
                 operationId.Value,
                 samples,
+                sourceAfisSamples,
                 progressCallback,
                 operationToken);
             if (captureFailure is not null)
@@ -512,7 +519,28 @@ public sealed class ZKTecoScannerService(
                 await RegisterEnrolledTemplateAsync(userReference!, fingerIndex, rawTemplate, cancellationToken);
             }
 
-            EncryptedPayload? encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(registeredTemplate, registeredTemplateSize);
+            // Al backend se envía un template SourceAFIS de una de las muestras: el resultado de
+            // DBMerge es formato ZKFinger y SourceAFIS no puede leerlo. Se toma la última muestra
+            // aceptada (la de colocación más reciente).
+            EncryptedPayload? encryptedEnrollTemplate;
+            if (_sendSourceAfisTemplate)
+            {
+                if (sourceAfisSamples.Count > 0)
+                {
+                    byte[] afis = sourceAfisSamples[^1];
+                    encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(afis, afis.Length);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Enrolamiento sin template SourceAFIS: el backend no podrá identificar a este usuario.");
+                    encryptedEnrollTemplate = null;
+                }
+            }
+            else
+            {
+                encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(registeredTemplate, registeredTemplateSize);
+            }
 
             return FingerprintEnrollResult.Succeeded(
                 registeredTemplate,
@@ -549,6 +577,7 @@ public sealed class ZKTecoScannerService(
     private async Task<FingerprintEnrollResult?> CaptureEnrollmentSamplesAsync(
         Guid operationId,
         List<byte[]> samples,
+        List<byte[]> sourceAfisSamples,
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
         CancellationToken operationToken)
     {
@@ -594,6 +623,9 @@ public sealed class ZKTecoScannerService(
             }
 
             samples.Add(sample.Template);
+            if (sample.SourceAfisTemplate is { Length: > 0 } afisSample)
+                sourceAfisSamples.Add(afisSample);
+
             if (step < _enrollmentSamples && _requireFingerLiftBetweenEnrollmentSamples)
             {
                 await progressCallback(
@@ -805,7 +837,18 @@ public sealed class ZKTecoScannerService(
         }
 
         byte[] template = _templateBuffer[..templateSize].ToArray();
-        return CapturedSample.Succeeded(template, templateSize, qualityResult, image);
+
+        // Template SourceAFIS desde la MISMA imagen: es el que entiende el backend. El de ZKFinger
+        // (`template`) se conserva para la identificación 1:N on-device y para el frontend.
+        byte[]? sourceAfisTemplate = null;
+        if (_sendSourceAfisTemplate)
+        {
+            sourceAfisTemplate = SourceAfisTemplateExtractor.TryExtract(_imageBuffer, _imageWidth, _imageHeight, _sourceAfisDpi);
+            if (sourceAfisTemplate is null)
+                logger.LogWarning("No se pudo extraer el template SourceAFIS; el backend no podrá identificar esta captura.");
+        }
+
+        return CapturedSample.Succeeded(template, templateSize, qualityResult, image, sourceAfisTemplate);
     }
 
     // ZKFinger DBMatch devuelve un SCORE de similitud: mayor = más parecido, 0/negativo = no
@@ -839,6 +882,22 @@ public sealed class ZKTecoScannerService(
                 bestIndex, bestScore, _matchMinScore);
 
         return bestIndex;
+    }
+
+    /// <summary>
+    /// Cifra el template que se envía al backend. Cuando el envío en formato SourceAFIS está
+    /// activo se usa ese template (es el único que el backend puede matchear); si no se pudo
+    /// extraer, no se envía nada en vez de mandar un ZKFinger que el backend rechazaría.
+    /// </summary>
+    private EncryptedPayload? EncryptForBackend(CapturedSample sample)
+    {
+        if (!_sendSourceAfisTemplate)
+            return cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+
+        if (sample.SourceAfisTemplate is not { Length: > 0 } afis)
+            return null;
+
+        return cryptoService.TryEncryptTemplate(afis, afis.Length);
     }
 
     // Identificación 1:N con el motor del SDK: DBIdentify devuelve el fingerId y el score de la

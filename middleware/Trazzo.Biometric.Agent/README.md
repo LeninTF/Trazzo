@@ -228,6 +228,24 @@ El path local `fingerprint.match` compara la captura contra los templates recibi
 
 > El matching 1:N por institución (padrón completo del tenant) es responsabilidad del backend en `POST /asistencia/marcar` (aislado por `X-Tenant-ID`). El path local es para verificación puntual/diagnóstico.
 
+### Dos formatos de template: ZKFinger (local) y SourceAFIS (backend)
+
+El agente maneja **dos** representaciones de la misma huella, porque cada motor entiende la suya:
+
+| Formato | Para qué | Dónde |
+|---|---|---|
+| **ZKFinger** (propietario del SDK) | Identificación 1:N **on-device** (`DBAdd`/`DBIdentify`), `DBMerge` del enrolamiento, y el `templateBase64` que ve el frontend | Padrón local `enrolled.db` |
+| **SourceAFIS** | Lo que se **cifra y envía al backend** (`/asistencia/marcar`, `/sync`, `enroll/completar`), porque el backend matchea con SourceAFIS y no puede leer el formato de ZKTeco | Payload HTTP |
+
+El template SourceAFIS se extrae de la **misma imagen** de la captura (`SourceAfisTemplateExtractor`), usando el DPI real del sensor. Se controla con:
+
+- `Biometric:SendSourceAfisTemplate` (default en producción: `true`). Si se desactiva, se envía el template ZKFinger — que el backend actual **rechazará**.
+- `Biometric:SourceAfisDpi` (default `500`, el del ZK9500). El DPI afecta la estimación de frecuencia de crestas y por tanto la calidad del template.
+
+En el **enrolamiento**, el template que se manda al backend es el SourceAFIS de la última muestra aceptada (el resultado de `DBMerge` es ZKFinger y no sirve para SourceAFIS).
+
+> Si se cambia este ajuste o la versión de SourceAFIS, **hay que re-enrolar**: los templates guardados en el backend quedan en el formato anterior.
+
 ### Integridad del enrolamiento (mismo dedo en las 3 muestras)
 
 El enrolamiento fusiona 3 capturas con `DBMerge`. Antes de fusionar, cada muestra nueva se **verifica contra la primera** con `DBMatch`: si el score no supera `Biometric:Match:MinScore`, la muestra se descarta y se pide repetir con el mensaje *"Use el MISMO dedo en todas las capturas"*. Esto evita que se enrolen 3 dedos distintos (o de 2 personas) en un solo template, lo que produciría una plantilla que coincide con varias huellas y rompería la distinción biométrica.
@@ -692,6 +710,41 @@ El instalador configura las acciones de recuperación del SCM de Windows:
 ---
 
 ## Errores Comunes
+
+### `ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS` (el navegador no conecta con el agente)
+
+Síntoma en la consola del navegador, entrando desde la web desplegada:
+
+```text
+WebSocket connection to 'ws://localhost:9001/' failed:
+net::ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS
+```
+
+**No es un fallo del agente ni del lector.** Chrome 142+ introdujo *Local Network Access* (LNA), que impide a una página pública abrir conexiones a `localhost`/red local; desde Chrome 147 aplica también a WebSockets. Es un permiso del navegador: el agente responde correctamente el preflight con `Access-Control-Allow-Private-Network: true`, pero **el navegador bloquea antes de mirar esa respuesta**.
+
+Para confirmar que el agente está bien:
+
+```powershell
+Invoke-RestMethod http://localhost:9001/health
+```
+
+Si responde, el agente funciona y el bloqueo es del navegador.
+
+**Solución para despliegue (recomendada):** aplicar la política de empresa `LocalNetworkAccessAllowedForUrls`, incluida en el MSI:
+
+```powershell
+# PowerShell COMO ADMINISTRADOR
+& "C:\Program Files\Trazzo\BiometricAgent\Enable-BrowserLocalNetworkAccess.ps1" `
+  -Origins "https://trazzosaas.noahtechperu.com"
+```
+
+Aplica la política a Chrome y Edge para todo el equipo, sin depender de que cada usuario acepte un aviso. Luego **cerrar completamente el navegador** y reabrirlo. Verificar en `chrome://policy`. Para revertir, agregar `-Remove`.
+
+> **Loopback ≠ red local.** El agente escucha en `localhost`, que para Chromium es el espacio **loopback**; las IPs privadas (192.168.x.x) son "red local" y usan **otra** política. La que destraba `ws://localhost` es **`LoopbackNetworkAccessAllowedForUrls`** — aplicar solo `LocalNetworkAccessAllowedForUrls` **no funciona**. El script escribe ambas y sus variantes de nombre, porque cambian entre versiones de Chrome/Edge.
+
+**Alternativas manuales (solo para pruebas):**
+- `chrome://settings/content/localNetworkAccess` → revisar que el sitio no esté en *bloqueados* (un rechazo previo se recuerda y ya no se vuelve a preguntar).
+- `chrome://flags#local-network-access-check` → `Enabled (Blocking)` para forzar que aparezca el aviso de permiso.
 
 ### WebSocket desconectado
 

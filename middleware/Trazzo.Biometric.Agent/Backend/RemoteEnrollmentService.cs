@@ -111,7 +111,11 @@ public sealed class RemoteEnrollmentService : BackgroundService
         AddBackendHeaders(request);
 
         using HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        // "Sin sesión pendiente" es un estado normal del polling (cada pocos segundos).
+        // El contrato define 204; el backend actual responde 404. Ambos se tratan igual
+        // y en silencio, para no llenar el log con un warning por cada ciclo.
+        if (response.StatusCode is System.Net.HttpStatusCode.NoContent
+            or System.Net.HttpStatusCode.NotFound)
         {
             return false;
         }
@@ -175,19 +179,18 @@ public sealed class RemoteEnrollmentService : BackgroundService
         EncryptedPayload encrypted = enrollResult.EncryptedRegisteredTemplate!;
         string deviceCode = pending.DeviceCode ?? enrollResult.DeviceId ?? _deviceCode!;
 
-        // El backend (CompleteEnrollRequest.java) espera:
-        //   template_cifrado, llave_cifrado, capturado_en (LocalDateTime sin offset),
-        //   finger_index, device_code, enroll_token.
-        // Empaquetamos iv||cipher||tag dentro de `template_cifrado` para no perder
-        // los metadatos AES-GCM (Jackson en el backend lo recibe como string opaco).
+        // Contrato del backend: CompleteEnrollHttpRequest (iv y tag SEPARADOS). El backend
+        // guarda estos campos tal cual y luego los descifra con el mismo AAD al matchear.
         var payload = new
         {
             enroll_token = pending.EnrollToken,
             device_code = deviceCode,
             finger_index = pending.FingerIndex,
-            template_cifrado = encrypted.ToPackedTemplateBase64(),
-            llave_cifrado = encrypted.EncryptedAesKeyBase64,
-            capturado_en = FormatAsLocalDateTime(enrollResult.CapturedAtUtc)
+            encrypted_template_base64 = encrypted.EncryptedTemplateBase64,
+            encrypted_aes_key_base64 = encrypted.EncryptedAesKeyBase64,
+            iv_base64 = encrypted.IvBase64,
+            tag_base64 = encrypted.TagBase64,
+            captured_at_utc = FormatAsLocalDateTime(enrollResult.CapturedAtUtc)
         };
 
         using StringContent content = new(

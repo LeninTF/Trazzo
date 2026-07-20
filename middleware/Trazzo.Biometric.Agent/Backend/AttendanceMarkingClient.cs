@@ -75,15 +75,16 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
             return false;
         }
 
-        // Nomenclatura alineada con lo que el backend ya expone en enroll/completar
-        // (template_cifrado / llave_cifrado / capturado_en). El iv+tag AES-GCM van
-        // empaquetados dentro de template_cifrado (formato estándar iv||cipher||tag).
+        // Contrato del backend: BiometricIdentifyRequest (iv y tag SEPARADOS, no empaquetados).
+        // captured_at_utc se mapea a LocalDateTime en Java, por eso va sin offset.
         var payload = new
         {
             event_type = "identify",
-            template_cifrado = encryptedTemplate.ToPackedTemplateBase64(),
-            llave_cifrado = encryptedTemplate.EncryptedAesKeyBase64,
-            capturado_en = RemoteEnrollmentService.FormatAsLocalDateTime(capturedAtUtc),
+            encrypted_template_base64 = encryptedTemplate.EncryptedTemplateBase64,
+            encrypted_aes_key_base64 = encryptedTemplate.EncryptedAesKeyBase64,
+            iv_base64 = encryptedTemplate.IvBase64,
+            tag_base64 = encryptedTemplate.TagBase64,
+            captured_at_utc = RemoteEnrollmentService.FormatAsLocalDateTime(capturedAtUtc),
             device_code = resolvedDeviceCode
         };
 

@@ -247,6 +247,44 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
+    public async Task HandleMessageAsync_ForEnrollSinUserRef_GeneraReferenciaParaElPadronLocal()
+    {
+        // El frontend desplegado envía enroll.start sin `userRef`. Sin una referencia la huella
+        // no quedaría en el padrón local y luego identify rechazaría a todos.
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Succeeded(
+                [1, 2, 3], 3, capturedSamples: 3, deviceId: "ZK9500-ENROLL")
+        };
+        LocalWebSocketServerService server = CreateServer(scannerOverride: scanner);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.enroll.start" }""",
+            CancellationToken.None);
+
+        Assert.False(string.IsNullOrWhiteSpace(scanner.LastEnrollUserReference));
+        Assert.StartsWith("local-", scanner.LastEnrollUserReference);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollConUserRef_RespetaLaReferenciaDelCliente()
+    {
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Succeeded(
+                [1, 2, 3], 3, capturedSamples: 3, deviceId: "ZK9500-ENROLL")
+        };
+        LocalWebSocketServerService server = CreateServer(scannerOverride: scanner);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.enroll.start", "userRef": "42", "fingerIndex": 1 }""",
+            CancellationToken.None);
+
+        Assert.Equal("42", scanner.LastEnrollUserReference);
+        Assert.Equal(1, scanner.LastEnrollFingerIndex);
+    }
+
+    [Fact]
     public async Task HandleMessageAsync_ForEnrollWithEncryptedTemplate_DoesNotEnqueueAttendanceEvent()
     {
         EncryptedPayload encrypted = new("cipher", "key", "iv", "tag");
@@ -417,9 +455,10 @@ public sealed class WebSocketResponseTests
         FingerprintIdentifyResult? identifyResult = null,
         FingerprintEnrollResult? enrollResult = null,
         FakeEventQueue? eventQueue = null,
-        FakeAttendanceMarkingClient? attendanceClient = null)
+        FakeAttendanceMarkingClient? attendanceClient = null,
+        FakeBiometricScannerService? scannerOverride = null)
     {
-        FakeBiometricScannerService scanner = new()
+        FakeBiometricScannerService scanner = scannerOverride ?? new()
         {
             Status = new FingerprintDeviceStatus(
                 "device.status.result",

@@ -105,9 +105,20 @@ public sealed class LocalWebSocketServerService(
     {
         if (!context.Request.IsWebSocketRequest)
         {
+            // Preflight de Private/Local Network Access: Chrome lo envía ANTES del handshake
+            // cuando una página pública (https://…) intenta abrir una conexión a localhost.
+            // Sin responderlo, el navegador aborta con ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS.
+            if (context.Request.HttpMethod == "OPTIONS")
+            {
+                WritePreflightResponse(context);
+                context.Response.Close();
+                return;
+            }
+
             if (context.Request.HttpMethod == "GET" &&
                 context.Request.Url?.AbsolutePath is "/" or "/health")
             {
+                AddCorsOriginHeader(context);
                 byte[] body = JsonSerializer.SerializeToUtf8Bytes(
                     healthService.GetHealthResult(), JsonOptions);
                 context.Response.StatusCode = 200;
@@ -139,6 +150,39 @@ public sealed class LocalWebSocketServerService(
         logger.LogInformation("Cliente WebSocket conectado desde {ClientId}", clientId);
 
         await ReceiveLoopAsync(webSocket, clientId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Responde el preflight CORS + Private Network Access. El header
+    /// <c>Access-Control-Allow-Private-Network</c> es el que autoriza a una página pública a
+    /// conectarse a un servicio de la red local (aquí, el agente en localhost).
+    /// </summary>
+    private void WritePreflightResponse(HttpListenerContext context)
+    {
+        string? origin = context.Request.Headers["Origin"];
+        string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
+
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
+        {
+            logger.LogWarning("Preflight rechazado. Origen no permitido: {Origin}", origin);
+            context.Response.StatusCode = 403;
+            return;
+        }
+
+        AddCorsOriginHeader(context);
+        context.Response.AddHeader("Access-Control-Allow-Private-Network", "true");
+        context.Response.AddHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        context.Response.AddHeader("Access-Control-Allow-Headers", "*");
+        context.Response.AddHeader("Access-Control-Max-Age", "600");
+        context.Response.StatusCode = 204;
+    }
+
+    private static void AddCorsOriginHeader(HttpListenerContext context)
+    {
+        string? origin = context.Request.Headers["Origin"];
+        context.Response.AddHeader(
+            "Access-Control-Allow-Origin",
+            string.IsNullOrWhiteSpace(origin) ? "*" : origin);
     }
 
     private async Task ReceiveLoopAsync(System.Net.WebSockets.WebSocket webSocket, string clientId, CancellationToken cancellationToken)
@@ -635,7 +679,21 @@ public sealed class LocalWebSocketServerService(
         int fingerIndex,
         CancellationToken ct)
     {
-        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(callback, ct, userRef, fingerIndex);
+        // Clientes que no envían `userRef` (p. ej. el frontend desplegado) igual deben quedar
+        // enrolados en el padrón local: sin una referencia, la huella no se registraría y luego
+        // `fingerprint.identify` rechazaría a todo el mundo. Se genera una referencia local
+        // estable para esta huella; el cliente puede enviar `userRef` para controlarla.
+        bool generated = string.IsNullOrWhiteSpace(userRef);
+        string effectiveUserRef = generated ? $"local-{Guid.NewGuid():N}" : userRef!;
+        if (generated)
+        {
+            logger.LogInformation(
+                "Enrolamiento sin 'userRef': se registrará en el padrón local como {UserRef}.",
+                effectiveUserRef);
+        }
+
+        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(
+            callback, ct, effectiveUserRef, fingerIndex);
         return result;
     }
 
