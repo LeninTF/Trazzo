@@ -89,4 +89,22 @@ class ResendAttendanceNotificationAdapterTest {
 
         verify(bodyUriSpec).body(anyMap());
     }
+
+    @Test
+    void notifyTardanza_shouldUseDefaultName_whenWorkerNameIsNull() throws Exception {
+        var adapter = new ResendAttendanceNotificationAdapter("re_key_xxx", "from@test.com");
+        RestClient restClient = mock(RestClient.class);
+        RestClient.RequestBodyUriSpec bodyUriSpec = mock(RestClient.RequestBodyUriSpec.class, org.mockito.Answers.RETURNS_SELF);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+
+        when(restClient.post()).thenReturn(bodyUriSpec);
+        when(bodyUriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toBodilessEntity()).thenReturn(null);
+
+        injectRestClient(adapter, restClient);
+
+        assertDoesNotThrow(() -> adapter.notifyTardanza("to@test.com", null, 15, LocalDate.of(2025, 1, 15)));
+
+        verify(bodyUriSpec).body(anyMap());
+    }
 }

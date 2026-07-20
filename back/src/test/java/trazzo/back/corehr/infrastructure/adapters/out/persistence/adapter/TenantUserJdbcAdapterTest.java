@@ -68,4 +68,13 @@ class TenantUserJdbcAdapterTest {
         assertTrue(state.isPresent());
         assertEquals(trazzo.back.corehr.domain.model.TenantUserState.ACTIVO, state.get());
     }
+
+    @Test
+    void findStateByIdReturnsEmptyWhenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+
+        var state = adapter.findStateById(99L);
+
+        assertTrue(state.isEmpty());
+    }
 }
