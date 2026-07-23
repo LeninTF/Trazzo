@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
@@ -98,7 +99,7 @@ class IncidentRepositoryAdapterTest {
         var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(), null);
         var page = new PageImpl<>(List.of(entity));
-        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
         var results = adapter.findAll("1", "PENDIENTE", null, null, null, null, 0, 20, null);
@@ -112,7 +113,7 @@ class IncidentRepositoryAdapterTest {
         var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(), null);
         var page = new PageImpl<>(List.of(entity));
-        when(incidentRepo.findAll(any(Pageable.class))).thenReturn(page);
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
 
         var results = adapter.findAll(null, null, null, null, null, null, 0, 20, null);
 
@@ -121,9 +122,7 @@ class IncidentRepositoryAdapterTest {
 
     @Test
     void countWithFilters() {
-        Page<IncidentEntity> page = new PageImpl<>(List.of(), PageRequest.of(0, 1), 5);
-        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(page);
+        when(incidentRepo.count(any(Specification.class))).thenReturn(5L);
 
         var count = adapter.count("1", null, null, null, null, null);
 
@@ -132,7 +131,7 @@ class IncidentRepositoryAdapterTest {
 
     @Test
     void countWithoutFilters() {
-        when(incidentRepo.count()).thenReturn(10L);
+        when(incidentRepo.count(any(Specification.class))).thenReturn(10L);
 
         var count = adapter.count(null, null, null, null, null, null);
 
@@ -150,35 +149,61 @@ class IncidentRepositoryAdapterTest {
 
     @Test
     void parseSortWithBlankDefaultsToDescCreatedAt() {
-        when(incidentRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+        when(incidentRepo.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
         adapter.findAll(null, null, null, null, null, null, 0, 20, null);
-        verify(incidentRepo).findAll(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt")));
+        verify(incidentRepo).findAll(any(Specification.class),
+                eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
     @Test
     void parseSortWithFieldAndAscDirection() {
-        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         adapter.findAll("1", null, null, null, null, null, 0, 20, "state,asc");
-        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+        verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "state"))));
     }
 
     @Test
     void parseSortWithFieldAndDescDirection() {
-        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         adapter.findAll("1", null, null, null, null, null, 0, 20, "updatedAt,desc");
-        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+        verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "updatedAt"))));
     }
 
     @Test
     void parseSortMapsCreatedAtField() {
-        when(incidentRepo.findByFilters(any(), any(), any(), any(), any(), any(), any()))
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
         adapter.findAll("1", null, null, null, null, null, 0, 20, "created_at,asc");
-        verify(incidentRepo).findByFilters(any(), any(), any(), any(), any(), any(),
+        verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "createdAt"))));
+    }
+
+    @Test
+    void findAllWithSearchUsesSearchQuery() {
+        var now = LocalDateTime.now();
+        var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
+                "comment", null, now, now, List.of(), null);
+        var page = new PageImpl<>(List.of(entity));
+        when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        var results = adapter.findAll("1", "PENDIENTE", null, null, null, "comm", 0, 20, null);
+
+        assertEquals(1, results.size());
+        verify(incidentRepo).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void countWithSearchUsesSearchQuery() {
+        when(incidentRepo.count(any(Specification.class))).thenReturn(3L);
+
+        var count = adapter.count("1", null, null, null, null, "term");
+
+        assertEquals(3, count);
+        verify(incidentRepo).count(any(Specification.class));
     }
 }

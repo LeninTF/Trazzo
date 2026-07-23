@@ -1,6 +1,6 @@
 -- Align incidents tables with JPA entities (add missing columns)
 
--- incidencias: add comment and rejection_reason
+-- V1 already defines comment and rejection_reason as TEXT; these are no-ops if present.
 ALTER TABLE incidencias ADD COLUMN IF NOT EXISTS comment TEXT;
 ALTER TABLE incidencias ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 

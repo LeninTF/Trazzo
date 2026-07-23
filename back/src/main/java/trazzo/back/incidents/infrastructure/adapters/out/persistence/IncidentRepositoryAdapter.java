@@ -14,6 +14,7 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.mapper.Inci
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentEvidenceSpringDataRepository;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentPermissionSpringDataRepository;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpringDataRepository;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpecifications;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -66,13 +67,15 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         var sortObj = parseSort(sort);
         var pageable = PageRequest.of(page, size, sortObj);
         var incidentState = parseState(state);
-        Page<IncidentEntity> result;
-
-        if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            result = incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search, pageable);
-        } else {
-            result = incidentRepo.findAll(pageable);
-        }
+        var specification = IncidentSpecifications.byFilters(
+                toInt(tenantUserId),
+                incidentState,
+                toInt(tipoId),
+                desde,
+                hasta,
+                search
+        );
+        Page<IncidentEntity> result = incidentRepo.findAll(specification, pageable);
 
         var permissionByIncidentId = loadPermissions(result);
 
@@ -90,11 +93,15 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     public long count(String tenantUserId, String state, String tipoId,
                        LocalDateTime desde, LocalDateTime hasta, String search) {
         var incidentState = parseState(state);
-        if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            return incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search,
-                    PageRequest.of(0, 1)).getTotalElements();
-        }
-        return incidentRepo.count();
+        var specification = IncidentSpecifications.byFilters(
+                toInt(tenantUserId),
+                incidentState,
+                toInt(tipoId),
+                desde,
+                hasta,
+                search
+        );
+        return incidentRepo.count(specification);
     }
 
     @Override
@@ -122,16 +129,6 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Estado de incidencia invalido: " + state);
         }
-    }
-
-    private boolean hasAnyFilter(String tenantUserId, String state, String tipoId,
-                                  LocalDateTime desde, LocalDateTime hasta, String search) {
-        return notBlank(tenantUserId) || notBlank(state) || notBlank(tipoId)
-                || desde != null || hasta != null || notBlank(search);
-    }
-
-    private static boolean notBlank(String value) {
-        return value != null && !value.isBlank();
     }
 
     private Sort parseSort(String sort) {

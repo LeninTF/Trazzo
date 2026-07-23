@@ -3,7 +3,8 @@ package trazzo.back.saasglobal.infrastructure.config;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -28,7 +29,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @ConditionalOnProperty(name = "trazzo.seed.tenant.enabled", havingValue = "true", matchIfMissing = false)
 @Order(1)
 @Slf4j
-public class TenantDataSeeder implements CommandLineRunner {
+public class TenantDataSeeder implements ApplicationRunner {
 
     private static final String DEMO_PLAN_NAME = "Plan Demo";
 
@@ -57,7 +58,7 @@ public class TenantDataSeeder implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) {
+    public void run(ApplicationArguments args) {
         if (tenantRepository.findBySubDomain(subDomain).isPresent()) {
             log.info("Demo tenant already exists, skipping seed");
             return;

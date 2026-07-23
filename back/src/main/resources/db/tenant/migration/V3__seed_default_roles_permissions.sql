@@ -92,6 +92,9 @@ FROM (VALUES
     ('administrador', 'configuracion-tenant.gestionar-metodos'),
     ('administrador', 'auditoria-seguridad.acceso-logs'),
     ('administrador', 'auditoria-seguridad.historial-cambios'),
+    ('administrador', 'incidencias.ver-propias'),
+    ('administrador', 'incidencias.crear'),
+    ('administrador', 'incidencias.aprobar-rechazar'),
     ('administrador', 'administrador_tenant'),
 
     ('director', 'gestion-trabajadores.crear'),

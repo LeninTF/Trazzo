@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpecifications.byFilters;
 
 @DataJpaTest
 @Transactional
@@ -72,19 +73,93 @@ class IncidentsDataJpaTest {
 
     @Test
     void shouldFindIncidentByFilters() {
+        var type = new IncidentTypeEntity();
+        type.setNombre("Filtro");
+        type.setActivo(true);
+        var savedType = incidentTypeRepository.saveAndFlush(type);
+
         var incident = new IncidentEntity();
         incident.setTenantUserId(20);
-        incident.setIncidentTypeId(1);
+        incident.setIncidentTypeId(savedType.getId());
         incident.setState(IncidentState.APROBADO);
         incident.setComment("filtro test");
-        incidentRepository.save(incident);
+        incidentRepository.saveAndFlush(incident);
 
-        Page<IncidentEntity> result = incidentRepository.findByFilters(
-                "20", null, "1",
-                null, null, "filtro", PageRequest.of(0, 10));
+        Page<IncidentEntity> result = incidentRepository.findAll(
+                byFilters(20, null, savedType.getId(), null, null, "filtro"),
+                PageRequest.of(0, 10));
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getComment()).contains("filtro");
+    }
+
+    @Test
+    void shouldFindIncidentByCommentIgnoringCase() {
+        var type = new IncidentTypeEntity();
+        type.setNombre("Urgencia");
+        type.setActivo(true);
+        var savedType = incidentTypeRepository.saveAndFlush(type);
+
+        var incident = new IncidentEntity();
+        incident.setTenantUserId(21);
+        incident.setIncidentTypeId(savedType.getId());
+        incident.setState(IncidentState.PENDIENTE);
+        incident.setComment("Permiso Medico Urgente");
+        incidentRepository.saveAndFlush(incident);
+
+        Page<IncidentEntity> result = incidentRepository.findAll(
+                byFilters(21, IncidentState.PENDIENTE, savedType.getId(), null, null, "mEdIcO"),
+                PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getComment()).isEqualTo("Permiso Medico Urgente");
+    }
+
+    @Test
+    void shouldFindIncidentByFiltersWithoutSearch() {
+        var type = new IncidentTypeEntity();
+        type.setNombre("SinBusqueda");
+        type.setActivo(true);
+        var savedType = incidentTypeRepository.saveAndFlush(type);
+
+        var incident = new IncidentEntity();
+        incident.setTenantUserId(22);
+        incident.setIncidentTypeId(savedType.getId());
+        incident.setState(IncidentState.PENDIENTE);
+        incident.setComment("sin busqueda");
+        incidentRepository.saveAndFlush(incident);
+
+        Page<IncidentEntity> result = incidentRepository.findAll(
+                byFilters(22, IncidentState.PENDIENTE, savedType.getId(), null, null, null),
+                PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getComment()).isEqualTo("sin busqueda");
+    }
+
+    @Test
+    void shouldFindIncidentByDateFiltersWithoutNullTypingIssues() {
+        var type = new IncidentTypeEntity();
+        type.setNombre("Fecha");
+        type.setActivo(true);
+        var savedType = incidentTypeRepository.saveAndFlush(type);
+
+        var incident = new IncidentEntity();
+        incident.setTenantUserId(23);
+        incident.setIncidentTypeId(savedType.getId());
+        incident.setState(IncidentState.PENDIENTE);
+        incident.setComment("con fecha");
+        incidentRepository.saveAndFlush(incident);
+
+        var start = incident.getCreatedAt().minusMinutes(1);
+        var end = incident.getCreatedAt().plusMinutes(1);
+
+        Page<IncidentEntity> result = incidentRepository.findAll(
+                byFilters(23, IncidentState.PENDIENTE, savedType.getId(), start, end, null),
+                PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getComment()).isEqualTo("con fecha");
     }
 
     @Test

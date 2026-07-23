@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
@@ -46,7 +47,7 @@ class TenantDataSeederTest {
     void run_whenDemoTenantExistsSkipsSeed() {
         when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.of(mock(Tenant.class)));
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verifyNoInteractions(schemaProvisioning);
         verify(tenantRepository, never()).save(any());
@@ -60,7 +61,7 @@ class TenantDataSeederTest {
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         mockTenantUserCreation();
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verify(jdbc, never()).queryForObject(contains("INSERT INTO plans"), eq(Integer.class), any());
         var settingsCaptor = ArgumentCaptor.forClass(TenantSettings.class);
@@ -84,7 +85,7 @@ class TenantDataSeederTest {
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         mockTenantUserCreation();
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verify(schemaProvisioning).provisionExisting(any(TenantSettings.class));
         var tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
