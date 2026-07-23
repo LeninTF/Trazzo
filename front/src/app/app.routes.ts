@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
+import { roleGuard } from './auth/role.guard';
 import { Index } from './pages/public/index/index';
 import { Form } from './pages/public/form/form';
 import { Shop } from './pages/shop/shop';
@@ -65,61 +66,62 @@ export const routes: Routes = [
     {
         path: 'tenant/dashboard',
         component: Dashboard,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/monitoreo',
         component: Monitoreo,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/incidencias',
         component: Incidencias,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/tipos-incidencia',
-        component: TiposIncidencia
+        component: TiposIncidencia,
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/reglas-asistencia',
         component: ReglasAsistencia,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/sedes',
         component: Sedes,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/gestion-roles',
         component: GestionRoles,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/configuracion-tenant',
         component: ConfiguracionTenant,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/planes',
         component: Planes,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/directorio-personal',
         component: DirectorioPersonal,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/gestion-horarios',
         component: GestionHorarios,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'tenant/perfil',
         component: Perfil,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'usuario',
@@ -129,22 +131,22 @@ export const routes: Routes = [
     {
         path: 'usuario/dashboard',
         component: DashboardUsuario,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'usuario/calendario',
         component: CalendarioUsuario,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'usuario/historial-asistencia',
         component: HistorialAsistenciaUsuario,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'usuario/incidencias',
         component: IncidenciasUsuario,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas',
@@ -155,47 +157,47 @@ export const routes: Routes = [
     {
         path: 'saas/tenants',
         component: Tenants,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/gestion-planes',
         component: GestionPlanes,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/solicitudes',
         component: Solicitudes,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/log-auditoria',
         component: LogAuditoria,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/facturas',
         component: Facturas,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/gestion-usuarios',
         component: GestionUsuarios,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/gestion-roles',
         component: GestionRolesSaas,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'saas/perfil',
         component: PerfilSass,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'usuario/perfil',
         component: Perfil,
-        canActivate: [authGuard]
+        canActivate: [authGuard, roleGuard]
     },
     {
         path: 'ayuda/:seccion',

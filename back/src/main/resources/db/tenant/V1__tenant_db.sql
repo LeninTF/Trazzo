@@ -215,15 +215,14 @@ CREATE TABLE attendances (
 -- 6. GESTIÓN DE INCIDENCIAS Y PERMISOS
 -- ==============================================================================
 
--- Nombres de tabla en inglés para coincidir con las entidades JPA del módulo
--- incidents (IncidentEntity, IncidentTypeEntity, IncidentEvidenceEntity,
--- IncidentPermissionEntity), que son la fuente de verdad hoy. Los IDs son
--- VARCHAR(36) (UUID generado en Java), no SERIAL. "state" es VARCHAR porque
+-- Nombres de tabla en español y SERIAL para alinear con las entidades JPA del
+-- módulo incidents (IncidentEntity → incidencias, IncidentTypeEntity →
+-- incidencia_types, IncidentEvidenceEntity → incidencia_evidencia,
+-- IncidentPermissionEntity → permisos_incidencia).  "state" es VARCHAR porque
 -- Hibernate mapea @Enumerated(STRING) a texto plano, no a un enum nativo de
--- Postgres. tenant_user_id no lleva FK porque las entidades tampoco declaran
--- esa relación (es un @Column simple, no @ManyToOne).
-CREATE TABLE incident_types (
-    id VARCHAR(36) PRIMARY KEY,
+-- Postgres.
+CREATE TABLE incidencia_types (
+    id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) UNIQUE NOT NULL,
     descripcion TEXT,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -231,10 +230,10 @@ CREATE TABLE incident_types (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE incidents (
-    id VARCHAR(36) PRIMARY KEY,
-    tenant_user_id VARCHAR(36) NOT NULL,
-    incident_type_id VARCHAR(36) NOT NULL REFERENCES incident_types(id) ON DELETE CASCADE,
+CREATE TABLE incidencias (
+    id SERIAL PRIMARY KEY,
+    tenant_user_id INT NOT NULL REFERENCES tenant_user(id) ON DELETE CASCADE,
+    incidencia_type_id INT NOT NULL REFERENCES incidencia_types(id) ON DELETE CASCADE,
     state VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
     comment TEXT,
     rejection_reason TEXT,
@@ -242,9 +241,9 @@ CREATE TABLE incidents (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE incident_evidences (
-    id VARCHAR(36) PRIMARY KEY,
-    incident_id VARCHAR(36) NOT NULL REFERENCES incidents(id) ON DELETE CASCADE,
+CREATE TABLE incidencia_evidencia (
+    id SERIAL PRIMARY KEY,
+    incidencia_id INT NOT NULL REFERENCES incidencias(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
     file_url VARCHAR(500) NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
@@ -256,11 +255,11 @@ CREATE TABLE incident_evidences (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE incident_permissions (
-    id VARCHAR(36) PRIMARY KEY,
-    incident_id VARCHAR(36) NOT NULL UNIQUE REFERENCES incidents(id) ON DELETE CASCADE,
+CREATE TABLE permisos_incidencia (
+    id SERIAL PRIMARY KEY,
+    incidencia_id INT NOT NULL UNIQUE REFERENCES incidencias(id) ON DELETE CASCADE,
     start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
+    finish_date DATE NOT NULL,
     days_granted INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

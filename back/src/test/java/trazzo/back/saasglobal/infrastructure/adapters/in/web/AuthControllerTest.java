@@ -48,6 +48,7 @@ class AuthControllerTest {
     @MockitoBean PersonRepositoryPort personRepository;
     @MockitoBean TenantRepositoryPort tenantRepository;
     @MockitoBean RoleMasterRepositoryPort roleRepository;
+    @MockitoBean trazzo.back.shared.security.TenantPermissionPort tenantPermissionPort;
 
     @Test
     @WithMockUser(username = "admin@test.com", roles = {"ADMIN"})

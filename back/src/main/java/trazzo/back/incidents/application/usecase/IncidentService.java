@@ -55,7 +55,7 @@ public class IncidentService implements IncidentUseCase {
     }
 
     @Override
-    public PaginatedResult<IncidentResult> findAll(String scope, String sedeId, String areaId,
+    public PaginatedResult<IncidentResult> findAll(String currentTenantUserId, String scope, String sedeId, String areaId,
                                                     String departamentoId, String state, String tipoId,
                                                     LocalDate desde, LocalDate hasta, String search,
                                                     int page, int size, String sort) {
@@ -63,8 +63,10 @@ public class IncidentService implements IncidentUseCase {
         LocalDateTime desdeDt = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDt = hasta != null ? hasta.plusDays(1).atStartOfDay() : null;
 
-        var incidents = incidentRepository.findAll(null, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
-        var total = incidentRepository.count(null, state, tipoId, desdeDt, hastaDt, search);
+        String tenantUserFilter = "SELF".equals(scope) ? currentTenantUserId : null;
+
+        var incidents = incidentRepository.findAll(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
+        var total = incidentRepository.count(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search);
 
         attachTypes(incidents);
 

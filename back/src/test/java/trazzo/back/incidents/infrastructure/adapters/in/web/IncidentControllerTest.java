@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -40,6 +41,7 @@ import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(IncidentController.class)
+@EnableMethodSecurity
 class IncidentControllerTest {
 
     @Autowired
@@ -76,7 +78,10 @@ class IncidentControllerTest {
         testUser = new AuthenticatedUser(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 "test@mail.com", "pass",
-                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+                List.of(new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("incidencias.ver-propias"),
+                        new SimpleGrantedAuthority("incidencias.crear"),
+                        new SimpleGrantedAuthority("incidencias.aprobar-rechazar")), true);
         var auth = new UsernamePasswordAuthenticationToken(testUser, null, testUser.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
@@ -89,7 +94,7 @@ class IncidentControllerTest {
     @Test
     void listReturns200() throws Exception {
         var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
-        when(incidentUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+        when(incidentUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
                 .thenReturn(paginated);
 
         mockMvc.perform(get("/incidentes")
@@ -97,6 +102,53 @@ class IncidentControllerTest {
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("inc-1"));
+    }
+
+    @Test
+    void listWithScopeSelfResolvesTenantUser() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
+        when(incidentUseCase.findAll(eq("42"), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("scope", "SELF")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("inc-1"))
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+
+        verify(tenantUserPort).findIdByMasterUserId(testUser.id());
+    }
+
+    @Test
+    void listWithScopeSelfTenantUserNotMappedPassesNull() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
+        when(incidentUseCase.findAll(isNull(), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("scope", "SELF")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+    }
+
+    @Test
+    void listScopeAllPassesNullTenantUserId() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(incidentUseCase.findAll(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk());
+
+        verify(tenantUserPort, never()).findIdByMasterUserId(any());
     }
 
     @Test
@@ -218,5 +270,20 @@ class IncidentControllerTest {
         mockMvc.perform(post("/incidentes/inc-1/justificar")
                         .with(csrf()))
                 .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void listReturns403WhenMissingAuthority() throws Exception {
+        var restrictedUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                "restricted@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+        var restrictedAuth = new UsernamePasswordAuthenticationToken(restrictedUser, null, restrictedUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(restrictedAuth);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isForbidden());
     }
 }

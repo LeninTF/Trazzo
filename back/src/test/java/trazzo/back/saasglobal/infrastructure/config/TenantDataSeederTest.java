@@ -99,5 +99,9 @@ class TenantDataSeederTest {
         when(jdbc.queryForObject(eq("SELECT LASTVAL()"), eq(Integer.class))).thenReturn(42);
         when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class))).thenReturn(1L);
         when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'administrador'"), eq(String.class))).thenReturn("role-uuid");
+
+        when(userRepository.findByEmail("usuario@trazzo.pe")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("usuario123")).thenReturn("encoded-usuario");
+        when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'usuario'"), eq(String.class))).thenReturn("usuario-role-uuid");
     }
 }

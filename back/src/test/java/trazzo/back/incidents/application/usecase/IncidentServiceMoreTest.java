@@ -80,11 +80,41 @@ class IncidentServiceMoreTest {
                 .thenReturn(List.of(incident));
         when(incidentRepo.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
 
-        var result = service.findAll(null, null, null, null, null, null, null, null, null, 0, 20, null);
+        var result = service.findAll(null, null, null, null, null, null, null, null, null, null, 0, 20, null);
 
         assertEquals(1, result.content().size());
         assertEquals(0, result.page());
         assertEquals(1, result.totalElements());
+    }
+
+    @Test
+    void findAllScopeSelfPassesTenantUserIdToRepo() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "42", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        when(incidentRepo.findAll(eq("42"), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(List.of(incident));
+        when(incidentRepo.count(eq("42"), any(), any(), any(), any(), any())).thenReturn(1L);
+
+        var result = service.findAll("42", "SELF", null, null, null, null, null, null, null, null, 0, 20, null);
+
+        assertEquals(1, result.content().size());
+        verify(incidentRepo).findAll(eq("42"), isNull(), isNull(), isNull(), isNull(), isNull(), eq(0), eq(20), isNull());
+        verify(incidentRepo).count(eq("42"), isNull(), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void findAllScopeAllPassesNullTenantUserIdToRepo() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        when(incidentRepo.findAll(isNull(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(List.of(incident));
+        when(incidentRepo.count(isNull(), any(), any(), any(), any(), any())).thenReturn(1L);
+
+        service.findAll(null, "ALL", null, null, null, null, null, null, null, null, 0, 20, null);
+
+        verify(incidentRepo).findAll(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(0), eq(20), isNull());
     }
 
     @Test

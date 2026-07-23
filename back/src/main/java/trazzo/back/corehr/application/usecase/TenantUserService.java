@@ -14,9 +14,12 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class TenantUserService implements TenantUserUseCase {
@@ -30,13 +33,18 @@ public class TenantUserService implements TenantUserUseCase {
         var projections = tenantUserPort.findAllProfiles(search, status, page, size, sort);
         var total = tenantUserPort.countAllProfiles(search, status);
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
-        var content = projections.stream().map(this::toResult).toList();
+        var ids = projections.stream().map(TenantUserPort.TenantUserProfileProjection::id).collect(Collectors.toSet());
+        var orgMap = tenantUserPort.findOrgAssignmentsByUserIds(ids);
+        var content = projections.stream()
+                .map(p -> toResult(p, orgMap.getOrDefault(p.id(), emptyOrgBundle())))
+                .toList();
         return new PaginatedResult<>(content, page, size, total, totalPages);
     }
 
     @Override
     public Optional<TenantUserProfileResult> findById(Long id) {
-        return tenantUserPort.findProfileById(id).map(this::toResult);
+        return tenantUserPort.findProfileById(id)
+                .map(p -> toResult(p, findOrgAssignmentsForUser(id)));
     }
 
     @Override
@@ -148,7 +156,7 @@ public class TenantUserService implements TenantUserUseCase {
                     return userOpt.isPresent() && userOpt.get().getId().equals(masterUserId);
                 })
                 .findFirst()
-                .map(this::toResult);
+                .map(p -> toResult(p, findOrgAssignmentsForUser(p.id())));
     }
 
     @Override
@@ -162,7 +170,9 @@ public class TenantUserService implements TenantUserUseCase {
         return UUID.randomUUID().toString().substring(0, 12);
     }
 
-    private TenantUserProfileResult toResult(TenantUserPort.TenantUserProfileProjection p) {
+    private TenantUserProfileResult toResult(
+            TenantUserPort.TenantUserProfileProjection p,
+            TenantUserPort.OrgAssignmentBundle org) {
         return new TenantUserProfileResult(
                 p.id(),
                 p.email(),
@@ -184,9 +194,24 @@ public class TenantUserService implements TenantUserUseCase {
                 p.roleId() != null
                         ? new TenantUserProfileResult.RoleInfoResult(p.roleId(), p.roleName())
                         : null,
-                List.of(),
-                List.of(),
-                List.of()
+                mapOrg(org.sedes()),
+                mapOrg(org.areas()),
+                mapOrg(org.departamentos())
         );
+    }
+
+    private TenantUserPort.OrgAssignmentBundle findOrgAssignmentsForUser(Long id) {
+        return tenantUserPort.findOrgAssignmentsByUserIds(List.of(id))
+                .getOrDefault(id, emptyOrgBundle());
+    }
+
+    private TenantUserPort.OrgAssignmentBundle emptyOrgBundle() {
+        return new TenantUserPort.OrgAssignmentBundle(List.of(), List.of(), List.of());
+    }
+
+    private List<TenantUserProfileResult.OrgAssignment> mapOrg(List<TenantUserPort.OrgAssignmentRow> rows) {
+        return rows.stream()
+                .map(r -> new TenantUserProfileResult.OrgAssignment(r.id(), r.nombre()))
+                .toList();
     }
 }

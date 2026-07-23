@@ -17,11 +17,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
+import trazzo.back.shared.security.TenantPermissionPort;
 
 @ExtendWith(MockitoExtension.class)
 class UserDetailsServiceImplTest {
 
     @Mock UserRepositoryPort userRepository;
+    @Mock TenantPermissionPort tenantPermissionPort;
     @InjectMocks UserDetailsServiceImpl service;
 
     private static final UUID USER_ID = UUID.randomUUID();

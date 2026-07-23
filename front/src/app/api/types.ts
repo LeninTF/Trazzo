@@ -261,6 +261,7 @@ export interface UsuarioProfile {
   status: 'ACTIVO' | 'SUSPENDIDO' | 'INACTIVO';
   ultimo_acceso: string;
   rol: RoleProfile[];
+  tenant_permissions: string[];
 }
 
 export interface RoleProfile {

@@ -83,8 +83,8 @@ export class Incidencias implements OnInit {
     this.error.set('');
     try {
       const [tiposRes, incRes] = await Promise.all([
-        firstValueFrom(this.incidentsService.listTypes({ activo: true, size: 100 })),
-        firstValueFrom(this.incidentsService.list({ size: 100, scope: 'SELF' })),
+        firstValueFrom(this.incidentsService.listTypes({ activo: true, size: 10 })),
+        firstValueFrom(this.incidentsService.list({ size: 10, scope: 'SELF' })),
       ]);
       this.tiposDisponibles = tiposRes.content.map(t => t.nombre);
       this.tipoNameToId.clear();

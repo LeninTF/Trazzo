@@ -2,7 +2,9 @@ package trazzo.back.corehr.application.port.out;
 
 import trazzo.back.corehr.domain.model.TenantUserState;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ public interface TenantUserPort {
     List<TenantUserProfileProjection> findAllProfiles(String search, String status, int page, int size, String sort);
     long countAllProfiles(String search, String status);
     Optional<TenantUserProfileProjection> findProfileById(Long id);
+    Map<Long, OrgAssignmentBundle> findOrgAssignmentsByUserIds(Collection<Long> tenantUserIds);
 
     Long saveTenantUser(java.util.UUID masterUserId);
     void updateState(Long id, TenantUserState state);
@@ -49,5 +52,13 @@ public interface TenantUserPort {
         String motherSurname,
         String roleId,
         String roleName
+    ) {}
+
+    record OrgAssignmentRow(Long id, String nombre) {}
+
+    record OrgAssignmentBundle(
+        List<OrgAssignmentRow> sedes,
+        List<OrgAssignmentRow> areas,
+        List<OrgAssignmentRow> departamentos
     ) {}
 }

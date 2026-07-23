@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
@@ -35,6 +36,7 @@ public class IncidentController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<IncidentListResponse> list(
             @RequestParam(required = false) String scope,
             @RequestParam(name = "sede_id", required = false) String sedeId,
@@ -46,15 +48,23 @@ public class IncidentController {
             @RequestParam(required = false) LocalDate hasta,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
-        var result = incidentUseCase.findAll(scope, sedeId, areaId, departamentoId,
+        String tenantUserId = null;
+        if ("SELF".equals(scope) && user != null) {
+            tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
+                    .map(String::valueOf)
+                    .orElse(null);
+        }
+        var result = incidentUseCase.findAll(tenantUserId, scope, sedeId, areaId, departamentoId,
                 state, tipoId, desde, hasta, search, page, size, sort);
         return ResponseEntity.ok(IncidentListResponse.from(result, scope));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('incidencias.crear')")
     public ResponseEntity<IncidentResponse> create(
             @Valid @RequestBody CreateIncidentRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
@@ -70,6 +80,7 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<IncidentResponse> getById(@PathVariable String id) {
         return incidentUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(IncidentResponse.from(result)))
@@ -87,6 +98,7 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
     public ResponseEntity<IncidentResponse> changeState(
             @PathVariable String id,
             @Valid @RequestBody IncidentStateChangeRequest request
@@ -121,6 +133,7 @@ public class IncidentController {
     }
 
     @PostMapping("/{id}/notificar")
+    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
     public ResponseEntity<Void> notify(@PathVariable String id, @Valid @RequestBody NotifyIncidentRequest request) {
         var command = new trazzo.back.incidents.application.dto.command.NotifyIncidentCommand(request.tipo());
         notificationUseCase.notify(id, command);

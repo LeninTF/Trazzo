@@ -245,6 +245,7 @@ export const mockUsuarioProfile: UsuarioProfile = {
       permissions: { VIEW_USUARIOS: true, VIEW_ALL_TENANT_USERS: true },
     },
   ],
+  tenant_permissions: [],
 };
 
 export const mockAuthResponse: AuthResponse = {
