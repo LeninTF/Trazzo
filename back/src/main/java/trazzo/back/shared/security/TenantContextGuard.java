@@ -54,7 +54,7 @@ public class TenantContextGuard extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String path = request.getRequestURI();
+        String path = request.getServletPath();
 
         if (isNonTenantPath(path)) {
             filterChain.doFilter(request, response);
@@ -89,9 +89,9 @@ public class TenantContextGuard extends OncePerRequestFilter {
         if (isPostgreSQL != null) {
             return isPostgreSQL;
         }
-        try {
+        try (var conn = dataSource.getConnection()) {
             isPostgreSQL = "PostgreSQL".equals(
-                    dataSource.getConnection().getMetaData().getDatabaseProductName());
+                    conn.getMetaData().getDatabaseProductName());
         } catch (SQLException e) {
             log.warn("Could not determine database product name, assuming non-PostgreSQL", e);
             isPostgreSQL = false;

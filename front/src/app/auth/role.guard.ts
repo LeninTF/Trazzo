@@ -27,7 +27,7 @@ export const roleGuard: CanActivateFn = (route) => {
   const router = inject(Router);
 
   const currentRole = roleService.role();
-  const routePath = route.url.map(segment => segment.path).join('/');
+  const routePath = '/' + route.url.map(segment => segment.path).join('/');
   const requiredPrefix = ROLE_PREFIX[currentRole];
 
   if (routePath.startsWith(requiredPrefix)) {

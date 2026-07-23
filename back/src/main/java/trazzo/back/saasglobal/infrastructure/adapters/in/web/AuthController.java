@@ -59,10 +59,11 @@ public class AuthController {
         String tenantSchema = resolveTenantSchema(user.getTenantId());
 
         AuthenticatedUser enrichedPrincipal = principal;
+        List<String> tenantPerms = List.of();
         if (tenantSchema != null) {
             TenantContext.set(tenantSchema);
             try {
-                List<String> tenantPerms = tenantPermissionPort.findPermissionCodesByMasterUserId(
+                tenantPerms = tenantPermissionPort.findPermissionCodesByMasterUserId(
                         UUID.fromString(user.getId()));
                 if (!tenantPerms.isEmpty()) {
                     var merged = new ArrayList<GrantedAuthority>(principal.getAuthorities());
@@ -96,8 +97,7 @@ public class AuthController {
                 user.isActive() ? "ACTIVO" : "INACTIVO",
                 null,
                 roles,
-                tenantSchema != null ? tenantPermissionPort.findPermissionCodesByMasterUserId(
-                        UUID.fromString(user.getId())) : List.of()
+                tenantPerms
         );
 
         return ResponseEntity.ok(new LoginResponse(token, "Bearer", usuario));

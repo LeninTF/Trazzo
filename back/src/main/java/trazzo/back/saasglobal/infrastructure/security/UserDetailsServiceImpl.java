@@ -33,7 +33,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .toList());
 
-        if (!user.getRoles().isEmpty()) {
+        if (user.getRoles().contains("admin_trazzo")) {
             authorities.add(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"));
         }
 

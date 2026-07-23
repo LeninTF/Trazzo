@@ -41,7 +41,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/auth/login");
+        request.setServletPath("/auth/login");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -55,7 +55,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/saas/tenants");
+        request.setServletPath("/saas/tenants");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -69,7 +69,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/incidentes");
+        request.setServletPath("/incidentes");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -83,7 +83,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("tenant_demo");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/incidentes");
+        request.setServletPath("/incidentes");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -97,7 +97,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set(null);
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/incidentes/tipos");
+        request.setServletPath("/incidentes/tipos");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -110,7 +110,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(false);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/incidentes");
+        request.setServletPath("/incidentes");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -124,7 +124,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/branches");
+        request.setServletPath("/branches");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
@@ -137,7 +137,7 @@ class TenantContextGuardTest {
         TenantContextGuard guard = createGuard(true);
         TenantContext.set("public");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRequestURI("/actuator/health");
+        request.setServletPath("/actuator/health");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         guard.doFilterInternal(request, response, chain);
