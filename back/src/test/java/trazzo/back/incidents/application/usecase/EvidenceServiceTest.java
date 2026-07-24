@@ -44,7 +44,7 @@ class EvidenceServiceTest {
         var result = service.create("inc-1", command);
 
         assertEquals("doc.pdf", result.fileName());
-        assertEquals("http://public-url/test", result.fileUrl());
+        assertEquals("/api/v1/incidentes/inc-1/evidencias/" + result.id() + "/descarga", result.downloadUrl());
         assertEquals("pdf", result.mimeType());
         assertEquals(100, result.fileSize());
         verify(eventPublisher).publish(any());
@@ -92,6 +92,51 @@ class EvidenceServiceTest {
     void findAllByIncidentIdWithNonExistentIncidentThrowsException() {
         when(incidentRepo.findById("bad-id")).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class, () -> service.findAllByIncidentId("bad-id"));
+    }
+
+    @Test
+    void findEvidenceSuccessfully() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                "ev-1", "inc-1", "doc.pdf", "file-key", "application/pdf", 100, false, null, now, now, now);
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+
+        var result = service.findEvidence("inc-1", "ev-1");
+
+        assertEquals("ev-1", result.id());
+        assertEquals("doc.pdf", result.fileName());
+        assertEquals("file-key", result.fileKey());
+        assertEquals("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga", result.downloadUrl());
+    }
+
+    @Test
+    void findEvidenceWithNonExistentIncidentThrowsException() {
+        when(incidentRepo.findById("bad-id")).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence("bad-id", "ev-1"));
+    }
+
+    @Test
+    void findEvidenceWithNonExistentEvidenceIdThrowsException() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence("inc-1", "missing-ev"));
+    }
+
+    @Test
+    void findEvidenceExcludesDeletedEvidences() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                "ev-1", "inc-1", "doc.pdf", "file-key", "application/pdf", 100, true, now, now, now, now);
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence("inc-1", "ev-1"));
     }
 
     @Test

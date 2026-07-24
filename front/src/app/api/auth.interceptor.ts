@@ -6,11 +6,28 @@ import { Observable, catchError, throwError } from 'rxjs';
 
 const PUBLIC_ENDPOINTS = ['/auth/login', '/security/public-key'];
 
+function isExternalOrigin(req: HttpRequest<unknown>): boolean {
+  if (req.url.startsWith('http://') || req.url.startsWith('https://')) {
+    try {
+      const host = new URL(req.url).hostname;
+      return host !== window.location.hostname;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export function authInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
   const router = inject(Router);
   const token = localStorage.getItem('trazzo_token');
 
-  if (token && !PUBLIC_ENDPOINTS.some(e => req.url.includes(e))) {
+  const shouldAttachToken =
+    token &&
+    !isExternalOrigin(req) &&
+    !PUBLIC_ENDPOINTS.some(e => req.url.includes(e));
+
+  if (shouldAttachToken) {
     req = req.clone({
       setHeaders: { Authorization: `Bearer ${token}` },
     });

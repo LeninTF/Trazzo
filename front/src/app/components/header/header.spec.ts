@@ -68,10 +68,10 @@ describe('Header', () => {
 
   describe('roles', () => {
     it('should contain 3 role options', () => {
-      expect(component['roles'].length).toBe(3);
-      expect(component['roles'][0].value).toBe('admin-tenant');
-      expect(component['roles'][1].value).toBe('admin-saas');
-      expect(component['roles'][2].value).toBe('usuario');
+      expect(component['roles']().length).toBe(3);
+      expect(component['roles']()[0].value).toBe('admin-tenant');
+      expect(component['roles']()[1].value).toBe('admin-saas');
+      expect(component['roles']()[2].value).toBe('usuario');
     });
   });
 

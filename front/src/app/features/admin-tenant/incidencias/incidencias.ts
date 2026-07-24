@@ -18,7 +18,7 @@ interface IncidenciaSolicitud {
     nombre: string;
     tipo: string;
     tamano: string;
-    url: string;
+    downloadUrl: string;
   } | null;
 }
 
@@ -39,7 +39,12 @@ function toSolicitud(inc: IncidentProfile): IncidenciaSolicitud {
     estado: STATE_MAP[inc.state] ?? 'Pendiente',
     descripcion: inc.comment ?? '',
     fechaCreacion: inc.created_at ? new Date(inc.created_at).toLocaleDateString('es-PE') : '',
-    archivo: e ? { nombre: e.file_name ?? 'archivo', tipo: e.mime_type ?? 'application/octet-stream', tamano: e.file_size ? `${(e.file_size / 1024).toFixed(1)} KB` : '—', url: e.file_url } : null,
+    archivo: e ? {
+      nombre: e.file_name ?? 'archivo',
+      tipo: e.mime_type ?? 'application/octet-stream',
+      tamano: e.file_size ? `${(e.file_size / 1024).toFixed(1)} KB` : '—',
+      downloadUrl: e.download_url,
+    } : null,
   };
 }
 
@@ -232,7 +237,8 @@ export class Incidencias implements OnInit {
   async descargarArchivo(solicitud: IncidenciaSolicitud): Promise<void> {
     if (!solicitud.archivo) return;
     try {
-      const response = await fetch(solicitud.archivo.url);
+      const response = await fetch(solicitud.archivo.downloadUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);

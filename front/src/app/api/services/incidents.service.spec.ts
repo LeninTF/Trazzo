@@ -137,7 +137,7 @@ describe('IncidentsService', () => {
       const req = httpMock.expectOne(`${apiBase}/incidentes/1/evidencias`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(body);
-      req.flush({ id: 1, incidencia_id: 1, ...body, file_url: '#', created_at: '', updated_at: '' });
+      req.flush({ id: 1, incidencia_id: 1, ...body, download_url: '/api/v1/incidentes/1/evidencias/1/descarga', created_at: '', updated_at: '' });
     });
 
     it('should delete evidence', () => {
@@ -145,6 +145,32 @@ describe('IncidentsService', () => {
       const req = httpMock.expectOne(`${apiBase}/incidentes/1/evidencias/99`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
+    });
+
+    it('should get presigned URL with required params', () => {
+      service.getPresignedUrl('a.pdf', 'application/pdf').subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/storage/presigned-url` && r.method === 'GET');
+      expect(req.request.params.get('fileName')).toBe('a.pdf');
+      expect(req.request.params.get('contentType')).toBe('application/pdf');
+      expect(req.request.params.has('incident_id')).toBeFalse();
+      req.flush({ presigned_url: 'https://r2/presigned', object_key: 'evidences/42/a.pdf' });
+    });
+
+    it('should include incident_id when provided', () => {
+      service.getPresignedUrl('a.pdf', 'application/pdf', 7).subscribe();
+      const req = httpMock.expectOne(r => r.url === `${apiBase}/storage/presigned-url`);
+      expect(req.request.params.get('incident_id')).toBe('7');
+      req.flush({ presigned_url: 'u', object_key: 'k' });
+    });
+
+    it('should upload to R2 via PUT', () => {
+      const file = new File(['data'], 'a.pdf', { type: 'application/pdf' });
+      service.uploadToR2('https://r2/presigned', file, 'application/pdf').subscribe();
+      const req = httpMock.expectOne('https://r2/presigned');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toBe(file);
+      expect(req.request.headers.get('Content-Type')).toBe('application/pdf');
+      req.flush('uploaded', { status: 200, statusText: 'OK' });
     });
   });
 });

@@ -1,4 +1,4 @@
-import { HttpRequest, HttpResponse } from '@angular/common/http';
+import { HttpRequest, HttpResponse, HttpParams } from '@angular/common/http';
 import { of } from 'rxjs';
 import { mockInterceptor, _setTestApiBase } from './mock.interceptor';
 import { mockAttendance, mockMasterUsers } from './mock-data';
@@ -491,10 +491,51 @@ describe('mockInterceptor', () => {
   });
 
   it('should mock POST /incidentes/{id}/evidencias', (done) => {
-    const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/incidentes/1/evidencias', { file: 'data' });
+    const reqBody = { file_name: 'f.pdf', file_key: 'evidences/42/1/uuid/f.pdf', mime_type: 'application/pdf', file_size: 100 };
+    const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/incidentes/1/evidencias', reqBody);
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(201);
+      expect(r.body.file_name).toBe('f.pdf');
+      expect(r.body.file_key).toBe('evidences/42/1/uuid/f.pdf');
+      expect(r.body.download_url).toContain('/api/v1/incidentes/1/evidencias/');
+      expect(r.body.download_url).toContain('/descarga');
+      expect(r.body.file_url).toBeUndefined();
+      done();
+    });
+  });
+
+  it('should mock GET /incidentes/{id}/evidencias/{evidenceId}/descarga', (done) => {
+    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/incidentes/1/evidencias/1/descarga');
+    mockInterceptor(req, next).subscribe(res => {
+      const r = res as HttpResponse<any>;
+      expect(r.status).toBe(200);
+      expect(r.body).toBeInstanceOf(Blob);
+      done();
+    });
+  });
+
+  it('should mock GET /storage/presigned-url with fileName and contentType', (done) => {
+    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
+      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf'),
+    });
+    mockInterceptor(req, next).subscribe(res => {
+      const r = res as HttpResponse<any>;
+      expect(r.status).toBe(200);
+      expect(r.body.object_key).toContain('evidences/42/');
+      expect(r.body.object_key).toContain('a.pdf');
+      expect(r.body.presigned_url).toContain('https://r2.mock.dev/');
+      done();
+    });
+  });
+
+  it('should include incident_id in object_key when provided to presigned-url', (done) => {
+    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
+      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf').set('incident_id', '7'),
+    });
+    mockInterceptor(req, next).subscribe(res => {
+      const r = res as HttpResponse<any>;
+      expect(r.body.object_key).toContain('/7/');
       done();
     });
   });

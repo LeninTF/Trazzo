@@ -3,15 +3,23 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { IncidentsService } from '../../../api/services/incidents.service';
 import type { IncidentProfile } from '../../../api/types';
+import { ToastService } from '../../../services/toast.service';
+import { validateFile, formatFileSize, FileValidationResult } from '../../../shared/storage/file-validator';
 
 interface Incidencia {
   id: string;
+  numericId: number;
   tipo: string;
   descripcion: string;
   fecha: string;
   dias: number;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
-  archivo: { nombre: string; tamano: string } | null;
+  archivo: {
+    nombre: string;
+    tamano: string;
+    evidenciaId: number;
+    downloadUrl: string;
+  } | null;
 }
 
 type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
@@ -25,22 +33,22 @@ function formatDate(iso: string): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
 function toIncidencia(inc: IncidentProfile): Incidencia {
   const e = inc.evidencias?.[0];
   return {
     id: `#INC-${inc.id}`,
+    numericId: inc.id,
     tipo: inc.tipo.nombre,
     descripcion: inc.comment ?? '',
     fecha: inc.created_at ? formatDate(inc.created_at) : '',
     dias: inc.permiso?.days_granted ?? 1,
     estado: STATE_MAP[inc.state] ?? 'Pendiente',
-    archivo: e ? { nombre: e.file_name, tamano: formatSize(e.file_size) } : null,
+    archivo: e ? {
+      nombre: e.file_name,
+      tamano: formatFileSize(e.file_size),
+      evidenciaId: e.id,
+      downloadUrl: e.download_url,
+    } : null,
   };
 }
 
@@ -53,9 +61,12 @@ function toIncidencia(inc: IncidentProfile): Incidencia {
 })
 export class Incidencias implements OnInit {
   private readonly incidentsService = inject(IncidentsService);
+  private readonly toast = inject(ToastService);
 
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly uploading = signal(false);
+  readonly fileError = signal('');
   mostrarModalCrear = false;
   mostrarModalDetalle = false;
   selectedIncidencia: Incidencia | null = null;
@@ -131,6 +142,7 @@ export class Incidencias implements OnInit {
 
   abrirModalCrear(): void {
     this.nuevaIncidencia = { tipo: '', fecha: '', dias: 1, descripcion: '', archivo: null };
+    this.fileError.set('');
     this.mostrarModalCrear = true;
     document.body.style.overflow = 'hidden';
   }
@@ -152,11 +164,30 @@ export class Incidencias implements OnInit {
     document.body.style.overflow = '';
   }
 
-  onFileChange(event: Event): void {
+  async onFileChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.nuevaIncidencia.archivo = input.files[0];
+    this.fileError.set('');
+    if (!input.files || input.files.length === 0) {
+      this.nuevaIncidencia.archivo = null;
+      return;
     }
+    const file = input.files[0];
+    const result: FileValidationResult = await validateFile(file);
+    if (!result.valid) {
+      this.nuevaIncidencia.archivo = null;
+      const firstError = result.errors[0]?.message ?? 'Archivo inválido.';
+      this.fileError.set(firstError);
+      this.toast.error(firstError);
+      input.value = '';
+      return;
+    }
+    this.nuevaIncidencia.archivo = file;
+  }
+
+  removeFile(event: Event): void {
+    event.stopPropagation();
+    this.nuevaIncidencia.archivo = null;
+    this.fileError.set('');
   }
 
   async enviar(): Promise<void> {
@@ -166,25 +197,61 @@ export class Incidencias implements OnInit {
     if (!typeId) return;
 
     this.loading.set(true);
+    this.error.set('');
     try {
-      await firstValueFrom(this.incidentsService.create({
+      const created = await firstValueFrom(this.incidentsService.create({
         incidencia_type_id: typeId,
         comment: this.nuevaIncidencia.descripcion,
       }));
+
+      if (this.nuevaIncidencia.archivo) {
+        await this.uploadEvidence(created.id, this.nuevaIncidencia.archivo);
+      }
+
       await this.cargarDatos();
       this.cerrarModalCrear();
-    } catch {
+      this.toast.success('Incidencia registrada correctamente.');
+    } catch (err) {
       this.error.set('Error al crear la incidencia.');
+      this.toast.error('Error al crear la incidencia.');
     } finally {
       this.loading.set(false);
     }
   }
 
-  descargarArchivo(inc: Incidencia): void {
+  private async uploadEvidence(incidentId: number, file: File): Promise<void> {
+    this.uploading.set(true);
+    try {
+      const contentType = file.type || 'application/octet-stream';
+      const presigned = await firstValueFrom(
+        this.incidentsService.getPresignedUrl(file.name, contentType, incidentId)
+      );
+      await firstValueFrom(this.incidentsService.uploadToR2(presigned.presigned_url, file, contentType));
+      await firstValueFrom(this.incidentsService.createEvidence(incidentId, {
+        file_name: file.name,
+        file_key: presigned.object_key,
+        mime_type: contentType,
+        file_size: file.size,
+      }));
+    } finally {
+      this.uploading.set(false);
+    }
+  }
+
+  async descargarArchivo(inc: Incidencia): Promise<void> {
     if (!inc.archivo) return;
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = inc.archivo.nombre;
-    link.click();
+    try {
+      const url = inc.archivo.downloadUrl;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = inc.archivo.nombre;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch {
+      this.toast.error('No se pudo descargar el archivo.');
+    }
   }
 }

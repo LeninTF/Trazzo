@@ -56,7 +56,7 @@ describe('Incidencias (admin-tenant)', () => {
       makeIncident(2, 'APROBADO', 'Juan', 'Pérez', 'Permiso Médico'),
       makeIncident(3, 'DENEGADO', 'Carlos', 'López', 'Capacitación'),
     ];
-    incidentsData[0].evidencias.push({ id: 1, incidencia_id: 1, file_name: 'doc.pdf', file_url: '#', mime_type: 'application/pdf', file_size: 2048, created_at: '', updated_at: '' });
+    incidentsData[0].evidencias.push({ id: 1, incidencia_id: 1, file_name: 'doc.pdf', file_key: 'k', download_url: '/api/v1/incidentes/1/evidencias/1/descarga', mime_type: 'application/pdf', file_size: 2048, created_at: '', updated_at: '' });
 
     mockToast.success.calls.reset();
     mockToast.error.calls.reset();
@@ -382,7 +382,7 @@ describe('Incidencias (admin-tenant)', () => {
         comment: 'Test',
         tipo: { id: 70, nombre: 'Permiso', descripcion: null, activo: true, created_at: '', updated_at: '' },
         permiso: null,
-        evidencias: [{ id: 70, incidencia_id: 70, file_name: null as any, file_url: '#', mime_type: null as any, file_size: null as any, created_at: '', updated_at: '' }],
+        evidencias: [{ id: 70, incidencia_id: 70, file_name: null as any, file_key: 'k', download_url: 'd', mime_type: null as any, file_size: null as any, created_at: '', updated_at: '' }],
         tenant_user: { id: 70, nombre: 'Eve', apellido_paterno: 'Lee', apellido_materno: '', email: 'eve@test.com' },
         created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
       }];
@@ -407,7 +407,7 @@ describe('Incidencias (admin-tenant)', () => {
         comment: 'Zero size',
         tipo: { id: 80, nombre: 'Otro', descripcion: null, activo: true, created_at: '', updated_at: '' },
         permiso: null,
-        evidencias: [{ id: 80, incidencia_id: 80, file_name: 'empty.txt', file_url: '#', mime_type: 'text/plain', file_size: 0, created_at: '', updated_at: '' }],
+        evidencias: [{ id: 80, incidencia_id: 80, file_name: 'empty.txt', file_key: 'k', download_url: 'd', mime_type: 'text/plain', file_size: 0, created_at: '', updated_at: '' }],
         tenant_user: { id: 80, nombre: 'Zoe', apellido_paterno: 'Kim', apellido_materno: '', email: 'zoe@test.com' },
         created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
       }];

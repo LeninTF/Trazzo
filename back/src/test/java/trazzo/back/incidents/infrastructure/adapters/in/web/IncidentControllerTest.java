@@ -33,6 +33,7 @@ import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
 import trazzo.back.shared.security.AuthenticatedUser;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -74,7 +75,7 @@ class IncidentControllerTest {
         sampleResult = new IncidentResult("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), null, now, now);
         sampleEvidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
-                "file-key", "http://url", "pdf", 100, now, now);
+                "file-key", "/api/v1/incidentes/inc-1/evidencias/ev-1/descarga", "application/pdf", 100, now, now);
         testUser = new AuthenticatedUser(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 "test@mail.com", "pass",
@@ -224,13 +225,14 @@ class IncidentControllerTest {
     void createEvidenceReturns201() throws Exception {
         when(evidenceUseCase.create(anyString(), any())).thenReturn(sampleEvidenceResult);
 
-        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", 100);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "application/pdf", 100);
         mockMvc.perform(post("/incidentes/inc-1/evidencias")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.file_name").value("doc.pdf"));
+                .andExpect(jsonPath("$.file_name").value("doc.pdf"))
+                .andExpect(jsonPath("$.download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
     }
 
     @Test
@@ -239,7 +241,8 @@ class IncidentControllerTest {
 
         mockMvc.perform(get("/incidentes/inc-1/evidencias"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].file_name").value("doc.pdf"));
+                .andExpect(jsonPath("$[0].file_name").value("doc.pdf"))
+                .andExpect(jsonPath("$[0].download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
     }
 
     @Test
@@ -249,6 +252,44 @@ class IncidentControllerTest {
         mockMvc.perform(delete("/incidentes/inc-1/evidencias/ev-1")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void downloadEvidenceReturns200() throws Exception {
+        when(evidenceUseCase.findEvidence("inc-1", "ev-1")).thenReturn(sampleEvidenceResult);
+        InputStream stream = new java.io.ByteArrayInputStream("evidence-bytes".getBytes());
+        when(fileStoragePort.downloadFile("file-key")).thenReturn(stream);
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("attachment; filename=\"doc.pdf\"")))
+                .andExpect(header().longValue("Content-Length", 100));
+    }
+
+    @Test
+    void downloadEvidenceReturns404WhenEvidenceNotFound() throws Exception {
+        when(evidenceUseCase.findEvidence("inc-1", "missing"))
+                .thenThrow(new IllegalArgumentException("Evidencia no encontrada: missing"));
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/missing/descarga"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void downloadEvidenceReturns403WhenMissingPermission() throws Exception {
+        var restrictedUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                "restricted@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+        var restrictedAuth = new UsernamePasswordAuthenticationToken(restrictedUser, null, restrictedUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(restrictedAuth);
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(evidenceUseCase);
+        verifyNoInteractions(fileStoragePort);
     }
 
     @Test

@@ -320,7 +320,8 @@ export interface IncidentEvidenceProfile {
   id: number;
   incidencia_id: number;
   file_name: string;
-  file_url: string;
+  download_url: string;
+  file_key: string;
   mime_type: string;
   file_size: number;
   created_at: string;
@@ -382,6 +383,11 @@ export interface CreateEvidenceRequest {
   file_key: string;
   mime_type: string;
   file_size: number;
+}
+
+export interface PresignedUrlResponse {
+  presigned_url: string;
+  object_key: string;
 }
 
 export interface NotifyIncidentRequest {

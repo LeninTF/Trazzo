@@ -64,4 +64,27 @@ class IncidentEvidenceSpecTest {
     void invalidFileSizeExceedingMax() {
         assertFalse(spec.isValidFileSize(IncidentEvidenceSpec.MAX_FILE_SIZE_BYTES + 1));
     }
+
+    @Test
+    void isAllowedMimeTypeAcceptsWhitelistedTypes() {
+        for (String mime : IncidentEvidenceSpec.ALLOWED_MIME_TYPES) {
+            assertTrue(spec.isAllowedMimeType(mime), "Expected to accept: " + mime);
+        }
+    }
+
+    @Test
+    void isAllowedMimeTypeIsCaseInsensitive() {
+        assertTrue(spec.isAllowedMimeType("APPLICATION/PDF"));
+        assertTrue(spec.isAllowedMimeType("Image/PNG"));
+    }
+
+    @Test
+    void isAllowedMimeTypeRejectsUnknown() {
+        assertFalse(spec.isAllowedMimeType("application/x-msdownload"));
+    }
+
+    @Test
+    void isAllowedMimeTypeRejectsNull() {
+        assertFalse(spec.isAllowedMimeType(null));
+    }
 }

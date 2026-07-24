@@ -30,7 +30,7 @@ const mockIncidents: IncidentProfile[] = [
     id: 4, tenant_user_id: 1, incidencia_type_id: 2, state: 'APROBADO',
     comment: 'Emergencia familiar - 27/05',
     tipo: mockTypes[1], permiso: { id: 1, incidencia_id: 4, start_date: '2026-05-27', end_date: '2026-05-28', days_granted: 2, created_at: '', updated_at: '' }, evidencias: [
-      { id: 1, incidencia_id: 4, file_name: 'justificacion.pdf', file_url: '#', mime_type: 'application/pdf', file_size: 512000, created_at: '', updated_at: '' },
+      { id: 1, incidencia_id: 4, file_name: 'justificacion.pdf', file_key: 'k/1', download_url: '/api/v1/incidentes/4/evidencias/1/descarga', mime_type: 'application/pdf', file_size: 512000, created_at: '', updated_at: '' },
     ],
     tenant_user: { id: 1, nombre: 'Josselin', apellido_paterno: 'Rojas', apellido_materno: 'Luque', email: 'joss@colegio.edu.pe' },
     created_at: '2026-05-27T09:00:00Z', updated_at: '2026-05-27T09:00:00Z',
@@ -53,7 +53,7 @@ const mockIncidents: IncidentProfile[] = [
     id: 1, tenant_user_id: 1, incidencia_type_id: 2, state: 'APROBADO',
     comment: 'Problema de salud - 15/05',
     tipo: mockTypes[1], permiso: { id: 2, incidencia_id: 1, start_date: '2026-05-15', end_date: '2026-05-17', days_granted: 3, created_at: '', updated_at: '' }, evidencias: [
-      { id: 2, incidencia_id: 1, file_name: 'certificado-medico.pdf', file_url: '#', mime_type: 'application/pdf', file_size: 1228800, created_at: '', updated_at: '' },
+      { id: 2, incidencia_id: 1, file_name: 'certificado-medico.pdf', file_key: 'k/2', download_url: '/api/v1/incidentes/1/evidencias/2/descarga', mime_type: 'application/pdf', file_size: 1228800, created_at: '', updated_at: '' },
     ],
     tenant_user: { id: 1, nombre: 'Josselin', apellido_paterno: 'Rojas', apellido_materno: 'Luque', email: 'joss@colegio.edu.pe' },
     created_at: '2026-05-16T06:00:00Z', updated_at: '2026-05-16T06:00:00Z',
@@ -69,8 +69,21 @@ let incidentsResponse: IncidentListResponse;
 const mockIncidentsService = {
   listTypes: () => of(typesResponse),
   list: () => of(incidentsResponse),
-  create: (_body: any) => of({} as IncidentProfile),
+  create: (_body: any) => of({ id: 99 } as IncidentProfile),
+  getPresignedUrl: (_name: string, _ct: string, _incId?: number) => of({ presigned_url: 'https://r2/presigned', object_key: 'evidences/42/9/uuid/f.pdf' }),
+  uploadToR2: (_url: string, _file: File, _ct: string) => of({} as any),
+  createEvidence: (_id: number, _body: any) => of({} as any),
 };
+
+function makePdfFile(): File {
+  const pdfMagic = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x35, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]);
+  return new File([pdfMagic], 'cert.pdf', { type: 'application/pdf' });
+}
+
+function makeInvalidFile(): File {
+  const exe = new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff]);
+  return new File([exe], 'malware.exe', { type: 'application/x-msdownload' });
+}
 
 describe('Incidencias (usuario)', () => {
   let component: Incidencias;
@@ -83,6 +96,9 @@ describe('Incidencias (usuario)', () => {
     spyOn(mockIncidentsService, 'listTypes').and.callThrough();
     spyOn(mockIncidentsService, 'list').and.callThrough();
     spyOn(mockIncidentsService, 'create').and.callThrough();
+    spyOn(mockIncidentsService, 'getPresignedUrl').and.callThrough();
+    spyOn(mockIncidentsService, 'uploadToR2').and.callThrough();
+    spyOn(mockIncidentsService, 'createEvidence').and.callThrough();
 
     await TestBed.configureTestingModule({
       imports: [Incidencias],
@@ -199,21 +215,47 @@ describe('Incidencias (usuario)', () => {
   });
 
   describe('onFileChange', () => {
-    it('should set archivo when file selected', () => {
-      const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
+    it('should accept a valid PDF and set archivo', async () => {
+      const file = makePdfFile();
       const input = document.createElement('input');
       Object.defineProperty(input, 'files', { value: [file] });
 
-      component.onFileChange({ target: input } as unknown as Event);
+      await component.onFileChange({ target: input } as unknown as Event);
       expect(component.nuevaIncidencia.archivo).toBe(file);
+      expect(component.fileError()).toBe('');
     });
 
-    it('should not change archivo when no file', () => {
+    it('should reject an invalid file (spoofed mime / disallowed type)', async () => {
+      const file = makeInvalidFile();
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', { value: [file] });
+
+      await component.onFileChange({ target: input } as unknown as Event);
+      expect(component.nuevaIncidencia.archivo).toBeNull();
+      expect(component.fileError().length).toBeGreaterThan(0);
+    });
+
+    it('should clear archivo when no file', async () => {
       const input = document.createElement('input');
       Object.defineProperty(input, 'files', { value: [] });
 
-      component.onFileChange({ target: input } as unknown as Event);
+      await component.onFileChange({ target: input } as unknown as Event);
       expect(component.nuevaIncidencia.archivo).toBeNull();
+    });
+  });
+
+  describe('removeFile', () => {
+    it('should clear archivo and stop propagation', async () => {
+      const file = makePdfFile();
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', { value: [file] });
+      await component.onFileChange({ target: input } as unknown as Event);
+      expect(component.nuevaIncidencia.archivo).not.toBeNull();
+
+      const event = { stopPropagation: jasmine.createSpy() } as unknown as Event;
+      component.removeFile(event);
+      expect(component.nuevaIncidencia.archivo).toBeNull();
+      expect(event.stopPropagation).toHaveBeenCalled();
     });
   });
 
@@ -245,10 +287,43 @@ describe('Incidencias (usuario)', () => {
       expect(component.mostrarModalCrear).toBeFalse();
     });
 
+    it('should run full upload flow when an archivo is selected', async () => {
+      const file = makePdfFile();
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', { value: [file] });
+      await component.onFileChange({ target: input } as unknown as Event);
+
+      component.nuevaIncidencia.tipo = 'Permiso Personal';
+      component.nuevaIncidencia.descripcion = 'Con evidencia';
+
+      await component.enviar();
+
+      expect(mockIncidentsService.getPresignedUrl).toHaveBeenCalledWith(file.name, 'application/pdf', 99);
+      expect(mockIncidentsService.uploadToR2).toHaveBeenCalledWith('https://r2/presigned', file, 'application/pdf');
+      expect(mockIncidentsService.createEvidence).toHaveBeenCalledWith(99, jasmine.objectContaining({
+        file_name: file.name,
+        mime_type: 'application/pdf',
+      }));
+    });
+
     it('should handle create error', async () => {
       (mockIncidentsService.create as jasmine.Spy).and.returnValue(throwError(() => new Error('fail')));
       component.nuevaIncidencia.tipo = 'Permiso Personal';
       component.nuevaIncidencia.descripcion = 'Test';
+
+      await component.enviar();
+
+      expect(component.error()).toContain('Error al crear');
+    });
+
+    it('should set error when upload fails after create', async () => {
+      (mockIncidentsService.getPresignedUrl as jasmine.Spy).and.returnValue(throwError(() => new Error('r2 fail')));
+      component.nuevaIncidencia.tipo = 'Permiso Personal';
+      component.nuevaIncidencia.descripcion = 'Test';
+      const file = makePdfFile();
+      const input = document.createElement('input');
+      Object.defineProperty(input, 'files', { value: [file] });
+      await component.onFileChange({ target: input } as unknown as Event);
 
       await component.enviar();
 
@@ -265,22 +340,38 @@ describe('Incidencias (usuario)', () => {
   });
 
   describe('descargarArchivo', () => {
-    it('should do nothing when no archivo', () => {
+    it('should do nothing when no archivo', async () => {
       const inc = component.incidencias()[1];
       inc.archivo = null;
-      component.descargarArchivo(inc);
+      await component.descargarArchivo(inc);
     });
 
-    it('should create a download link', () => {
+    it('should fetch the download_url, build a blob link and click', async () => {
       const inc = component.incidencias().find(i => i.archivo !== null)!;
-      const link = document.createElement('a');
-      const clickSpy = spyOn(link, 'click');
-      spyOn(document, 'createElement').and.returnValue(link);
+      const blob = new Blob(['pdf-bytes'], { type: 'application/pdf' });
+      const fetchSpy = spyOn(window, 'fetch').and.resolveTo(new Response(blob, { status: 200, headers: { 'Content-Type': 'application/pdf' } }) as any);
+      const link = { href: '', download: '', click: jasmine.createSpy('click') } as unknown as HTMLAnchorElement;
+      const realCreateElement = document.createElement.bind(document);
+      spyOn(document, 'createElement').and.callFake((tag: string) => {
+        if (tag === 'a') return link;
+        return realCreateElement(tag as keyof HTMLElementTagNameMap);
+      });
+      const createUrlSpy = spyOn(URL, 'createObjectURL').and.returnValue('blob:');
+      spyOn(URL, 'revokeObjectURL').and.callFake(() => {});
 
-      component.descargarArchivo(inc);
+      await component.descargarArchivo(inc);
 
+      expect(fetchSpy).toHaveBeenCalledWith(inc.archivo!.downloadUrl, { credentials: 'include' });
       expect(link.download).toBe(inc.archivo!.nombre);
-      expect(clickSpy).toHaveBeenCalled();
+      expect(createUrlSpy).toHaveBeenCalled();
+      expect(link.click).toHaveBeenCalled();
+    });
+
+    it('should toast on fetch failure', async () => {
+      const inc = component.incidencias().find(i => i.archivo !== null)!;
+      spyOn(window, 'fetch').and.resolveTo(new Response(null, { status: 500 }) as any);
+
+      await component.descargarArchivo(inc);
     });
   });
 });

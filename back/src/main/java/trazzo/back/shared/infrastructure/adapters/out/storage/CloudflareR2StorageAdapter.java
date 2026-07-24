@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -73,5 +74,18 @@ public class CloudflareR2StorageAdapter implements FileStoragePort {
             return publicUrl + objectKey;
         }
         return publicUrl + "/" + objectKey;
+    }
+
+    @Override
+    public InputStream downloadFile(String objectKey) {
+        try {
+            GetObjectRequest getRequest = GetObjectRequest.builder()
+                    .bucket(properties.getBucketName())
+                    .key(objectKey)
+                    .build();
+            return s3Client.getObject(getRequest);
+        } catch (S3Exception e) {
+            throw new StorageException("Failed to download file with key: " + objectKey, e);
+        }
     }
 }

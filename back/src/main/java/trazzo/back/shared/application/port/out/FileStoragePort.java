@@ -10,4 +10,6 @@ public interface FileStoragePort {
     void uploadFile(String objectKey, InputStream data, long contentLength, String contentType);
 
     String buildPublicUrl(String objectKey);
+
+    InputStream downloadFile(String objectKey);
 }
