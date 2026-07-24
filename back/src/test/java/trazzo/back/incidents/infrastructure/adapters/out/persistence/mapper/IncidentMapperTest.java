@@ -36,7 +36,7 @@ class IncidentMapperTest {
     void toDomainMapsIncidentFields() {
         var now = LocalDateTime.now();
         var evidenceEntity = new IncidentEvidenceEntity(1, 1, "doc.pdf",
-                "http://url", "key-123", "pdf", 100, false, null, now, now, now);
+                "evidences/2/1/uuid/doc.pdf", "application/pdf", 100, false, null, now, now, now);
         var permissionEntity = new IncidentPermissionEntity(1, 1,
                 LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now);
         var entity = new IncidentEntity(1, 10, 20, IncidentState.PENDIENTE,

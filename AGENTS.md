@@ -79,6 +79,12 @@ Flujo de subida y descarga de archivos de evidencia en buckets privados de R2:
   permisos sobre el incidente + evidence_id + tenant y streamea el archivo
   desde R2 vía `FileStoragePort.downloadFile(objectKey)`. El frontend usa
   `fetch(downloadUrl, { credentials: 'include' })` y construye un Blob link.
+- **Persistencia**: la columna persistida en `incidencia_evidencia` es
+  `file_key VARCHAR(500) NOT NULL` (objectKey R2, formato
+  `evidences/{tenantId}/{incidentId}/{uuid}/{fileName}`). La columna legacy
+  `file_url` fue eliminada en `V1__tenant_db.sql` (no hay rows históricos en
+  prod/tenant_demo). `download_url` **no** se persiste: lo fabrica
+  `EvidenceService.toResult` a partir de los IDs del incidente y evidence.
 - **`FileStoragePort`** (`shared/application/port/out`): `uploadFile`,
   `downloadFile`, `buildPublicUrl`, `presignedPutUrl`. Implementaciones:
   `CloudflareR2StorageAdapter` (producción) y `LocalStorageStub` (fallback

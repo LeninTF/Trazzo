@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpecifications.byFilters;
 
 @DataJpaTest
@@ -173,7 +174,7 @@ class IncidentsDataJpaTest {
         var evidence = new IncidentEvidenceEntity();
         evidence.setIncidentId(savedIncident.getId());
         evidence.setFileName("documento.pdf");
-        evidence.setFileUrl("http://example.com/doc.pdf");
+        evidence.setFileKey("evidences/2/1/uuid/documento.pdf");
         evidence.setMimeType("application/pdf");
         evidence.setFileSize(2048);
         evidence.setDeleted(false);
@@ -182,6 +183,7 @@ class IncidentsDataJpaTest {
         List<IncidentEvidenceEntity> found = incidentEvidenceRepository.findByIncidentId(savedIncident.getId());
         assertThat(found).hasSize(1);
         assertThat(found.get(0).getFileName()).isEqualTo("documento.pdf");
+        assertThat(found.get(0).getFileKey()).isEqualTo("evidences/2/1/uuid/documento.pdf");
     }
 
     @Test
@@ -195,7 +197,7 @@ class IncidentsDataJpaTest {
         var evidence = new IncidentEvidenceEntity();
         evidence.setIncidentId(savedIncident.getId());
         evidence.setFileName("borrar.txt");
-        evidence.setFileUrl("http://example.com/borrar.txt");
+        evidence.setFileKey("evidences/2/1/uuid/borrar.txt");
         evidence.setMimeType("text/plain");
         evidence.setFileSize(512);
         evidence.setDeleted(false);
@@ -205,6 +207,26 @@ class IncidentsDataJpaTest {
 
         List<IncidentEvidenceEntity> found = incidentEvidenceRepository.findByIncidentId(savedIncident.getId());
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    void shouldRejectEvidenceWithNullFileKey() {
+        var incident = new IncidentEntity();
+        incident.setTenantUserId(1);
+        incident.setIncidentTypeId(1);
+        incident.setState(IncidentState.PENDIENTE);
+        var savedIncident = incidentRepository.save(incident);
+
+        var evidence = new IncidentEvidenceEntity();
+        evidence.setIncidentId(savedIncident.getId());
+        evidence.setFileName("no-key.pdf");
+        evidence.setMimeType("application/pdf");
+        evidence.setFileSize(64);
+        evidence.setDeleted(false);
+
+        assertThatThrownBy(() -> {
+            incidentEvidenceRepository.saveAndFlush(evidence);
+        }).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test

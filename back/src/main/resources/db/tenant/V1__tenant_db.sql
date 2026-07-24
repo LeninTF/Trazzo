@@ -245,7 +245,7 @@ CREATE TABLE incidencia_evidencia (
     id SERIAL PRIMARY KEY,
     incidencia_id INT NOT NULL REFERENCES incidencias(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
-    file_url VARCHAR(500) NOT NULL,
+    file_key VARCHAR(500) NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
     file_size INT NOT NULL,
     deleted BOOLEAN NOT NULL DEFAULT FALSE,

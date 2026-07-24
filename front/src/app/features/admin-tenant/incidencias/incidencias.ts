@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
 import { ToastService } from '../../../services/toast.service';
+import { downloadWithAuth } from '../../../shared/storage/download';
 
 interface IncidenciaSolicitud {
   id: number;
@@ -237,14 +238,7 @@ export class Incidencias implements OnInit {
   async descargarArchivo(solicitud: IncidenciaSolicitud): Promise<void> {
     if (!solicitud.archivo) return;
     try {
-      const response = await fetch(solicitud.archivo.downloadUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = solicitud.archivo.nombre;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      await downloadWithAuth(solicitud.archivo.downloadUrl, { fileName: solicitud.archivo.nombre });
     } catch {
       this.toastService.error('Error al descargar el archivo');
     }

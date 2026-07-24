@@ -5,6 +5,7 @@ import { IncidentsService } from '../../../api/services/incidents.service';
 import type { IncidentProfile } from '../../../api/types';
 import { ToastService } from '../../../services/toast.service';
 import { validateFile, formatFileSize, FileValidationResult } from '../../../shared/storage/file-validator';
+import { downloadWithAuth } from '../../../shared/storage/download';
 
 interface Incidencia {
   id: string;
@@ -241,15 +242,7 @@ export class Incidencias implements OnInit {
   async descargarArchivo(inc: Incidencia): Promise<void> {
     if (!inc.archivo) return;
     try {
-      const url = inc.archivo.downloadUrl;
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = inc.archivo.nombre;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      await downloadWithAuth(inc.archivo.downloadUrl, { fileName: inc.archivo.nombre });
     } catch {
       this.toast.error('No se pudo descargar el archivo.');
     }

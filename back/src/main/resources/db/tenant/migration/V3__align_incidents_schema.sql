@@ -4,8 +4,9 @@
 ALTER TABLE incidencias ADD COLUMN IF NOT EXISTS comment TEXT;
 ALTER TABLE incidencias ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
 
--- incidencia_evidencia: add missing columns
-ALTER TABLE incidencia_evidencia ADD COLUMN IF NOT EXISTS file_key VARCHAR(255);
+-- incidencia_evidencia: file_key is now created in V1 (NOT NULL VARCHAR(500)).
+-- These columns existed in V1 except for deleted/deleted_at/uploaded_at; the IF NOT EXISTS
+-- keeps this migration safe for schemas that were created before these columns existed.
 ALTER TABLE incidencia_evidencia ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
 ALTER TABLE incidencia_evidencia ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
 ALTER TABLE incidencia_evidencia ADD COLUMN IF NOT EXISTS uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;

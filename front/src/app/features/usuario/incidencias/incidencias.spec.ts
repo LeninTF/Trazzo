@@ -347,6 +347,7 @@ describe('Incidencias (usuario)', () => {
     });
 
     it('should fetch the download_url, build a blob link and click', async () => {
+      localStorage.setItem('trazzo_token', 'my-token');
       const inc = component.incidencias().find(i => i.archivo !== null)!;
       const blob = new Blob(['pdf-bytes'], { type: 'application/pdf' });
       const fetchSpy = spyOn(window, 'fetch').and.resolveTo(new Response(blob, { status: 200, headers: { 'Content-Type': 'application/pdf' } }) as any);
@@ -361,7 +362,11 @@ describe('Incidencias (usuario)', () => {
 
       await component.descargarArchivo(inc);
 
-      expect(fetchSpy).toHaveBeenCalledWith(inc.archivo!.downloadUrl, { credentials: 'include' });
+      expect(fetchSpy).toHaveBeenCalled();
+      const [url, init] = fetchSpy.calls.mostRecent().args;
+      expect(url).toBe(inc.archivo!.downloadUrl);
+      expect((init as any).credentials).toBe('include');
+      expect((init as any).headers['Authorization']).toBe('Bearer my-token');
       expect(link.download).toBe(inc.archivo!.nombre);
       expect(createUrlSpy).toHaveBeenCalled();
       expect(link.click).toHaveBeenCalled();

@@ -25,7 +25,7 @@ class IncidentsBeanConfigTest {
 
     @Test
     void shouldCreateIncidentUseCase() {
-        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher, fileStoragePort));
+        assertNotNull(config.incidentUseCase(incidentRepo, typeRepo, tenantUserPort, eventPublisher));
     }
 
     @Test
