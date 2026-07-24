@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -56,7 +57,8 @@ public class IncidentController {
         if ("SELF".equals(scope) && user != null) {
             tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
                     .map(String::valueOf)
-                    .orElse(null);
+                    .orElseThrow(() -> new AccessDeniedException(
+                            "No se encontró usuario de tenant para el usuario autenticado"));
         }
         var result = incidentUseCase.findAll(tenantUserId, scope, sedeId, areaId, departamentoId,
                 state, tipoId, desde, hasta, search, page, size, sort);

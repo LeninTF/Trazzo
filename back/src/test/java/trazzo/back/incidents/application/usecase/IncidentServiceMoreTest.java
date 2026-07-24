@@ -114,6 +114,21 @@ class IncidentServiceMoreTest {
     }
 
     @Test
+    void findAllScopeSelfWithNullTenantUserIdFailsClosed() {
+        var ex = assertThrows(IllegalStateException.class,
+                () -> service.findAll(null, "SELF", null, null, null, null, null, null, null, null, 0, 20, null));
+        assertTrue(ex.getMessage().contains("scope=SELF"));
+        verifyNoInteractions(incidentRepo);
+    }
+
+    @Test
+    void findAllScopeSelfWithBlankTenantUserIdFailsClosed() {
+        assertThrows(IllegalStateException.class,
+                () -> service.findAll("   ", "SELF", null, null, null, null, null, null, null, null, 0, 20, null));
+        verifyNoInteractions(incidentRepo);
+    }
+
+    @Test
     void toResultWithTypeAndPermissionAndUser() {
         var now = LocalDateTime.now();
         var type = trazzo.back.incidents.domain.model.IncidentType.restore("t-1", "Permiso", "Desc", true, now, now);

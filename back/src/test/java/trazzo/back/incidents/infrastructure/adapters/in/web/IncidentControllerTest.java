@@ -124,18 +124,16 @@ class IncidentControllerTest {
     }
 
     @Test
-    void listWithScopeSelfTenantUserNotMappedPassesNull() throws Exception {
-        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+    void listWithScopeSelfTenantUserNotMappedReturns403() throws Exception {
         when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
-        when(incidentUseCase.findAll(isNull(), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
-                .thenReturn(paginated);
 
         mockMvc.perform(get("/incidentes")
                         .param("scope", "SELF")
                         .param("page", "0")
                         .param("size", "20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(incidentUseCase);
     }
 
     @Test

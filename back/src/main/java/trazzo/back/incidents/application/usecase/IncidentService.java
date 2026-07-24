@@ -61,6 +61,11 @@ public class IncidentService implements IncidentUseCase {
         LocalDateTime desdeDt = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDt = hasta != null ? hasta.plusDays(1).atStartOfDay() : null;
 
+        if ("SELF".equals(scope) && (currentTenantUserId == null || currentTenantUserId.isBlank())) {
+            throw new IllegalStateException(
+                    "No se encontró usuario de tenant para el usuario autenticado con scope=SELF");
+        }
+
         String tenantUserFilter = "SELF".equals(scope) ? currentTenantUserId : null;
 
         var incidents = incidentRepository.findAll(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
