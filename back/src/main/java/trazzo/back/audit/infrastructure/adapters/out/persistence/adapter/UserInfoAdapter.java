@@ -37,7 +37,7 @@ public class UserInfoAdapter implements UserInfoPort {
         try {
             UserInfo info = jdbcTemplate.queryForObject("""
                     SELECT u.id AS user_id,
-                           COALESCE(p.name, '') || ' ' || COALESCE(p.father_surname, '') || ' ' || COALESCE(p.mother_surname, '') AS user_name,
+                           TRIM(BOTH ' ' FROM CONCAT_WS(' ', NULLIF(p.name, ''), NULLIF(p.father_surname, ''), NULLIF(p.mother_surname, ''))) AS user_name,
                            u.email AS user_email
                     FROM users u
                     JOIN persons p ON p.id = u.person_id
@@ -76,7 +76,7 @@ public class UserInfoAdapter implements UserInfoPort {
             return Map.of();
         }
         String sql = "SELECT u.id AS user_id, " +
-                "COALESCE(p.name, '') || ' ' || COALESCE(p.father_surname, '') || ' ' || COALESCE(p.mother_surname, '') AS user_name, " +
+                "TRIM(BOTH ' ' FROM CONCAT_WS(' ', NULLIF(p.name, ''), NULLIF(p.father_surname, ''), NULLIF(p.mother_surname, ''))) AS user_name, " +
                 "u.email AS user_email " +
                 "FROM users u " +
                 "JOIN persons p ON p.id = u.person_id " +

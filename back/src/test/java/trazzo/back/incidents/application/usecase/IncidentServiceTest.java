@@ -192,7 +192,7 @@ class IncidentServiceTest {
     }
 
     @Test
-    void findAll_attachTypes_withBatchAndFallback() {
+    void findAll_attachTypes_batchOnly() {
         var incident1 = Incident.restore("inc-1", "user-1", "type-1",
                 IncidentState.PENDIENTE, "c1", null, null, null,
                 Collections.emptyList(), LocalDateTime.now(), LocalDateTime.now());
@@ -205,17 +205,13 @@ class IncidentServiceTest {
         when(incidentRepository.count(null, null, null, null, null, null)).thenReturn(2L);
         when(typeRepository.findByIdIn(List.of("type-1", "type-missing")))
                 .thenReturn(List.of(sampleType()));
-        // Fallback for missing type
-        when(typeRepository.findById("type-missing"))
-                .thenReturn(Optional.of(IncidentType.restore("type-missing", "Permiso", "Desc", true,
-                        LocalDateTime.now(), LocalDateTime.now())));
 
         var result = service.findAll(null, null, null, null, null, null,
                 null, null, null, 0, 10, null);
 
         assertThat(result.content()).hasSize(2);
         verify(typeRepository).findByIdIn(anyList());
-        verify(typeRepository).findById("type-missing");
+        verify(typeRepository, never()).findById(any());
     }
 
     @Test

@@ -1,7 +1,6 @@
 package trazzo.back.audit.infrastructure.adapters.in.web.dto;
 
 import trazzo.back.audit.application.dto.result.AuditLogDetailResult;
-import trazzo.back.audit.domain.model.master.Action;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -9,7 +8,7 @@ public record AuditLogDetailResponse(
     String id,
     String entidad,
     String entidadId,
-    Action accion,
+    String accion,
     String userId,
     String endpoint,
     String ipAddress,

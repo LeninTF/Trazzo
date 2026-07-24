@@ -49,7 +49,7 @@ class AuditMetricsControllerTest {
                         .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "monitoreo-sistema.dashboard-global"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total_eventos").value(100))
-                .andExpect(jsonPath("$.errores").value(5))
+                .andExpect(jsonPath("$.acciones_delete").value(5))
                 .andExpect(jsonPath("$.sesiones_activas").value(20))
                 .andExpect(jsonPath("$.crecimiento").value(15.5))
                 .andExpect(jsonPath("$.porcentaje_sesiones").value(20.0));

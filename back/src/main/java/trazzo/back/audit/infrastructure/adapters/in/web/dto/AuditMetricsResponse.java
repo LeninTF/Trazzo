@@ -5,14 +5,14 @@ import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 
 public record AuditMetricsResponse(
     @JsonProperty("total_eventos") long totalEventos,
-    long errores,
+    @JsonProperty("acciones_delete") long accionesDelete,
     @JsonProperty("sesiones_activas") long sesionesActivas,
-    double crecimiento,
+    @JsonProperty("crecimiento") double crecimiento,
     @JsonProperty("porcentaje_sesiones") double porcentajeSesiones
 ) {
     public static AuditMetricsResponse from(AuditMetricsResult result) {
         return new AuditMetricsResponse(
-            result.totalEventos(), result.errores(), result.sesionesActivas(),
+            result.totalEventos(), result.accionesDelete(), result.sesionesActivas(),
             result.crecimiento(), result.porcentajeSesiones()
         );
     }

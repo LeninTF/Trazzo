@@ -127,14 +127,6 @@ public class IncidentService implements IncidentUseCase {
                 .stream()
                 .collect(Collectors.toMap(IncidentType::getId, t -> t));
 
-        List<String> missingIds = typeIds.stream()
-                .filter(id -> !typeMap.containsKey(id))
-                .toList();
-        if (!missingIds.isEmpty()) {
-            missingIds.forEach(id ->
-                    typeRepository.findById(id).ifPresent(t -> typeMap.put(id, t)));
-        }
-
         incidents.forEach(i -> {
             var type = typeMap.get(i.getIncidentTypeId());
             if (type != null) {

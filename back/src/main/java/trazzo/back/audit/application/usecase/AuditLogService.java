@@ -1,6 +1,7 @@
 package trazzo.back.audit.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import trazzo.back.audit.application.dto.PageParams;
 import trazzo.back.audit.application.dto.result.AuditLogDetailResult;
 import trazzo.back.audit.application.dto.result.AuditLogResult;
 import trazzo.back.audit.application.dto.result.PaginatedResult;
@@ -12,7 +13,6 @@ import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.shared.util.SortUtils;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,8 +33,8 @@ public class AuditLogService implements AuditLogUseCase {
             String entity, String fechaDesde, String fechaHasta, int page, int size, String sort) {
         LocalDateTime desde = fechaDesde != null ? LocalDate.parse(fechaDesde).atStartOfDay() : null;
         LocalDateTime hasta = fechaHasta != null ? LocalDate.parse(fechaHasta).atTime(LocalTime.MAX) : null;
-        var pageable = PageRequest.of(page, size, SortUtils.parseSort(sort, f -> f));
-        var audits = auditRepository.findAll(searchTerm, tenantId, action, entity, desde, hasta, pageable);
+        var pageParams = PageParams.of(page, size, sort);
+        var audits = auditRepository.findAll(searchTerm, tenantId, action, entity, desde, hasta, pageParams);
         var total = auditRepository.count(searchTerm, tenantId, action, entity, desde, hasta);
         var totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
 
@@ -85,7 +85,7 @@ public class AuditLogService implements AuditLogUseCase {
 
     private AuditLogDetailResult toDetailResult(Audit audit) {
         return new AuditLogDetailResult(
-                audit.getId(), audit.getEntity(), audit.getEntityId(), audit.getAction(),
+                audit.getId(), audit.getEntity(), audit.getEntityId(), audit.getAction().name(),
                 audit.getUserId(), audit.getEndpoint(), audit.getIpAddress(),
                 audit.getUserAgent(), audit.getPreviousValue(), audit.getNewValue(),
                 audit.getCreatedAt()

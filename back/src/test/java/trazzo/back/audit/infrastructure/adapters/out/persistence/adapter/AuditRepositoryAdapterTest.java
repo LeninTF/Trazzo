@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import trazzo.back.audit.application.dto.PageParams;
 import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.master.Audit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.repository.AuditJpaRepository;
@@ -51,7 +52,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of(audit));
 
         var result = adapter.findAll(null, "search", Action.CREATE, "User",
-                now, now.plusDays(1), org.springframework.data.domain.PageRequest.of(0, 10));
+                now, now.plusDays(1), PageParams.of(0, 10, null));
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getEntity()).isEqualTo("User");
@@ -65,7 +66,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("ORDER BY a.created_at DESC"), any(RowMapper.class), any(Object[].class));
     }
@@ -77,7 +78,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll("test", null, null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("LOWER(a.entity) LIKE"), any(RowMapper.class), any(Object[].class));
     }
@@ -89,7 +90,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, "not-a-uuid", null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("1=1"), any(RowMapper.class), any(Object[].class));
     }
@@ -101,7 +102,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, Action.DELETE, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("a.action = ?"), any(RowMapper.class), any(Object[].class));
     }
@@ -113,7 +114,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, "User", null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("a.entity = ?"), any(RowMapper.class), any(Object[].class));
     }
@@ -125,7 +126,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, null, now, now.plusDays(1),
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("created_at >= ?"), any(RowMapper.class), any(Object[].class));
         verify(jdbcTemplate).query(contains("created_at <= ?"), any(RowMapper.class), any(Object[].class));
@@ -180,7 +181,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, "00000000-0000-0000-0000-000000000001", null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("user_id IN"), any(RowMapper.class), any(Object[].class));
     }
@@ -193,7 +194,7 @@ class AuditRepositoryAdapterTest {
 
         adapter.findAll("search", "00000000-0000-0000-0000-000000000001",
                 Action.CREATE, "User", now, now.plusDays(1),
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                PageParams.of(0, 10, null));
 
         verify(jdbcTemplate).query(contains("LOWER(a.entity) LIKE"), any(RowMapper.class), any(Object[].class));
         verify(jdbcTemplate).query(contains("a.action = ?"), any(RowMapper.class), any(Object[].class));
@@ -210,8 +211,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10,
-                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "action")));
+                PageParams.of(0, 10, "action,asc"));
 
         verify(jdbcTemplate).query(contains("ORDER BY a.action ASC"), any(RowMapper.class), any(Object[].class));
     }
@@ -223,8 +223,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10,
-                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "ip_address")));
+                PageParams.of(0, 10, "ip_address,desc"));
 
         verify(jdbcTemplate).query(contains("ORDER BY a.ip_address DESC"), any(RowMapper.class), any(Object[].class));
     }
@@ -236,8 +235,7 @@ class AuditRepositoryAdapterTest {
                 .thenReturn(List.of());
 
         adapter.findAll(null, null, null, null, null, null,
-                org.springframework.data.domain.PageRequest.of(0, 10,
-                        org.springframework.data.domain.Sort.by("nonExistentField")));
+                PageParams.of(0, 10, "nonExistentField,asc"));
 
         verify(jdbcTemplate).query(contains("ORDER BY a.created_at DESC"), any(RowMapper.class), any(Object[].class));
     }

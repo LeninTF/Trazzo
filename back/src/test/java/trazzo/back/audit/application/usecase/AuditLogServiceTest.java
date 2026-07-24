@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import trazzo.back.audit.application.dto.PageParams;
 import trazzo.back.audit.application.dto.result.AuditLogDetailResult;
 import trazzo.back.audit.application.dto.result.AuditLogResult;
 import trazzo.back.audit.application.dto.result.PaginatedResult;
@@ -15,7 +16,6 @@ import trazzo.back.audit.application.port.out.UserInfoPort;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.master.Audit;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,7 +49,7 @@ class AuditLogServiceTest {
         assertEquals("1", result.id());
         assertEquals("entity", result.entidad());
         assertEquals("entity-1", result.entidadId());
-        assertEquals(Action.CREATE, result.accion());
+        assertEquals("CREATE", result.accion());
         assertEquals("user-1", result.userId());
         assertEquals("/api/test", result.endpoint());
         assertEquals("192.168.1.1", result.ipAddress());
@@ -71,7 +71,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", Map.of("old", "val"), Map.of("new", "val"), now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of("user-1", new TenantInfoPort.TenantInfo("tenant-1", "Test Corp")));
         when(userInfoPort.findByUserIds(any())).thenReturn(Map.of("user-1", new UserInfoPort.UserInfo("user-1", "John Doe", "john@test.com")));
@@ -99,7 +99,7 @@ class AuditLogServiceTest {
         assertEquals("192.168.1.1", logResult.ipAddress());
         assertEquals("Mozilla/5.0", logResult.userAgent());
 
-        verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class));
+        verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class));
         verify(auditRepository).count(any(), any(), any(), any(), any(), any());
         verify(tenantInfoPort).findByUserIds(any());
         verify(userInfoPort).findByUserIds(any());
@@ -110,7 +110,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.DELETE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of());
         when(userInfoPort.findByUserIds(any())).thenReturn(Map.of());
@@ -126,7 +126,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.CREATE, "user-1", "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of());
         when(userInfoPort.findByUserIds(any())).thenReturn(Map.of());
@@ -142,7 +142,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("1", "entity", "entity-1", Action.UPDATE, null, "/api/test",
                 "192.168.1.1", "Mozilla/5.0", null, null, now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -154,7 +154,7 @@ class AuditLogServiceTest {
 
     @Test
     void findAllReturnsEmptyWhenNoAudits() {
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of());
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of());
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(0L);
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -165,13 +165,13 @@ class AuditLogServiceTest {
 
     @Test
     void findAllWithDates_parsesDateStrings() {
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of());
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of());
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(0L);
 
         var result = service.findAll(null, null, null, null, "2026-01-01", "2026-01-31", 0, 10, null);
 
         assertTrue(result.content().isEmpty());
-        verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class));
+        verify(auditRepository).findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class));
     }
 
     @Test
@@ -184,7 +184,7 @@ class AuditLogServiceTest {
         var result = service.findById("1");
 
         assertEquals("entity", result.entidad());
-        assertEquals(Action.UPDATE, result.accion());
+        assertEquals("UPDATE", result.accion());
         assertEquals("user-1", result.userId());
         assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("agent", result.userAgent());
@@ -195,7 +195,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("2", "entity", "e-2", Action.CREATE, "user-2", "/api",
                 "10.0.0.1", "curl", null, null, now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of("user-2", new TenantInfoPort.TenantInfo("t-2", "Tenant Corp")));
         when(userInfoPort.findByUserIds(any())).thenReturn(Map.of("user-2", new UserInfoPort.UserInfo("user-2", "Jane Smith", "jane@test.com")));
@@ -214,7 +214,7 @@ class AuditLogServiceTest {
         var now = LocalDateTime.now();
         var audit = Audit.restore("3", "entity", "e-3", Action.DELETE, "user-3", "/api",
                 "10.0.0.1", "curl", null, null, now);
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of(audit));
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of(audit));
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
         when(tenantInfoPort.findByUserIds(any())).thenReturn(Map.of());
         when(userInfoPort.findByUserIds(any())).thenReturn(Map.of());
@@ -230,7 +230,7 @@ class AuditLogServiceTest {
 
     @Test
     void findAll_totalPagesCalculatedCorrectly() {
-        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(List.of());
+        when(auditRepository.findAll(any(), any(), any(), any(), any(), any(), any(PageParams.class))).thenReturn(List.of());
         when(auditRepository.count(any(), any(), any(), any(), any(), any())).thenReturn(25L);
 
         var result = service.findAll(null, null, null, null, null, null, 0, 10, null);
@@ -252,7 +252,7 @@ class AuditLogServiceTest {
         assertEquals("id-1", result.id());
         assertEquals("User", result.entidad());
         assertEquals("user-123", result.entidadId());
-        assertEquals(Action.UPDATE, result.accion());
+        assertEquals("UPDATE", result.accion());
         assertEquals("u-1", result.userId());
         assertEquals("/api/users", result.endpoint());
         assertEquals("127.0.0.1", result.ipAddress());
