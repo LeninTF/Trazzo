@@ -36,7 +36,26 @@ class IncidentStateChangeRequestTest {
     @Test
     void rejectWithMotivo() {
         var request = new IncidentStateChangeRequest(IncidentState.DENEGADO, null, "motivo");
+        var violations = validator.validate(request);
+        assertTrue(violations.isEmpty());
         assertEquals("motivo", request.motivoRechazo());
+    }
+
+    @Test
+    void rejectWithoutMotivoFailsValidation() {
+        var request = new IncidentStateChangeRequest(IncidentState.DENEGADO, null, null);
+        var violations = validator.validate(request);
+        assertEquals(1, violations.size());
+        var violation = violations.iterator().next();
+        assertEquals("motivo_rechazo", violation.getPropertyPath().toString());
+    }
+
+    @Test
+    void rejectWithBlankMotivoFailsValidation() {
+        var request = new IncidentStateChangeRequest(IncidentState.DENEGADO, null, "   ");
+        var violations = validator.validate(request);
+        assertEquals(1, violations.size());
+        assertEquals("motivo_rechazo", violations.iterator().next().getPropertyPath().toString());
     }
 
     @Test

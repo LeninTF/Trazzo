@@ -261,6 +261,78 @@ class IncidentTest {
         assertSame(type, incident.getType());
     }
 
+    @Test
+    void attachTypeWhenNotPendingThrowsException() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+        var type = IncidentType.create("Urgente", "Desc");
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.attachType(type)
+        );
+    }
+
+    @Test
+    void hydrateTypeOnApprovedIncidentDoesNotThrow() {
+        var now = LocalDateTime.now();
+        var originalUpdatedAt = now;
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, originalUpdatedAt
+        );
+        var type = IncidentType.create("Vacaciones", "Desc");
+
+        incident.hydrateType(type);
+
+        assertSame(type, incident.getType());
+        assertEquals(originalUpdatedAt, incident.getUpdatedAt());
+    }
+
+    @Test
+    void hydrateTypeOnDeniedIncidentDoesNotThrow() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.DENEGADO,
+                null, "reason", null, null, List.of(), now, now
+        );
+        var type = IncidentType.create("Permiso", "Desc");
+
+        incident.hydrateType(type);
+
+        assertSame(type, incident.getType());
+    }
+
+    @Test
+    void hydrateTypeWithNullSkipsAssignment() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+
+        incident.hydrateType(null);
+
+        assertNull(incident.getType());
+    }
+
+    @Test
+    void hydrateTypeWithInactiveTypeThrowsException() {
+        var now = LocalDateTime.now();
+        var inactiveType = IncidentType.restore("t-1", "Inactivo", "Desc", false, now, now);
+        var incident = Incident.restore(
+                "inc-1", "user-1", "type-1", IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.hydrateType(inactiveType)
+        );
+    }
+
     /* == ADD EVIDENCE TESTS == */
 
     @Test

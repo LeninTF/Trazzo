@@ -161,6 +161,18 @@ public class Incident {
 
     public void attachType(IncidentType type) {
         requirePending("Only pending incidents can accept a type");
+        assignActiveType(type);
+        touch();
+    }
+
+    public void hydrateType(IncidentType type) {
+        if (type == null) {
+            return;
+        }
+        assignActiveType(type);
+    }
+
+    private void assignActiveType(IncidentType type) {
         if (type == null) {
             throw new IllegalArgumentException("type is required");
         }
@@ -168,7 +180,6 @@ public class Incident {
             throw new InactiveIncidentTypeException("incident type must be active");
         }
         this.type = type;
-        touch();
     }
 
     public void addEvidence(IncidentEvidence evidence) {

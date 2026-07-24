@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
@@ -23,7 +23,17 @@ let incidentsData: IncidentProfile[];
 const mockApi = {
   incidents: {
     list: () => of({ content: incidentsData, page: 0, size: 100, totalElements: incidentsData.length, totalPages: 1 }),
-    changeState: (id: number, body: { state: 'APROBADO' | 'DENEGADO' }) => {
+    changeState: (id: number, body: { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string }) => {
+      if (body.state === 'DENEGADO' && (!body.motivo_rechazo || !body.motivo_rechazo.trim())) {
+        return throwError(() => ({
+          error: {
+            status: 400,
+            error: 'Validation Error',
+            message: 'motivo_rechazo is required when state is DENEGADO',
+            details: [{ field: 'motivo_rechazo', message: 'Debes ingresar un motivo para rechazar la incidencia.' }],
+          },
+        }));
+      }
       const inc = incidentsData.find(x => x.id === id);
       if (inc) inc.state = body.state;
       return of({} as any);
@@ -154,9 +164,29 @@ describe('Incidencias (admin-tenant)', () => {
     expect(component.modalOpen).toBeFalse();
   });
 
-  it('should rechazar solicitud', async () => {
-    const sol = component.solicitudes()[0];
-    await component.rechazar(sol);
+  it('should open rejection form on first rechazar click and not call api', async () => {
+    const spy = spyOn(mockApi.incidents, 'changeState').and.callThrough();
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    expect(component.showRejectionForm()).toBeTrue();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should show rejection error and not call api when motivo is empty', async () => {
+    const spy = spyOn(mockApi.incidents, 'changeState').and.callThrough();
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]); // abre form
+    await component.rechazar(component.solicitudes()[0]); // intenta sin motivo
+    expect(component.showRejectionError()).toBeTrue();
+    expect(spy).not.toHaveBeenCalled();
+    expect(component.modalOpen).toBeTrue();
+  });
+
+  it('should rechazar solicitud when motivo provided', async () => {
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]); // abre form
+    component.rejectionReason.set('Documentación insuficiente');
+    await component.rechazar(component.solicitudes()[0]); // confirma
     expect(component.solicitudes()[0].estado).toBe('Rechazado');
     expect(component.modalOpen).toBeFalse();
   });
@@ -168,11 +198,41 @@ describe('Incidencias (admin-tenant)', () => {
     expect(mockToast.error).toHaveBeenCalledWith('Error al aprobar');
   });
 
-  it('should show toast on rechazar error', async () => {
-    mockApi.incidents.changeState = () => throwError(() => new Error('fail'));
-    const sol = component.solicitudes()[0];
-    await component.rechazar(sol);
-    expect(mockToast.error).toHaveBeenCalledWith('Error al rechazar');
+  it('should show toast on rechazar error from api with other message', async () => {
+    mockApi.incidents.changeState = () => throwError(() => ({ error: { message: 'Server boom' } }));
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    component.rejectionReason.set('algo');
+    await component.rechazar(component.solicitudes()[0]);
+    expect(mockToast.error).toHaveBeenCalledWith('Server boom');
+  });
+
+  it('should set rejection error flag when api returns motivo_rechazo detail', async () => {
+    mockApi.incidents.changeState = () => throwError(() => ({
+      error: { details: [{ field: 'motivo_rechazo', message: 'Inválido' }] },
+    }));
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    component.rejectionReason.set('x');
+    await component.rechazar(component.solicitudes()[0]);
+    expect(component.showRejectionError()).toBeTrue();
+    expect(mockToast.error).toHaveBeenCalledWith('Inválido');
+  });
+
+  it('should clear showRejectionError when typing non-empty value', () => {
+    component.showRejectionError.set(true);
+    component.onRejectionReasonInput({ target: { value: 'texto' } } as unknown as Event);
+    expect(component.showRejectionError()).toBeFalse();
+  });
+
+  it('should toggleRejectionForm and clear state on cancel', () => {
+    component.showRejectionForm.set(true);
+    component.rejectionReason.set('x');
+    component.showRejectionError.set(true);
+    component.toggleRejectionForm();
+    expect(component.showRejectionForm()).toBeFalse();
+    expect(component.rejectionReason()).toBe('');
+    expect(component.showRejectionError()).toBeFalse();
   });
 
   it('should descargarArchivo', async () => {
@@ -271,8 +331,11 @@ describe('Incidencias (admin-tenant)', () => {
     it('should handle rechazar error gracefully', async () => {
       spyOn(mockApi.incidents, 'changeState').and.returnValue(throwError(() => new Error('fail')));
       component.openModal(component.solicitudes()[0]);
-      await component.rechazar(component.solicitudes()[0]);
-      expect(component.modalOpen).toBeFalse();
+      await component.rechazar(component.solicitudes()[0]); // abre form
+      component.rejectionReason.set('motivo');
+      await component.rechazar(component.solicitudes()[0]); // intenta confirmar
+      expect(component.modalOpen).toBeTrue();
+      expect(mockToast.error).toHaveBeenCalled();
     });
 
     it('should handle descargarArchivo HTTP error gracefully', async () => {

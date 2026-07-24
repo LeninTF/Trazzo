@@ -125,7 +125,7 @@ public class IncidentService implements IncidentUseCase {
         incidents.forEach(i -> {
             var type = typeMap.get(i.getIncidentTypeId());
             if (type != null) {
-                i.attachType(type);
+                i.hydrateType(type);
             }
         });
     }

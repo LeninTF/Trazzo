@@ -343,6 +343,7 @@ export interface IncidentProfile {
   incidencia_type_id: number;
   state: 'PENDIENTE' | 'APROBADO' | 'DENEGADO';
   comment: string | null;
+  rejection_reason?: string | null;
   tipo: IncidentTypeProfile;
   permiso: IncidentPermissionProfile | null;
   evidencias: IncidentEvidenceProfile[];

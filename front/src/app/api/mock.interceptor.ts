@@ -518,27 +518,33 @@ function handleIncidenteEstadoActions(
   _page: number, _size: number, _qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   const incStateMatch = /^\/incidentes\/(\d+)\/estado$/.exec(u);
-  if (incStateMatch && method === 'PATCH') {
-    const id = Number.parseInt(incStateMatch[1], 10);
-    const incident = mockIncidencias.find(i => i.id === id);
-    if (!incident) return _error(404, 'Incidencia no encontrada');
-    const body = req.body as { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string };
-    return ok({
-      ...incident,
-      state: body.state,
-      permiso: body.state === 'APROBADO' && body.days_granted
-        ? {
-            id: (incident.permiso?.id ?? 0) + 1,
-            incidencia_id: incident.id,
-            start_date: new Date().toISOString().slice(0, 10),
-            end_date: new Date(Date.now() + (body.days_granted * 86400000)).toISOString().slice(0, 10),
-            days_granted: body.days_granted,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }
-        : null,
-    } as typeof incident);
-  }
+    if (incStateMatch && method === 'PATCH') {
+      const id = Number.parseInt(incStateMatch[1], 10);
+      const incident = mockIncidencias.find(i => i.id === id);
+      if (!incident) return _error(404, 'Incidencia no encontrada');
+      const body = req.body as { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string };
+      if (body.state === 'DENEGADO' && (!body.motivo_rechazo || !body.motivo_rechazo.trim())) {
+        return _error(400, 'motivo_rechazo is required when state is DENEGADO', [
+          { field: 'motivo_rechazo', message: 'Debes ingresar un motivo para rechazar la incidencia.' },
+        ]);
+      }
+      return ok({
+        ...incident,
+        state: body.state,
+        rejection_reason: body.state === 'DENEGADO' ? body.motivo_rechazo : null,
+        permiso: body.state === 'APROBADO' && body.days_granted
+          ? {
+              id: (incident.permiso?.id ?? 0) + 1,
+              incidencia_id: incident.id,
+              start_date: new Date().toISOString().slice(0, 10),
+              end_date: new Date(Date.now() + (body.days_granted * 86400000)).toISOString().slice(0, 10),
+              days_granted: body.days_granted,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+          : null,
+      } as typeof incident);
+    }
 
   if (/^\/incidentes\/(\d+)\/notificar$/.test(u) && method === 'POST') {
     return accepted<MessageResponse>({ message: 'Notificación encolada para envío.', status: 'queued' });

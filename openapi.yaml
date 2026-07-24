@@ -1763,6 +1763,11 @@ components:
             Comentario o justificación del trabajador.
             Almacenado en Redis para acceso rápido.
           example: "Adjunto certificado médico por inasistencia del 15 al 17 de junio"
+        rejection_reason:
+          type: string
+          nullable: true
+          description: "Motivo del rechazo. Presente solo cuando `state = DENEGADO`."
+          example: "Documentación insuficiente"
         tipo:
           $ref: '#/components/schemas/IncidentTypeProfile'
         permiso:
@@ -4696,7 +4701,8 @@ paths:
         "400":
           description: |
             - Estado actual no es `PENDIENTE`.
-            - `motivo_rechazo` ausente al denegar.
+            - `motivo_rechazo` ausente o vacío al denegar (retorna `ErrorResponse`
+              con `details[]` incluyendo `field: "motivo_rechazo"`).
             - `days_granted` inválido.
           content:
             application/json:

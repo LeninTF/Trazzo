@@ -59,6 +59,11 @@ export class Incidencias implements OnInit {
   filterOpen = false;
   selectedSolicitud: IncidenciaSolicitud | null = null;
 
+  rejectionReason = signal('');
+  showRejectionError = signal(false);
+  rejecting = signal(false);
+  showRejectionForm = signal(false);
+
   filterEstado = signal<EstadoFilter>('Todos');
   filterTipo = signal<string>('');
 
@@ -141,13 +146,37 @@ export class Incidencias implements OnInit {
   openModal(solicitud: IncidenciaSolicitud): void {
     this.selectedSolicitud = solicitud;
     this.modalOpen = true;
+    this.rejectionReason.set('');
+    this.showRejectionError.set(false);
+    this.rejecting.set(false);
+    this.showRejectionForm.set(false);
     document.body.style.overflow = 'hidden';
   }
 
   closeModal(): void {
     this.modalOpen = false;
     this.selectedSolicitud = null;
+    this.rejectionReason.set('');
+    this.showRejectionError.set(false);
+    this.rejecting.set(false);
+    this.showRejectionForm.set(false);
     document.body.style.overflow = '';
+  }
+
+  toggleRejectionForm(): void {
+    this.showRejectionForm.set(!this.showRejectionForm());
+    if (!this.showRejectionForm()) {
+      this.rejectionReason.set('');
+      this.showRejectionError.set(false);
+    }
+  }
+
+  onRejectionReasonInput(event: Event): void {
+    const value = (event.target as HTMLTextAreaElement).value;
+    this.rejectionReason.set(value);
+    if (value.trim() && this.showRejectionError()) {
+      this.showRejectionError.set(false);
+    }
   }
 
   async aprobar(solicitud: IncidenciaSolicitud): Promise<void> {
@@ -162,14 +191,42 @@ export class Incidencias implements OnInit {
   }
 
   async rechazar(solicitud: IncidenciaSolicitud): Promise<void> {
+    if (!this.showRejectionForm()) {
+      this.showRejectionForm.set(true);
+      return;
+    }
+    const motivo = this.rejectionReason().trim();
+    if (!motivo) {
+      this.showRejectionError.set(true);
+      return;
+    }
+    this.rejecting.set(true);
     try {
-      await firstValueFrom(this.api.incidents.changeState(solicitud.id, { state: 'DENEGADO' }));
+      await firstValueFrom(
+        this.api.incidents.changeState(solicitud.id, {
+          state: 'DENEGADO',
+          motivo_rechazo: motivo,
+        }),
+      );
       await this.cargarIncidencias();
       this.toastService.success('Incidencia rechazada');
-    } catch {
-      this.toastService.error('Error al rechazar');
+      this.closeModal();
+    } catch (err) {
+      this.handleRejectionError(err as { error?: { details?: Array<{ field?: string; message?: string }> } });
+    } finally {
+      this.rejecting.set(false);
     }
-    this.closeModal();
+  }
+
+  private handleRejectionError(err: { error?: { details?: Array<{ field?: string; message?: string }>; message?: string } }): void {
+    const details = err?.error?.details;
+    const motivoDetail = Array.isArray(details) ? details.find(d => d?.field === 'motivo_rechazo') : null;
+    if (motivoDetail) {
+      this.showRejectionError.set(true);
+      this.toastService.error(motivoDetail.message ?? 'Debes ingresar un motivo para rechazar');
+    } else {
+      this.toastService.error(err?.error?.message ?? 'Error al rechazar');
+    }
   }
 
   async descargarArchivo(solicitud: IncidenciaSolicitud): Promise<void> {
