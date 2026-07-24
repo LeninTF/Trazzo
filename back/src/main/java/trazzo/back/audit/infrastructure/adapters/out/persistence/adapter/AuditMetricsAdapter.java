@@ -1,6 +1,7 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.adapter;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import trazzo.back.audit.application.port.out.AuditMetricsPort;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AuditMetricsAdapter implements AuditMetricsPort {
@@ -46,6 +48,7 @@ public class AuditMetricsAdapter implements AuditMetricsPort {
                     : jdbcTemplate.queryForObject(sql, Long.class, args);
             return result != null ? result : 0L;
         } catch (DataAccessException e) {
+            log.debug("Query failed (table may not exist in current schema): {}", e.getMessage());
             return 0L;
         }
     }

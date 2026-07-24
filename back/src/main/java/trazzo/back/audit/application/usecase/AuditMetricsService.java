@@ -26,7 +26,7 @@ public class AuditMetricsService implements AuditMetricsUseCase {
         long totalEventos = metricsPort.countAll();
         long recentCount = metricsPort.countSince(thirtyDaysAgo);
         long previousCount = metricsPort.countBetween(sixtyDaysAgo, thirtyDaysAgo);
-        long accionesDelete = metricsPort.countByAction("DELETE");
+        long errores = metricsPort.countByAction("DELETE");
         long sesionesActivas = metricsPort.countActiveSessions();
 
         double crecimiento = 0.0;
@@ -41,7 +41,7 @@ public class AuditMetricsService implements AuditMetricsUseCase {
 
         return new AuditMetricsResult(
                 totalEventos,
-                accionesDelete,
+                errores,
                 sesionesActivas,
                 Math.round(crecimiento * 10.0) / 10.0,
                 Math.round(porcentajeSesiones * 10.0) / 10.0

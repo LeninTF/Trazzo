@@ -35,7 +35,7 @@ class AuditMetricsServiceTest {
         var result = service.getMetrics();
 
         assertEquals(0, result.totalEventos());
-        assertEquals(0, result.accionesDelete());
+        assertEquals(0, result.errores());
         assertEquals(0, result.sesionesActivas());
         assertEquals(0.0, result.crecimiento());
         assertEquals(0.0, result.porcentajeSesiones());
@@ -52,7 +52,7 @@ class AuditMetricsServiceTest {
         var result = service.getMetrics();
 
         assertEquals(150, result.totalEventos());
-        assertEquals(5, result.accionesDelete());
+        assertEquals(5, result.errores());
         assertEquals(10, result.sesionesActivas());
         assertEquals(100.0, result.crecimiento(), 0.1);
         assertEquals(6.7, result.porcentajeSesiones(), 0.1);
@@ -69,7 +69,7 @@ class AuditMetricsServiceTest {
         var result = service.getMetrics();
 
         assertEquals(0, result.totalEventos());
-        assertEquals(0, result.accionesDelete());
+        assertEquals(0, result.errores());
         assertEquals(0, result.sesionesActivas());
         assertEquals(0.0, result.crecimiento());
         assertEquals(0.0, result.porcentajeSesiones());
@@ -86,7 +86,7 @@ class AuditMetricsServiceTest {
         var result = service.getMetrics();
 
         assertEquals(10, result.totalEventos());
-        assertEquals(1, result.accionesDelete());
+        assertEquals(1, result.errores());
         assertEquals(0, result.sesionesActivas());
         assertEquals(50.0, result.crecimiento(), 0.1);
         assertEquals(0.0, result.porcentajeSesiones());

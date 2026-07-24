@@ -14,7 +14,7 @@ class AuditMetricsResponseTest {
         var response = AuditMetricsResponse.from(result);
 
         assertThat(response.totalEventos()).isEqualTo(100);
-        assertThat(response.accionesDelete()).isEqualTo(5);
+        assertThat(response.errores()).isEqualTo(5);
         assertThat(response.sesionesActivas()).isEqualTo(20);
         assertThat(response.crecimiento()).isEqualTo(15.5);
         assertThat(response.porcentajeSesiones()).isEqualTo(20.0);
