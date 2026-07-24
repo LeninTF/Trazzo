@@ -15,7 +15,6 @@ import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.domain.model.IncidentType;
-import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -26,7 +25,6 @@ class IncidentServiceTest {
     private IncidentTypeRepositoryPort typeRepo;
     private TenantUserPort tenantUserPort;
     private EventPublisherPort eventPublisher;
-    private FileStoragePort fileStoragePort;
     private IncidentService service;
 
     @BeforeEach
@@ -35,9 +33,7 @@ class IncidentServiceTest {
         typeRepo = mock(IncidentTypeRepositoryPort.class);
         tenantUserPort = mock(TenantUserPort.class);
         eventPublisher = mock(EventPublisherPort.class);
-        fileStoragePort = mock(FileStoragePort.class);
-        when(fileStoragePort.buildPublicUrl(any())).thenReturn("http://public-url/test");
-        service = new IncidentService(incidentRepo, typeRepo, tenantUserPort, eventPublisher, fileStoragePort);
+        service = new IncidentService(incidentRepo, typeRepo, tenantUserPort, eventPublisher);
     }
 
     @Test

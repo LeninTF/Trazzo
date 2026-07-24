@@ -12,7 +12,6 @@ import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
-import trazzo.back.shared.application.port.out.FileStoragePort;
 import trazzo.back.incidents.domain.model.IncidentType;
 
 import java.time.LocalDate;
@@ -29,7 +28,6 @@ public class IncidentService implements IncidentUseCase {
     private final IncidentTypeRepositoryPort typeRepository;
     private final TenantUserPort tenantUserPort;
     private final EventPublisherPort eventPublisher;
-    private final FileStoragePort fileStoragePort;
 
     @Override
     public IncidentResult create(CreateIncidentCommand command) {
@@ -55,7 +53,7 @@ public class IncidentService implements IncidentUseCase {
     }
 
     @Override
-    public PaginatedResult<IncidentResult> findAll(String scope, String sedeId, String areaId,
+    public PaginatedResult<IncidentResult> findAll(String currentTenantUserId, String scope, String sedeId, String areaId,
                                                     String departamentoId, String state, String tipoId,
                                                     LocalDate desde, LocalDate hasta, String search,
                                                     int page, int size, String sort) {
@@ -63,8 +61,10 @@ public class IncidentService implements IncidentUseCase {
         LocalDateTime desdeDt = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDt = hasta != null ? hasta.plusDays(1).atStartOfDay() : null;
 
-        var incidents = incidentRepository.findAll(null, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
-        var total = incidentRepository.count(null, state, tipoId, desdeDt, hastaDt, search);
+        String tenantUserFilter = "SELF".equals(scope) ? currentTenantUserId : null;
+
+        var incidents = incidentRepository.findAll(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
+        var total = incidentRepository.count(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search);
 
         attachTypes(incidents);
 
@@ -123,7 +123,7 @@ public class IncidentService implements IncidentUseCase {
         incidents.forEach(i -> {
             var type = typeMap.get(i.getIncidentTypeId());
             if (type != null) {
-                i.attachType(type);
+                i.hydrateType(type);
             }
         });
     }
@@ -151,10 +151,14 @@ public class IncidentService implements IncidentUseCase {
 
         List<IncidentEvidenceResult> evidenciasResult = incident.getEvidences().stream()
                 .filter(e -> !e.isDeleted())
-                .map(e -> new IncidentEvidenceResult(e.getId(), e.getIncidentId(),
-                        e.getFileName(), e.getFileKey(), fileStoragePort.buildPublicUrl(e.getFileKey()),
-                        e.getMimeType(), e.getFileSize(),
-                        e.getCreatedAt(), e.getUpdatedAt()))
+                .map(e -> {
+                    String downloadUrl = "/api/v1/incidentes/" + e.getIncidentId()
+                            + "/evidencias/" + e.getId() + "/descarga";
+                    return new IncidentEvidenceResult(e.getId(), e.getIncidentId(),
+                            e.getFileName(), e.getFileKey(), downloadUrl,
+                            e.getMimeType(), e.getFileSize(),
+                            e.getCreatedAt(), e.getUpdatedAt());
+                })
                 .toList();
 
         IncidentResult.TenantUserBasicInfoResult tenantUserResult = null;

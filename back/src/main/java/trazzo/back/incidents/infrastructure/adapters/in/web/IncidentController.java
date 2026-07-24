@@ -2,8 +2,13 @@ package trazzo.back.incidents.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
@@ -12,8 +17,11 @@ import trazzo.back.incidents.application.port.in.EvidenceUseCase;
 import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
+import trazzo.back.shared.security.AuthenticatedUser;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 
 @RestController
@@ -25,12 +33,10 @@ public class IncidentController {
     private final EvidenceUseCase evidenceUseCase;
     private final NotificationUseCase notificationUseCase;
     private final FileStoragePort fileStoragePort;
-
-    private String buildPublicUrl(String fileKey) {
-        return fileStoragePort.buildPublicUrl(fileKey);
-    }
+    private final TenantUserPort tenantUserPort;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<IncidentListResponse> list(
             @RequestParam(required = false) String scope,
             @RequestParam(name = "sede_id", required = false) String sedeId,
@@ -42,22 +48,39 @@ public class IncidentController {
             @RequestParam(required = false) LocalDate hasta,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String sort
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
-        var result = incidentUseCase.findAll(scope, sedeId, areaId, departamentoId,
+        String tenantUserId = null;
+        if ("SELF".equals(scope) && user != null) {
+            tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
+                    .map(String::valueOf)
+                    .orElse(null);
+        }
+        var result = incidentUseCase.findAll(tenantUserId, scope, sedeId, areaId, departamentoId,
                 state, tipoId, desde, hasta, search, page, size, sort);
         return ResponseEntity.ok(IncidentListResponse.from(result, scope));
     }
 
     @PostMapping
-    public ResponseEntity<IncidentResponse> create(@Valid @RequestBody CreateIncidentRequest request) {
-        var command = new CreateIncidentCommand(request.tenantUserId(), request.incidenciaTypeId(), request.comment());
+    @PreAuthorize("hasAuthority('incidencias.crear')")
+    public ResponseEntity<IncidentResponse> create(
+            @Valid @RequestBody CreateIncidentRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        var tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró usuario de tenant para el usuario autenticado"));
+        var command = new CreateIncidentCommand(
+                String.valueOf(tenantUserId),
+                request.incidenciaTypeId(),
+                request.comment());
         var result = incidentUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentResponse.from(result));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<IncidentResponse> getById(@PathVariable String id) {
         return incidentUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(IncidentResponse.from(result)))
@@ -75,6 +98,7 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
     public ResponseEntity<IncidentResponse> changeState(
             @PathVariable String id,
             @Valid @RequestBody IncidentStateChangeRequest request
@@ -85,6 +109,7 @@ public class IncidentController {
     }
 
     @PostMapping("/{id}/evidencias")
+    @PreAuthorize("hasAuthority('incidencias.crear')")
     public ResponseEntity<IncidentEvidenceResponse> createEvidence(
             @PathVariable String id,
             @Valid @RequestBody CreateEvidenceRequest request
@@ -96,19 +121,39 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}/evidencias")
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<java.util.List<IncidentEvidenceResponse>> listEvidences(@PathVariable String id) {
         var results = evidenceUseCase.findAllByIncidentId(id);
         var response = results.stream().map(IncidentEvidenceResponse::from).toList();
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{id}/evidencias/{evidenceId}/descarga")
+    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
+    public ResponseEntity<InputStreamResource> downloadEvidence(
+            @PathVariable String id,
+            @PathVariable String evidenceId
+    ) {
+        var result = evidenceUseCase.findEvidence(id, evidenceId);
+        InputStream stream = fileStoragePort.downloadFile(result.fileKey());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(
+                result.mimeType() != null && !result.mimeType().isBlank() ? result.mimeType() : "application/octet-stream"));
+        headers.add(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"" + sanitizeFileName(result.fileName()) + "\"");
+        headers.setContentLength(result.fileSize());
+        return ResponseEntity.ok().headers(headers).body(new InputStreamResource(stream));
+    }
+
     @DeleteMapping("/{id}/evidencias/{evidenceId}")
+    @PreAuthorize("hasAuthority('incidencias.crear')")
     public ResponseEntity<Void> deleteEvidence(@PathVariable String id, @PathVariable String evidenceId) {
         evidenceUseCase.delete(id, evidenceId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/notificar")
+    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
     public ResponseEntity<Void> notify(@PathVariable String id, @Valid @RequestBody NotifyIncidentRequest request) {
         var command = new trazzo.back.incidents.application.dto.command.NotifyIncidentCommand(request.tipo());
         notificationUseCase.notify(id, command);
@@ -119,5 +164,16 @@ public class IncidentController {
     public ResponseEntity<Void> justify(@PathVariable String id) {
         notificationUseCase.justifyAttendance(id);
         return ResponseEntity.accepted().build();
+    }
+
+    private static String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "evidencia";
+        }
+        String sanitized = fileName.replaceAll("[\\r\\n\"]", "_");
+        if (sanitized.length() > 200) {
+            sanitized = sanitized.substring(0, 200);
+        }
+        return sanitized;
     }
 }

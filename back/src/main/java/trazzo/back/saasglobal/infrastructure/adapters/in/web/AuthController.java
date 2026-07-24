@@ -1,12 +1,17 @@
 package trazzo.back.saasglobal.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +31,8 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.RoleProfileResp
 import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.UsuarioResponse;
 import trazzo.back.shared.security.AuthenticatedUser;
 import trazzo.back.shared.security.JwtService;
+import trazzo.back.shared.security.TenantPermissionPort;
+import trazzo.back.shared.tenancy.TenantContext;
 
 @RestController
 @RequestMapping("/auth")
@@ -38,6 +45,7 @@ public class AuthController {
     private final PersonRepositoryPort personRepository;
     private final TenantRepositoryPort tenantRepository;
     private final RoleMasterRepositoryPort roleRepository;
+    private final TenantPermissionPort tenantPermissionPort;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -49,7 +57,27 @@ public class AuthController {
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + principal.email()));
 
         String tenantSchema = resolveTenantSchema(user.getTenantId());
-        String token = jwtService.generateToken(principal, tenantSchema);
+
+        AuthenticatedUser enrichedPrincipal = principal;
+        List<String> tenantPerms = List.of();
+        if (tenantSchema != null) {
+            TenantContext.set(tenantSchema);
+            try {
+                tenantPerms = tenantPermissionPort.findPermissionCodesByMasterUserId(
+                        UUID.fromString(user.getId()));
+                if (!tenantPerms.isEmpty()) {
+                    var merged = new ArrayList<GrantedAuthority>(principal.getAuthorities());
+                    tenantPerms.forEach(code -> merged.add(new SimpleGrantedAuthority(code)));
+                    enrichedPrincipal = new AuthenticatedUser(
+                            principal.id(), principal.email(), principal.password(),
+                            merged, principal.isEnabled());
+                }
+            } finally {
+                TenantContext.clear();
+            }
+        }
+
+        String token = jwtService.generateToken(enrichedPrincipal, tenantSchema);
 
         Person person = personRepository.findById(user.getPersonId())
                 .orElseThrow(() -> new IllegalStateException("Person not found for user: " + user.getId()));
@@ -68,7 +96,8 @@ public class AuthController {
                 user.getEmail(),
                 user.isActive() ? "ACTIVO" : "INACTIVO",
                 null,
-                roles
+                roles,
+                tenantPerms
         );
 
         return ResponseEntity.ok(new LoginResponse(token, "Bearer", usuario));
@@ -84,12 +113,6 @@ public class AuthController {
         ));
     }
 
-    /**
-     * SaaS-admin users have no tenant (tenantId is null) — their token carries no tenant
-     * claim. A tenant-scoped user must always resolve a schema: JwtAuthFilter defaults a
-     * missing claim to the "public" schema, so silently issuing a claim-less token here
-     * would route that tenant's requests to the master schema instead of failing loudly.
-     */
     private String resolveTenantSchema(String tenantId) {
         if (tenantId == null) {
             return null;

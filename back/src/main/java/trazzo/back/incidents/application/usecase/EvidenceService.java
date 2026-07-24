@@ -47,6 +47,18 @@ public class EvidenceService implements EvidenceUseCase {
     }
 
     @Override
+    public IncidentEvidenceResult findEvidence(String incidentId, String evidenceId) {
+        var incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
+        var evidence = incident.getEvidences().stream()
+                .filter(e -> e.getId() != null && e.getId().equals(evidenceId) && !e.isDeleted())
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Evidencia no encontrada: " + evidenceId + " en incidencia: " + incidentId));
+        return toResult(evidence);
+    }
+
+    @Override
     public void delete(String incidentId, String evidenceId) {
         var incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
@@ -59,12 +71,14 @@ public class EvidenceService implements EvidenceUseCase {
     }
 
     private IncidentEvidenceResult toResult(IncidentEvidence evidence) {
+        String downloadUrl = "/api/v1/incidentes/" + evidence.getIncidentId()
+                + "/evidencias/" + evidence.getId() + "/descarga";
         return new IncidentEvidenceResult(
                 evidence.getId(),
                 evidence.getIncidentId(),
                 evidence.getFileName(),
                 evidence.getFileKey(),
-                fileStoragePort.buildPublicUrl(evidence.getFileKey()),
+                downloadUrl,
                 evidence.getMimeType(),
                 evidence.getFileSize(),
                 evidence.getCreatedAt(),

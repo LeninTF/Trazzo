@@ -6,12 +6,14 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserProfileProjection;
 import trazzo.back.corehr.domain.model.TenantUserState;
 
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -28,14 +30,29 @@ class TenantUserJdbcAdapterTest {
     }
 
     @Test
-    void findBasicInfoByIdReturnsUser() {
-        var user = new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777");
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(user));
+    void findBasicInfoByIdReturnsUser() throws Exception {
+        var rs = mock(ResultSet.class);
+        when(rs.getLong("id")).thenReturn(1L);
+        when(rs.getString("name")).thenReturn("Juan");
+        when(rs.getString("father_surname")).thenReturn("Perez");
+        when(rs.getString("mother_surname")).thenReturn("Lopez");
+        when(rs.getString("email")).thenReturn("juan@mail.com");
+        when(rs.getString("phone")).thenReturn("999888777");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<RowMapper<TenantUserPort.TenantUserBasicInfo>> captor = ArgumentCaptor.forClass(RowMapper.class);
+        when(jdbc.query(anyString(), captor.capture(), anyLong())).thenAnswer(invocation -> {
+            RowMapper<TenantUserPort.TenantUserBasicInfo> mapper = captor.getValue();
+            return List.of(mapper.mapRow(rs, 0));
+        });
 
         var result = adapter.findBasicInfoById(1L);
 
         assertTrue(result.isPresent());
         assertEquals("Juan", result.get().nombre());
+        assertEquals("Perez", result.get().apellidoPaterno());
+        assertEquals("Lopez", result.get().apellidoMaterno());
+        assertEquals("juan@mail.com", result.get().email());
         assertEquals("999888777", result.get().phone());
     }
 

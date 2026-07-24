@@ -66,7 +66,7 @@
 				<i class="bi bi-chevron-down"></i>
 			</button>
 			<ul class="dropdown-menu dropdown-menu-end header-dropdown">
-				@for (rol of roles; track rol.value) {
+				@for (rol of roles(); track rol.value) {
 					<li>
 						<button type="button" class="dropdown-item" (click)="switchRoleAndNavigate(rol.value)">
 							@if (roleService.role() === rol.value) {

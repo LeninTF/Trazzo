@@ -23,11 +23,15 @@ export class Header {
   private readonly router = inject(Router);
   private readonly modalService = inject(ModalService);
 
-  protected readonly roles: { value: Role; label: string }[] = [
+  protected readonly allRoles: { value: Role; label: string }[] = [
     { value: 'admin-tenant', label: 'Administrador Tenant' },
     { value: 'admin-saas', label: 'Administrador SaaS' },
     { value: 'usuario', label: 'Usuario' },
   ];
+
+  protected readonly roles = computed(() =>
+    this.allRoles.filter(r => this.roleService.availableRoles().includes(r.value))
+  );
 
   protected settingsUrl = computed(() => {
     const role = this.roleService.role();

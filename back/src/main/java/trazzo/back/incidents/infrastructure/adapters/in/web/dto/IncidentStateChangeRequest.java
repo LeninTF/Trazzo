@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import trazzo.back.incidents.domain.model.IncidentState;
 
+@ValidMotivoRechazo
 public record IncidentStateChangeRequest(
         @NotNull IncidentState state,
         @JsonProperty("days_granted") Integer daysGranted,

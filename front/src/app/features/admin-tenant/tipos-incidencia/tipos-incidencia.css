@@ -1,0 +1,418 @@
+:host {
+  --page-blue: #1e40af;
+  --page-blue-dark: #17307d;
+  --page-blue-soft: #e8f0ff;
+  --page-ink: #0f172a;
+  --page-muted: #64748b;
+  --page-surface: #ffffff;
+  --page-border: rgba(30, 64, 175, 0.12);
+}
+
+.ti-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.ti-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--page-ink);
+  margin: 0;
+}
+
+.ti-subtitle {
+  font-size: 0.875rem;
+  color: var(--page-muted);
+  margin: 2px 0 0;
+}
+
+.ti-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ti-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 16px;
+  border-radius: 999px;
+  background: var(--page-blue-soft);
+  color: var(--page-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ti-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, var(--page-blue), var(--page-blue-dark));
+  border: none;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+}
+.ti-btn-primary:hover {
+  box-shadow: 0 6px 16px rgba(30,64,175,0.25);
+  transform: translateY(-2px);
+}
+
+.ti-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  background: transparent;
+  border: 1px solid var(--page-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+.ti-btn-outline:hover {
+  background: var(--page-blue-soft);
+  border-color: var(--page-blue);
+}
+
+/* Card */
+.ti-card {
+  background: var(--page-surface);
+  border: 1px solid var(--page-border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.ti-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #fafbff 0%, #f0f4ff 100%);
+  border-bottom: 1px solid var(--page-border);
+}
+
+.ti-card__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--page-ink);
+  margin: 0;
+}
+
+.ti-card__body {
+  padding: 0;
+}
+
+/* Table */
+.ti-table-responsive {
+  overflow-x: auto;
+}
+
+.ti-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ti-table thead th {
+  padding: 12px 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--page-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #fafbff;
+  border-bottom: 1px solid var(--page-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.ti-table tbody tr {
+  border-bottom: 1px solid rgba(30,64,175,0.06);
+  transition: background 160ms ease;
+}
+.ti-table tbody tr:last-child { border-bottom: none; }
+.ti-table tbody tr:hover { background: #f8faff; }
+
+.ti-table td {
+  padding: 14px 22px;
+  font-size: 14px;
+  color: var(--page-ink);
+  vertical-align: middle;
+}
+
+.ti-row--editing {
+  background: #fefce8 !important;
+}
+
+.ti-tipo-name {
+  font-weight: 600;
+  color: var(--page-ink);
+}
+
+.ti-tipo-desc {
+  color: var(--page-muted);
+  font-size: 13px;
+}
+
+.ti-td-date {
+  font-size: 13px;
+  color: var(--page-muted);
+  white-space: nowrap;
+}
+
+/* Status badge */
+.ti-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ti-status__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.ti-status--active {
+  background: #d1fae5;
+  color: #059669;
+}
+.ti-status--active .ti-status__dot {
+  background: #059669;
+}
+
+.ti-status--inactive {
+  background: #fef2f2;
+  color: #ef4444;
+}
+.ti-status--inactive .ti-status__dot {
+  background: #ef4444;
+}
+
+/* Actions */
+.ti-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ti-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 160ms ease;
+  flex-shrink: 0;
+}
+.ti-icon-btn--ghost { background: transparent; color: var(--page-muted); }
+.ti-icon-btn--ghost:hover { background: var(--page-blue-soft); color: var(--page-blue); }
+.ti-icon-btn--success { background: #d1fae5; color: #059669; }
+.ti-icon-btn--success:hover { background: #059669; color: #fff; }
+.ti-icon-btn--warning { background: #fef3c7; color: #d97706; }
+.ti-icon-btn--warning:hover { background: #d97706; color: #fff; }
+.ti-icon-btn--danger { background: #fef2f2; color: #ef4444; }
+.ti-icon-btn--danger:hover { background: #ef4444; color: #fff; }
+
+/* Toggle switch */
+.ti-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.ti-toggle-input {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #e2e8f0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 200ms ease;
+  flex-shrink: 0;
+}
+.ti-toggle-input:checked {
+  background: #059669;
+}
+
+.ti-toggle-slider {
+  display: none;
+}
+
+.ti-toggle-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--page-muted);
+}
+
+/* Input */
+.ti-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--page-border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--page-ink);
+  background: var(--page-surface);
+  transition: border-color 160ms ease;
+}
+.ti-input:focus {
+  outline: none;
+  border-color: var(--page-blue);
+  box-shadow: 0 0 0 3px rgba(30,64,175,0.08);
+}
+.ti-input.is-invalid {
+  border-color: #ef4444;
+}
+
+.ti-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.ti-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--page-ink);
+  margin-bottom: 6px;
+}
+
+.ti-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+}
+
+/* Empty */
+.ti-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: var(--page-muted);
+  font-size: 14px;
+}
+
+/* ── Modal ── */
+.ti-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1040;
+  animation: ti-fade-in 0.15s ease;
+}
+
+.ti-modal-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ti-modal-dialog {
+  width: 100%;
+  max-width: 480px;
+  animation: ti-scale-in 0.2s ease;
+}
+
+@keyframes ti-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ti-scale-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ti-modal {
+  background: var(--page-surface);
+  border-radius: 1.5rem;
+  border: none;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.ti-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--page-border);
+}
+
+.ti-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--page-blue-soft), #dbeafe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--page-blue);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ti-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--page-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+.ti-modal-close:hover { background: #f1f5f9; color: var(--page-ink); }
+
+.ti-modal-body { padding: 20px 28px; }
+
+.ti-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 28px 24px;
+  border-top: 1px solid var(--page-border);
+}
+
+.ti-btn-ghost {
+  padding: 10px 20px;
+  border: 1px solid var(--page-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--page-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+.ti-btn-ghost:hover { border-color: var(--page-blue); color: var(--page-blue); background: var(--page-blue-soft); }
+
+.ti-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }

@@ -7,13 +7,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,16 +29,20 @@ import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
+import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
+import trazzo.back.shared.security.AuthenticatedUser;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(IncidentController.class)
-@WithMockUser
+@EnableMethodSecurity
 class IncidentControllerTest {
 
     @Autowired
@@ -51,10 +60,14 @@ class IncidentControllerTest {
     @MockitoBean
     private FileStoragePort fileStoragePort;
 
+    @MockitoBean
+    private TenantUserPort tenantUserPort;
+
     private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private IncidentResult sampleResult;
     private IncidentEvidenceResult sampleEvidenceResult;
+    private AuthenticatedUser testUser;
 
     @BeforeEach
     void setUp() {
@@ -62,13 +75,27 @@ class IncidentControllerTest {
         sampleResult = new IncidentResult("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), null, now, now);
         sampleEvidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
-                "file-key", "http://url", "pdf", 100, now, now);
+                "file-key", "/api/v1/incidentes/inc-1/evidencias/ev-1/descarga", "application/pdf", 100, now, now);
+        testUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                "test@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("incidencias.ver-propias"),
+                        new SimpleGrantedAuthority("incidencias.crear"),
+                        new SimpleGrantedAuthority("incidencias.aprobar-rechazar")), true);
+        var auth = new UsernamePasswordAuthenticationToken(testUser, null, testUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
     void listReturns200() throws Exception {
         var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
-        when(incidentUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+        when(incidentUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
                 .thenReturn(paginated);
 
         mockMvc.perform(get("/incidentes")
@@ -79,16 +106,76 @@ class IncidentControllerTest {
     }
 
     @Test
+    void listWithScopeSelfResolvesTenantUser() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
+        when(incidentUseCase.findAll(eq("42"), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("scope", "SELF")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("inc-1"))
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+
+        verify(tenantUserPort).findIdByMasterUserId(testUser.id());
+    }
+
+    @Test
+    void listWithScopeSelfTenantUserNotMappedPassesNull() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
+        when(incidentUseCase.findAll(isNull(), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("scope", "SELF")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+    }
+
+    @Test
+    void listScopeAllPassesNullTenantUserId() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(incidentUseCase.findAll(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+                .thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk());
+
+        verify(tenantUserPort, never()).findIdByMasterUserId(any());
+    }
+
+    @Test
     void createReturns201() throws Exception {
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
         when(incidentUseCase.create(any())).thenReturn(sampleResult);
 
-        var request = new CreateIncidentRequest("u-1", "comment", "t-1");
+        var request = new CreateIncidentRequest("t-1", "comment");
         mockMvc.perform(post("/incidentes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("inc-1"));
+    }
+
+    @Test
+    void createReturns400WhenTenantUserNotFound() throws Exception {
+        when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
+
+        var request = new CreateIncidentRequest("t-1", "comment");
+        mockMvc.perform(post("/incidentes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -138,13 +225,14 @@ class IncidentControllerTest {
     void createEvidenceReturns201() throws Exception {
         when(evidenceUseCase.create(anyString(), any())).thenReturn(sampleEvidenceResult);
 
-        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "pdf", 100);
+        var request = new CreateEvidenceRequest("doc.pdf", "file-key", "application/pdf", 100);
         mockMvc.perform(post("/incidentes/inc-1/evidencias")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.file_name").value("doc.pdf"));
+                .andExpect(jsonPath("$.file_name").value("doc.pdf"))
+                .andExpect(jsonPath("$.download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
     }
 
     @Test
@@ -153,7 +241,8 @@ class IncidentControllerTest {
 
         mockMvc.perform(get("/incidentes/inc-1/evidencias"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].file_name").value("doc.pdf"));
+                .andExpect(jsonPath("$[0].file_name").value("doc.pdf"))
+                .andExpect(jsonPath("$[0].download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
     }
 
     @Test
@@ -163,6 +252,44 @@ class IncidentControllerTest {
         mockMvc.perform(delete("/incidentes/inc-1/evidencias/ev-1")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void downloadEvidenceReturns200() throws Exception {
+        when(evidenceUseCase.findEvidence("inc-1", "ev-1")).thenReturn(sampleEvidenceResult);
+        InputStream stream = new java.io.ByteArrayInputStream("evidence-bytes".getBytes());
+        when(fileStoragePort.downloadFile("file-key")).thenReturn(stream);
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("attachment; filename=\"doc.pdf\"")))
+                .andExpect(header().longValue("Content-Length", 100));
+    }
+
+    @Test
+    void downloadEvidenceReturns404WhenEvidenceNotFound() throws Exception {
+        when(evidenceUseCase.findEvidence("inc-1", "missing"))
+                .thenThrow(new IllegalArgumentException("Evidencia no encontrada: missing"));
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/missing/descarga"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void downloadEvidenceReturns403WhenMissingPermission() throws Exception {
+        var restrictedUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                "restricted@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+        var restrictedAuth = new UsernamePasswordAuthenticationToken(restrictedUser, null, restrictedUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(restrictedAuth);
+
+        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(evidenceUseCase);
+        verifyNoInteractions(fileStoragePort);
     }
 
     @Test
@@ -184,5 +311,20 @@ class IncidentControllerTest {
         mockMvc.perform(post("/incidentes/inc-1/justificar")
                         .with(csrf()))
                 .andExpect(status().isAccepted());
+    }
+
+    @Test
+    void listReturns403WhenMissingAuthority() throws Exception {
+        var restrictedUser = new AuthenticatedUser(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                "restricted@mail.com", "pass",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")), true);
+        var restrictedAuth = new UsernamePasswordAuthenticationToken(restrictedUser, null, restrictedUser.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(restrictedAuth);
+
+        mockMvc.perform(get("/incidentes")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isForbidden());
     }
 }

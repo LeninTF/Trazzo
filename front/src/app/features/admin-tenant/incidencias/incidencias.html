@@ -317,12 +317,50 @@
             <i class="bi bi-check-circle me-2"></i>
             Aprobar
           </button>
-          <button class="btn btn-rechazar" (click)="rechazar(selectedSolicitud)">
-            <i class="bi bi-x-circle me-2"></i>
-            Rechazar
-          </button>
+          @if (!showRejectionForm()) {
+            <button class="btn btn-rechazar" (click)="toggleRejectionForm()">
+              <i class="bi bi-x-circle me-2"></i>
+              Rechazar
+            </button>
+          }
         }
       </div>
+
+      @if (showRejectionForm() && selectedSolicitud.estado === 'Pendiente') {
+        <div class="rejection-form">
+          <div class="rejection-form-header">
+            <span class="rejection-form-title">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Motivo de rechazo
+            </span>
+            <button class="rejection-cancel" type="button" (click)="toggleRejectionForm()" title="Cancelar rechazo">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <p class="rejection-form-help">Indica el motivo por el que se rechaza esta incidencia. Es obligatorio y será visible para el colaborador.</p>
+          <textarea
+            class="rejection-textarea"
+            [class.has-error]="showRejectionError()"
+            [value]="rejectionReason()"
+            (input)="onRejectionReasonInput($event)"
+            placeholder="Ej: Documentación insuficiente, fuera del rango permitido..."
+            rows="3"
+            maxlength="500"></textarea>
+          @if (showRejectionError()) {
+            <p class="rejection-error-msg">
+              <i class="bi bi-exclamation-circle me-1"></i>
+              Debes ingresar un motivo para rechazar la incidencia.
+            </p>
+          }
+          <div class="rejection-form-actions">
+            <button class="btn btn-secondary" type="button" (click)="toggleRejectionForm()">Cancelar</button>
+            <button class="btn btn-rechazar" type="button" [disabled]="rejecting()" (click)="rechazar(selectedSolicitud)">
+              <i class="bi bi-x-circle me-2"></i>
+              Confirmar rechazo
+            </button>
+          </div>
+        </div>
+      }
     </div>
   </div>
 }

@@ -1,17 +1,57 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { IncidentsService } from '../../../api/services/incidents.service';
+import type { IncidentProfile } from '../../../api/types';
+import { ToastService } from '../../../services/toast.service';
+import { validateFile, formatFileSize, FileValidationResult } from '../../../shared/storage/file-validator';
+import { downloadWithAuth } from '../../../shared/storage/download';
 
 interface Incidencia {
   id: string;
+  numericId: number;
   tipo: string;
   descripcion: string;
   fecha: string;
   dias: number;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
-  archivo: { nombre: string; tamano: string } | null;
+  archivo: {
+    nombre: string;
+    tamano: string;
+    evidenciaId: number;
+    downloadUrl: string;
+  } | null;
 }
 
 type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
+
+const STATE_MAP: Record<string, 'Pendiente' | 'Aprobado' | 'Rechazado'> = {
+  PENDIENTE: 'Pendiente', APROBADO: 'Aprobado', DENEGADO: 'Rechazado',
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+function toIncidencia(inc: IncidentProfile): Incidencia {
+  const e = inc.evidencias?.[0];
+  return {
+    id: `#INC-${inc.id}`,
+    numericId: inc.id,
+    tipo: inc.tipo.nombre,
+    descripcion: inc.comment ?? '',
+    fecha: inc.created_at ? formatDate(inc.created_at) : '',
+    dias: inc.permiso?.days_granted ?? 1,
+    estado: STATE_MAP[inc.state] ?? 'Pendiente',
+    archivo: e ? {
+      nombre: e.file_name,
+      tamano: formatFileSize(e.file_size),
+      evidenciaId: e.id,
+      downloadUrl: e.download_url,
+    } : null,
+  };
+}
 
 @Component({
   selector: 'app-incidencias',
@@ -20,15 +60,21 @@ type EstadoFilter = 'Todos' | 'Pendiente' | 'Aprobado' | 'Rechazado';
   templateUrl: './incidencias.html',
   styleUrl: './incidencias.css',
 })
-export class Incidencias {
+export class Incidencias implements OnInit {
+  private readonly incidentsService = inject(IncidentsService);
+  private readonly toast = inject(ToastService);
+
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly uploading = signal(false);
+  readonly fileError = signal('');
   mostrarModalCrear = false;
   mostrarModalDetalle = false;
   selectedIncidencia: Incidencia | null = null;
   filterEstado = signal<EstadoFilter>('Todos');
 
-  tiposDisponibles = ['Permiso Personal', 'Justificación de Falta', 'Cambio de Turno', 'Vacaciones'];
+  tiposDisponibles: string[] = [];
+  private tipoNameToId = new Map<string, number>();
 
   nuevaIncidencia = {
     tipo: '',
@@ -38,14 +84,32 @@ export class Incidencias {
     archivo: null as File | null,
   };
 
-  incidencias = signal<Incidencia[]>([
-    { id: '#INC-006', tipo: 'Permiso Personal', descripcion: 'Trámite bancario - medio día', fecha: '05/06/2026', dias: 1, estado: 'Pendiente', archivo: null },
-    { id: '#INC-005', tipo: 'Permiso Personal', descripcion: 'Cita médica - 4 horas', fecha: '01/06/2026', dias: 1, estado: 'Aprobado', archivo: null },
-    { id: '#INC-004', tipo: 'Justificación de Falta', descripcion: 'Emergencia familiar - 27/05', fecha: '27/05/2026', dias: 2, estado: 'Aprobado', archivo: { nombre: 'justificacion.pdf', tamano: '0.5 MB' } },
-    { id: '#INC-003', tipo: 'Cambio de Turno', descripcion: 'Solicitud de intercambio con J. Pérez para el 10/06', fecha: '25/05/2026', dias: 1, estado: 'Aprobado', archivo: null },
-    { id: '#INC-002', tipo: 'Permiso Personal', descripcion: 'Día personal solicitado para el 15/06', fecha: '20/05/2026', dias: 1, estado: 'Rechazado', archivo: null },
-    { id: '#INC-001', tipo: 'Justificación de Falta', descripcion: 'Problema de salud - 15/05', fecha: '16/05/2026', dias: 3, estado: 'Aprobado', archivo: { nombre: 'certificado-medico.pdf', tamano: '1.2 MB' } },
-  ]);
+  incidencias = signal<Incidencia[]>([]);
+
+  ngOnInit(): void {
+    this.cargarDatos();
+  }
+
+  async cargarDatos(): Promise<void> {
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const [tiposRes, incRes] = await Promise.all([
+        firstValueFrom(this.incidentsService.listTypes({ activo: true, size: 10 })),
+        firstValueFrom(this.incidentsService.list({ size: 10, scope: 'SELF' })),
+      ]);
+      this.tiposDisponibles = tiposRes.content.map(t => t.nombre);
+      this.tipoNameToId.clear();
+      for (const t of tiposRes.content) {
+        this.tipoNameToId.set(t.nombre, t.id);
+      }
+      this.incidencias.set(incRes.content.map(toIncidencia));
+    } catch {
+      this.error.set('Error al cargar las incidencias. Intenta de nuevo.');
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   get filtradas() {
     return this.incidencias().filter(i =>
@@ -79,6 +143,7 @@ export class Incidencias {
 
   abrirModalCrear(): void {
     this.nuevaIncidencia = { tipo: '', fecha: '', dias: 1, descripcion: '', archivo: null };
+    this.fileError.set('');
     this.mostrarModalCrear = true;
     document.body.style.overflow = 'hidden';
   }
@@ -100,49 +165,86 @@ export class Incidencias {
     document.body.style.overflow = '';
   }
 
-  onFileChange(event: Event): void {
+  async onFileChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      this.nuevaIncidencia.archivo = input.files[0];
+    this.fileError.set('');
+    if (!input.files || input.files.length === 0) {
+      this.nuevaIncidencia.archivo = null;
+      return;
+    }
+    const file = input.files[0];
+    const result: FileValidationResult = await validateFile(file);
+    if (!result.valid) {
+      this.nuevaIncidencia.archivo = null;
+      const firstError = result.errors[0]?.message ?? 'Archivo inválido.';
+      this.fileError.set(firstError);
+      this.toast.error(firstError);
+      input.value = '';
+      return;
+    }
+    this.nuevaIncidencia.archivo = file;
+  }
+
+  removeFile(event: Event): void {
+    event.stopPropagation();
+    this.nuevaIncidencia.archivo = null;
+    this.fileError.set('');
+  }
+
+  async enviar(): Promise<void> {
+    if (!this.nuevaIncidencia.tipo || !this.nuevaIncidencia.descripcion) return;
+
+    const typeId = this.tipoNameToId.get(this.nuevaIncidencia.tipo);
+    if (!typeId) return;
+
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const created = await firstValueFrom(this.incidentsService.create({
+        incidencia_type_id: typeId,
+        comment: this.nuevaIncidencia.descripcion,
+      }));
+
+      if (this.nuevaIncidencia.archivo) {
+        await this.uploadEvidence(created.id, this.nuevaIncidencia.archivo);
+      }
+
+      await this.cargarDatos();
+      this.cerrarModalCrear();
+      this.toast.success('Incidencia registrada correctamente.');
+    } catch (err) {
+      this.error.set('Error al crear la incidencia.');
+      this.toast.error('Error al crear la incidencia.');
+    } finally {
+      this.loading.set(false);
     }
   }
 
-  enviar(): void {
-    if (!this.nuevaIncidencia.tipo || !this.nuevaIncidencia.descripcion) return;
-
-    const ahora = new Date();
-    const fechaLocal = `${String(ahora.getDate()).padStart(2, '0')}/${String(ahora.getMonth() + 1).padStart(2, '0')}/${ahora.getFullYear()}`;
-
-    const ids = this.incidencias().map(i => parseInt(i.id.replace('#INC-', ''), 10));
-    const nextId = Math.max(0, ...ids) + 1;
-
-    const nueva: Incidencia = {
-      id: `#INC-${String(nextId).padStart(3, '0')}`,
-      tipo: this.nuevaIncidencia.tipo,
-      descripcion: this.nuevaIncidencia.descripcion,
-      fecha: this.nuevaIncidencia.fecha || fechaLocal,
-      dias: this.nuevaIncidencia.dias,
-      estado: 'Pendiente',
-      archivo: this.nuevaIncidencia.archivo
-        ? { nombre: this.nuevaIncidencia.archivo.name, tamano: this.formatSize(this.nuevaIncidencia.archivo.size) }
-        : null,
-    };
-
-    this.incidencias.update(list => [nueva, ...list]);
-    this.cerrarModalCrear();
+  private async uploadEvidence(incidentId: number, file: File): Promise<void> {
+    this.uploading.set(true);
+    try {
+      const contentType = file.type || 'application/octet-stream';
+      const presigned = await firstValueFrom(
+        this.incidentsService.getPresignedUrl(file.name, contentType, incidentId)
+      );
+      await firstValueFrom(this.incidentsService.uploadToR2(presigned.presigned_url, file, contentType));
+      await firstValueFrom(this.incidentsService.createEvidence(incidentId, {
+        file_name: file.name,
+        file_key: presigned.object_key,
+        mime_type: contentType,
+        file_size: file.size,
+      }));
+    } finally {
+      this.uploading.set(false);
+    }
   }
 
-  descargarArchivo(inc: Incidencia): void {
+  async descargarArchivo(inc: Incidencia): Promise<void> {
     if (!inc.archivo) return;
-    const link = document.createElement('a');
-    link.href = '#';
-    link.download = inc.archivo.nombre;
-    link.click();
-  }
-
-  private formatSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    try {
+      await downloadWithAuth(inc.archivo.downloadUrl, { fileName: inc.archivo.nombre });
+    } catch {
+      this.toast.error('No se pudo descargar el archivo.');
+    }
   }
 }

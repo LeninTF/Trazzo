@@ -17,11 +17,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
+import trazzo.back.shared.security.TenantPermissionPort;
 
 @ExtendWith(MockitoExtension.class)
 class UserDetailsServiceImplTest {
 
     @Mock UserRepositoryPort userRepository;
+    @Mock TenantPermissionPort tenantPermissionPort;
     @InjectMocks UserDetailsServiceImpl service;
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -31,7 +33,7 @@ class UserDetailsServiceImplTest {
     void loadUserByUsername_returnsUserDetails_whenUserExists() {
         LocalDateTime now = LocalDateTime.now();
         User user = User.restore(USER_ID.toString(), 1, null, "admin@test.com", null,
-                "hashed_pass", List.of("ADMIN"), List.of(), false, now, now, null);
+                "hashed_pass", List.of("admin_trazzo"), List.of(), false, now, now, null);
         when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
 
         UserDetails details = service.loadUserByUsername("admin@test.com");
@@ -39,8 +41,22 @@ class UserDetailsServiceImplTest {
         assertThat(details.getUsername()).isEqualTo("admin@test.com");
         assertThat(details.getPassword()).isEqualTo("hashed_pass");
         var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
-        assertThat(authorities).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_SAAS_ADMIN");
+        assertThat(authorities).containsExactlyInAnyOrder("ROLE_admin_trazzo", "ROLE_SAAS_ADMIN");
         assertThat(details.isEnabled()).isTrue();
+    }
+
+    @Test
+    void loadUserByUsername_doesNotGrantSaasAdmin_whenRoleIsNotAdminTrazzo() {
+        LocalDateTime now = LocalDateTime.now();
+        User user = User.restore(USER_ID.toString(), 1, null, "user@test.com", null,
+                "hashed_pass", List.of("financiero"), List.of(), false, now, now, null);
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("user@test.com");
+
+        var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        assertThat(authorities).containsExactly("ROLE_financiero");
+        assertThat(authorities).doesNotContain("ROLE_SAAS_ADMIN");
     }
 
     @Test
@@ -56,7 +72,7 @@ class UserDetailsServiceImplTest {
 
         var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
         assertThat(authorities).containsExactlyInAnyOrder(
-                "ROLE_financiero", "ROLE_SAAS_ADMIN",
+                "ROLE_financiero",
                 "billing-suscripciones.gestionar-pagos", "monitoreo-sistema.dashboard-global");
     }
 

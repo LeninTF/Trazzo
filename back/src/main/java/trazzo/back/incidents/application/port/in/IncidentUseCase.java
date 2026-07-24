@@ -12,7 +12,7 @@ import java.util.Optional;
 public interface IncidentUseCase {
     IncidentResult create(CreateIncidentCommand command);
     Optional<IncidentResult> findById(String id);
-    PaginatedResult<IncidentResult> findAll(String scope, String sedeId, String areaId,
+    PaginatedResult<IncidentResult> findAll(String currentTenantUserId, String scope, String sedeId, String areaId,
                                              String departamentoId, String state, String tipoId,
                                              LocalDate desde, LocalDate hasta, String search,
                                              int page, int size, String sort);

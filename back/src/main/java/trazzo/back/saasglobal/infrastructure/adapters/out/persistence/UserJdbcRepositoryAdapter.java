@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.List;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
+import javax.sql.DataSource;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -16,8 +16,15 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 @Repository
-@RequiredArgsConstructor
 public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
+
+    private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate namedJdbc;
+
+    public UserJdbcRepositoryAdapter(javax.sql.DataSource rawDataSource) {
+        this.jdbc = new JdbcTemplate(rawDataSource);
+        this.namedJdbc = new NamedParameterJdbcTemplate(rawDataSource);
+    }
 
     private static final String BASE_SELECT = """
             SELECT u.id, u.person_id, u.tenant_id, u.email, u.phone, u.password,
@@ -40,9 +47,6 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
             WHERE u.tenant_id IS NULL AND u.deleted_at IS NULL
               AND (:search IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')))
             """;
-
-    private final JdbcTemplate jdbc;
-    private final NamedParameterJdbcTemplate namedJdbc;
 
     @Override
     public Optional<User> findByEmail(String email) {

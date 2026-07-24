@@ -7,7 +7,7 @@ public record IncidentEvidenceResult(
         String incidenciaId,
         String fileName,
         String fileKey,
-        String fileUrl,
+        String downloadUrl,
         String mimeType,
         int fileSize,
         LocalDateTime createdAt,

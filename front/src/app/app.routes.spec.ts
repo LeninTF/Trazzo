@@ -2,8 +2,8 @@ import { routes } from './app.routes';
 import { authGuard } from './auth/auth.guard';
 
 describe('app.routes', () => {
-  it('should have 35 route definitions', () => {
-    expect(routes.length).toBe(35);
+  it('should have 36 route definitions', () => {
+    expect(routes.length).toBe(36);
   });
 
   it('should define public routes', () => {
@@ -24,6 +24,7 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/dashboard');
     expect(paths).toContain('tenant/monitoreo');
     expect(paths).toContain('tenant/incidencias');
+    expect(paths).toContain('tenant/tipos-incidencia');
     expect(paths).toContain('tenant/reglas-asistencia');
     expect(paths).toContain('tenant/sedes');
     expect(paths).toContain('tenant/gestion-roles');

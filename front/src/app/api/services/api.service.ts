@@ -76,6 +76,10 @@ export class ApiService {
   createEvidence = this.incidents.createEvidence.bind(this.incidents);
   /** @deprecated Use `api.incidents.deleteEvidence()` */
   deleteEvidence = this.incidents.deleteEvidence.bind(this.incidents);
+  /** @deprecated Use `api.incidents.getPresignedUrl()` */
+  getPresignedUrl = this.incidents.getPresignedUrl.bind(this.incidents);
+  /** @deprecated Use `api.incidents.uploadToR2()` */
+  uploadToR2 = this.incidents.uploadToR2.bind(this.incidents);
   /** @deprecated Use `api.horarios.listShifts()` */
   listShifts = this.horarios.listShifts.bind(this.horarios);
   /** @deprecated Use `api.horarios.createShift()` */

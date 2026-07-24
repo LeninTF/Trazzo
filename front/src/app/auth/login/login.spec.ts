@@ -28,6 +28,7 @@ describe('Login', () => {
       status: 'ACTIVO',
       ultimo_acceso: '',
       rol: [{ id: 1, name: 'admin_trazzo', permissions: {} }],
+      tenant_permissions: [],
     },
   };
 
@@ -43,6 +44,7 @@ describe('Login', () => {
       status: 'ACTIVO',
       ultimo_acceso: '',
       rol: [{ id: 2, name: 'admin_tenant', permissions: {} }],
+      tenant_permissions: [],
     },
   };
 

@@ -44,7 +44,11 @@ FROM (VALUES
     ('notificaciones-docente.recibir-alertas', 'Recibir alertas'),
     ('notificaciones-docente.ver-cambios-horario', 'Ver cambios de horario'),
     ('perfil.ver-actualizar-datos', 'Ver/actualizar datos personales'),
-    ('perfil.cambiar-contrasena', 'Cambiar contraseña')
+    ('perfil.cambiar-contrasena', 'Cambiar contraseña'),
+    ('incidencias.ver-propias', 'Ver incidencias propias'),
+    ('incidencias.crear', 'Crear incidencias'),
+    ('incidencias.aprobar-rechazar', 'Aprobar/rechazar incidencias'),
+    ('administrador_tenant', 'Acceso completo al panel de administración del tenant')
 ) AS seed(name, description)
 WHERE NOT EXISTS (SELECT 1 FROM permissions p WHERE p.name = seed.name);
 
@@ -55,7 +59,8 @@ FROM (VALUES
     ('director', 'El Director puede supervisar la estructura organizacional, revisar reportes y aprobar incidencias, con acceso a la mayoría de módulos operativos.'),
     ('coordinador', 'El Coordinador gestiona horarios, control de asistencia y trabajadores a su cargo, con permisos limitados a módulos operativos.'),
     ('recursos-humanos', 'RRHH administra trabajadores, corrige marcaciones, gestiona permisos y licencias, y puede exportar reportes.'),
-    ('docente', 'El Docente puede registrar su asistencia, consultar horarios, realizar solicitudes de corrección y gestionar su perfil personal.')
+    ('docente', 'El Docente puede registrar su asistencia, consultar horarios, realizar solicitudes de corrección y gestionar su perfil personal.'),
+    ('usuario', 'El Usuario tiene acceso básico a incidencias, historial de asistencia y perfil.')
 ) AS seed(name, description)
 WHERE NOT EXISTS (SELECT 1 FROM role r WHERE r.name = seed.name);
 
@@ -87,6 +92,10 @@ FROM (VALUES
     ('administrador', 'configuracion-tenant.gestionar-metodos'),
     ('administrador', 'auditoria-seguridad.acceso-logs'),
     ('administrador', 'auditoria-seguridad.historial-cambios'),
+    ('administrador', 'incidencias.ver-propias'),
+    ('administrador', 'incidencias.crear'),
+    ('administrador', 'incidencias.aprobar-rechazar'),
+    ('administrador', 'administrador_tenant'),
 
     ('director', 'gestion-trabajadores.crear'),
     ('director', 'gestion-trabajadores.editar'),
@@ -134,7 +143,12 @@ FROM (VALUES
     ('docente', 'notificaciones-docente.recibir-alertas'),
     ('docente', 'notificaciones-docente.ver-cambios-horario'),
     ('docente', 'perfil.ver-actualizar-datos'),
-    ('docente', 'perfil.cambiar-contrasena')
+    ('docente', 'perfil.cambiar-contrasena'),
+
+    ('usuario', 'incidencias.ver-propias'),
+    ('usuario', 'incidencias.crear'),
+    ('usuario', 'asistencia-docente.ver-historial'),
+    ('usuario', 'perfil.ver-actualizar-datos')
 ) AS grants(role_name, permission_name)
 JOIN role r ON r.name = grants.role_name
 JOIN permissions p ON p.name = grants.permission_name

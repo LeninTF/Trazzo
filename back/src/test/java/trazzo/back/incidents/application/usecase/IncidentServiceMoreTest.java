@@ -13,7 +13,6 @@ import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
-import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,7 +24,6 @@ class IncidentServiceMoreTest {
     private IncidentTypeRepositoryPort typeRepo;
     private TenantUserPort tenantUserPort;
     private EventPublisherPort eventPublisher;
-    private FileStoragePort fileStoragePort;
     private IncidentService service;
 
     @BeforeEach
@@ -34,9 +32,7 @@ class IncidentServiceMoreTest {
         typeRepo = mock(IncidentTypeRepositoryPort.class);
         tenantUserPort = mock(TenantUserPort.class);
         eventPublisher = mock(EventPublisherPort.class);
-        fileStoragePort = mock(FileStoragePort.class);
-        when(fileStoragePort.buildPublicUrl(any())).thenReturn("http://public-url/test");
-        service = new IncidentService(incidentRepo, typeRepo, tenantUserPort, eventPublisher, fileStoragePort);
+        service = new IncidentService(incidentRepo, typeRepo, tenantUserPort, eventPublisher);
     }
 
     @Test
@@ -80,11 +76,41 @@ class IncidentServiceMoreTest {
                 .thenReturn(List.of(incident));
         when(incidentRepo.count(any(), any(), any(), any(), any(), any())).thenReturn(1L);
 
-        var result = service.findAll(null, null, null, null, null, null, null, null, null, 0, 20, null);
+        var result = service.findAll(null, null, null, null, null, null, null, null, null, null, 0, 20, null);
 
         assertEquals(1, result.content().size());
         assertEquals(0, result.page());
         assertEquals(1, result.totalElements());
+    }
+
+    @Test
+    void findAllScopeSelfPassesTenantUserIdToRepo() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "42", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        when(incidentRepo.findAll(eq("42"), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(List.of(incident));
+        when(incidentRepo.count(eq("42"), any(), any(), any(), any(), any())).thenReturn(1L);
+
+        var result = service.findAll("42", "SELF", null, null, null, null, null, null, null, null, 0, 20, null);
+
+        assertEquals(1, result.content().size());
+        verify(incidentRepo).findAll(eq("42"), isNull(), isNull(), isNull(), isNull(), isNull(), eq(0), eq(20), isNull());
+        verify(incidentRepo).count(eq("42"), isNull(), isNull(), isNull(), isNull(), isNull());
+    }
+
+    @Test
+    void findAllScopeAllPassesNullTenantUserIdToRepo() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        when(incidentRepo.findAll(isNull(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(List.of(incident));
+        when(incidentRepo.count(isNull(), any(), any(), any(), any(), any())).thenReturn(1L);
+
+        service.findAll(null, "ALL", null, null, null, null, null, null, null, null, 0, 20, null);
+
+        verify(incidentRepo).findAll(isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(0), eq(20), isNull());
     }
 
     @Test
@@ -108,5 +134,8 @@ class IncidentServiceMoreTest {
         assertEquals(1, result.get().permiso().daysGranted());
         assertEquals(1, result.get().evidencias().size());
         assertEquals("Juan", result.get().tenantUser().nombre());
+        var ev = result.get().evidencias().get(0);
+        assertTrue(ev.downloadUrl().startsWith("/api/v1/incidentes/inc-1/evidencias/"));
+        assertTrue(ev.downloadUrl().endsWith("/descarga"));
     }
 }

@@ -3,7 +3,8 @@ package trazzo.back.saasglobal.infrastructure.config;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -28,7 +29,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @ConditionalOnProperty(name = "trazzo.seed.tenant.enabled", havingValue = "true", matchIfMissing = false)
 @Order(1)
 @Slf4j
-public class TenantDataSeeder implements CommandLineRunner {
+public class TenantDataSeeder implements ApplicationRunner {
 
     private static final String DEMO_PLAN_NAME = "Plan Demo";
 
@@ -57,7 +58,7 @@ public class TenantDataSeeder implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) {
+    public void run(ApplicationArguments args) {
         if (tenantRepository.findBySubDomain(subDomain).isPresent()) {
             log.info("Demo tenant already exists, skipping seed");
             return;
@@ -79,6 +80,7 @@ public class TenantDataSeeder implements CommandLineRunner {
         log.info("Demo tenant '{}' provisioned successfully (schema: {})", subDomain, settings.getSchemaName());
 
         createTenantUser(tenant, settings.getSchemaName());
+        createUsuarioUser(tenant, settings.getSchemaName());
     }
 
     private void createTenantUser(Tenant tenant, String schemaName) {
@@ -129,6 +131,65 @@ public class TenantDataSeeder implements CommandLineRunner {
                 VALUES ('DNI', '00000001', 'Demo', 'Trazzo', 'Usuario')
                 """);
         return jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
+    }
+
+    private void createUsuarioUser(Tenant tenant, String schemaName) {
+        if (userRepository.findByEmail("usuario@trazzo.pe").isPresent()) {
+            log.info("Usuario user already exists, skipping");
+            return;
+        }
+
+        log.info("Creating usuario user for '{}'...", subDomain);
+
+        jdbc.update("""
+                INSERT INTO persons (document_type, document_value, name, father_surname, mother_surname)
+                VALUES ('DNI', '00000002', 'Usuario', 'Trazzo', 'Basico')
+                """);
+        Integer personId = jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
+        String encodedPassword = passwordEncoder.encode("usuario123");
+
+        User usuarioUser = User.create(
+                personId,
+                tenant.getId(),
+                "usuario@trazzo.pe",
+                null,
+                encodedPassword
+        );
+        userRepository.save(usuarioUser);
+
+        jdbc.execute("SET search_path TO \"" + schemaName + "\", public");
+        try {
+            jdbc.update("""
+                    INSERT INTO tenant_user (master_user_id, state, created_at, updated_at)
+                    VALUES (?::uuid, 'ACTIVO', NOW(), NOW())
+                    """, usuarioUser.getId());
+
+            Long tenantUserId = jdbc.queryForObject("SELECT currval('tenant_user_id_seq')", Long.class);
+            String roleId = ensureUsuarioRoleExists();
+
+            jdbc.update("""
+                    INSERT INTO tenant_user_role (tenant_user_id, role_id, created_at)
+                    VALUES (?, ?::uuid, NOW())
+                    """, tenantUserId, roleId);
+
+            log.info("Tenant user '{}' created with role 'usuario'", "usuario@trazzo.pe");
+        } finally {
+            jdbc.execute("SET search_path TO public");
+        }
+    }
+
+    /**
+     * Ensures the 'usuario' role exists in the tenant schema and returns its ID.
+     * TenantSchemaMigrator (@Order(2)) will later run V3__seed_default_roles_permissions.sql
+     * which also seeds this role idempotently (WHERE NOT EXISTS).
+     */
+    private String ensureUsuarioRoleExists() {
+        return jdbc.queryForObject("""
+                INSERT INTO role (id, name, description)
+                SELECT gen_random_uuid(), 'usuario', 'El Usuario tiene acceso básico a incidencias, historial de asistencia y perfil.'
+                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'usuario')
+                RETURNING id
+                """, String.class);
     }
 
     private Integer ensureDemoPlanExists() {

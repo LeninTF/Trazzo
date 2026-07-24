@@ -44,7 +44,7 @@ class TenantUserControllerTest {
     }
 
     private static TenantUserProfileResult aResult() {
-        var persona = new TenantUserProfileResult.PersonaResult(1, "DNI", "12345678", "Juan", "Perez", "Lopez", "1990-01-15");
+        var persona = new TenantUserProfileResult.PersonaResult(1, "DNI", "12345678", "Juan", "Perez", "Lopez", "1990-01-15", null);
         var rol = new TenantUserProfileResult.RoleInfoResult("role-1", "ADMIN");
         var sede = new TenantUserProfileResult.OrgAssignment(1L, "Sede Central");
         var area = new TenantUserProfileResult.OrgAssignment(10L, "Tecnologia");
