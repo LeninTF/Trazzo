@@ -34,13 +34,42 @@ class TenantDataSeederTest {
         jdbc = mock(JdbcTemplate.class);
         passwordEncoder = mock(PasswordEncoder.class);
         userRepository = mock(UserRepositoryPort.class);
-        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "demo");
+        seeder = new TenantDataSeeder(
+                tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                "demo",
+                "demo@trazzo.pe", "demo123",
+                "usuario@trazzo.pe", "usuario123"
+        );
     }
 
     @Test
     void constructor_throwsWhenSubDomainBlank() {
         assertThrows(IllegalStateException.class,
-                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "  "));
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "  ",
+                        "demo@trazzo.pe", "demo123",
+                        "usuario@trazzo.pe", "usuario123"));
+    }
+
+    @Test
+    void constructor_throwsWhenDemoEmailBlank() {
+        assertThrows(IllegalStateException.class,
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "demo",
+                        "  ", "demo123",
+                        "usuario@trazzo.pe", "usuario123"));
+    }
+
+    @Test
+    void constructor_throwsWhenUsuarioPasswordBlank() {
+        assertThrows(IllegalStateException.class,
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "demo",
+                        "demo@trazzo.pe", "demo123",
+                        "usuario@trazzo.pe", "  "));
     }
 
     @Test

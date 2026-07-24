@@ -39,6 +39,10 @@ public class TenantDataSeeder implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final UserRepositoryPort userRepository;
     private final String subDomain;
+    private final String demoEmail;
+    private final String demoPassword;
+    private final String usuarioEmail;
+    private final String usuarioPassword;
 
     public TenantDataSeeder(
             TenantRepositoryPort tenantRepository,
@@ -46,7 +50,11 @@ public class TenantDataSeeder implements ApplicationRunner {
             JdbcTemplate jdbc,
             PasswordEncoder passwordEncoder,
             UserRepositoryPort userRepository,
-            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain
+            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain,
+            @Value("${trazzo.seed.tenant.demo.email}") String demoEmail,
+            @Value("${trazzo.seed.tenant.demo.password}") String demoPassword,
+            @Value("${trazzo.seed.tenant.usuario.email}") String usuarioEmail,
+            @Value("${trazzo.seed.tenant.usuario.password}") String usuarioPassword
     ) {
         this.tenantRepository = tenantRepository;
         this.schemaProvisioning = schemaProvisioning;
@@ -54,6 +62,10 @@ public class TenantDataSeeder implements ApplicationRunner {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.subDomain = requireNonBlank(subDomain, "trazzo.seed.tenant.sub-domain");
+        this.demoEmail = requireNonBlank(demoEmail, "trazzo.seed.tenant.demo.email");
+        this.demoPassword = requireNonBlank(demoPassword, "trazzo.seed.tenant.demo.password");
+        this.usuarioEmail = requireNonBlank(usuarioEmail, "trazzo.seed.tenant.usuario.email");
+        this.usuarioPassword = requireNonBlank(usuarioPassword, "trazzo.seed.tenant.usuario.password");
     }
 
     @Override
@@ -84,7 +96,7 @@ public class TenantDataSeeder implements ApplicationRunner {
     }
 
     private void createTenantUser(Tenant tenant, String schemaName) {
-        if (userRepository.findByEmail("demo@trazzo.pe").isPresent()) {
+        if (userRepository.findByEmail(demoEmail).isPresent()) {
             log.info("Tenant user already exists, skipping");
             return;
         }
@@ -92,12 +104,12 @@ public class TenantDataSeeder implements ApplicationRunner {
         log.info("Creating tenant user for '{}'...", subDomain);
 
         Integer personId = insertPerson();
-        String encodedPassword = passwordEncoder.encode("demo123");
+        String encodedPassword = passwordEncoder.encode(demoPassword);
 
         User tenantUser = User.create(
                 personId,
                 tenant.getId(),
-                "demo@trazzo.pe",
+                demoEmail,
                 null,
                 encodedPassword
         );
@@ -118,7 +130,7 @@ public class TenantDataSeeder implements ApplicationRunner {
                     VALUES (?, ?::uuid, NOW())
                     """, tenantUserId, roleId);
 
-            log.info("Tenant user '{}' created with role 'administrador'", "demo@trazzo.pe");
+            log.info("Tenant user '{}' created with role 'administrador'", demoEmail);
         } finally {
             jdbc.execute("SET search_path TO public");
         }
@@ -134,7 +146,7 @@ public class TenantDataSeeder implements ApplicationRunner {
     }
 
     private void createUsuarioUser(Tenant tenant, String schemaName) {
-        if (userRepository.findByEmail("usuario@trazzo.pe").isPresent()) {
+        if (userRepository.findByEmail(usuarioEmail).isPresent()) {
             log.info("Usuario user already exists, skipping");
             return;
         }
@@ -146,12 +158,12 @@ public class TenantDataSeeder implements ApplicationRunner {
                 VALUES ('DNI', '00000002', 'Usuario', 'Trazzo', 'Basico')
                 """);
         Integer personId = jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
-        String encodedPassword = passwordEncoder.encode("usuario123");
+        String encodedPassword = passwordEncoder.encode(usuarioPassword);
 
         User usuarioUser = User.create(
                 personId,
                 tenant.getId(),
-                "usuario@trazzo.pe",
+                usuarioEmail,
                 null,
                 encodedPassword
         );
@@ -172,7 +184,7 @@ public class TenantDataSeeder implements ApplicationRunner {
                     VALUES (?, ?::uuid, NOW())
                     """, tenantUserId, roleId);
 
-            log.info("Tenant user '{}' created with role 'usuario'", "usuario@trazzo.pe");
+            log.info("Tenant user '{}' created with role 'usuario'", usuarioEmail);
         } finally {
             jdbc.execute("SET search_path TO public");
         }
