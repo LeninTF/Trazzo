@@ -98,6 +98,7 @@ class TenantDataSeederTest {
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(jdbc.queryForObject(eq("SELECT LASTVAL()"), eq(Integer.class))).thenReturn(42);
         when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class))).thenReturn(1L);
-        when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'administrador'"), eq(String.class))).thenReturn("role-uuid");
+        when(jdbc.queryForList(eq("SELECT id::text FROM role WHERE name = 'administrador'"), eq(String.class)))
+                .thenReturn(List.of("role-uuid"));
     }
 }

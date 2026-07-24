@@ -6,6 +6,9 @@ secret:
       match: "demo123"
     - name: "Local dev admin password (admin123, profile=local only)"
       match: "admin123"
-
-  ignored_paths:
-    - 'back/src/main/resources/application-local.properties'
+    - name: "Local dev AES-256 encryption key (application-local.properties)"
+      match: "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+    - name: "Local dev JWT secret (application-local.properties)"
+      match: "ea62296432a0f884cb1bf6bcc4ef160e829f55a2c4a5bb381cbd7a83d2ccc93f"
+    - name: "Local dev Resend API key placeholder (application-local.properties)"
+      match: "re_apiExample"

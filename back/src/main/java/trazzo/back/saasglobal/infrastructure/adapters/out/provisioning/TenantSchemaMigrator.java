@@ -95,7 +95,10 @@ public class TenantSchemaMigrator implements ApplicationRunner {
             try {
                 resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
             } catch (IOException e) {
-                resources = new Resource[0];
+                log.error("Failed to resolve migration resources for tenant {} (schema {}): {}",
+                        tenantId, schemaName, e.getMessage());
+                throw new TenantProvisioningException(
+                        "Failed to resolve migration resources for schema " + schemaName, e);
             }
             // Each script runs independently: this migrator has no per-tenant applied-migration
             // tracking (every script re-runs on every startup), so one broken/non-idempotent
