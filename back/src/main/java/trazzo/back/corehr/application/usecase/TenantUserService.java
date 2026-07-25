@@ -1,6 +1,7 @@
 package trazzo.back.corehr.application.usecase;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.corehr.application.dto.command.CreateTenantUserCommand;
 import trazzo.back.corehr.application.dto.command.PatchTenantUserCommand;
@@ -10,6 +11,7 @@ import trazzo.back.corehr.application.dto.result.TenantUserProfileResult;
 import trazzo.back.corehr.application.port.in.TenantUserUseCase;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.domain.model.TenantUserState;
+import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
@@ -21,12 +23,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RequiredArgsConstructor
 public class TenantUserService implements TenantUserUseCase {
 
     private final TenantUserPort tenantUserPort;
     private final UserRepositoryPort userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Override
     public PaginatedResult<TenantUserProfileResult> findAll(String search, String status, int page, int size, String sort) {
@@ -54,14 +58,17 @@ public class TenantUserService implements TenantUserUseCase {
                         command.documentType(), command.documentValue(),
                         command.name(), command.fatherSurname(), command.motherSurname()));
 
+        String tempPassword = generateTemporaryPassword();
         var tenantUser = User.create(personId, null, command.email(), command.phone(),
-                passwordEncoder.encode(generateTemporaryPassword()));
+                passwordEncoder.encode(tempPassword));
         userRepository.save(tenantUser);
 
         var tenantUserId = tenantUserPort.saveTenantUser(UUID.fromString(tenantUser.getId()));
         if (command.roleId() != null) {
             tenantUserPort.assignRole(tenantUserId, command.roleId());
         }
+
+        sendWelcomeEmail(command.email(), tempPassword);
 
         return findById(tenantUserId)
                 .orElseThrow(() -> new IllegalStateException("Failed to retrieve created tenant user"));
@@ -168,6 +175,16 @@ public class TenantUserService implements TenantUserUseCase {
 
     private String generateTemporaryPassword() {
         return UUID.randomUUID().toString().substring(0, 12);
+    }
+
+    private void sendWelcomeEmail(String email, String rawPassword) {
+        try {
+            emailService.send(email, "Bienvenido a Trazzo",
+                    "Se creó tu cuenta. Contraseña temporal: " + rawPassword
+                            + "<br>Deberás cambiarla al iniciar sesión.");
+        } catch (Exception e) {
+            log.warn("Failed to send welcome email to {}: {}", email, e.getMessage());
+        }
     }
 
     private TenantUserProfileResult toResult(

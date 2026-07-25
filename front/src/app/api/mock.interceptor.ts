@@ -94,6 +94,7 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
     && !url.startsWith('/storage')
     && !url.startsWith('/asistencia/') && !url.startsWith('/security/')
     && !url.startsWith('/corehr/')
+    && !url.startsWith('/org/')
     && !url.startsWith('/ws/')) {
     return next(req);
   }
@@ -150,6 +151,10 @@ function handleRoute(
     handleCorehrNonWorkingDays(method, u, req, page, size, qp) ??
     handleCorehrTenantContacts(method, u, req, page, size, qp) ??
     handleCorehrUserDepartments(method, u, req, page, size, qp) ??
+    handleOrgBranches(method, u, req, page, size, qp) ??
+    handleOrgAreas(method, u, req, page, size, qp) ??
+    handleOrgDepartments(method, u, req, page, size, qp) ??
+    handleOrgRoles(method, u, req, page, size, qp) ??
     handleWebsocket(method, u, req, page, size, qp) ??
     null
   );
@@ -185,7 +190,7 @@ function handleTenantUserList(
       (u.email ?? '').toLowerCase().includes(s)
     );
   }
-  if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
+  if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === qp['role_id']);
   return ok(paginate(filtered, page, size));
 }
 
@@ -268,6 +273,8 @@ function handleTenantUserById(
     return ok({ ...user, ...body, id });
   }
   if (method === 'DELETE') {
+    const idx = mockTenantUsers.findIndex(u => u.id === id);
+    if (idx >= 0) mockTenantUsers.splice(idx, 1);
     return ok<SoftDeleteResponse>({
       id: user.id,
       status: 'INACTIVO',
@@ -288,7 +295,7 @@ function handleTenantUserRole(
   const id = Number.parseInt(rolMatch[1], 10);
   const user = mockTenantUsers.find(u => u.id === id);
   if (!user) return _error(404, 'Usuario no encontrado');
-  const body = req.body as { role_id?: number };
+  const body = req.body as { role_id?: string };
   const rolesDisponibles = mockTenantUsers.map(u => u.rol);
   const newRole = rolesDisponibles.find(r => r.id === body.role_id);
   return ok({ ...user, rol: newRole ?? user.rol });
@@ -1127,6 +1134,118 @@ function handleCorehrUserDepartments(
     });
   }
 
+  return null;
+}
+
+function handleOrgBranches(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/org/branches')) return null;
+
+  const ts = new Date().toISOString();
+  const mockBranches = [
+    { id: 1, name: 'Sede San Isidro', description: 'Sede principal', state: true, createdAt: ts, updatedAt: ts },
+    { id: 2, name: 'Sede Miraflores', description: 'Sede secundaria', state: true, createdAt: ts, updatedAt: ts },
+    { id: 3, name: 'Sede Surco', description: 'Sede norte', state: true, createdAt: ts, updatedAt: ts },
+  ];
+
+  if (u === '/org/branches' && method === 'GET') {
+    return ok(paginate(mockBranches, page, size));
+  }
+  if (u === '/org/branches' && method === 'POST') {
+    const body = req.body as { name: string; description?: string };
+    return created({ id: mockBranches.length + 1, name: body.name, description: body.description ?? null, state: true, createdAt: ts, updatedAt: ts });
+  }
+  if (/^\/org\/branches\/\d+$/.test(u)) {
+    if (method === 'DELETE') return noContent();
+  }
+  return null;
+}
+
+function handleOrgAreas(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/org/areas')) return null;
+
+  const ts = new Date().toISOString();
+  const mockAreas = [
+    { id: 1, branchId: 1, name: 'Direccion Academica', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 2, branchId: 1, name: 'Administracion', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 3, branchId: 2, name: 'Docencia', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 4, branchId: 2, name: 'Mantenimiento', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 5, branchId: 3, name: 'Informatica', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 6, branchId: 3, name: 'Psicologia', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 7, branchId: 1, name: 'Secretaria Academica', description: null, state: true, createdAt: ts, updatedAt: ts },
+  ];
+
+  if (u === '/org/areas' && method === 'GET') {
+    let filtered = [...mockAreas];
+    if (qp['branchId']) filtered = filtered.filter(a => a.branchId === Number.parseInt(qp['branchId'], 10));
+    return ok(paginate(filtered, page, size));
+  }
+  if (u === '/org/areas' && method === 'POST') {
+    const body = req.body as { branchId: number; name: string; description?: string };
+    return created({ id: mockAreas.length + 1, branchId: body.branchId, name: body.name, description: body.description ?? null, state: true, createdAt: ts, updatedAt: ts });
+  }
+  if (/^\/org\/areas\/\d+$/.test(u)) {
+    if (method === 'DELETE') return noContent();
+  }
+  return null;
+}
+
+function handleOrgDepartments(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/org/departments')) return null;
+
+  const ts = new Date().toISOString();
+  const mockDepartments = [
+    { id: 1, areaId: 1, name: 'Matematicas', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 2, areaId: 1, name: 'Comunicacion', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 3, areaId: 2, name: 'Ciencias', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 4, areaId: 3, name: 'Humanidades', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 5, areaId: 3, name: 'Idiomas', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 6, areaId: 5, name: 'Educacion Fisica', description: null, state: true, createdAt: ts, updatedAt: ts },
+    { id: 7, areaId: 5, name: 'Arte y Cultura', description: null, state: true, createdAt: ts, updatedAt: ts },
+  ];
+
+  if (u === '/org/departments' && method === 'GET') {
+    let filtered = [...mockDepartments];
+    if (qp['areaId']) filtered = filtered.filter(d => d.areaId === Number.parseInt(qp['areaId'], 10));
+    return ok(paginate(filtered, page, size));
+  }
+  if (u === '/org/departments' && method === 'POST') {
+    const body = req.body as { areaId: number; name: string; description?: string };
+    return created({ id: mockDepartments.length + 1, areaId: body.areaId, name: body.name, description: body.description ?? null, state: true, createdAt: ts, updatedAt: ts });
+  }
+  if (/^\/org\/departments\/\d+$/.test(u)) {
+    if (method === 'DELETE') return noContent();
+  }
+  return null;
+}
+
+function handleOrgRoles(
+  method: string, u: string, req: HttpRequest<unknown>,
+  page: number, size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (!u.startsWith('/org/roles')) return null;
+
+  const ts = new Date().toISOString();
+  const mockRoles = [
+    { id: '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec', name: 'administrador', description: null, createdAt: ts, updatedAt: ts },
+    { id: 'c0f2870b-e454-4c46-b669-0ea1cc2dcd56', name: 'usuario', description: null, createdAt: ts, updatedAt: ts },
+    { id: '99e8824c-041b-436d-95d0-77d19bd6ae74', name: 'director', description: null, createdAt: ts, updatedAt: ts },
+    { id: '0fbfdb44-3ee6-41e1-afe4-2ef6de7b2932', name: 'coordinador', description: null, createdAt: ts, updatedAt: ts },
+    { id: 'ed2c0349-841e-49b1-851b-3e982a13514c', name: 'recursos-humanos', description: null, createdAt: ts, updatedAt: ts },
+    { id: '4829d40d-fc89-4f45-9e72-faf8392360fe', name: 'docente', description: null, createdAt: ts, updatedAt: ts },
+  ];
+
+  if (u === '/org/roles' && method === 'GET') {
+    return ok(paginate(mockRoles, page, size));
+  }
   return null;
 }
 

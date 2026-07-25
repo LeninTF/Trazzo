@@ -5,8 +5,9 @@ import { PaginationComponent } from '../../../shared/pagination/pagination.compo
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
 import { ApiService } from '../../../api/services/api.service';
+import { OrgService } from '../../../api/services/org.service';
 import { tenantUserToPersonal } from '../../../api/services/helpers';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   MiddlewareWebSocketService,
   type MiddlewareFingerprintEnrollProgress,
@@ -14,6 +15,7 @@ import {
   type MiddlewareFingerprintQuality,
 } from '../../../services/middleware-websocket.service';
 import { FingerprintStoreService } from '../../../services/fingerprint-store.service';
+import type { DocumentType, OrgBranchResult, OrgAreaResult, OrgDepartmentResult } from '../../../api/types';
 
 export interface Personal {
   id: number;
@@ -28,7 +30,18 @@ export interface Personal {
   telefono?: string;
   fechaIngreso?: string;
   imagenUrl?: string;
+  tipoDocumento?: DocumentType;
+  documento?: string;
+  sedeId?: number;
+  areaId?: number;
+  departamentoId?: number;
+  rolId?: string;
+  rolNombre?: string;
 }
+
+interface OrgSede { id: number; nombre: string; }
+interface OrgArea { id: number; nombre: string; sedeId: number; }
+interface OrgDepto { id: number; nombre: string; areaId: number; }
 
 interface Metricas {
   personalTotal: number;
@@ -57,10 +70,44 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
   private readonly modalService = inject(ModalService);
   private readonly api = inject(ApiService);
+  private readonly orgService = inject(OrgService);
   private readonly middlewareWs = inject(MiddlewareWebSocketService);
   private readonly fingerprintStore = inject(FingerprintStoreService);
   readonly loading = signal(false);
   readonly error = signal('');
+
+  // ==========================================
+  // DATOS ORGANIZACIONALES (de OrgService)
+  // ==========================================
+  orgSedes: OrgSede[] = [];
+  orgAreas: OrgArea[] = [];
+  orgDepartamentos: OrgDepto[] = [];
+  orgRoles: { id: string; nombre: string }[] = [];
+
+  orgSedeSeleccionada: number = 0;
+  orgAreaSeleccionada: number = 0;
+  orgDeptoSeleccionado: number = 0;
+  orgRolSeleccionado: string = '';
+
+  get orgAreasFiltradas(): OrgArea[] {
+    return this.orgSedeSeleccionada
+      ? this.orgAreas.filter(a => a.sedeId === this.orgSedeSeleccionada)
+      : this.orgAreas;
+  }
+
+  get orgDepartamentosFiltrados(): OrgDepto[] {
+    return this.orgAreaSeleccionada
+      ? this.orgDepartamentos.filter(d => d.areaId === this.orgAreaSeleccionada)
+      : (this.orgSedeSeleccionada
+        ? this.orgDepartamentos.filter(d =>
+            this.orgAreasFiltradas.some(a => a.id === d.areaId))
+        : this.orgDepartamentos);
+  }
+
+  // ==========================================
+  // ARCHIVO DE FOTO (para subir a R2)
+  // ==========================================
+  fotoFile: File | null = null;
 
   // ==========================================
   // DATOS PRINCIPALES
@@ -102,8 +149,17 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
     email: '',
     telefono: '',
     fechaIngreso: '',
-    imagenUrl: ''
+    imagenUrl: '',
+    tipoDocumento: 'DNI',
+    documento: '',
   };
+
+  readonly tiposDocumento: { value: DocumentType; label: string }[] = [
+    { value: 'DNI', label: 'DNI' },
+    { value: 'CARNET_EXTRANJERIA', label: 'Carnet de Extranjería' },
+    { value: 'PASAPORTE', label: 'Pasaporte' },
+    { value: 'OTRO', label: 'Otro' },
+  ];
 
   // ==========================================
   // ENROLLMENT STATE
@@ -148,11 +204,40 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    this.cargarPersonal();
+    this.cargarDatosIniciales();
   }
 
   ngOnDestroy(): void {
     this.cleanupEnrollmentSubscriptions();
+  }
+
+  async cargarDatosIniciales(): Promise<void> {
+    this.loading.set(true);
+    try {
+      await Promise.all([
+        this.cargarPersonal(),
+        this.cargarOrgData(),
+      ]);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async cargarOrgData(): Promise<void> {
+    try {
+      const [branchesRes, areasRes, deptosRes, rolesRes] = await Promise.all([
+        firstValueFrom(this.orgService.listBranches({ size: 200 })),
+        firstValueFrom(this.orgService.listAreas({ size: 1000 })),
+        firstValueFrom(this.orgService.listDepartments({ size: 2000 })),
+        firstValueFrom(this.orgService.listRoles({ size: 100 })),
+      ]);
+      this.orgSedes = branchesRes.content.map(b => ({ id: b.id, nombre: b.name }));
+      this.orgAreas = areasRes.content.map(a => ({ id: a.id, nombre: a.name, sedeId: a.branchId }));
+      this.orgDepartamentos = deptosRes.content.map(d => ({ id: d.id, nombre: d.name, areaId: d.areaId }));
+      this.orgRoles = rolesRes.content.map(r => ({ id: r.id, nombre: r.name }));
+    } catch {
+      // Silently handle - org data is supplementary
+    }
   }
 
   async cargarPersonal(): Promise<void> {
@@ -232,7 +317,7 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   // ==========================================
 
   abrirSelectorArchivo(): void {
-    const input = document.getElementById('fileInput') as HTMLInputElement;
+    const input = document.getElementById('personal-file-input') as HTMLInputElement;
     if (input) {
       input.click();
     }
@@ -259,6 +344,7 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
         return;
       }
 
+      this.fotoFile = file;
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64 = e.target?.result as string;
@@ -293,18 +379,25 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
       id: 0,
       nombre: '',
       idPersonal: '',
-      sede: this.sedesDisponibles[0],
-      area: this.areasDisponibles[0],
-      departamento: this.departamentosDisponibles[0],
+      sede: '',
+      area: '',
+      departamento: '',
       cargo: '',
       estado: 'ACTIVO',
       email: '',
       telefono: '',
       fechaIngreso: new Date().toISOString().split('T')[0],
-      imagenUrl: ''
+      imagenUrl: '',
+      tipoDocumento: 'DNI',
+      documento: '',
     };
     this.imagenPreviewUrl = null;
     this.modoImagenUrl = true;
+    this.fotoFile = null;
+    this.orgSedeSeleccionada = this.orgSedes[0]?.id ?? 0;
+    this.orgAreaSeleccionada = this.orgAreasFiltradas[0]?.id ?? 0;
+    this.orgDeptoSeleccionado = this.orgDepartamentosFiltrados[0]?.id ?? 0;
+    this.orgRolSeleccionado = this.orgRoles[0]?.id ?? '';
     this.modalPersonalOpen = true;
   }
 
@@ -313,41 +406,94 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
     this.personalForm = { ...persona };
     this.imagenPreviewUrl = persona.imagenUrl || null;
     this.modoImagenUrl = true;
+    this.fotoFile = null;
+    this.orgSedeSeleccionada = persona.sedeId ?? this.orgSedes[0]?.id ?? 0;
+    this.orgAreaSeleccionada = persona.areaId ?? this.orgAreasFiltradas[0]?.id ?? 0;
+    this.orgDeptoSeleccionado = persona.departamentoId ?? this.orgDepartamentosFiltrados[0]?.id ?? 0;
+    this.orgRolSeleccionado = persona.rolId ?? '';
     this.modalPersonalOpen = true;
+  }
+
+  onSedeChange(): void {
+    this.orgAreaSeleccionada = this.orgAreasFiltradas[0]?.id ?? 0;
+    this.orgDeptoSeleccionado = this.orgDepartamentosFiltrados[0]?.id ?? 0;
+  }
+
+  onAreaChange(): void {
+    this.orgDeptoSeleccionado = this.orgDepartamentosFiltrados[0]?.id ?? 0;
   }
 
   cerrarModalPersonal(): void {
     this.modalPersonalOpen = false;
     this.imagenPreviewUrl = null;
+    this.fotoFile = null;
   }
 
   async guardarPersonal(): Promise<void> {
-    if (!this.personalForm.nombre || !this.personalForm.idPersonal) {
+    if (!this.personalForm.nombre || !this.personalForm.documento) {
       this.mostrarToast('Complete los campos obligatorios');
+      return;
+    }
+    if (!this.editandoPersonal && !this.orgRolSeleccionado) {
+      this.mostrarToast('Seleccioná un rol para el nuevo usuario');
       return;
     }
 
     try {
+      let imgUrl: string | null = this.personalForm.imagenUrl || null;
+
+      if (this.fotoFile && this.fotoFile.size > 0) {
+        try {
+          const presigned = await firstValueFrom(
+            this.api.incidents.getPresignedUrl(this.fotoFile.name, this.fotoFile.type)
+          );
+          await firstValueFrom(
+            this.api.incidents.uploadToR2(presigned.presigned_url, this.fotoFile, this.fotoFile.type)
+          );
+          imgUrl = presigned.object_key;
+        } catch {
+          this.mostrarToast('Error al subir la foto. Se creará el usuario sin foto.');
+          imgUrl = null;
+        }
+      }
+
+      const nombreParts = this.personalForm.nombre.trim().split(/\s+/);
+      const name = nombreParts[0] ?? '';
+      const fatherSurname = nombreParts.slice(1).join(' ') || '-';
+
       if (this.editandoPersonal) {
         await firstValueFrom(this.api.users.patch(this.personalForm.id, {
-          name: this.personalForm.nombre.split(' ')[0] ?? '',
-          father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
+          name,
+          father_surname: fatherSurname,
           email: this.personalForm.email?.trim() || '',
           phone: this.personalForm.telefono ?? null,
+          img_url: imgUrl,
+          sede_ids: this.orgSedeSeleccionada ? [this.orgSedeSeleccionada] : null,
+          area_ids: this.orgAreaSeleccionada ? [this.orgAreaSeleccionada] : null,
+          departamento_ids: this.orgDeptoSeleccionado ? [this.orgDeptoSeleccionado] : null,
+          role_id: this.orgRolSeleccionado || null,
+          estado: (this.personalForm.estado as 'ACTIVO' | 'LICENCIA' | 'INACTIVO') ?? null,
         }));
         this.mostrarToast('Personal actualizado correctamente');
       } else {
+        const email = this.personalForm.email?.trim()
+          || `${name.toLowerCase()}.${fatherSurname.toLowerCase().replace(/\s+/g, '')}@colegio.edu.pe`;
+
         await firstValueFrom(this.api.users.create({
-          document_type: 'DNI',
-          document_value: String(Date.now()).slice(-8),
-          name: this.personalForm.nombre.split(' ')[0] ?? '',
-          father_surname: this.personalForm.nombre.split(' ')[1] ?? '',
-          mother_surname: '',
-          email: this.personalForm.email?.trim() || `${this.personalForm.nombre.toLowerCase().replace(/\s+/g, '.')}@colegio.edu.pe`,
+          document_type: this.personalForm.tipoDocumento ?? 'DNI',
+          document_value: this.personalForm.documento,
+          name,
+          father_surname: fatherSurname,
+          mother_surname: null,
+          email,
           phone: this.personalForm.telefono ?? null,
-          role_id: 5,
+          role_id: this.orgRolSeleccionado,
+          img_url: imgUrl,
+          sede_ids: this.orgSedeSeleccionada ? [this.orgSedeSeleccionada] : null,
+          area_ids: this.orgAreaSeleccionada ? [this.orgAreaSeleccionada] : null,
+          departamento_ids: this.orgDeptoSeleccionado ? [this.orgDeptoSeleccionado] : null,
         }));
-        this.mostrarToast('Nuevo miembro agregado correctamente');
+        this.mostrarToast('Nuevo miembro agregado. Se envió la contraseña al correo electrónico.');
       }
       await this.cargarPersonal();
     } catch {

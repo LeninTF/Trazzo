@@ -36,6 +36,7 @@ import trazzo.back.corehr.application.usecase.UserScheduleService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionStore;
 import trazzo.back.corehr.infrastructure.adapters.out.reporting.CoreHrAttendanceSummaryJdbcAdapter;
+import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 
 @Configuration
@@ -116,8 +117,9 @@ public class CoreHrBeanConfiguration {
     }
 
     @Bean
-    public TenantUserService tenantUserUseCase(TenantUserPort tenantUserPort, UserRepositoryPort userRepository, PasswordEncoder passwordEncoder) {
-        return new TenantUserService(tenantUserPort, userRepository, passwordEncoder);
+    public TenantUserService tenantUserUseCase(TenantUserPort tenantUserPort, UserRepositoryPort userRepository,
+                                               PasswordEncoder passwordEncoder, EmailService emailService) {
+        return new TenantUserService(tenantUserPort, userRepository, passwordEncoder, emailService);
     }
 
     @Bean

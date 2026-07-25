@@ -266,7 +266,7 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     public Integer savePerson(String documentType, String documentValue, String name, String fatherSurname, String motherSurname) {
         jdbc.update("""
                 INSERT INTO persons (document_type, document_value, name, father_surname, mother_surname)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?::document_type_enum, ?, ?, ?, ?)
                 """, documentType, documentValue, name, fatherSurname, motherSurname);
         return jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
     }
@@ -281,7 +281,7 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     @Override
     public Optional<Integer> findPersonIdByDocument(String documentType, String documentValue) {
         var results = jdbc.query("""
-                SELECT id FROM persons WHERE document_type = ? AND document_value = ?
+                SELECT id FROM persons WHERE document_type = ?::document_type_enum AND document_value = ?
                 """, (rs, rowNum) -> rs.getInt("id"), documentType, documentValue);
         return results.stream().findFirst();
     }

@@ -12,6 +12,7 @@ import trazzo.back.corehr.application.dto.result.SoftDeleteResult;
 import trazzo.back.corehr.application.dto.result.TenantUserProfileResult;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserProfileProjection;
+import trazzo.back.saasglobal.application.port.out.EmailService;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
@@ -28,6 +29,7 @@ class TenantUserServiceTest {
     private TenantUserPort tenantUserPort;
     private UserRepositoryPort userRepository;
     private PasswordEncoder passwordEncoder;
+    private EmailService emailService;
     private TenantUserService service;
 
     private final TenantUserPort.OrgAssignmentBundle EMPTY_ORG = new TenantUserPort.OrgAssignmentBundle(List.of(), List.of(), List.of());
@@ -37,7 +39,8 @@ class TenantUserServiceTest {
         tenantUserPort = mock(TenantUserPort.class);
         userRepository = mock(UserRepositoryPort.class);
         passwordEncoder = mock(PasswordEncoder.class);
-        service = new TenantUserService(tenantUserPort, userRepository, passwordEncoder);
+        emailService = mock(EmailService.class);
+        service = new TenantUserService(tenantUserPort, userRepository, passwordEncoder, emailService);
         when(tenantUserPort.findOrgAssignmentsByUserIds(any())).thenReturn(Map.of());
     }
 
@@ -174,6 +177,7 @@ class TenantUserServiceTest {
         verify(tenantUserPort).savePerson("DNI", "12345678", "Juan", "Perez", "Lopez");
         verify(tenantUserPort).saveTenantUser(any(UUID.class));
         verify(tenantUserPort).assignRole(10L, "role-1");
+        verify(emailService).send(eq("juan@test.com"), anyString(), contains("Contraseña temporal"));
     }
 
     @Test

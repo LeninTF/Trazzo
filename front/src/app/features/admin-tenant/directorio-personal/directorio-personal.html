@@ -233,30 +233,54 @@
                 <input type="text" id="personal-nombre" class="form-control" [(ngModel)]="personalForm.nombre" placeholder="Ej: Dr. Sarah Jenkins">
               </div>
               <div class="form-group">
-                <label class="form-label" for="personal-id">ID de Personal <span class="text-danger">*</span></label>
-                <input type="text" id="personal-id" class="form-control" [(ngModel)]="personalForm.idPersonal" placeholder="Ej: #AX-9021">
+                <label class="form-label" for="personal-email">Email</label>
+                <input type="email" id="personal-email" class="form-control" [(ngModel)]="personalForm.email" placeholder="ejemplo@empresa.com">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="personal-tipo-doc">Tipo de Documento <span class="text-danger">*</span></label>
+                <select id="personal-tipo-doc" class="form-select" [(ngModel)]="personalForm.tipoDocumento">
+                  @for (td of tiposDocumento; track td.value) {
+                    <option [value]="td.value">{{ td.label }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="personal-documento">Nro. de Documento <span class="text-danger">*</span></label>
+                <input type="text" id="personal-documento" class="form-control" [(ngModel)]="personalForm.documento" placeholder="Ej: 76543210">
               </div>
               <div class="form-group">
                 <label class="form-label" for="personal-sede">Sede</label>
-                <select id="personal-sede" class="form-select" [(ngModel)]="personalForm.sede">
-                  @for (sede of sedesDisponibles; track sede) {
-                    <option [value]="sede">{{ sede }}</option>
+                <select id="personal-sede" class="form-select" [ngModel]="orgSedeSeleccionada" (ngModelChange)="orgSedeSeleccionada=$event; onSedeChange()">
+                  <option [value]="0">Seleccionar sede...</option>
+                  @for (sede of orgSedes; track sede.id) {
+                    <option [value]="sede.id">{{ sede.nombre }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label" for="personal-area">Área</label>
-                <select id="personal-area" class="form-select" [(ngModel)]="personalForm.area">
-                  @for (area of areasDisponibles; track area) {
-                    <option [value]="area">{{ area }}</option>
+                <select id="personal-area" class="form-select" [ngModel]="orgAreaSeleccionada" (ngModelChange)="orgAreaSeleccionada=$event; onAreaChange()">
+                  <option [value]="0">Seleccionar área...</option>
+                  @for (area of orgAreasFiltradas; track area.id) {
+                    <option [value]="area.id">{{ area.nombre }}</option>
                   }
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label" for="personal-departamento">Departamento</label>
-                <select id="personal-departamento" class="form-select" [(ngModel)]="personalForm.departamento">
-                  @for (depto of departamentosDisponibles; track depto) {
-                    <option [value]="depto">{{ depto }}</option>
+                <select id="personal-departamento" class="form-select" [(ngModel)]="orgDeptoSeleccionado">
+                  <option [value]="0">Seleccionar departamento...</option>
+                  @for (depto of orgDepartamentosFiltrados; track depto.id) {
+                    <option [value]="depto.id">{{ depto.nombre }}</option>
+                  }
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="personal-rol">Rol <span class="text-danger">*</span></label>
+                <select id="personal-rol" class="form-select" [(ngModel)]="orgRolSeleccionado">
+                  <option [value]="">Seleccionar rol...</option>
+                  @for (rol of orgRoles; track rol.id) {
+                    <option [value]="rol.id">{{ rol.nombre }}</option>
                   }
                 </select>
               </div>
@@ -273,10 +297,6 @@
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label" for="personal-email">Email</label>
-                <input type="email" id="personal-email" class="form-control" [(ngModel)]="personalForm.email" placeholder="ejemplo@empresa.com">
-              </div>
-              <div class="form-group">
                 <label class="form-label" for="personal-telefono">Teléfono</label>
                 <input type="text" id="personal-telefono" class="form-control" [(ngModel)]="personalForm.telefono" placeholder="+51 987 654 321">
               </div>
@@ -285,6 +305,12 @@
                 <input type="date" id="personal-fecha-ingreso" class="form-control" [(ngModel)]="personalForm.fechaIngreso">
               </div>
             </div>
+            @if (!editandoPersonal) {
+              <div class="alert alert-info mt-3" style="font-size: 0.85rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                Se generará una contraseña automática y se enviará al correo electrónico del nuevo miembro.
+              </div>
+            }
           </div>
         </div>
       </div>
