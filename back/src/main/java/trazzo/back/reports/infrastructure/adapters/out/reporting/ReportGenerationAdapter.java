@@ -110,13 +110,13 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
                 table.addCell(String.valueOf(detail.getTotalOvertimeHours()));
             }
 
+            document.add(table);
+
             if (details.isEmpty()) {
                 com.lowagie.text.Font italicFont = com.lowagie.text.FontFactory.getFont(
                         com.lowagie.text.FontFactory.HELVETICA, 10, com.lowagie.text.Font.ITALIC);
                 document.add(new Paragraph("Sin datos de asistencia para este periodo.", italicFont));
             }
-
-            document.add(table);
             document.close();
 
             String objectKey = "reports/monthly/" + closure.getYear() + "/" + closure.getMonth()
