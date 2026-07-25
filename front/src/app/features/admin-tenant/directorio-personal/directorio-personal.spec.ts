@@ -50,6 +50,7 @@ describe('DirectorioPersonal', () => {
       create: jasmine.createSpy('create').and.returnValue(of(mockUsersResponse.content[0])),
       patch: jasmine.createSpy('patch').and.returnValue(of(mockUsersResponse.content[0])),
       delete: jasmine.createSpy('delete').and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 })),
+      getProfilePresignedUrl: jasmine.createSpy('getProfilePresignedUrl').and.returnValue(of({ presigned_url: 'https://r2.mock.dev/test', object_key: 'profiles/test/key' })),
     },
     incidents: {
       getPresignedUrl: jasmine.createSpy('getPresignedUrl').and.returnValue(of({ presigned_url: 'https://r2.mock.dev/test', object_key: 'profiles/test/key' })),
@@ -114,6 +115,7 @@ describe('DirectorioPersonal', () => {
     mockApi.users.create.calls.reset();
     mockApi.users.patch.calls.reset();
     mockApi.users.delete.calls.reset();
+    mockApi.users.getProfilePresignedUrl.calls.reset();
     mockApi.incidents.getPresignedUrl.calls.reset();
     mockApi.incidents.uploadToR2.calls.reset();
     mockOrgService.listBranches.calls.reset();
@@ -427,7 +429,7 @@ describe('DirectorioPersonal', () => {
       component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
       component.fotoFile = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
       await component.guardarPersonal();
-      expect(mockApi.incidents.getPresignedUrl).toHaveBeenCalledWith('photo.jpg', 'image/jpeg');
+      expect(mockApi.users.getProfilePresignedUrl).toHaveBeenCalledWith('photo.jpg', 'image/jpeg');
       expect(mockApi.incidents.uploadToR2).toHaveBeenCalled();
       expect(mockApi.users.create).toHaveBeenCalled();
       const createCall = mockApi.users.create.calls.mostRecent().args[0];

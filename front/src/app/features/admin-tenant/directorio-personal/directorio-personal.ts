@@ -445,7 +445,7 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
       if (this.fotoFile && this.fotoFile.size > 0) {
         try {
           const presigned = await firstValueFrom(
-            this.api.incidents.getPresignedUrl(this.fotoFile.name, this.fotoFile.type)
+            this.api.users.getProfilePresignedUrl(this.fotoFile.name, this.fotoFile.type)
           );
           await firstValueFrom(
             this.api.incidents.uploadToR2(presigned.presigned_url, this.fotoFile, this.fotoFile.type)

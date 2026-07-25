@@ -615,6 +615,15 @@ function handleStoragePresigned(
   method: string, u: string, req: HttpRequest<unknown>,
   _page: number, _size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
+  if (u === '/storage/presigned-url-profile' && method === 'GET') {
+    const fileName = qp['fileName'] ?? 'foto.jpg';
+    const contentType = qp['contentType'] ?? 'image/jpeg';
+    const objectKey = `perfiles/42/${crypto.randomUUID()}/${fileName}`;
+    return ok({
+      presigned_url: `https://r2.mock.dev/${objectKey}?X-Amz-Mock=1&contentType=${encodeURIComponent(contentType)}`,
+      object_key: objectKey,
+    });
+  }
   if (u !== '/storage/presigned-url' || method !== 'GET') return null;
   const fileName = qp['fileName'] ?? 'archivo';
   const contentType = qp['contentType'] ?? 'application/octet-stream';

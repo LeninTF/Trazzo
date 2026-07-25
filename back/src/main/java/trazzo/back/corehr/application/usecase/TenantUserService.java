@@ -67,6 +67,7 @@ public class TenantUserService implements TenantUserUseCase {
         if (command.roleId() != null) {
             tenantUserPort.assignRole(tenantUserId, command.roleId());
         }
+        tenantUserPort.replaceOrgDepartments(tenantUserId, command.departamentoIds());
 
         sendWelcomeEmail(command.email(), tempPassword);
 
@@ -85,6 +86,7 @@ public class TenantUserService implements TenantUserUseCase {
         if (command.roleId() != null) {
             tenantUserPort.assignRole(id, command.roleId());
         }
+        tenantUserPort.replaceOrgDepartments(id, command.departamentoIds());
 
         return findById(id)
                 .orElseThrow(() -> new IllegalStateException("Failed to retrieve updated tenant user"));
@@ -110,6 +112,9 @@ public class TenantUserService implements TenantUserUseCase {
 
         if (command.roleId() != null) {
             tenantUserPort.assignRole(id, command.roleId());
+        }
+        if (command.departamentoIds() != null) {
+            tenantUserPort.replaceOrgDepartments(id, command.departamentoIds());
         }
 
         return findById(id)

@@ -381,7 +381,11 @@
           </div>
           <div class="detail-field">
             <span class="detail-label">Cargo</span>
-            <span class="detail-value">{{ personalSeleccionado.cargo }}</span>
+            <span class="detail-value">{{ personalSeleccionado.cargo || 'No asignado' }}</span>
+          </div>
+          <div class="detail-field">
+            <span class="detail-label">Rol</span>
+            <span class="detail-value">{{ personalSeleccionado.rolNombre || 'No asignado' }}</span>
           </div>
           <div class="detail-field">
             <span class="detail-label">Email</span>

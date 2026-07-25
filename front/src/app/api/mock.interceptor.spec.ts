@@ -1,14 +1,21 @@
 import { HttpRequest, HttpResponse, HttpParams } from '@angular/common/http';
 import { of } from 'rxjs';
 import { mockInterceptor, _setTestApiBase } from './mock.interceptor';
-import { mockAttendance, mockMasterUsers } from './mock-data';
+import { mockAttendance, mockMasterUsers, mockTenantUsers } from './mock-data';
 
 _setTestApiBase('https://api.trazzo.pe/api/v1');
 
 describe('mockInterceptor', () => {
+  const originalUsers = JSON.parse(JSON.stringify(mockTenantUsers));
+
   function next() {
     return of(new HttpResponse({ status: 404 }));
   }
+
+  beforeEach(() => {
+    mockTenantUsers.length = 0;
+    mockTenantUsers.push(...JSON.parse(JSON.stringify(originalUsers)));
+  });
 
   it('should mock auth login POST', (done) => {
     const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/auth/login', {});
@@ -940,11 +947,12 @@ describe('mockInterceptor', () => {
 
   // Branch coverage: handleTenantUserList – filter by role_id
   it('should filter GET /usuarios by role_id', (done) => {
-    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/usuarios?role_id=1');
+    const roleId = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
+    const req = new HttpRequest('GET', `https://api.trazzo.pe/api/v1/usuarios?role_id=${roleId}`);
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(200);
-      r.body.content.forEach((u: any) => expect(u.rol.id).toBe(1));
+      r.body.content.forEach((u: any) => expect(u.rol.id).toBe(roleId));
       done();
     });
   });
