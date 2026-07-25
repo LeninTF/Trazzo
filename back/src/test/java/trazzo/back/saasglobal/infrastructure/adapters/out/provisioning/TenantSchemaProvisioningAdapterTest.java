@@ -3,6 +3,7 @@ package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,21 +29,23 @@ class TenantSchemaProvisioningAdapterTest {
     @Mock DataSource rawDataSource;
     @Mock Connection connection;
     @Mock Statement statement;
+    @Mock ResourcePatternResolver resourceResolver;
 
     private TenantSchemaProvisioningAdapter adapter;
 
-    private void wireHappyPathConnection() throws SQLException {
+    private void wireHappyPathConnection() throws Exception {
         when(rawDataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
         // ScriptUtils.executeSqlScript loops on getMoreResults()/getUpdateCount() after each
         // statement until getUpdateCount() reports -1 (JDBC's "no more results" sentinel); an
         // unstubbed mock defaults to 0, which never satisfies that check and spins forever.
         when(statement.getUpdateCount()).thenReturn(-1);
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        when(resourceResolver.getResources(anyString())).thenReturn(new Resource[0]);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
     }
 
     @Test
-    void provisionNew_createsSchemaDerivedFromSubDomainAndRunsScript() throws SQLException {
+    void provisionNew_createsSchemaDerivedFromSubDomainAndRunsScript() throws Exception {
         wireHappyPathConnection();
 
         TenantSettings result = adapter.provisionNew("t-1", "Acme");
@@ -52,7 +57,7 @@ class TenantSchemaProvisioningAdapterTest {
     }
 
     @Test
-    void provisionExisting_provisionsGivenSchemaName() throws SQLException {
+    void provisionExisting_provisionsGivenSchemaName() throws Exception {
         wireHappyPathConnection();
 
         adapter.provisionExisting(TenantSettings.of("t-1", "tenant_acme"));
@@ -68,7 +73,7 @@ class TenantSchemaProvisioningAdapterTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.execute("CREATE SCHEMA \"tenant_acme\""))
                 .thenThrow(new SQLException("schema \"tenant_acme\" already exists", "42P06"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
@@ -84,7 +89,7 @@ class TenantSchemaProvisioningAdapterTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.execute("SET search_path TO \"tenant_acme\", public"))
                 .thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
@@ -96,14 +101,14 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void provisionExisting_wrapsSqlExceptionAsProvisioningException() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
     }
 
     @Test
-    void deprovision_dropsSchemaCascade() throws SQLException {
+    void deprovision_dropsSchemaCascade() throws Exception {
         wireHappyPathConnection();
 
         adapter.deprovision("tenant_acme");
@@ -114,14 +119,14 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void deprovision_swallowsFailuresBestEffort() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         assertDoesNotThrow(() -> adapter.deprovision("tenant_acme"));
     }
 
     @Test
     void deprovision_rejectsUnsafeIdentifierWithoutTouchingDataSource() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         adapter.deprovision("tenant_acme\"; DROP SCHEMA public CASCADE; --");
 
@@ -130,7 +135,7 @@ class TenantSchemaProvisioningAdapterTest {
 
     @Test
     void provisionExisting_rejectsUnsafeSchemaNameWithoutTouchingDataSource() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
         var maliciousSettings = TenantSettings.of("t-1", "tenant_acme; DROP TABLE users");
 
         assertThrows(TenantProvisioningException.class,
@@ -141,7 +146,7 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void provisionNew_failsWhenCreateSchemaThrows() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.provisionNew("t-1", "Acme"));
@@ -151,7 +156,7 @@ class TenantSchemaProvisioningAdapterTest {
     void recreateSchema_dropsSchema() throws SQLException {
         when(rawDataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         adapter.recreateSchema("tenant_acme");
 
@@ -161,7 +166,7 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void recreateSchema_throwsOnSqlException() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.recreateSchema("tenant_acme"));
@@ -169,7 +174,7 @@ class TenantSchemaProvisioningAdapterTest {
 
     @Test
     void recreateSchema_rejectsUnsafeIdentifier() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, resourceResolver);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.recreateSchema("tenant_acme; DROP TABLE users"));

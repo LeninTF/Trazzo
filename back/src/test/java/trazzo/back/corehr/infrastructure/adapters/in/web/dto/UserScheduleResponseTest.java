@@ -49,8 +49,8 @@ class UserScheduleResponseTest {
     void equalsAndHashCode() {
         var now = LocalDateTime.now();
         var t = LocalTime.of(8, 0);
-        var a = new UserScheduleResponse(1L, 10L, null, null, null, t, t, now, now);
-        var b = new UserScheduleResponse(1L, 10L, null, null, null, t, t, now, now);
+        var a = new UserScheduleResponse(1L, 10L, null, null, null, t, t, now, now, null);
+        var b = new UserScheduleResponse(1L, 10L, null, null, null, t, t, now, now, null);
         assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
     }
 }

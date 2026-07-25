@@ -14,8 +14,8 @@ class ScheduleTimeSpecTest {
     }
 
     @Test
-    void shouldBeInvalidWhenEntryAfterDeparture() {
-        assertFalse(spec.isValidScheduleTime(LocalTime.of(17, 0), LocalTime.of(8, 0)));
+    void shouldBeValidWhenEntryAfterDeparture_nocturnal() {
+        assertTrue(spec.isValidScheduleTime(LocalTime.of(22, 0), LocalTime.of(6, 0)));
     }
 
     @Test

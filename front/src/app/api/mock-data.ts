@@ -391,11 +391,11 @@ export const mockIncidencias: IncidentProfile[] = [
 // ==========================================
 
 const mockScheduleSummaries: ScheduleSummary[] = [
-  { id: 1, name: 'Horario 7:00 - 13:00', entry_time: '07:00:00', departure_time: '13:00:00' },
-  { id: 2, name: 'Horario 8:00 - 14:00', entry_time: '08:00:00', departure_time: '14:00:00' },
-  { id: 3, name: 'Horario 9:00 - 15:00', entry_time: '09:00:00', departure_time: '15:00:00' },
-  { id: 4, name: 'Horario 13:00 - 19:00', entry_time: '13:00:00', departure_time: '19:00:00' },
-  { id: 5, name: 'Horario 7:00 - 14:30', entry_time: '07:00:00', departure_time: '14:30:00' },
+  { id: 1, name: 'Horario 7:00 - 13:00', entry_time: '07:00:00', departure_time: '13:00:00', days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] },
+  { id: 2, name: 'Horario 8:00 - 14:00', entry_time: '08:00:00', departure_time: '14:00:00', days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] },
+  { id: 3, name: 'Horario 9:00 - 15:00', entry_time: '09:00:00', departure_time: '15:00:00', days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] },
+  { id: 4, name: 'Horario 13:00 - 19:00', entry_time: '13:00:00', departure_time: '19:00:00', days_of_week: ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'] },
+  { id: 5, name: 'Horario 7:00 - 14:30', entry_time: '07:00:00', departure_time: '14:30:00', days_of_week: ['MONDAY', 'WEDNESDAY', 'FRIDAY'] },
 ];
 
 const mockTolerancias: ToleranciaProfile[] = [
@@ -413,6 +413,7 @@ const mockSchedulesFull: ScheduleProfile[] = mockScheduleSummaries.map((s, i) =>
   description: null,
   entry_time: s.entry_time,
   departure_time: s.departure_time,
+  days_of_week: s.days_of_week ?? [],
   tolerancias: mockTolerancias.filter(t => t.schedule_id === s.id),
   created_at: daysAgo(100),
   updated_at: daysAgo(50),
@@ -451,12 +452,26 @@ export const mockSchedules: ScheduleProfile[] = mockSchedulesFull;
 // USER SCHEDULES
 // ==========================================
 
+function summarizeUser(uid: number) {
+  const u = mockTenantUsers.find(tu => tu.id === uid);
+  if (!u) return undefined;
+  return {
+    id: u.id,
+    name: u.persona.name,
+    father_surname: u.persona.father_surname,
+    mother_surname: u.persona.mother_surname,
+    sede: u.sedes[0]?.nombre ?? null,
+    area: u.areas[0]?.nombre ?? null,
+    department: u.departamentos[0]?.nombre ?? null,
+  };
+}
+
 export const mockUserSchedules: UserScheduleProfile[] = [
-  { id: 1, tenant_user_id: 1, schedule_id: 1, schedule: mockScheduleSummaries[0], description: 'Horario regular año 2026', entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(60), updated_at: daysAgo(30) },
-  { id: 2, tenant_user_id: 2, schedule_id: 1, schedule: mockScheduleSummaries[0], description: 'Horario regular año 2026', entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(60), updated_at: daysAgo(30) },
-  { id: 3, tenant_user_id: 3, schedule_id: 2, schedule: mockScheduleSummaries[1], description: 'Horario administrativo', entry_time: '08:00:00', departure_time: '14:00:00', created_at: daysAgo(45), updated_at: daysAgo(15) },
-  { id: 4, tenant_user_id: 4, schedule_id: 3, schedule: mockScheduleSummaries[2], description: null, entry_time: '09:00:00', departure_time: '15:00:00', created_at: daysAgo(30), updated_at: daysAgo(5) },
-  { id: 5, tenant_user_id: 5, schedule_id: 1, schedule: mockScheduleSummaries[0], description: null, entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(20), updated_at: daysAgo(20) },
+  { id: 1, tenant_user_id: 1, schedule_id: 1, schedule: mockScheduleSummaries[0], description: 'Horario regular año 2026', entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(60), updated_at: daysAgo(30), tenant_user: summarizeUser(1) },
+  { id: 2, tenant_user_id: 2, schedule_id: 1, schedule: mockScheduleSummaries[0], description: 'Horario regular año 2026', entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(60), updated_at: daysAgo(30), tenant_user: summarizeUser(2) },
+  { id: 3, tenant_user_id: 3, schedule_id: 2, schedule: mockScheduleSummaries[1], description: 'Horario administrativo', entry_time: '08:00:00', departure_time: '14:00:00', created_at: daysAgo(45), updated_at: daysAgo(15), tenant_user: summarizeUser(3) },
+  { id: 4, tenant_user_id: 4, schedule_id: 3, schedule: mockScheduleSummaries[2], description: null, entry_time: '09:00:00', departure_time: '15:00:00', created_at: daysAgo(30), updated_at: daysAgo(5), tenant_user: summarizeUser(4) },
+  { id: 5, tenant_user_id: 5, schedule_id: 1, schedule: mockScheduleSummaries[0], description: null, entry_time: '07:00:00', departure_time: '13:00:00', created_at: daysAgo(20), updated_at: daysAgo(20), tenant_user: summarizeUser(5) },
 ];
 
 // ==========================================

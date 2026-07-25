@@ -13,6 +13,7 @@ import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.NonWorkingDaysRepositoryPort;
 import trazzo.back.corehr.application.port.out.ScheduleRepositoryPort;
+import trazzo.back.corehr.application.port.out.AuditScheduleAssignmentPort;
 import trazzo.back.corehr.application.port.out.ShiftRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantContactRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserDepartmentRepositoryPort;
@@ -59,8 +60,9 @@ public class CoreHrBeanConfiguration {
 
     @Bean
     public UserScheduleService userScheduleUseCase(UserScheduleRepositoryPort userScheduleRepo,
-                                                   ScheduleRepositoryPort scheduleRepo, TenantUserPort tenantUserPort) {
-        return new UserScheduleService(userScheduleRepo, scheduleRepo, tenantUserPort);
+                                                   ScheduleRepositoryPort scheduleRepo, TenantUserPort tenantUserPort,
+                                                   AuditScheduleAssignmentPort auditPort) {
+        return new UserScheduleService(userScheduleRepo, scheduleRepo, tenantUserPort, auditPort);
     }
 
     @Bean

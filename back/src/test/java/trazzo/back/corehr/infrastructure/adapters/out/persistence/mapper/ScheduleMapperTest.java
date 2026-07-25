@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test;
 import trazzo.back.corehr.domain.model.schedule.Schedule;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.ScheduleEntity;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,7 +17,7 @@ class ScheduleMapperTest {
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
         var domain = Schedule.restore(1L, 10L, "Morning", "desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY), now, now);
 
         var entity = ScheduleMapper.toEntity(domain);
 
@@ -25,6 +27,7 @@ class ScheduleMapperTest {
         assertEquals("desc", entity.getDescription());
         assertEquals(LocalTime.of(8, 0), entity.getEntryTime());
         assertEquals(LocalTime.of(17, 0), entity.getDepartureTime());
+        assertEquals(2, entity.getDaysOfWeek().size());
     }
 
     @Test
@@ -45,13 +48,14 @@ class ScheduleMapperTest {
         assertEquals(1L, domain.getId());
         assertEquals(10L, domain.getShiftId());
         assertEquals("Morning", domain.getName());
+        assertTrue(domain.getDaysOfWeek().isEmpty());
     }
 
     @Test
     void shouldMapRoundTrip() {
         var now = LocalDateTime.now();
         var original = Schedule.restore(2L, 20L, "Afternoon", null,
-                LocalTime.of(13, 0), LocalTime.of(22, 0), now, now);
+                LocalTime.of(13, 0), LocalTime.of(22, 0), List.of(DayOfWeek.WEDNESDAY), now, now);
 
         var entity = ScheduleMapper.toEntity(original);
         var restored = ScheduleMapper.toDomain(entity);
@@ -59,5 +63,7 @@ class ScheduleMapperTest {
         assertEquals(original.getId(), restored.getId());
         assertEquals(original.getName(), restored.getName());
         assertNull(restored.getDescription());
+        assertEquals(1, restored.getDaysOfWeek().size());
+        assertEquals(DayOfWeek.WEDNESDAY, restored.getDaysOfWeek().get(0));
     }
 }

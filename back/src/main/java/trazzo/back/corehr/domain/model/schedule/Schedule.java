@@ -1,8 +1,14 @@
 package trazzo.back.corehr.domain.model.schedule;
 
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +24,7 @@ public class Schedule extends BaseDomainModel {
     private String description;
     private LocalTime entryTime;
     private LocalTime departureTime;
+    private List<DayOfWeek> daysOfWeek;
 
     private Schedule(
             Long id,
@@ -26,6 +33,7 @@ public class Schedule extends BaseDomainModel {
             String description,
             LocalTime entryTime,
             LocalTime departureTime,
+            List<DayOfWeek> daysOfWeek,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -35,24 +43,24 @@ public class Schedule extends BaseDomainModel {
         this.description = DomainModelValidator.normalizeOptionalText(description);
         this.entryTime = DomainModelValidator.requireTime(entryTime, "entryTime");
         this.departureTime = DomainModelValidator.requireValidDepartureTime(entryTime, departureTime);
+        this.daysOfWeek = normalizeDaysOfWeek(daysOfWeek);
     }
 
-    public static Schedule create(Long shiftId, String name, String description, LocalTime entryTime, LocalTime departureTime) {
+    public static Schedule create(Long shiftId, String name, String description,
+                                   LocalTime entryTime, LocalTime departureTime,
+                                   List<DayOfWeek> daysOfWeek) {
         LocalDateTime now = LocalDateTime.now();
-        return new Schedule(null, shiftId, name, description, entryTime, departureTime, now, now);
+        return new Schedule(null, shiftId, name, description, entryTime, departureTime,
+                daysOfWeek, now, now);
     }
 
     public static Schedule restore(
-            Long id,
-            Long shiftId,
-            String name,
-            String description,
-            LocalTime entryTime,
-            LocalTime departureTime,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Long id, Long shiftId, String name, String description,
+            LocalTime entryTime, LocalTime departureTime, List<DayOfWeek> daysOfWeek,
+            LocalDateTime createdAt, LocalDateTime updatedAt
     ) {
-        return new Schedule(id, shiftId, name, description, entryTime, departureTime, createdAt, updatedAt);
+        return new Schedule(id, shiftId, name, description, entryTime, departureTime,
+                daysOfWeek, createdAt, updatedAt);
     }
 
     public void rename(String name) {
@@ -69,5 +77,22 @@ public class Schedule extends BaseDomainModel {
         this.entryTime = DomainModelValidator.requireTime(entryTime, "entryTime");
         this.departureTime = DomainModelValidator.requireValidDepartureTime(entryTime, departureTime);
         touch();
+    }
+
+    public void updateDaysOfWeek(List<DayOfWeek> daysOfWeek) {
+        this.daysOfWeek = normalizeDaysOfWeek(daysOfWeek);
+        touch();
+    }
+
+    public List<DayOfWeek> getDaysOfWeek() {
+        return Collections.unmodifiableList(this.daysOfWeek);
+    }
+
+    private static List<DayOfWeek> normalizeDaysOfWeek(List<DayOfWeek> daysOfWeek) {
+        if (daysOfWeek == null || daysOfWeek.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<DayOfWeek> deduped = new LinkedHashSet<>(daysOfWeek);
+        return Collections.unmodifiableList(new ArrayList<>(deduped));
     }
 }

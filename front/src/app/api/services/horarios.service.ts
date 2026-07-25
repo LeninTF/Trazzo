@@ -8,7 +8,7 @@ import type {
   ToleranciaProfile,
   CreateShiftRequest, PatchShiftRequest,
   CreateScheduleRequest, PatchScheduleRequest,
-  CreateUserScheduleRequest,
+  CreateUserScheduleRequest, BulkAssignUserSchedulesRequest, BulkAssignUserSchedulesResponse,
   CreateToleranciaRequest, PatchToleranciaRequest,
   PageResponse,
 } from '../types';
@@ -79,12 +79,20 @@ export class HorariosService {
   }
 
   // ========== USER SCHEDULES ==========
-  listUserSchedules(opts?: { tenant_user_id?: number; schedule_id?: number; page?: number; size?: number }): Observable<UserScheduleListResponse> {
+  listUserSchedules(opts?: { tenant_user_id?: number; schedule_id?: number; shift_id?: number; page?: number; size?: number }): Observable<UserScheduleListResponse> {
     return this.http.get<UserScheduleListResponse>(`${this.apiBase}/corehr/user-schedules`, { params: params(opts) });
+  }
+
+  listUserSchedulesByUser(tenantUserId: number): Observable<UserScheduleProfile[]> {
+    return this.http.get<UserScheduleProfile[]>(`${this.apiBase}/corehr/user-schedules/by-user/${tenantUserId}`);
   }
 
   createUserSchedule(body: CreateUserScheduleRequest): Observable<UserScheduleProfile> {
     return this.http.post<UserScheduleProfile>(`${this.apiBase}/corehr/user-schedules`, body);
+  }
+
+  bulkAssignUserSchedules(body: BulkAssignUserSchedulesRequest): Observable<BulkAssignUserSchedulesResponse> {
+    return this.http.post<BulkAssignUserSchedulesResponse>(`${this.apiBase}/corehr/user-schedules/bulk`, body);
   }
 
   deleteUserSchedule(id: number): Observable<void> {

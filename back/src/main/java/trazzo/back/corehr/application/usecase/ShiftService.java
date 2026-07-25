@@ -10,6 +10,8 @@ import trazzo.back.corehr.application.port.out.ScheduleRepositoryPort;
 import trazzo.back.corehr.application.port.out.ShiftRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.Shift;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -67,11 +69,15 @@ public class ShiftService implements ShiftUseCase {
     }
 
     private ShiftResult toResult(Shift shift) {
+        var schedules = scheduleRepository.findAll(shift.getId(), 0, 200, null).stream()
+                .map(s -> new ShiftResult.ScheduleSummary(
+                        s.getId(), s.getName(), s.getEntryTime(), s.getDepartureTime(), s.getDaysOfWeek()))
+                .toList();
         return new ShiftResult(
                 shift.getId(),
                 shift.getName(),
                 shift.getDescription(),
-                java.util.Collections.emptyList(),
+                schedules,
                 shift.getCreatedAt(),
                 shift.getUpdatedAt()
         );

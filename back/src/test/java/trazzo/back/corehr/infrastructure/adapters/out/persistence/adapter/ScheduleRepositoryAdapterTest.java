@@ -13,6 +13,7 @@ import trazzo.back.corehr.domain.model.schedule.Schedule;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.ScheduleEntity;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.ScheduleJpaRepository;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -50,7 +51,7 @@ class ScheduleRepositoryAdapterTest {
 
     @Test
     void save_shouldPersistAndReturnDomain() {
-        var domain = Schedule.restore(null, 10L, "Morning", "desc", entryTime, departureTime, now, now);
+        var domain = Schedule.restore(null, 10L, "Morning", "desc", entryTime, departureTime, List.of(DayOfWeek.MONDAY), now, now);
         var entity = createEntity(1L);
         when(scheduleRepo.save(any())).thenReturn(entity);
 

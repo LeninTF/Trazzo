@@ -35,7 +35,7 @@ class ToleranciaServiceTest {
     void createWithValidData() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(toleranciaRepository.existsActiveByScheduleIdAndType(1L, ToleranciaType.ENTRADA)).thenReturn(false);
         when(toleranciaRepository.save(any())).thenAnswer(invocation -> invocation.<Tolerancia>getArgument(0));
@@ -54,7 +54,7 @@ class ToleranciaServiceTest {
     void createWithDuplicateTypeThrowsException() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(toleranciaRepository.existsActiveByScheduleIdAndType(1L, ToleranciaType.ENTRADA)).thenReturn(true);
 
@@ -78,7 +78,7 @@ class ToleranciaServiceTest {
     void findAllByScheduleIdReturnsPaginatedResults() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
         var tolerancia = Tolerancia.restore(1L, 1L, "Tolerancia 1", ToleranciaType.ENTRADA,
                 15, "Desc", true, now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));

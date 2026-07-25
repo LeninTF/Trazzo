@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.corehr.application.dto.command.CreateScheduleCommand;
 import trazzo.back.corehr.application.dto.command.PatchScheduleCommand;
@@ -21,6 +22,7 @@ public class ScheduleController {
     private final ScheduleUseCase scheduleUseCase;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('gestion-horarios.ver-asignaciones')")
     public ResponseEntity<ScheduleListResponse> list(
             @RequestParam(name = "shift_id", required = false) Long shiftId,
             @RequestParam(defaultValue = "0") int page,
@@ -32,14 +34,17 @@ public class ScheduleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ScheduleResponse> create(@Valid @RequestBody CreateScheduleRequest request) {
         var command = new CreateScheduleCommand(request.shiftId(), request.name(),
-                request.description(), request.entryTime(), request.departureTime());
+                request.description(), request.entryTime(), request.departureTime(),
+                request.daysOfWeek());
         var result = scheduleUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(ScheduleResponse.from(result));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('gestion-horarios.ver-asignaciones')")
     public ResponseEntity<ScheduleResponse> getById(@PathVariable Long id) {
         return scheduleUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(ScheduleResponse.from(result)))
@@ -47,17 +52,19 @@ public class ScheduleController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ScheduleResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchScheduleRequest request
     ) {
         var command = new PatchScheduleCommand(request.name(), request.description(),
-                request.entryTime(), request.departureTime());
+                request.entryTime(), request.departureTime(), request.daysOfWeek());
         var result = scheduleUseCase.patch(id, command);
         return ResponseEntity.ok(ScheduleResponse.from(result));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('gestion-horarios.configurar-turnos')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         scheduleUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

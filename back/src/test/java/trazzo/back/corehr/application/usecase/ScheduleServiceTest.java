@@ -14,6 +14,7 @@ import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.Schedule;
 import trazzo.back.corehr.domain.model.schedule.Shift;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -43,7 +44,7 @@ class ScheduleServiceTest {
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
         when(scheduleRepository.save(any())).thenAnswer(invocation -> invocation.<Schedule>getArgument(0));
 
-        var command = new CreateScheduleCommand(1L, "Horario A", "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));
+        var command = new CreateScheduleCommand(1L, "Horario A", "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0), null);
         var result = service.create(command);
 
         assertEquals("Horario A", result.name());
@@ -55,7 +56,7 @@ class ScheduleServiceTest {
     void createWithShiftNotFoundThrowsException() {
         when(shiftRepository.findById(99L)).thenReturn(Optional.empty());
 
-        var command = new CreateScheduleCommand(99L, "Horario A", "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));
+        var command = new CreateScheduleCommand(99L, "Horario A", "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0), null);
 
         assertThrows(IllegalArgumentException.class, () -> service.create(command));
         verify(scheduleRepository, never()).save(any());
@@ -65,7 +66,7 @@ class ScheduleServiceTest {
     void findByIdReturnsSchedule() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         var shift = Shift.restore(1L, "Turno Matutino", "Desc", now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
@@ -89,7 +90,7 @@ class ScheduleServiceTest {
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         var shift = Shift.restore(1L, "Turno Matutino", "Desc", now, now);
         when(scheduleRepository.findAll(1L, 0, 10, "name")).thenReturn(List.of(schedule));
         when(scheduleRepository.count(1L)).thenReturn(1L);
@@ -106,11 +107,11 @@ class ScheduleServiceTest {
     void patchUpdatesName() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Original", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(scheduleRepository.save(any())).thenAnswer(invocation -> invocation.<Schedule>getArgument(0));
 
-        var command = new PatchScheduleCommand("Modificado", null, null, null);
+        var command = new PatchScheduleCommand("Modificado", null, null, null, null);
         var result = service.patch(1L, command);
 
         assertEquals("Modificado", result.name());
@@ -120,11 +121,11 @@ class ScheduleServiceTest {
     void patchUpdatesTimes() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Original", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
         when(scheduleRepository.save(any())).thenAnswer(invocation -> invocation.<Schedule>getArgument(0));
 
-        var command = new PatchScheduleCommand(null, null, LocalTime.of(9, 0), LocalTime.of(18, 0));
+        var command = new PatchScheduleCommand(null, null, LocalTime.of(9, 0), LocalTime.of(18, 0), null);
         var result = service.patch(1L, command);
 
         assertEquals(LocalTime.of(9, 0), result.entryTime());
@@ -135,7 +136,7 @@ class ScheduleServiceTest {
     void patchWithNotFoundIdThrowsException() {
         when(scheduleRepository.findById(99L)).thenReturn(Optional.empty());
 
-        var command = new PatchScheduleCommand("Nuevo", null, null, null);
+        var command = new PatchScheduleCommand("Nuevo", null, null, null, null);
 
         assertThrows(IllegalArgumentException.class, () -> service.patch(99L, command));
     }
@@ -144,9 +145,9 @@ class ScheduleServiceTest {
     void deleteByIdSuccess() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
-        when(userScheduleRepository.count(null, 1L)).thenReturn(0L);
+        when(userScheduleRepository.count(null, 1L, null)).thenReturn(0L);
 
         service.deleteById(1L);
 
@@ -157,9 +158,9 @@ class ScheduleServiceTest {
     void deleteByIdThrowsExceptionWhenHasActiveDependencies() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), now, now);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
-        when(userScheduleRepository.count(null, 1L)).thenReturn(3L);
+        when(userScheduleRepository.count(null, 1L, null)).thenReturn(3L);
 
         assertThrows(IllegalStateException.class, () -> service.deleteById(1L));
         verify(scheduleRepository, never()).deleteById(any());

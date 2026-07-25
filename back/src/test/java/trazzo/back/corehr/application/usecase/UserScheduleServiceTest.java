@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import trazzo.back.corehr.application.dto.command.CreateUserScheduleCommand;
-import trazzo.back.corehr.application.dto.result.ScheduleResult;
+import trazzo.back.corehr.application.port.out.AuditScheduleAssignmentPort;
 import trazzo.back.corehr.application.port.out.ScheduleRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
@@ -24,6 +24,7 @@ class UserScheduleServiceTest {
     private UserScheduleRepositoryPort userScheduleRepository;
     private ScheduleRepositoryPort scheduleRepository;
     private TenantUserPort tenantUserPort;
+    private AuditScheduleAssignmentPort auditPort;
     private UserScheduleService service;
 
     @BeforeEach
@@ -31,17 +32,19 @@ class UserScheduleServiceTest {
         userScheduleRepository = mock(UserScheduleRepositoryPort.class);
         scheduleRepository = mock(ScheduleRepositoryPort.class);
         tenantUserPort = mock(TenantUserPort.class);
-        service = new UserScheduleService(userScheduleRepository, scheduleRepository, tenantUserPort);
+        auditPort = mock(AuditScheduleAssignmentPort.class);
+        service = new UserScheduleService(userScheduleRepository, scheduleRepository, tenantUserPort, auditPort);
     }
 
     @Test
     void createWithValidData() {
         var now = LocalDateTime.now();
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
         when(tenantUserPort.existsById(10L)).thenReturn(true);
         when(tenantUserPort.findStateById(10L)).thenReturn(Optional.of(TenantUserState.ACTIVO));
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
+        when(userScheduleRepository.existsByTenantUserIdAndScheduleId(10L, 1L)).thenReturn(false);
         when(userScheduleRepository.save(any())).thenAnswer(invocation -> invocation.<UserSchedule>getArgument(0));
 
         var command = new CreateUserScheduleCommand(10L, 1L, "Desc", LocalTime.of(8, 0), LocalTime.of(17, 0));
@@ -50,6 +53,7 @@ class UserScheduleServiceTest {
         assertEquals(10L, result.tenantUserId());
         assertEquals(1L, result.scheduleId());
         verify(userScheduleRepository).save(any());
+        verify(auditPort).recordAssignment(eq(10L), eq(1L), any(), eq(AuditScheduleAssignmentPort.Action.CREATE));
     }
 
     @Test
@@ -91,12 +95,12 @@ class UserScheduleServiceTest {
         var us = UserSchedule.restore(1L, 10L, 1L, "Desc",
                 LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
         var schedule = Schedule.restore(1L, 1L, "Horario A", "Desc",
-                LocalTime.of(8, 0), LocalTime.of(17, 0), now, now);
-        when(userScheduleRepository.findAll(10L, 1L, 0, 10)).thenReturn(List.of(us));
-        when(userScheduleRepository.count(10L, 1L)).thenReturn(1L);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
+        when(userScheduleRepository.findAll(10L, 1L, null, 0, 10)).thenReturn(List.of(us));
+        when(userScheduleRepository.count(10L, 1L, null)).thenReturn(1L);
         when(scheduleRepository.findById(1L)).thenReturn(Optional.of(schedule));
 
-        var result = service.findAll(10L, 1L, 0, 10);
+        var result = service.findAll(10L, 1L, null, 0, 10);
 
         assertEquals(1, result.content().size());
         assertEquals(0, result.page());
@@ -113,6 +117,7 @@ class UserScheduleServiceTest {
         service.deleteById(1L);
 
         verify(userScheduleRepository).deleteById(1L);
+        verify(auditPort).recordAssignment(eq(10L), eq(1L), eq(1L), eq(AuditScheduleAssignmentPort.Action.DELETE));
     }
 
     @Test

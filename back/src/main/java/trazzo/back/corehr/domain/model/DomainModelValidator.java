@@ -51,7 +51,7 @@ public final class DomainModelValidator {
             throw new InvalidScheduleException("departureTime is required");
         }
         if (!new ScheduleTimeSpec().isValidScheduleTime(entryTime, departureTime)) {
-            throw new InvalidScheduleException("departureTime must be after entryTime");
+            throw new InvalidScheduleException("departureTime must differ from entryTime (use 24h format; nocturnal shifts crossing midnight are allowed)");
         }
         return departureTime;
     }

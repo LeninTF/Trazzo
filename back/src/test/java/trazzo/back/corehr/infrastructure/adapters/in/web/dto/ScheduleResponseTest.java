@@ -3,6 +3,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web.dto;
 import org.junit.jupiter.api.Test;
 import trazzo.back.corehr.application.dto.result.ScheduleResult;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -20,7 +21,7 @@ class ScheduleResponseTest {
                 1L, 10L, "T1", null, 15, "desc", true, now, now);
         var shiftResult = new ScheduleResult.ShiftSummary(99L, "Morning");
         var result = new ScheduleResult(1L, 99L, shiftResult, "Schedule1", "desc",
-                entry, departure, List.of(toleranciaResult), now, now);
+                entry, departure, List.of(DayOfWeek.MONDAY), List.of(toleranciaResult), now, now);
 
         var response = ScheduleResponse.from(result);
 
@@ -30,6 +31,7 @@ class ScheduleResponseTest {
         assertThat(response.shift().id()).isEqualTo(99L);
         assertThat(response.shift().name()).isEqualTo("Morning");
         assertThat(response.name()).isEqualTo("Schedule1");
+        assertThat(response.daysOfWeek()).containsExactly(DayOfWeek.MONDAY);
         assertThat(response.tolerancias()).hasSize(1);
         assertThat(response.tolerancias().get(0).id()).isEqualTo(1L);
     }
@@ -38,7 +40,7 @@ class ScheduleResponseTest {
     void fromHandlesNullShift() {
         var now = LocalDateTime.now();
         var result = new ScheduleResult(1L, null, null, "Solo", null,
-                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), List.of(), now, now);
 
         var response = ScheduleResponse.from(result);
 
@@ -50,11 +52,12 @@ class ScheduleResponseTest {
     void fromHandlesNullTolerancias() {
         var now = LocalDateTime.now();
         var result = new ScheduleResult(1L, null, null, "Solo", null,
-                LocalTime.of(8, 0), LocalTime.of(17, 0), null, now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), null, null, now, now);
 
         var response = ScheduleResponse.from(result);
 
         assertThat(response.tolerancias()).isEmpty();
+        assertThat(response.daysOfWeek()).isEmpty();
     }
 
     @Test
@@ -68,9 +71,9 @@ class ScheduleResponseTest {
     void equalsAndHashCode() {
         var now = LocalDateTime.now();
         var a = new ScheduleResponse(1L, null, null, "n", null,
-                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), List.of(), now, now);
         var b = new ScheduleResponse(1L, null, null, "n", null,
-                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), List.of(), now, now);
 
         assertThat(a).isEqualTo(b);
         assertThat(a).hasSameHashCodeAs(b);

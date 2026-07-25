@@ -415,11 +415,26 @@ export interface ToleranciaProfile {
   updated_at: string;
 }
 
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+export const DAYS_OF_WEEK: DayOfWeek[] = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
+  MONDAY: 'Lun',
+  TUESDAY: 'Mar',
+  WEDNESDAY: 'Mié',
+  THURSDAY: 'Jue',
+  FRIDAY: 'Vie',
+  SATURDAY: 'Sáb',
+  SUNDAY: 'Dom',
+};
+
 export interface ScheduleSummary {
   id: number;
   name: string;
   entry_time: string;
   departure_time: string;
+  days_of_week?: DayOfWeek[];
 }
 
 export interface ScheduleProfile {
@@ -430,6 +445,7 @@ export interface ScheduleProfile {
   description: string | null;
   entry_time: string;
   departure_time: string;
+  days_of_week: DayOfWeek[];
   tolerancias: ToleranciaProfile[];
   created_at: string;
   updated_at: string;
@@ -464,6 +480,7 @@ export interface CreateScheduleRequest {
   description?: string | null;
   entry_time: string;
   departure_time: string;
+  days_of_week?: DayOfWeek[];
 }
 
 export interface PatchScheduleRequest {
@@ -471,6 +488,7 @@ export interface PatchScheduleRequest {
   description?: string | null;
   entry_time?: string;
   departure_time?: string;
+  days_of_week?: DayOfWeek[];
 }
 
 // ── Tolerancia ──
@@ -491,6 +509,16 @@ export interface PatchToleranciaRequest {
 
 // ── User Schedule ──
 
+export interface TenantUserSummary {
+  id: number;
+  name: string;
+  father_surname: string;
+  mother_surname: string;
+  sede: string | null;
+  area: string | null;
+  department: string | null;
+}
+
 export interface UserScheduleProfile {
   id: number;
   tenant_user_id: number;
@@ -501,6 +529,7 @@ export interface UserScheduleProfile {
   departure_time: string;
   created_at: string;
   updated_at: string;
+  tenant_user?: TenantUserSummary;
 }
 
 export interface UserScheduleListResponse extends PageResponse<UserScheduleProfile> {}
@@ -511,6 +540,27 @@ export interface CreateUserScheduleRequest {
   description?: string | null;
   entry_time: string;
   departure_time: string;
+}
+
+export interface BulkAssignUserSchedulesRequest {
+  tenant_user_ids: number[];
+  schedule_id: number;
+  description?: string | null;
+}
+
+export interface BulkAssignUserSchedulesItem {
+  tenant_user_id: number;
+  status: 'CREATED' | 'SKIPPED' | 'ERROR';
+  message: string;
+}
+
+export interface BulkAssignUserSchedulesResponse {
+  schedule_id: number;
+  items: BulkAssignUserSchedulesItem[];
+  total: number;
+  created: number;
+  skipped: number;
+  errors: number;
 }
 
 // ── Device ──

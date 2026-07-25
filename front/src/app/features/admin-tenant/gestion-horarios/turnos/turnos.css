@@ -255,13 +255,49 @@
 /* ── Add horario ── */
 .horario-add {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   margin-top: 8px;
   padding: 12px 16px;
   background: var(--page-surface);
   border: 1px dashed #cbd5e1;
   border-radius: 12px;
+}
+
+.horario-days {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--page-muted);
+  margin-top: 2px;
+}
+
+.day-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--page-border);
+  background: var(--page-surface);
+  color: var(--page-muted);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.day-chip:hover {
+  border-color: var(--page-blue);
+  color: var(--page-blue);
+}
+
+.day-chip-active {
+  background: linear-gradient(135deg, var(--page-blue), var(--page-blue-dark));
+  border-color: transparent;
+  color: #fff;
+}
+
+.day-chip-active:hover {
+  color: #fff;
+  opacity: 0.92;
 }
 
 .turno-add-horario {

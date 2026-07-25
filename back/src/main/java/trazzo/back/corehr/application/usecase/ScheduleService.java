@@ -12,6 +12,7 @@ import trazzo.back.corehr.application.port.out.ToleranciaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.Schedule;
 
+import java.util.Collections;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -24,12 +25,13 @@ public class ScheduleService implements ScheduleUseCase {
 
     @Override
     public ScheduleResult create(CreateScheduleCommand command) {
-        if (!shiftRepository.findById(command.shiftId()).isPresent()) {
+        if (shiftRepository.findById(command.shiftId()).isEmpty()) {
             throw new IllegalArgumentException("Turno no encontrado: " + command.shiftId());
         }
+        var days = command.daysOfWeek() != null ? command.daysOfWeek() : Collections.<java.time.DayOfWeek>emptyList();
         var schedule = Schedule.create(
                 command.shiftId(), command.name(), command.description(),
-                command.entryTime(), command.departureTime()
+                command.entryTime(), command.departureTime(), days
         );
         var saved = scheduleRepository.save(schedule);
         return toResult(saved);
@@ -64,6 +66,9 @@ public class ScheduleService implements ScheduleUseCase {
             var departure = command.departureTime() != null ? command.departureTime() : schedule.getDepartureTime();
             schedule.reschedule(entry, departure);
         }
+        if (command.daysOfWeek() != null) {
+            schedule.updateDaysOfWeek(command.daysOfWeek());
+        }
         var saved = scheduleRepository.save(schedule);
         return toResult(saved);
     }
@@ -72,7 +77,7 @@ public class ScheduleService implements ScheduleUseCase {
     public void deleteById(Long id) {
         var schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule no encontrado: " + id));
-        if (userScheduleRepository.count(null, id) > 0) {
+        if (userScheduleRepository.count(null, id, null) > 0) {
             throw new IllegalStateException("El schedule tiene user_schedules o asistencias activas.");
         }
         scheduleRepository.deleteById(id);
@@ -90,7 +95,8 @@ public class ScheduleService implements ScheduleUseCase {
                 schedule.getDescription(),
                 schedule.getEntryTime(),
                 schedule.getDepartureTime(),
-                java.util.Collections.emptyList(),
+                schedule.getDaysOfWeek(),
+                Collections.emptyList(),
                 schedule.getCreatedAt(),
                 schedule.getUpdatedAt()
         );
@@ -115,6 +121,7 @@ public class ScheduleService implements ScheduleUseCase {
                 schedule.getDescription(),
                 schedule.getEntryTime(),
                 schedule.getDepartureTime(),
+                schedule.getDaysOfWeek(),
                 tolerancias,
                 schedule.getCreatedAt(),
                 schedule.getUpdatedAt()

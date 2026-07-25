@@ -103,39 +103,56 @@
           @for (horario of turno.horarios; track horario.id) {
             <div class="horario-card">
               @if (isEditingHorario(turno.id, horario.id)) {
-                <div class="d-flex align-items-center gap-2 flex-grow-1" [formGroup]="editHorarioForm">
-                  <label for="turno-horario-inicio" class="visually-hidden">Hora inicio</label>
-                  <input
-                    id="turno-horario-inicio"
-                    type="text"
-                    class="gh-input-xs"
-                    [class.is-invalid]="editHorarioForm.get('inicio')?.invalid && editHorarioForm.get('inicio')?.touched"
-                    formControlName="inicio"
-                    placeholder="HH:mm"
-                  >
-                  <span class="text-muted fw-bold">&ndash;</span>
-                  <label for="turno-horario-fin" class="visually-hidden">Hora fin</label>
-                  <input
-                    id="turno-horario-fin"
-                    type="text"
-                    class="gh-input-xs"
-                    [class.is-invalid]="editHorarioForm.get('fin')?.invalid && editHorarioForm.get('fin')?.touched"
-                    formControlName="fin"
-                    placeholder="HH:mm"
-                  >
-                  <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditHorario(turno.id, horario)">
-                    <i class="bi bi-check-lg"></i>
-                  </button>
-                  <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelEditHorario()">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
+                <div class="d-flex flex-column gap-2 flex-grow-1" [formGroup]="editHorarioForm">
+                  <div class="d-flex align-items-center gap-2">
+                    <label for="turno-horario-inicio" class="visually-hidden">Hora inicio</label>
+                    <input
+                      id="turno-horario-inicio"
+                      type="text"
+                      class="gh-input-xs"
+                      [class.is-invalid]="editHorarioForm.get('inicio')?.invalid && editHorarioForm.get('inicio')?.touched"
+                      formControlName="inicio"
+                      placeholder="HH:mm"
+                    >
+                    <span class="text-muted fw-bold">&ndash;</span>
+                    <label for="turno-horario-fin" class="visually-hidden">Hora fin</label>
+                    <input
+                      id="turno-horario-fin"
+                      type="text"
+                      class="gh-input-xs"
+                      [class.is-invalid]="editHorarioForm.get('fin')?.invalid && editHorarioForm.get('fin')?.touched"
+                      formControlName="fin"
+                      placeholder="HH:mm"
+                    >
+                  </div>
+                  <div class="d-flex flex-wrap gap-1">
+                    @for (day of DAYS_OF_WEEK; track day) {
+                      <button
+                        type="button"
+                        class="day-chip"
+                        [class.day-chip-active]="hasDay(editHorarioForm, day)"
+                        (click)="toggleDay(editHorarioForm, day)"
+                      >{{ DAY_OF_WEEK_LABELS[day] }}</button>
+                    }
+                  </div>
+                  <div class="d-flex gap-1 align-self-end">
+                    <button class="gh-icon-btn gh-icon-btn-success" (click)="saveEditHorario(turno.id, horario)">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelEditHorario()">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
                 </div>
               } @else {
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 flex-grow-1">
                   <div class="horario-icon">
                     <i class="bi bi-clock"></i>
                   </div>
-                  <div class="horario-time">{{ horario.inicio }} &ndash; {{ horario.fin }}</div>
+                  <div>
+                    <div class="horario-time">{{ horario.inicio }} &ndash; {{ horario.fin }}</div>
+                    <div class="horario-days">{{ daysLabel(horario.daysOfWeek ?? []) }}</div>
+                  </div>
                   <span class="horario-duration">{{ calcularDuracion(horario.inicio, horario.fin) }}</span>
                 </div>
                 <div class="d-flex gap-1">
@@ -153,31 +170,45 @@
           <!-- ──────── ADD HORARIO ──────── -->
           @if (activeHorarioTurnoId === turno.id) {
             <div class="horario-add" [formGroup]="horarioForm">
-              <label for="turno-add-inicio" class="visually-hidden">Hora inicio</label>
-              <input
-                id="turno-add-inicio"
-                type="text"
-                class="gh-input-xs"
-                [class.is-invalid]="horarioForm.get('inicio')?.invalid && horarioForm.get('inicio')?.touched"
-                formControlName="inicio"
-                placeholder="HH:mm"
-              >
-              <span class="text-muted fw-bold">&ndash;</span>
-              <label for="turno-add-fin" class="visually-hidden">Hora fin</label>
-              <input
-                id="turno-add-fin"
-                type="text"
-                class="gh-input-xs"
-                [class.is-invalid]="horarioForm.get('fin')?.invalid && horarioForm.get('fin')?.touched"
-                formControlName="fin"
-                placeholder="HH:mm"
-              >
-              <button class="gh-icon-btn gh-icon-btn-success" (click)="addHorario(turno.id)" title="Agregar">
-                <i class="bi bi-plus-lg"></i>
-              </button>
-              <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelAddHorario()" title="Cancelar">
-                <i class="bi bi-x-lg"></i>
-              </button>
+              <div class="d-flex align-items-center gap-2">
+                <label for="turno-add-inicio" class="visually-hidden">Hora inicio</label>
+                <input
+                  id="turno-add-inicio"
+                  type="text"
+                  class="gh-input-xs"
+                  [class.is-invalid]="horarioForm.get('inicio')?.invalid && horarioForm.get('inicio')?.touched"
+                  formControlName="inicio"
+                  placeholder="HH:mm"
+                >
+                <span class="text-muted fw-bold">&ndash;</span>
+                <label for="turno-add-fin" class="visually-hidden">Hora fin</label>
+                <input
+                  id="turno-add-fin"
+                  type="text"
+                  class="gh-input-xs"
+                  [class.is-invalid]="horarioForm.get('fin')?.invalid && horarioForm.get('fin')?.touched"
+                  formControlName="fin"
+                  placeholder="HH:mm"
+                >
+              </div>
+              <div class="d-flex flex-wrap gap-1 mt-2">
+                @for (day of DAYS_OF_WEEK; track day) {
+                  <button
+                    type="button"
+                    class="day-chip"
+                    [class.day-chip-active]="hasDay(horarioForm, day)"
+                    (click)="toggleDay(horarioForm, day)"
+                  >{{ DAY_OF_WEEK_LABELS[day] }}</button>
+                }
+              </div>
+              <div class="d-flex gap-1 align-self-end mt-1">
+                <button class="gh-icon-btn gh-icon-btn-success" (click)="addHorario(turno.id)" title="Agregar">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+                <button class="gh-icon-btn gh-icon-btn-ghost" (click)="cancelAddHorario()" title="Cancelar">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
             </div>
           } @else {
             <button class="turno-add-horario" (click)="showAddHorario(turno.id)">

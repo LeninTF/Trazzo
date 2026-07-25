@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import trazzo.back.corehr.application.port.out.ScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.UserSchedule;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.UserScheduleEntity;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.UserScheduleJpaRepository;
@@ -18,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +27,8 @@ class UserScheduleRepositoryAdapterTest {
 
     @Mock
     private UserScheduleJpaRepository userScheduleRepo;
+    @Mock
+    private ScheduleRepositoryPort scheduleRepository;
 
     @InjectMocks
     private UserScheduleRepositoryAdapter adapter;
@@ -82,10 +86,10 @@ class UserScheduleRepositoryAdapterTest {
     @Test
     void findAll_shouldReturnMappedList() {
         var entity = createEntity(1L);
-        when(userScheduleRepo.findByTenantUserIdAndScheduleId(100L, 10L, PageRequest.of(0, 10)))
+        when(userScheduleRepo.findAllFiltered(eq(100L), eq(10L), eq(null), eq(PageRequest.of(0, 10))))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
-        var result = adapter.findAll(100L, 10L, 0, 10);
+        var result = adapter.findAll(100L, 10L, null, 0, 10);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getScheduleId()).isEqualTo(10L);
@@ -94,19 +98,19 @@ class UserScheduleRepositoryAdapterTest {
     @Test
     void findAll_withNullFilters_shouldUseNullParams() {
         var entity = createEntity(1L);
-        when(userScheduleRepo.findByTenantUserIdAndScheduleId(null, null, PageRequest.of(0, 10)))
+        when(userScheduleRepo.findAllFiltered(eq(null), eq(null), eq(null), eq(PageRequest.of(0, 10))))
                 .thenReturn(new PageImpl<>(List.of(entity)));
 
-        var result = adapter.findAll(null, null, 0, 10);
+        var result = adapter.findAll(null, null, null, 0, 10);
 
         assertThat(result).hasSize(1);
     }
 
     @Test
     void count_shouldReturnCount() {
-        when(userScheduleRepo.countByTenantUserIdAndScheduleId(100L, 10L)).thenReturn(3L);
+        when(userScheduleRepo.countFiltered(100L, 10L, null)).thenReturn(3L);
 
-        var result = adapter.count(100L, 10L);
+        var result = adapter.count(100L, 10L, null);
 
         assertThat(result).isEqualTo(3L);
     }

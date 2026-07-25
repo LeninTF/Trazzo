@@ -112,6 +112,10 @@ export class ApiService {
   listUserSchedules = this.horarios.listUserSchedules.bind(this.horarios);
   /** @deprecated Use `api.horarios.createUserSchedule()` */
   createUserSchedule = this.horarios.createUserSchedule.bind(this.horarios);
+  /** @deprecated Use `api.horarios.bulkAssignUserSchedules()` */
+  bulkAssignUserSchedules = this.horarios.bulkAssignUserSchedules.bind(this.horarios);
+  /** @deprecated Use `api.horarios.listUserSchedulesByUser()` */
+  listUserSchedulesByUser = this.horarios.listUserSchedulesByUser.bind(this.horarios);
   /** @deprecated Use `api.horarios.deleteUserSchedule()` */
   deleteUserSchedule = this.horarios.deleteUserSchedule.bind(this.horarios);
   /** @deprecated Use `api.corehr.listDevices()` */

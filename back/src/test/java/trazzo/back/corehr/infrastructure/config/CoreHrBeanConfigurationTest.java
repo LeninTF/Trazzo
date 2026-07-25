@@ -29,6 +29,7 @@ class CoreHrBeanConfigurationTest {
     @Mock private TenantContactRepositoryPort tenantContactRepo;
     @Mock private TenantUserPort tenantUserPort;
     @Mock private TenantUserDepartmentRepositoryPort deptRepo;
+    @Mock private AuditScheduleAssignmentPort auditPort;
     @Mock private JdbcTemplate jdbcTemplate;
     @Mock private EnrollSessionStore enrollSessionStore;
     @Mock private EnrollService enrollService;
@@ -50,7 +51,7 @@ class CoreHrBeanConfigurationTest {
 
     @Test
     void shouldCreateUserScheduleUseCase() {
-        assertNotNull(config.userScheduleUseCase(userScheduleRepo, scheduleRepo, tenantUserPort));
+        assertNotNull(config.userScheduleUseCase(userScheduleRepo, scheduleRepo, tenantUserPort, auditPort));
     }
 
     @Test

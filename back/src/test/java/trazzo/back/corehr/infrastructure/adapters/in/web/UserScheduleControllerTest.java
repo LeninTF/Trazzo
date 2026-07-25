@@ -45,7 +45,7 @@ class UserScheduleControllerTest {
     @Test
     void list_shouldReturn200() throws Exception {
         var paginated = new PaginatedResult<UserScheduleResult>(List.of(aResult()), 0, 20, 1, 1);
-        when(userScheduleUseCase.findAll(any(), any(), anyInt(), anyInt())).thenReturn(paginated);
+        when(userScheduleUseCase.findAll(any(), any(), any(), anyInt(), anyInt())).thenReturn(paginated);
 
         mockMvc.perform(get("/corehr/user-schedules"))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ class UserScheduleControllerTest {
     @Test
     void list_shouldFilterByTenantUserAndSchedule() throws Exception {
         var paginated = new PaginatedResult<UserScheduleResult>(List.of(aResult()), 0, 10, 1, 1);
-        when(userScheduleUseCase.findAll(eq(10L), eq(1L), eq(0), eq(10))).thenReturn(paginated);
+        when(userScheduleUseCase.findAll(eq(10L), eq(1L), eq(null), eq(0), eq(10))).thenReturn(paginated);
 
         mockMvc.perform(get("/corehr/user-schedules")
                         .param("tenant_user_id", "10")

@@ -3,6 +3,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web.dto;
 import org.junit.jupiter.api.Test;
 import trazzo.back.corehr.application.dto.result.PaginatedResult;
 import trazzo.back.corehr.application.dto.result.ScheduleResult;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -13,12 +14,13 @@ class ScheduleListResponseTest {
     void fromMapsPaginatedResult() {
         var now = LocalDateTime.now();
         var result = new ScheduleResult(1L, 10L, null, "Schedule1", null,
-                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(), now, now);
+                LocalTime.of(8, 0), LocalTime.of(17, 0), List.of(DayOfWeek.MONDAY), List.of(), now, now);
         var paginated = new PaginatedResult<>(List.of(result), 1, 5, 20, 4);
         var response = ScheduleListResponse.from(paginated);
         assertThat(response.content()).hasSize(1);
         assertThat(response.page()).isEqualTo(1);
         assertThat(response.totalPages()).isEqualTo(4);
+        assertThat(response.content().get(0).daysOfWeek()).containsExactly(DayOfWeek.MONDAY);
     }
     @Test
     void fromEmptyContent() {

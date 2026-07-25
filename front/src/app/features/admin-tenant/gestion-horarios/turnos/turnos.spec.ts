@@ -87,7 +87,7 @@ describe('TurnosComponent', () => {
 
   it('should add horario', async () => {
     component.showAddHorario(1);
-    component.horarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    component.horarioForm.setValue({ inicio: '09:00', fin: '13:00', daysOfWeek: [] });
     await component.addHorario(1);
     expect(mockApi.horarios.createSchedule).toHaveBeenCalled();
     expect(component.activeHorarioTurnoId).toBeNull();
@@ -95,7 +95,7 @@ describe('TurnosComponent', () => {
 
   it('should not add horario if form is invalid', () => {
     component.showAddHorario(1);
-    component.horarioForm.setValue({ inicio: '', fin: '' });
+    component.horarioForm.setValue({ inicio: '', fin: '', daysOfWeek: [] });
     expect(component.horarioForm.invalid).toBeTrue();
   });
 
@@ -139,12 +139,12 @@ describe('TurnosComponent', () => {
   });
 
   it('should start, cancel, and save edit horario', async () => {
-    const horario = { id: 1, inicio: '08:00', fin: '12:00' };
+    const horario = { id: 1, inicio: '08:00', fin: '12:00', daysOfWeek: [] };
     component.startEditHorario(1, horario);
     expect(component.editingHorarioKey).toBe('1-1');
-    component.editHorarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    component.editHorarioForm.setValue({ inicio: '09:00', fin: '13:00', daysOfWeek: [] });
     await component.saveEditHorario(1, horario);
-    expect(mockApi.horarios.patchSchedule).toHaveBeenCalledWith(1, { entry_time: '09:00', departure_time: '13:00' });
+    expect(mockApi.horarios.patchSchedule).toHaveBeenCalledWith(1, { entry_time: '09:00', departure_time: '13:00', days_of_week: [] });
     expect(component.editingHorarioKey).toBeNull();
   });
 
@@ -202,7 +202,7 @@ describe('TurnosComponent', () => {
   it('should not add horario if form is invalid via addHorario call', async () => {
     mockApi.horarios.createSchedule.calls.reset();
     component.showAddHorario(1);
-    component.horarioForm.setValue({ inicio: '', fin: '' });
+    component.horarioForm.setValue({ inicio: '', fin: '', daysOfWeek: [] });
     await component.addHorario(1);
     expect(mockApi.horarios.createSchedule).not.toHaveBeenCalled();
   });
@@ -210,25 +210,25 @@ describe('TurnosComponent', () => {
   it('should handle addHorario error', async () => {
     mockApi.horarios.createSchedule.and.callFake(() => { throw new Error('fail'); });
     component.showAddHorario(1);
-    component.horarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    component.horarioForm.setValue({ inicio: '09:00', fin: '13:00', daysOfWeek: [] });
     await component.addHorario(1);
     expect(mockToast.error).toHaveBeenCalledWith('Error al agregar horario');
   });
 
   it('should not save edit horario if form is invalid', async () => {
     mockApi.horarios.patchSchedule.calls.reset();
-    const horario = { id: 1, inicio: '08:00', fin: '12:00' };
+    const horario = { id: 1, inicio: '08:00', fin: '12:00', daysOfWeek: [] };
     component.startEditHorario(1, horario);
-    component.editHorarioForm.setValue({ inicio: '', fin: '' });
+    component.editHorarioForm.setValue({ inicio: '', fin: '', daysOfWeek: [] });
     await component.saveEditHorario(1, horario);
     expect(mockApi.horarios.patchSchedule).not.toHaveBeenCalled();
   });
 
   it('should handle saveEditHorario error', async () => {
     mockApi.horarios.patchSchedule.and.callFake(() => { throw new Error('fail'); });
-    const horario = { id: 1, inicio: '08:00', fin: '12:00' };
+    const horario = { id: 1, inicio: '08:00', fin: '12:00', daysOfWeek: [] };
     component.startEditHorario(1, horario);
-    component.editHorarioForm.setValue({ inicio: '09:00', fin: '13:00' });
+    component.editHorarioForm.setValue({ inicio: '09:00', fin: '13:00', daysOfWeek: [] });
     await component.saveEditHorario(1, horario);
     expect(mockToast.error).toHaveBeenCalledWith('Error al actualizar horario');
   });

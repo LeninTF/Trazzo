@@ -54,9 +54,9 @@ class UserScheduleTest {
     }
 
     @Test
-    void shouldThrowWhenDepartureBeforeEntry() {
+    void shouldThrowWhenEntryEqualsDeparture() {
         assertThrows(InvalidScheduleException.class, () ->
-            UserSchedule.create(1L, 1L, null, LocalTime.of(17, 0), LocalTime.of(8, 0))
+            UserSchedule.create(1L, 1L, null, LocalTime.of(17, 0), LocalTime.of(17, 0))
         );
     }
 }

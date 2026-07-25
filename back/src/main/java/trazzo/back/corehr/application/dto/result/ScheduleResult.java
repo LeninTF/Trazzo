@@ -1,5 +1,6 @@
 package trazzo.back.corehr.application.dto.result;
 
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -12,6 +13,7 @@ public record ScheduleResult(
         String description,
         LocalTime entryTime,
         LocalTime departureTime,
+        List<DayOfWeek> daysOfWeek,
         List<ToleranciaResult> tolerancias,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

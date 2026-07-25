@@ -688,7 +688,7 @@ function handleCorehrScheduleListCreate(
     return ok(paginate(filtered, page, size));
   }
   if (u === '/corehr/schedules' && method === 'POST') {
-    const body = req.body as { shift_id: number; name: string; entry_time: string; departure_time: string; description?: string };
+    const body = req.body as { shift_id: number; name: string; entry_time: string; departure_time: string; description?: string; days_of_week?: string[] };
     const shift = mockShifts.find(s => s.id === body.shift_id);
     const newSchedule = {
       id: mockSchedules.length + 1,
@@ -698,6 +698,7 @@ function handleCorehrScheduleListCreate(
       description: body.description ?? null,
       entry_time: body.entry_time,
       departure_time: body.departure_time,
+      days_of_week: body.days_of_week ?? [],
       tolerancias: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -782,25 +783,68 @@ function handleCorehrUserSchedules(
 ): Observable<HttpEvent<unknown>> | null {
   if (!u.startsWith('/corehr/user-schedules')) return null;
 
+  if (u === '/corehr/user-schedules/bulk' && method === 'POST') {
+    const body = req.body as { tenant_user_ids: number[]; schedule_id: number; description?: string };
+    const existing = new Set(mockUserSchedules.filter(us => us.schedule_id === body.schedule_id).map(us => us.tenant_user_id));
+    const items = body.tenant_user_ids.map(uid => {
+      if (existing.has(uid)) {
+        return { tenant_user_id: uid, status: 'SKIPPED' as const, message: 'Ya tiene este horario asignado.' };
+      }
+      return { tenant_user_id: uid, status: 'CREATED' as const, message: 'Asignación creada.' };
+    });
+    const created = items.filter(i => i.status === 'CREATED').length;
+    const skipped = items.filter(i => i.status === 'SKIPPED').length;
+    return ok({
+      schedule_id: body.schedule_id,
+      items,
+      total: items.length,
+      created,
+      skipped,
+      errors: 0,
+    });
+  }
+
+  const byUserMatch = /^\/corehr\/user-schedules\/by-user\/(\d+)$/.exec(u);
+  if (byUserMatch && method === 'GET') {
+    const tenantUserId = Number.parseInt(byUserMatch[1], 10);
+    const list = mockUserSchedules.filter(us => us.tenant_user_id === tenantUserId);
+    return ok(list);
+  }
+
   if (u === '/corehr/user-schedules' && method === 'GET') {
     let filtered = [...mockUserSchedules];
     if (qp['tenant_user_id']) filtered = filtered.filter(us => us.tenant_user_id === Number.parseInt(qp['tenant_user_id'], 10));
     if (qp['schedule_id']) filtered = filtered.filter(us => us.schedule_id === Number.parseInt(qp['schedule_id'], 10));
+    if (qp['shift_id']) {
+      const shiftId = Number.parseInt(qp['shift_id'], 10);
+      const scheduleIds = mockSchedules.filter(s => s.shift_id === shiftId).map(s => s.id);
+      filtered = filtered.filter(us => scheduleIds.includes(us.schedule_id));
+    }
     return ok(paginate(filtered, page, size));
   }
   if (u === '/corehr/user-schedules' && method === 'POST') {
-    const body = req.body as { tenant_user_id: number; schedule_id: number; entry_time: string; departure_time: string };
+    const body = req.body as { tenant_user_id: number; schedule_id: number; entry_time: string; departure_time: string; description?: string };
     const schedule = mockSchedules.find(s => s.id === body.schedule_id);
+    const user = mockTenantUsers.find(tu => tu.id === body.tenant_user_id);
     const newUs = {
       id: mockUserSchedules.length + 1,
       tenant_user_id: body.tenant_user_id,
       schedule_id: body.schedule_id,
-      schedule: schedule ?? { id: body.schedule_id, name: '', entry_time: body.entry_time, departure_time: body.departure_time },
-      description: (req.body as { description?: string }).description ?? null,
+      schedule: schedule ?? { id: body.schedule_id, name: '', entry_time: body.entry_time, departure_time: body.departure_time, days_of_week: [] },
+      description: body.description ?? null,
       entry_time: body.entry_time,
       departure_time: body.departure_time,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      tenant_user: user ? {
+        id: user.id,
+        name: user.persona.name,
+        father_surname: user.persona.father_surname,
+        mother_surname: user.persona.mother_surname,
+        sede: user.sedes[0]?.nombre ?? null,
+        area: user.areas[0]?.nombre ?? null,
+        department: user.departamentos[0]?.nombre ?? null,
+      } : undefined,
     };
     return created(newUs);
   }

@@ -3,11 +3,13 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../api/services/api.service';
 import { ToastService } from '../../../../services/toast.service';
+import { DAYS_OF_WEEK, DAY_OF_WEEK_LABELS, type DayOfWeek } from '../../../../api/types';
 
 interface Horario {
   id: number;
   inicio: string;
   fin: string;
+  daysOfWeek: DayOfWeek[];
 }
 
 interface Turno {
@@ -27,6 +29,9 @@ export class TurnosComponent implements OnInit {
   private readonly toastService = inject(ToastService);
   readonly loading = signal(true);
   readonly error = signal('');
+
+  readonly DAYS_OF_WEEK = DAYS_OF_WEEK;
+  readonly DAY_OF_WEEK_LABELS = DAY_OF_WEEK_LABELS;
 
   turnos: Turno[] = [];
 
@@ -50,10 +55,12 @@ export class TurnosComponent implements OnInit {
     this.horarioForm = this.fb.group({
       inicio: ['', [Validators.required, Validators.pattern(/^\d{2}:\d{2}$/)]],
       fin: ['', [Validators.required, Validators.pattern(/^\d{2}:\d{2}$/)]],
+      daysOfWeek: [[] as DayOfWeek[]],
     });
     this.editHorarioForm = this.fb.group({
       inicio: ['', [Validators.required, Validators.pattern(/^\d{2}:\d{2}$/)]],
       fin: ['', [Validators.required, Validators.pattern(/^\d{2}:\d{2}$/)]],
+      daysOfWeek: [[] as DayOfWeek[]],
     });
   }
 
@@ -72,6 +79,7 @@ export class TurnosComponent implements OnInit {
           id: h.id,
           inicio: h.entry_time.slice(0, 5),
           fin: h.departure_time.slice(0, 5),
+          daysOfWeek: h.days_of_week ?? [],
         })),
       }));
     } catch {
@@ -154,6 +162,7 @@ export class TurnosComponent implements OnInit {
         name: `${this.horarioForm.value.inicio}-${this.horarioForm.value.fin}`,
         entry_time: this.horarioForm.value.inicio,
         departure_time: this.horarioForm.value.fin,
+        days_of_week: this.horarioForm.value.daysOfWeek ?? [],
       }));
       await this.cargarTurnos();
       this.toastService.success('Horario agregado');
@@ -165,7 +174,11 @@ export class TurnosComponent implements OnInit {
 
   startEditHorario(turnoId: number, horario: Horario): void {
     this.editingHorarioKey = `${turnoId}-${horario.id}`;
-    this.editHorarioForm.setValue({ inicio: horario.inicio, fin: horario.fin });
+    this.editHorarioForm.setValue({
+      inicio: horario.inicio,
+      fin: horario.fin,
+      daysOfWeek: horario.daysOfWeek ?? [],
+    });
   }
 
   cancelEditHorario(): void {
@@ -179,6 +192,7 @@ export class TurnosComponent implements OnInit {
       await firstValueFrom(this.api.horarios.patchSchedule(horario.id, {
         entry_time: this.editHorarioForm.value.inicio,
         departure_time: this.editHorarioForm.value.fin,
+        days_of_week: this.editHorarioForm.value.daysOfWeek ?? [],
       }));
       await this.cargarTurnos();
       this.toastService.success('Horario actualizado');
@@ -200,6 +214,24 @@ export class TurnosComponent implements OnInit {
 
   isEditingHorario(turnoId: number, horarioId: number): boolean {
     return this.editingHorarioKey === `${turnoId}-${horarioId}`;
+  }
+
+  toggleDay(form: FormGroup, day: DayOfWeek): void {
+    const current = (form.get('daysOfWeek')?.value ?? []) as DayOfWeek[];
+    const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+    form.get('daysOfWeek')?.setValue(next);
+  }
+
+  hasDay(form: FormGroup, day: DayOfWeek): boolean {
+    return ((form.get('daysOfWeek')?.value ?? []) as DayOfWeek[]).includes(day);
+  }
+
+  daysLabel(days: DayOfWeek[]): string {
+    if (!days || days.length === 0) return 'Sin días';
+    if (days.length === 7) return 'Todos los días';
+    const ordered = [...days].sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b));
+    const short = ordered.map(d => DAY_OF_WEEK_LABELS[d]);
+    return short.join(', ');
   }
 
   calcularDuracion(inicio: string, fin: string): string {

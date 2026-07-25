@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "schedule")
@@ -34,4 +36,9 @@ public class ScheduleEntity extends AuditableEntity {
 
     @Column(name = "departure_time", nullable = false)
     private LocalTime departureTime;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id")
+    @OrderBy("id ASC")
+    private List<ScheduleDayEntity> daysOfWeek = new ArrayList<>();
 }

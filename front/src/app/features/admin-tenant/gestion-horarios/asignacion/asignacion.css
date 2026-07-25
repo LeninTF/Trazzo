@@ -391,3 +391,113 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.btn-gh-sm-outline {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid var(--page-border);
+  color: var(--page-blue);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.btn-gh-sm-outline:hover {
+  background: var(--page-blue-soft);
+  border-color: var(--page-blue);
+}
+
+.btn-link-xs {
+  background: transparent;
+  border: none;
+  color: var(--page-blue);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.btn-link-xs:hover {
+  background: var(--page-blue-soft);
+}
+
+.asig-modal-wrap-lg {
+  padding: 16px;
+}
+
+.asig-modal-dialog-lg {
+  width: 100%;
+  max-width: 720px;
+}
+
+.bulk-candidates-header {
+  margin-bottom: 10px;
+}
+
+.bulk-candidates-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--page-border);
+  border-radius: 12px;
+  padding: 8px;
+  background: #fafbff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bulk-candidate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--page-border);
+  background: var(--page-surface);
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.bulk-candidate:hover {
+  border-color: var(--page-blue);
+  background: var(--page-blue-soft);
+}
+
+.bulk-candidate-selected {
+  border-color: var(--page-blue);
+  background: var(--page-blue-soft);
+}
+
+.bulk-candidate input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--page-blue);
+  flex-shrink: 0;
+}
+
+.bulk-candidate .asig-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.bulk-candidate-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--page-ink);
+}
+
+.bulk-candidate-meta {
+  font-size: 11px;
+  color: var(--page-muted);
+  font-weight: 500;
+}
+

@@ -43,7 +43,7 @@ class ScheduleControllerTest {
     private static ScheduleResult aResult() {
         var shift = new ShiftSummary(1L, "Morning");
         return new ScheduleResult(1L, 1L, shift, "Schedule1", "desc",
-                EIGHT_AM, FIVE_PM, List.of(), NOW, NOW);
+                EIGHT_AM, FIVE_PM, List.of(), List.of(), NOW, NOW);
     }
 
     @Test

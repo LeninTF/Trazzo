@@ -3,11 +3,15 @@ package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.regex.Pattern;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
@@ -25,12 +29,17 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioningPort {
 
     private static final String SCHEMA_SCRIPT = "db/tenant/V1__tenant_db.sql";
+    private static final String MIGRATION_PATH = "db/tenant/migration/";
     private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
     private final DataSource rawDataSource;
+    private final ResourcePatternResolver resourceResolver;
 
-    public TenantSchemaProvisioningAdapter(@Qualifier("rawDataSource") DataSource rawDataSource) {
+    public TenantSchemaProvisioningAdapter(
+            @Qualifier("rawDataSource") DataSource rawDataSource,
+            ResourcePatternResolver resourceResolver) {
         this.rawDataSource = rawDataSource;
+        this.resourceResolver = resourceResolver;
     }
 
     @Override
@@ -76,6 +85,20 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
                 stmt.execute("SET search_path TO \"" + schemaName + "\", public");
             }
             ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
+            // Apply migrations (roles, permissions, schema changes) at provisioning time
+            // so new tenants don't depend on the next app restart (TenantSchemaMigrator)
+            // to seed permissions and other migration data.
+            Resource[] migrations = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
+            Arrays.stream(migrations)
+                    .sorted(Comparator.comparing(Resource::getFilename))
+                    .forEach(script -> {
+                        try {
+                            ScriptUtils.executeSqlScript(conn, script);
+                        } catch (Exception e) {
+                            throw new TenantProvisioningException(
+                                    "Failed to execute migration " + script.getFilename() + " on schema " + schemaName, e);
+                        }
+                    });
         } catch (Exception e) {
             // The schema was created by us (createSchema() above already succeeded), so a
             // failure past this point must not leave it behind half-populated — that would

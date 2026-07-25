@@ -12,6 +12,24 @@ public record UserScheduleResult(
         LocalTime entryTime,
         LocalTime departureTime,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        TenantUserSummary tenantUser
 ) {
+    public UserScheduleResult(Long id, Long tenantUserId, Long scheduleId, ShiftResult.ScheduleSummary schedule,
+                             String description, LocalTime entryTime, LocalTime departureTime,
+                             LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, tenantUserId, scheduleId, schedule, description, entryTime, departureTime,
+                createdAt, updatedAt, null);
+    }
+
+    public record TenantUserSummary(
+            Long id,
+            String name,
+            String fatherSurname,
+            String motherSurname,
+            String sede,
+            String area,
+            String department
+    ) {
+    }
 }

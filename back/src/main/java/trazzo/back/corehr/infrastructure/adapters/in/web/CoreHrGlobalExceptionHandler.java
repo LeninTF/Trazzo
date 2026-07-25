@@ -20,8 +20,17 @@ public class CoreHrGlobalExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
-        var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage());
-        return ResponseEntity.badRequest().body(error);
+        HttpStatus status = ex instanceof trazzo.back.corehr.domain.exception.ScheduleConflictException
+                ? HttpStatus.CONFLICT
+                : HttpStatus.BAD_REQUEST;
+        var error = new ErrorResponse(status.value(), status.getReasonPhrase(), ex.getMessage());
+        return ResponseEntity.status(status).body(error);
+    }
+
+    @ExceptionHandler(trazzo.back.corehr.domain.exception.ScheduleConflictException.class)
+    public ResponseEntity<ErrorResponse> handleScheduleConflict(trazzo.back.corehr.domain.exception.ScheduleConflictException ex) {
+        var error = new ErrorResponse(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     @ExceptionHandler(CoreHrValidationException.class)

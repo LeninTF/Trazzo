@@ -23,45 +23,62 @@
     <div class="d-flex align-items-center gap-2">
       <span class="badge-custom">{{ asignaciones().length }} asignaciones</span>
     </div>
-    <button class="btn-gh-sm-primary" (click)="openModal()">
-      <i class="bi bi-plus-lg me-1"></i>Asignar Turno
-    </button>
+    <div class="d-flex gap-2">
+      <button class="btn-gh-sm-primary" (click)="openBulkModal()">
+        <i class="bi bi-people-fill me-1"></i>Asignación masiva
+      </button>
+      <button class="btn-gh-sm-outline" (click)="openModal()">
+        <i class="bi bi-plus-lg me-1"></i>Asignar individual
+      </button>
+    </div>
   </div>
 
   <!-- Filters -->
   <div class="asig-filters">
     <div class="row g-2 align-items-end">
-      <div class="col-md-5">
+      <div class="col-md-4">
         <label class="filter-label" for="asig-buscar">Buscar</label>
         <input
           type="text"
           id="asig-buscar"
           class="filter-input"
           placeholder="Buscar por trabajador o turno..."
-          [ngModel]="searchTerm()"
-          (ngModelChange)="onSearch($event)"
-          [ngModelOptions]="{standalone: true}"
+          [value]="searchTerm()"
+          (input)="onSearch($any($event.target).value)"
         >
       </div>
       <div class="col-md-3">
-        <label class="filter-label" for="asig-area">Filtrar por área</label>
+        <label class="filter-label" for="asig-sede">Sede</label>
+        <select
+          id="asig-sede"
+          class="filter-select"
+          [value]="sedeFilter()"
+          (change)="onSedeFilter($any($event.target).value)"
+        >
+          <option value="">Todas las sedes</option>
+          @for (sede of sedes(); track sede) {
+            <option [value]="sede">{{ sede }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="filter-label" for="asig-area">Área</label>
         <select
           id="asig-area"
           class="filter-select"
-          [ngModel]="areaFilter()"
-          (ngModelChange)="onAreaFilter($event)"
-          [ngModelOptions]="{standalone: true}"
+          [value]="areaFilter()"
+          (change)="onAreaFilter($any($event.target).value)"
         >
           <option value="">Todas las áreas</option>
-          @for (area of areas; track area) {
+          @for (area of areas(); track area) {
             <option [value]="area">{{ area }}</option>
           }
         </select>
       </div>
-      <div class="col-md-4">
-        @if (searchTerm() || areaFilter()) {
-          <button class="btn-clear-filters" (click)="onSearch(''); onAreaFilter('')">
-            <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+      <div class="col-md-2">
+        @if (searchTerm() || sedeFilter() || areaFilter()) {
+          <button class="btn-clear-filters" (click)="onSearch(''); onSedeFilter(''); onAreaFilter('')">
+            <i class="bi bi-x-circle me-1"></i>Limpiar
           </button>
         }
       </div>
@@ -74,7 +91,9 @@
       <thead>
         <tr>
           <th>Trabajador</th>
+          <th>Sede</th>
           <th>Área</th>
+          <th>Departamento</th>
           <th>Turno asignado</th>
           <th>Horario asignado</th>
           <th class="text-center" style="width: 80px;">Acción</th>
@@ -90,7 +109,13 @@
               </div>
             </td>
             <td>
-              <span class="area-badge">{{ asignacion.area }}</span>
+              <span class="text-muted small">{{ asignacion.sede || '—' }}</span>
+            </td>
+            <td>
+              <span class="area-badge">{{ asignacion.area || '—' }}</span>
+            </td>
+            <td>
+              <span class="text-muted small">{{ asignacion.departamento || '—' }}</span>
             </td>
             <td>
               <div class="d-flex align-items-center gap-2">
@@ -109,7 +134,7 @@
           </tr>
         } @empty {
           <tr>
-            <td colspan="5" class="text-center text-muted py-5">
+            <td colspan="7" class="text-center text-muted py-5">
               <i class="bi bi-inbox fs-3 d-block mb-2"></i>
               No se encontraron asignaciones.
             </td>
@@ -119,11 +144,11 @@
     </table>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal Individual -->
   @if (showModal) {
-    <div class="asig-overlay" (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" role="button"></div>
+    <div class="asig-overlay" (click)="closeModal()"></div>
     <div class="asig-modal-wrap">
-      <div class="asig-modal-dialog" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+      <div class="asig-modal-dialog" (click)="$event.stopPropagation()">
         <div class="asig-modal-content">
           <div class="asig-modal-header">
             <div class="d-flex align-items-center gap-3">
@@ -132,7 +157,7 @@
               </div>
               <div>
                 <h5 class="mb-0 fw-bold">Asignar Turno</h5>
-                <span class="small text-muted">Selecciona trabajador y turno a asignar</span>
+                <span class="small text-muted">Selecciona trabajador y horario a asignar</span>
               </div>
             </div>
             <button type="button" class="asig-modal-close" (click)="closeModal()">
@@ -161,30 +186,13 @@
                 }
               </div>
               <div class="form-group">
-                <label class="form-label-custom" for="asig-area-select">Área / Departamento</label>
-                <select
-                  id="asig-area-select"
-                  class="input-custom"
-                  [class.invalid]="asignacionForm.get('area')?.invalid && asignacionForm.get('area')?.touched"
-                  formControlName="area"
-                >
-                  <option value="">Seleccione un área</option>
-                  @for (area of areas; track area) {
-                    <option [value]="area">{{ area }}</option>
-                  }
-                </select>
-                @if (asignacionForm.get('area')?.invalid && asignacionForm.get('area')?.touched) {
-                  <div class="error-msg">Seleccione un área.</div>
-                }
-              </div>
-              <div class="form-group">
                 <label class="form-label-custom" for="asig-turno">Turno</label>
                 <select
                   id="asig-turno"
                   class="input-custom"
                   [class.invalid]="asignacionForm.get('turnoId')?.invalid && asignacionForm.get('turnoId')?.touched"
                   formControlName="turnoId"
-                  (change)="onTurnoChange()"
+                  (change)="onTurnoChange(asignacionForm)"
                 >
                   <option value="">Seleccione un turno</option>
                   @for (turno of turnosDisponibles; track turno.id) {
@@ -217,6 +225,127 @@
               <button type="button" class="btn-ghost-sm" (click)="closeModal()">Cancelar</button>
               <button type="submit" class="btn-primary-sm" [disabled]="asignacionForm.invalid">
                 <i class="bi bi-check-lg me-1"></i>Asignar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Masivo -->
+  @if (showBulkModal) {
+    <div class="asig-overlay" (click)="closeBulkModal()"></div>
+    <div class="asig-modal-wrap asig-modal-wrap-lg">
+      <div class="asig-modal-dialog asig-modal-dialog-lg" (click)="$event.stopPropagation()">
+        <div class="asig-modal-content">
+          <div class="asig-modal-header">
+            <div class="d-flex align-items-center gap-3">
+              <div class="asig-modal-icon">
+                <i class="bi bi-people-fill"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 fw-bold">Asignación masiva</h5>
+                <span class="small text-muted">Selecciona varios trabajadores y un horario común</span>
+              </div>
+            </div>
+            <button type="button" class="asig-modal-close" (click)="closeBulkModal()">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <form [formGroup]="bulkForm" (ngSubmit)="submitBulk()">
+            <div class="asig-modal-body">
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label-custom" for="bulk-turno">Turno</label>
+                  <select
+                    id="bulk-turno"
+                    class="input-custom"
+                    [class.invalid]="bulkForm.get('turnoId')?.invalid && bulkForm.get('turnoId')?.touched"
+                    formControlName="turnoId"
+                    (change)="onTurnoChange(bulkForm)"
+                  >
+                    <option value="">Seleccione un turno</option>
+                    @for (turno of turnosDisponibles; track turno.id) {
+                      <option [value]="turno.id">{{ turno.nombre }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label-custom" for="bulk-horario">Horario</label>
+                  <select
+                    id="bulk-horario"
+                    class="input-custom"
+                    [class.invalid]="bulkForm.get('horarioId')?.invalid && bulkForm.get('horarioId')?.touched"
+                    formControlName="horarioId"
+                  >
+                    <option value="">Seleccione un horario</option>
+                    @for (horario of selectedTurnoHorarios; track horario.id) {
+                      <option [value]="horario.id">{{ horario.label }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+              <div class="form-group mb-3">
+                <label class="form-label-custom" for="bulk-description">Descripción (opcional)</label>
+                <input
+                  type="text"
+                  id="bulk-description"
+                  class="input-custom"
+                  formControlName="description"
+                  placeholder="Ej: Horario regular 2026"
+                  maxlength="200"
+                >
+              </div>
+
+              <div class="bulk-candidates-header">
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold">Trabajadores disponibles</span>
+                    <span class="badge-custom">{{ selectedCount() }} / {{ candidates().length }}</span>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn-link-xs" (click)="selectAllCandidates()">Todos</button>
+                    <button type="button" class="btn-link-xs" (click)="clearCandidateSelection()">Ninguno</button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  class="input-custom"
+                  placeholder="Buscar trabajador..."
+                  [value]="candidatesSearch()"
+                  (input)="candidatesSearchInput($any($event.target).value)"
+                >
+              </div>
+
+              <div class="bulk-candidates-list">
+                @for (candidate of filteredCandidates(); track candidate.id) {
+                  <label class="bulk-candidate" [class.bulk-candidate-selected]="candidate.selected">
+                    <input
+                      type="checkbox"
+                      [checked]="candidate.selected"
+                      (change)="toggleCandidate(candidate)"
+                    >
+                    <div class="asig-avatar">{{ candidate.persona.name.charAt(0) }}{{ candidate.persona.father_surname.charAt(0) }}</div>
+                    <div class="bulk-candidate-name">
+                      {{ candidate.persona.name }} {{ candidate.persona.father_surname }} {{ candidate.persona.mother_surname }}
+                    </div>
+                    @if (candidate.sedes.length) {
+                      <span class="bulk-candidate-meta">{{ candidate.sedes[0].nombre }}</span>
+                    }
+                  </label>
+                } @empty {
+                  <div class="text-center text-muted py-4">
+                    <i class="bi bi-search fs-3 d-block mb-2"></i>
+                    No se encontraron trabajadores.
+                  </div>
+                }
+              </div>
+            </div>
+            <div class="asig-modal-footer">
+              <button type="button" class="btn-ghost-sm" (click)="closeBulkModal()">Cancelar</button>
+              <button type="submit" class="btn-primary-sm" [disabled]="bulkForm.invalid || selectedCount() === 0">
+                <i class="bi bi-check-lg me-1"></i>Asignar a {{ selectedCount() }} trabajador(es)
               </button>
             </div>
           </form>
