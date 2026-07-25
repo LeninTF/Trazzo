@@ -14,6 +14,7 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.mapper.Inci
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentEvidenceSpringDataRepository;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentPermissionSpringDataRepository;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpringDataRepository;
+import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentSpecifications;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,8 +33,16 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     @Override
     public Incident save(Incident incident) {
         var entity = IncidentMapper.toEntity(incident);
+        boolean isNew = entity.getId() == null;
         var saved = incidentRepo.save(entity);
-        if (entity.getPermission() != null) {
+        if (isNew && entity.getPermission() != null) {
+            entity.getPermission().setIncidentId(saved.getId());
+            permissionRepo.save(entity.getPermission());
+        } else if (!isNew && entity.getPermission() != null) {
+            var existingPerm = permissionRepo.findByIncidentId(saved.getId()).orElse(null);
+            if (existingPerm != null) {
+                entity.getPermission().setId(existingPerm.getId());
+            }
             entity.getPermission().setIncidentId(saved.getId());
             permissionRepo.save(entity.getPermission());
         }
@@ -41,7 +50,8 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     @Override
-    public Optional<Incident> findById(String id) {
+    public Optional<Incident> findById(Integer id) {
+        if (id == null) return Optional.empty();
         return incidentRepo.findById(id).map(entity -> {
             var permission = permissionRepo.findByIncidentId(id).orElse(null);
             entity.setPermission(permission);
@@ -50,26 +60,23 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     @Override
-    public List<Incident> findAll(String tenantUserId, String state, String tipoId,
-                                   LocalDateTime desde, LocalDateTime hasta, String search,
-                                   int page, int size, String sort) {
+    public List<Incident> findAll(Integer tenantUserId, String state, Integer tipoId,
+                                  LocalDateTime desde, LocalDateTime hasta, String search,
+                                  int page, int size, String sort) {
         var sortObj = parseSort(sort);
         var pageable = PageRequest.of(page, size, sortObj);
         var incidentState = parseState(state);
-        Page<IncidentEntity> result;
+        var specification = IncidentSpecifications.byFilters(
+                tenantUserId,
+                incidentState,
+                tipoId,
+                desde,
+                hasta,
+                search
+        );
+        Page<IncidentEntity> result = incidentRepo.findAll(specification, pageable);
 
-        if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            result = incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search, pageable);
-        } else {
-            result = incidentRepo.findAll(pageable);
-        }
-
-        var incidentIds = result.stream()
-                .map(IncidentEntity::getId)
-                .toList();
-        Map<String, IncidentPermissionEntity> permissionByIncidentId = permissionRepo.findByIncidentIdIn(incidentIds)
-                .stream()
-                .collect(Collectors.toMap(IncidentPermissionEntity::getIncidentId, p -> p));
+        var permissionByIncidentId = loadPermissions(result);
 
         result.forEach(entity -> {
             var perm = permissionByIncidentId.get(entity.getId());
@@ -82,21 +89,35 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     @Override
-    public long count(String tenantUserId, String state, String tipoId,
-                       LocalDateTime desde, LocalDateTime hasta, String search) {
+    public long count(Integer tenantUserId, String state, Integer tipoId,
+                      LocalDateTime desde, LocalDateTime hasta, String search) {
         var incidentState = parseState(state);
-        if (hasAnyFilter(tenantUserId, state, tipoId, desde, hasta, search)) {
-            return incidentRepo.findByFilters(tenantUserId, incidentState, tipoId, desde, hasta, search,
-                    PageRequest.of(0, 1)).getTotalElements();
-        }
-        return incidentRepo.count();
+        var specification = IncidentSpecifications.byFilters(
+                tenantUserId,
+                incidentState,
+                tipoId,
+                desde,
+                hasta,
+                search
+        );
+        return incidentRepo.count(specification);
     }
 
     @Override
-    public void deleteById(String id) {
+    public void deleteById(Integer id) {
+        if (id == null) return;
         evidenceRepo.deleteByIncidentId(id);
         permissionRepo.deleteByIncidentId(id);
         incidentRepo.deleteById(id);
+    }
+
+    private Map<Integer, IncidentPermissionEntity> loadPermissions(Page<IncidentEntity> page) {
+        var incidentIds = page.stream()
+                .map(IncidentEntity::getId)
+                .toList();
+        return permissionRepo.findByIncidentIdIn(incidentIds)
+                .stream()
+                .collect(Collectors.toMap(IncidentPermissionEntity::getIncidentId, p -> p));
     }
 
     private static IncidentState parseState(String state) {
@@ -104,18 +125,8 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
         try {
             return IncidentState.valueOf(state.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Estado de incidencia inválido: " + state);
+            throw new IllegalArgumentException("Estado de incidencia invalido: " + state);
         }
-    }
-
-    private boolean hasAnyFilter(String tenantUserId, String state, String tipoId,
-                                  LocalDateTime desde, LocalDateTime hasta, String search) {
-        return notBlank(tenantUserId) || notBlank(state) || notBlank(tipoId)
-                || desde != null || hasta != null || notBlank(search);
-    }
-
-    private static boolean notBlank(String value) {
-        return value != null && !value.isBlank();
     }
 
     private Sort parseSort(String sort) {

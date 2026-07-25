@@ -6,9 +6,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record IncidentResult(
-        String id,
-        String tenantUserId,
-        String incidenciaTypeId,
+        Integer id,
+        Integer tenantUserId,
+        Integer incidenciaTypeId,
         IncidentState state,
         String comment,
         String rejectionReason,

@@ -52,10 +52,10 @@ class IncidentTypeServiceTest {
     @Test
     void findByIdReturnsType() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
+        var type = IncidentType.restore(1, "Permiso", "Desc", true, now, now);
+        when(repository.findById(1)).thenReturn(Optional.of(type));
 
-        var result = service.findById("id-1");
+        var result = service.findById(1);
 
         assertTrue(result.isPresent());
         assertEquals("Permiso", result.get().nombre());
@@ -63,14 +63,14 @@ class IncidentTypeServiceTest {
 
     @Test
     void findByIdReturnsEmptyWhenNotFound() {
-        when(repository.findById("not-found")).thenReturn(Optional.empty());
-        assertTrue(service.findById("not-found").isEmpty());
+        when(repository.findById(999)).thenReturn(Optional.empty());
+        assertTrue(service.findById(999).isEmpty());
     }
 
     @Test
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
+        var type = IncidentType.restore(1, "Permiso", "Desc", true, now, now);
         when(repository.findAll(true, 0, 10)).thenReturn(List.of(type));
         when(repository.count(true)).thenReturn(1L);
 
@@ -84,12 +84,12 @@ class IncidentTypeServiceTest {
     @Test
     void patchUpdatesNombre() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Original", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
+        var type = IncidentType.restore(1, "Original", "Desc", true, now, now);
+        when(repository.findById(1)).thenReturn(Optional.of(type));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<IncidentType>getArgument(0));
 
         var command = new PatchIncidentTypeCommand("Modificado", null, null);
-        var result = service.patch("id-1", command);
+        var result = service.patch(1, command);
 
         assertEquals("Modificado", result.nombre());
         assertEquals("Desc", result.descripcion());
@@ -98,21 +98,21 @@ class IncidentTypeServiceTest {
     @Test
     void patchDeactivatesType() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, now, now);
-        when(repository.findById("id-1")).thenReturn(Optional.of(type));
+        var type = IncidentType.restore(1, "Permiso", "Desc", true, now, now);
+        when(repository.findById(1)).thenReturn(Optional.of(type));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<IncidentType>getArgument(0));
 
         var command = new PatchIncidentTypeCommand(null, null, false);
-        var result = service.patch("id-1", command);
+        var result = service.patch(1, command);
 
         assertFalse(result.activo());
     }
 
     @Test
     void patchWithNotFoundIdThrowsException() {
-        when(repository.findById("bad-id")).thenReturn(Optional.empty());
+        when(repository.findById(999)).thenReturn(Optional.empty());
         var command = new PatchIncidentTypeCommand("Nuevo", null, null);
 
-        assertThrows(IllegalArgumentException.class, () -> service.patch("bad-id", command));
+        assertThrows(IllegalArgumentException.class, () -> service.patch(999, command));
     }
 }

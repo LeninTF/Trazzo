@@ -16,8 +16,11 @@ import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 class TenantUserServiceTest {
@@ -27,12 +30,15 @@ class TenantUserServiceTest {
     private PasswordEncoder passwordEncoder;
     private TenantUserService service;
 
+    private final TenantUserPort.OrgAssignmentBundle EMPTY_ORG = new TenantUserPort.OrgAssignmentBundle(List.of(), List.of(), List.of());
+
     @BeforeEach
     void setUp() {
         tenantUserPort = mock(TenantUserPort.class);
         userRepository = mock(UserRepositoryPort.class);
         passwordEncoder = mock(PasswordEncoder.class);
         service = new TenantUserService(tenantUserPort, userRepository, passwordEncoder);
+        when(tenantUserPort.findOrgAssignmentsByUserIds(any())).thenReturn(Map.of());
     }
 
     private TenantUserProfileProjection buildProjection(Long id) {

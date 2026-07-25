@@ -14,7 +14,11 @@ public record IncidentTypeResponse(
         @JsonProperty("updated_at") LocalDateTime updatedAt
 ) {
     public static IncidentTypeResponse from(IncidentTypeResult result) {
-        return new IncidentTypeResponse(result.id(), result.nombre(), result.descripcion(),
+        return new IncidentTypeResponse(toStr(result.id()), result.nombre(), result.descripcion(),
                 result.activo(), result.createdAt(), result.updatedAt());
+    }
+
+    private static String toStr(Integer value) {
+        return value != null ? String.valueOf(value) : null;
     }
 }

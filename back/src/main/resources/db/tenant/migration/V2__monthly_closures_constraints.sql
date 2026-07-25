@@ -18,29 +18,4 @@ END $$;
 
 -- 2. Delete orphan detail rows with NULL tenant_user_id, then enforce NOT NULL
 DELETE FROM monthly_closures_details WHERE tenant_user_id IS NULL;
-
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'monthly_closures_details' AND column_name = 'tenant_user_id' AND is_nullable = 'YES'
-    ) THEN
-        ALTER TABLE monthly_closures_details ALTER COLUMN tenant_user_id SET NOT NULL;
-    END IF;
-END $$;
-
--- 3. Add UNIQUE constraint on (year, month) if it does not exist yet
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1
-        FROM pg_constraint c
-        JOIN pg_class t ON t.oid = c.conrelid
-        JOIN pg_namespace n ON n.oid = t.relnamespace
-        WHERE c.conname = 'uq_monthly_closures_period'
-          AND n.nspname = current_schema()
-          AND t.relname = 'monthly_closures'
-    ) THEN
-        ALTER TABLE monthly_closures ADD CONSTRAINT uq_monthly_closures_period UNIQUE (year, month);
-    END IF;
-END $$;
+ALTER TABLE monthly_closures_details ALTER COLUMN tenant_user_id SET NOT NULL;

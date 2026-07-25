@@ -3,7 +3,8 @@ package trazzo.back.saasglobal.infrastructure.config;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -28,7 +29,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @ConditionalOnProperty(name = "trazzo.seed.tenant.enabled", havingValue = "true", matchIfMissing = false)
 @Order(1)
 @Slf4j
-public class TenantDataSeeder implements CommandLineRunner {
+public class TenantDataSeeder implements ApplicationRunner {
 
     private static final String DEMO_PLAN_NAME = "Plan Demo";
 
@@ -38,6 +39,10 @@ public class TenantDataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final UserRepositoryPort userRepository;
     private final String subDomain;
+    private final String demoEmail;
+    private final String demoPassword;
+    private final String usuarioEmail;
+    private final String usuarioPassword;
 
     public TenantDataSeeder(
             TenantRepositoryPort tenantRepository,
@@ -45,7 +50,11 @@ public class TenantDataSeeder implements CommandLineRunner {
             JdbcTemplate jdbc,
             PasswordEncoder passwordEncoder,
             UserRepositoryPort userRepository,
-            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain
+            @Value("${trazzo.seed.tenant.sub-domain}") String subDomain,
+            @Value("${trazzo.seed.tenant.demo.email}") String demoEmail,
+            @Value("${trazzo.seed.tenant.demo.password}") String demoPassword,
+            @Value("${trazzo.seed.tenant.usuario.email}") String usuarioEmail,
+            @Value("${trazzo.seed.tenant.usuario.password}") String usuarioPassword
     ) {
         this.tenantRepository = tenantRepository;
         this.schemaProvisioning = schemaProvisioning;
@@ -53,11 +62,15 @@ public class TenantDataSeeder implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.subDomain = requireNonBlank(subDomain, "trazzo.seed.tenant.sub-domain");
+        this.demoEmail = requireNonBlank(demoEmail, "trazzo.seed.tenant.demo.email");
+        this.demoPassword = requireNonBlank(demoPassword, "trazzo.seed.tenant.demo.password");
+        this.usuarioEmail = requireNonBlank(usuarioEmail, "trazzo.seed.tenant.usuario.email");
+        this.usuarioPassword = requireNonBlank(usuarioPassword, "trazzo.seed.tenant.usuario.password");
     }
 
     @Override
     @Transactional
-    public void run(String... args) {
+    public void run(ApplicationArguments args) {
         if (tenantRepository.findBySubDomain(subDomain).isPresent()) {
             log.info("Demo tenant already exists, skipping seed");
             return;
@@ -79,10 +92,11 @@ public class TenantDataSeeder implements CommandLineRunner {
         log.info("Demo tenant '{}' provisioned successfully (schema: {})", subDomain, settings.getSchemaName());
 
         createTenantUser(tenant, settings.getSchemaName());
+        createUsuarioUser(tenant, settings.getSchemaName());
     }
 
     private void createTenantUser(Tenant tenant, String schemaName) {
-        if (userRepository.findByEmail("demo@trazzo.pe").isPresent()) {
+        if (userRepository.findByEmail(demoEmail).isPresent()) {
             log.info("Tenant user already exists, skipping");
             return;
         }
@@ -90,13 +104,12 @@ public class TenantDataSeeder implements CommandLineRunner {
         log.info("Creating tenant user for '{}'...", subDomain);
 
         Integer personId = insertPerson();
-        String rawPassword = System.getenv().getOrDefault("DEMO_USER_PASSWORD", "demo123");
-        String encodedPassword = passwordEncoder.encode(rawPassword);
+        String encodedPassword = passwordEncoder.encode(demoPassword);
 
         User tenantUser = User.create(
                 personId,
                 tenant.getId(),
-                "demo@trazzo.pe",
+                demoEmail,
                 null,
                 encodedPassword
         );
@@ -117,7 +130,7 @@ public class TenantDataSeeder implements CommandLineRunner {
                     VALUES (?, ?::uuid, NOW())
                     """, tenantUserId, roleId);
 
-            log.info("Tenant user '{}' created with role 'administrador'", "demo@trazzo.pe");
+            log.info("Tenant user '{}' created with role 'administrador'", demoEmail);
         } finally {
             jdbc.execute("SET search_path TO public");
         }
@@ -130,6 +143,65 @@ public class TenantDataSeeder implements CommandLineRunner {
                 VALUES ('DNI', '00000001', 'Demo', 'Trazzo', 'Usuario')
                 """);
         return jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
+    }
+
+    private void createUsuarioUser(Tenant tenant, String schemaName) {
+        if (userRepository.findByEmail(usuarioEmail).isPresent()) {
+            log.info("Usuario user already exists, skipping");
+            return;
+        }
+
+        log.info("Creating usuario user for '{}'...", subDomain);
+
+        jdbc.update("""
+                INSERT INTO persons (document_type, document_value, name, father_surname, mother_surname)
+                VALUES ('DNI', '00000002', 'Usuario', 'Trazzo', 'Basico')
+                """);
+        Integer personId = jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
+        String encodedPassword = passwordEncoder.encode(usuarioPassword);
+
+        User usuarioUser = User.create(
+                personId,
+                tenant.getId(),
+                usuarioEmail,
+                null,
+                encodedPassword
+        );
+        userRepository.save(usuarioUser);
+
+        jdbc.execute("SET search_path TO \"" + schemaName + "\", public");
+        try {
+            jdbc.update("""
+                    INSERT INTO tenant_user (master_user_id, state, created_at, updated_at)
+                    VALUES (?::uuid, 'ACTIVO', NOW(), NOW())
+                    """, usuarioUser.getId());
+
+            Long tenantUserId = jdbc.queryForObject("SELECT currval('tenant_user_id_seq')", Long.class);
+            String roleId = ensureUsuarioRoleExists();
+
+            jdbc.update("""
+                    INSERT INTO tenant_user_role (tenant_user_id, role_id, created_at)
+                    VALUES (?, ?::uuid, NOW())
+                    """, tenantUserId, roleId);
+
+            log.info("Tenant user '{}' created with role 'usuario'", usuarioEmail);
+        } finally {
+            jdbc.execute("SET search_path TO public");
+        }
+    }
+
+    /**
+     * Ensures the 'usuario' role exists in the tenant schema and returns its ID.
+     * TenantSchemaMigrator (@Order(2)) will later run V3__seed_default_roles_permissions.sql
+     * which also seeds this role idempotently (WHERE NOT EXISTS).
+     */
+    private String ensureUsuarioRoleExists() {
+        return jdbc.queryForObject("""
+                INSERT INTO role (id, name, description)
+                SELECT gen_random_uuid(), 'usuario', 'El Usuario tiene acceso básico a incidencias, historial de asistencia y perfil.'
+                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'usuario')
+                RETURNING id
+                """, String.class);
     }
 
     private Integer ensureDemoPlanExists() {

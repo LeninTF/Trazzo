@@ -21,10 +21,17 @@ export class RoleService {
 
   readonly sidebarOpen = signal(false);
 
+  /** Roles the user actually has (determined at login). */
+  readonly availableRoles = signal<Role[]>([]);
+
   setUserInfo(name: string, email: string): void {
     this.userName.set(name);
     this.userEmail.set(email);
     localStorage.setItem('trazzo_user_name', name);
+  }
+
+  setAvailableRoles(roles: Role[]): void {
+    this.availableRoles.set(roles);
   }
 
   switchRole(role: Role): void {
@@ -42,6 +49,7 @@ export class RoleService {
     this.userName.set('');
     this.userEmail.set('');
     this.role.set('admin-tenant');
+    this.availableRoles.set([]);
     localStorage.removeItem('trazzo_user_name');
     localStorage.removeItem(STORAGE_KEY);
   }

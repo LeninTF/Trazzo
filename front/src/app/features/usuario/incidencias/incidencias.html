@@ -159,7 +159,7 @@
               <div class="file-upload__preview">
                 <i class="bi bi-file-earmark-text"></i>
                 <span>{{ nuevaIncidencia.archivo.name }}</span>
-                <button class="file-upload__remove" (click)="nuevaIncidencia.archivo = null; $event.stopPropagation()">
+                <button class="file-upload__remove" (click)="removeFile($event)">
                   <i class="bi bi-x"></i>
                 </button>
               </div>
@@ -167,11 +167,17 @@
               <div class="file-upload__placeholder">
                 <i class="bi bi-cloud-upload fs-3"></i>
                 <span>Haz clic para seleccionar un archivo</span>
-                <span class="file-upload__hint">PDF, JPG, PNG - Max 5 MB</span>
+                <span class="file-upload__hint">PDF, PNG, JPEG, DOC, DOCX, MP4, MOV - Max 15 MB</span>
               </div>
             }
           </div>
-          <input #fileInput id="incidencia-file-input" type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.jpg,.png,.doc,.docx" />
+          <input #fileInput id="incidencia-file-input" type="file" class="d-none" (change)="onFileChange($event)" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.mp4,.mov" />
+          @if (fileError()) {
+            <small class="text-danger d-block mt-1">{{ fileError() }}</small>
+          }
+          @if (uploading()) {
+            <small class="text-muted d-block mt-1">Subiendo archivo...</small>
+          }
         </div>
       </div>
 

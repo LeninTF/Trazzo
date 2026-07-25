@@ -7,8 +7,8 @@ import java.util.Optional;
 
 public interface IncidentTypeRepositoryPort {
     IncidentType save(IncidentType type);
-    Optional<IncidentType> findById(String id);
-    List<IncidentType> findByIdIn(List<String> ids);
+    Optional<IncidentType> findById(Integer id);
+    List<IncidentType> findByIdIn(List<Integer> ids);
     List<IncidentType> findAll(Boolean activo, int page, int size);
     long count(Boolean activo);
     boolean existsByNombre(String nombre);

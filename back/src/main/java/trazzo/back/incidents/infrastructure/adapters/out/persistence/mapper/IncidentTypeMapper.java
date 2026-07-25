@@ -9,14 +9,14 @@ public final class IncidentTypeMapper {
     }
 
     public static IncidentTypeEntity toEntity(IncidentType domain) {
-        return new IncidentTypeEntity(
-                domain.getId(),
-                domain.getNombre(),
-                domain.getDescripcion(),
-                domain.isActivo(),
-                domain.getCreatedAt(),
-                domain.getUpdatedAt()
-        );
+        var entity = new IncidentTypeEntity();
+        entity.setId(domain.getId());
+        entity.setNombre(domain.getNombre());
+        entity.setDescripcion(domain.getDescripcion());
+        entity.setActivo(domain.isActivo());
+        entity.setCreatedAt(domain.getCreatedAt());
+        entity.setUpdatedAt(domain.getUpdatedAt());
+        return entity;
     }
 
     public static IncidentType toDomain(IncidentTypeEntity entity) {

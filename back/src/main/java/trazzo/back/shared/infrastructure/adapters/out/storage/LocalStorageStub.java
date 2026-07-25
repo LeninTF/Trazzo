@@ -26,4 +26,9 @@ public class LocalStorageStub implements FileStoragePort {
     public String buildPublicUrl(String objectKey) {
         throw new StorageException("Cloudflare R2 is not configured. Set CLOUDFLARE_R2_ENDPOINT to enable file storage.");
     }
+
+    @Override
+    public InputStream downloadFile(String objectKey) {
+        throw new StorageException("Cloudflare R2 is not configured. Set CLOUDFLARE_R2_ENDPOINT to enable file storage.");
+    }
 }

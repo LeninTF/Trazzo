@@ -12,4 +12,8 @@ describe('RedirectService', () => {
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
+
+  it('should expose redirectTo as a function', () => {
+    expect(typeof service.redirectTo).toBe('function');
+  });
 });

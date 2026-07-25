@@ -3,7 +3,6 @@ package trazzo.back.incidents.domain.model;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,8 +13,8 @@ import trazzo.back.incidents.domain.specification.IncidentPermissionSpec;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IncidentPermission {
 
-    private String id;
-    private String incidentId;
+    private Integer id;
+    private Integer incidentId;
     private LocalDate startDate;
     private LocalDate endDate;
     private int daysGranted;
@@ -24,16 +23,16 @@ public class IncidentPermission {
     transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentPermission(
-            String id,
-            String incidentId,
+            Integer id,
+            Integer incidentId,
             LocalDate startDate,
             LocalDate endDate,
             int daysGranted,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = normalizeOptionalId(id);
-        this.incidentId = requireText(incidentId, "incidentId");
+        this.id = id;
+        this.incidentId = requireNonNull(incidentId, "incidentId");
         this.startDate = requireDate(startDate, "startDate");
         this.endDate = requireValidEndDate(startDate, endDate);
         this.daysGranted = requirePositiveDays(daysGranted);
@@ -42,18 +41,18 @@ public class IncidentPermission {
     }
 
     public static IncidentPermission create(
-            String incidentId,
+            Integer incidentId,
             LocalDate startDate,
             LocalDate endDate,
             int daysGranted
     ) {
         LocalDateTime now = LocalDateTime.now();
-        return new IncidentPermission(UUID.randomUUID().toString(), incidentId, startDate, endDate, daysGranted, now, now);
+        return new IncidentPermission(null, incidentId, startDate, endDate, daysGranted, now, now);
     }
 
     public static IncidentPermission restore(
-            String id,
-            String incidentId,
+            Integer id,
+            Integer incidentId,
             LocalDate startDate,
             LocalDate endDate,
             int daysGranted,
@@ -70,8 +69,8 @@ public class IncidentPermission {
         touch();
     }
 
-    public boolean belongsTo(String incidentId) {
-        return this.incidentId.equals(requireText(incidentId, "incidentId"));
+    public boolean belongsTo(Integer incidentId) {
+        return this.incidentId.equals(requireNonNull(incidentId, "incidentId"));
     }
 
     private void touch() {
@@ -99,17 +98,10 @@ public class IncidentPermission {
         return daysGranted;
     }
 
-    private static String requireText(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
+    private static Integer requireNonNull(Integer value, String fieldName) {
+        if (value == null) {
             throw new InvalidIncidentPermissionException(fieldName + " is required");
         }
-        return value.trim();
-    }
-
-    private static String normalizeOptionalId(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
+        return value;
     }
 }

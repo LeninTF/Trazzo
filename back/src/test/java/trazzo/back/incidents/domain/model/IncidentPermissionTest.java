@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import trazzo.back.incidents.domain.exception.InvalidIncidentPermissionException;
 
 class IncidentPermissionTest {
 
@@ -20,11 +21,11 @@ class IncidentPermissionTest {
         var startDate = LocalDate.now();
         var endDate = startDate.plusDays(3);
         var before = LocalDateTime.now();
-        var permission = IncidentPermission.create("inc-1", startDate, endDate, 3);
+        var permission = IncidentPermission.create(1, startDate, endDate, 3);
         var after = LocalDateTime.now();
 
-        assertNotNull(permission.getId());
-        assertEquals("inc-1", permission.getIncidentId());
+        assertNull(permission.getId());
+        assertEquals(1, permission.getIncidentId());
         assertEquals(startDate, permission.getStartDate());
         assertEquals(endDate, permission.getEndDate());
         assertEquals(3, permission.getDaysGranted());
@@ -36,14 +37,12 @@ class IncidentPermissionTest {
         assertFalse(permission.getUpdatedAt().isAfter(after));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void createWithBlankIncidentIdThrowsException(String incidentId) {
+    @Test
+    void createWithNullIncidentIdThrowsException() {
         assertThrows(
-                IllegalArgumentException.class,
+                InvalidIncidentPermissionException.class,
                 () -> IncidentPermission.create(
-                        incidentId, LocalDate.now(), LocalDate.now().plusDays(1), 1
+                        null, LocalDate.now(), LocalDate.now().plusDays(1), 1
                 )
         );
     }
@@ -52,7 +51,7 @@ class IncidentPermissionTest {
     void createWithNullStartDateThrowsException() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentPermission.create("inc-1", null, LocalDate.now().plusDays(1), 1)
+                () -> IncidentPermission.create(1, null, LocalDate.now().plusDays(1), 1)
         );
     }
 
@@ -60,7 +59,7 @@ class IncidentPermissionTest {
     void createWithNullEndDateThrowsException() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentPermission.create("inc-1", LocalDate.now(), null, 1)
+                () -> IncidentPermission.create(1, LocalDate.now(), null, 1)
         );
     }
 
@@ -70,14 +69,14 @@ class IncidentPermissionTest {
         var endDate = startDate.minusDays(1);
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentPermission.create("inc-1", startDate, endDate, 1)
+                () -> IncidentPermission.create(1, startDate, endDate, 1)
         );
     }
 
     @Test
     void createWithSameStartAndEndDateIsValid() {
         var date = LocalDate.now();
-        var permission = IncidentPermission.create("inc-1", date, date, 1);
+        var permission = IncidentPermission.create(1, date, date, 1);
 
         assertEquals(date, permission.getStartDate());
         assertEquals(date, permission.getEndDate());
@@ -88,7 +87,7 @@ class IncidentPermissionTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentPermission.create(
-                        "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 0
+                        1, LocalDate.now(), LocalDate.now().plusDays(1), 0
                 )
         );
     }
@@ -98,7 +97,7 @@ class IncidentPermissionTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentPermission.create(
-                        "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), -1
+                        1, LocalDate.now(), LocalDate.now().plusDays(1), -1
                 )
         );
     }
@@ -112,11 +111,11 @@ class IncidentPermissionTest {
         var now = LocalDateTime.now();
 
         var permission = IncidentPermission.restore(
-                "perm-1", "inc-1", startDate, endDate, 2, now, now
+                1, 1, startDate, endDate, 2, now, now
         );
 
-        assertEquals("perm-1", permission.getId());
-        assertEquals("inc-1", permission.getIncidentId());
+        assertEquals(1, permission.getId());
+        assertEquals(1, permission.getIncidentId());
         assertEquals(startDate, permission.getStartDate());
         assertEquals(endDate, permission.getEndDate());
         assertEquals(2, permission.getDaysGranted());
@@ -125,21 +124,21 @@ class IncidentPermissionTest {
     }
 
     @Test
-    void restoreWithBlankIdNormalizesToNull() {
+    void restoreWithNullIdIsAllowed() {
         var now = LocalDateTime.now();
         var permission = IncidentPermission.restore(
-                " ", "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
+                null, 1, LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
         );
         assertNull(permission.getId());
     }
 
     @Test
-    void restoreWithBlankIncidentIdThrowsException() {
+    void restoreWithNullIncidentIdThrowsException() {
         var now = LocalDateTime.now();
         assertThrows(
-                IllegalArgumentException.class,
+                InvalidIncidentPermissionException.class,
                 () -> IncidentPermission.restore(
-                        "id-1", " ", LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
+                        1, null, LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
                 )
         );
     }
@@ -149,7 +148,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleSuccessfully() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         var newStart = LocalDate.now().plusDays(5);
         var newEnd = newStart.plusDays(10);
@@ -164,7 +163,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleWithNullStartDateThrowsException() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         assertThrows(
                 IllegalArgumentException.class,
@@ -175,7 +174,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleWithNullEndDateThrowsException() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         assertThrows(
                 IllegalArgumentException.class,
@@ -186,7 +185,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleWithEndDateBeforeStartDateThrowsException() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         var newStart = LocalDate.now().plusDays(5);
         assertThrows(
@@ -198,7 +197,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleWithZeroDaysGrantedThrowsException() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         assertThrows(
                 IllegalArgumentException.class,
@@ -209,7 +208,7 @@ class IncidentPermissionTest {
     @Test
     void rescheduleUpdatesUpdatedAt() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(3), 3
+                1, LocalDate.now(), LocalDate.now().plusDays(3), 3
         );
         var originalUpdatedAt = permission.getUpdatedAt();
         permission.clock = Clock.fixed(
@@ -227,60 +226,30 @@ class IncidentPermissionTest {
     @Test
     void belongsToReturnsTrueForMatchingIncidentId() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1
+                1, LocalDate.now(), LocalDate.now().plusDays(1), 1
         );
 
-        assertTrue(permission.belongsTo("inc-1"));
+        assertTrue(permission.belongsTo(1));
     }
 
     @Test
     void belongsToReturnsFalseForDifferentIncidentId() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1
+                1, LocalDate.now(), LocalDate.now().plusDays(1), 1
         );
 
-        assertFalse(permission.belongsTo("other-inc"));
+        assertFalse(permission.belongsTo(99));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void belongsToWithBlankIncidentIdThrowsException(String incidentId) {
+    @Test
+    void belongsToWithNullIncidentIdThrowsException() {
         var permission = IncidentPermission.create(
-                "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1
+                1, LocalDate.now(), LocalDate.now().plusDays(1), 1
         );
         assertThrows(
-                IllegalArgumentException.class,
-                () -> permission.belongsTo(incidentId)
+                InvalidIncidentPermissionException.class,
+                () -> permission.belongsTo(null)
         );
-    }
-
-    /* == VALIDATION TESTS == */
-
-    @Test
-    void createTrimsWhitespaceFromIncidentId() {
-        var permission = IncidentPermission.create(
-                "  inc-1  ", LocalDate.now(), LocalDate.now().plusDays(1), 1
-        );
-        assertEquals("inc-1", permission.getIncidentId());
-    }
-
-    @Test
-    void restoreTrimsWhitespaceFromId() {
-        var now = LocalDateTime.now();
-        var permission = IncidentPermission.restore(
-                "  perm-1  ", "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
-        );
-        assertEquals("perm-1", permission.getId());
-    }
-
-    @Test
-    void restoreTrimsWhitespaceFromIncidentId() {
-        var now = LocalDateTime.now();
-        var permission = IncidentPermission.restore(
-                "perm-1", "  inc-1  ", LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
-        );
-        assertEquals("inc-1", permission.getIncidentId());
     }
 
 }

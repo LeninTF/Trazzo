@@ -23,7 +23,27 @@ describe('ExportService', () => {
     });
 
     it('should handle null or undefined', () => {
+      expect(service.escCSV(null as unknown as string)).toBe('""');
+      expect(service.escCSV(undefined as unknown as string)).toBe('""');
       expect(service.escCSV('')).toBe('""');
+    });
+  });
+
+  describe('downloadBlob', () => {
+    it('should create and click a download link from a Blob', () => {
+      const link = document.createElement('a');
+      const clickSpy = spyOn(link, 'click');
+      spyOn(document, 'createElement').and.returnValue(link);
+      spyOn(URL, 'createObjectURL').and.returnValue('blob:test-id');
+      spyOn(URL, 'revokeObjectURL');
+
+      const blob = new Blob(['data'], { type: 'application/pdf' });
+      service.downloadBlob('reporte.pdf', blob);
+
+      expect(link.download).toBe('reporte.pdf');
+      expect(link.href).toBe('blob:test-id');
+      expect(clickSpy).toHaveBeenCalled();
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test-id');
     });
   });
 

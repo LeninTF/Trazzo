@@ -13,12 +13,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.core.ResponseInputStream;
 
 import trazzo.back.shared.domain.exception.StorageException;
 import trazzo.back.shared.infrastructure.config.CloudflareR2Properties;
@@ -190,5 +193,30 @@ class CloudflareR2StorageAdapterTest {
         properties.setPublicUrl("  ");
 
         assertThrows(StorageException.class, () -> adapter.buildPublicUrl("key"));
+    }
+
+    @Test
+    void downloadFileShouldReturnStream() {
+        byte[] content = "evidence-bytes".getBytes();
+        @SuppressWarnings("unchecked")
+        ResponseInputStream<GetObjectResponse> responseStream = mock(ResponseInputStream.class);
+        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(responseStream);
+
+        InputStream result = adapter.downloadFile(OBJECT_KEY);
+
+        assertSame(responseStream, result);
+        verify(s3Client).getObject(any(GetObjectRequest.class));
+    }
+
+    @Test
+    void downloadFileShouldThrowStorageExceptionWhenS3Fails() {
+        when(s3Client.getObject(any(GetObjectRequest.class)))
+                .thenThrow(S3Exception.builder().message("Object not found").build());
+
+        var exception = assertThrows(StorageException.class,
+                () -> adapter.downloadFile(OBJECT_KEY));
+
+        assertTrue(exception.getMessage().contains(OBJECT_KEY));
+        assertInstanceOf(S3Exception.class, exception.getCause());
     }
 }
