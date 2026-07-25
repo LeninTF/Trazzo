@@ -207,4 +207,55 @@ describe('GestionUsuarios', () => {
     const user = component.usuarios()[0];
     expect(component.nombreCompleto(user)).toBe('Ana Perez');
   });
+
+  it('should eliminarUsuario early return when no user selected', () => {
+    component.editandoUsuario.set(null);
+    component.eliminarUsuario();
+    expect(mockUsers.deleteMaster).not.toHaveBeenCalled();
+  });
+
+  it('should siguientePaso not advance beyond totalPasos', () => {
+    component.abrirCrear();
+    component.siguientePaso();
+    expect(component.paso()).toBe(2);
+    component.siguientePaso();
+    expect(component.paso()).toBe(2);
+  });
+
+  it('should pasoAnterior not go below 1', () => {
+    component.abrirCrear();
+    expect(component.paso()).toBe(1);
+    component.pasoAnterior();
+    expect(component.paso()).toBe(1);
+  });
+
+  it('should registrarPersonal show error when updateMaster fails during edit', () => {
+    mockUsers.updateMaster.and.returnValue(throwError(() => new Error('fail')));
+    const user = component.usuarios()[0];
+    component.abrirCrear(user);
+    component.registrarPersonal();
+    expect(mockToast.show).toHaveBeenCalledWith('No se pudo actualizar el administrador.', 'error');
+  });
+
+  it('should registrarPersonal show error when assignMasterRole fails during edit', () => {
+    mockUsers.assignMasterRole.and.returnValue(throwError(() => new Error('fail')));
+    const user = component.usuarios()[0];
+    component.abrirCrear(user);
+    component.registrarPersonal();
+    expect(mockToast.show).toHaveBeenCalledWith('No se pudieron actualizar los roles.', 'error');
+  });
+
+  it('should irPaso set step to valid boundary values', () => {
+    component.abrirCrear();
+    component.irPaso(2);
+    expect(component.paso()).toBe(2);
+    component.irPaso(1);
+    expect(component.paso()).toBe(1);
+  });
+
+  it('should cargarUsuarios handle error on load', () => {
+    mockUsers.listMasters.and.returnValue(throwError(() => new Error('fail')));
+    component['cargarUsuarios']();
+    expect(component.error()).toBe('No se pudieron cargar los usuarios.');
+  });
 });

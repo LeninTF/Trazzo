@@ -669,4 +669,442 @@ describe('Monitoreo', () => {
       tick(800);
     }));
   });
+
+  // =============== BRANCH COVERAGE TESTS ===============
+
+  describe('actualizarTextoUltimaActualizacion – branch coverage', () => {
+    it('should display seconds when diff < 60', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 15000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toContain('segundos');
+    });
+
+    it('should display singular minuto when minutos === 1', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 60000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toBe('hace 1 minuto');
+    });
+
+    it('should display plural minutos when minutos > 1', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 180000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).toBe('hace 3 minutos');
+    });
+
+    it('should display localized time when diff >= 3600', () => {
+      component.ultimaActualizacion = new Date(Date.now() - 3600000);
+      (component as any).actualizarTextoUltimaActualizacion();
+      expect(component.ultimaActualizacionTexto()).not.toContain('hace');
+    });
+  });
+
+  describe('actualizarEscaneresPorMiddleware – branch coverage', () => {
+    it('should unshift new physical scanner when id=0 not present (idxFisico < 0)', () => {
+      component.escaneres = [];
+      (component as any).actualizarEscaneresPorMiddleware({
+        type: 'device.status.changed', success: true, isConnected: true, message: 'ok',
+      });
+      expect(component.escaneres.length).toBe(1);
+      expect(component.escaneres[0].id).toBe(0);
+      expect(component.escaneres[0].online).toBeTrue();
+      expect(component.escaneres[0].fisico).toBeTrue();
+    });
+
+    it('should update existing scanner when id=0 already present (idxFisico >= 0)', () => {
+      component.escaneres = [{ id: 0, nombre: 'Old', ubicacion: 'Old', online: false, fisico: true }];
+      (component as any).actualizarEscaneresPorMiddleware({
+        type: 'device.status.changed', success: true, isConnected: true, message: 'ok',
+      });
+      expect(component.escaneres.length).toBe(1);
+      expect(component.escaneres[0].online).toBeTrue();
+      expect(component.escaneres[0].nombre).toBe('Lector Biométrico');
+    });
+  });
+
+  describe('capturarHuella – operationInProgress guard', () => {
+    it('should return early when operationInProgress is true', () => {
+      component.operationInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.capturarHuella();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('identificarHuella – operationInProgress guard and enrolled.length === 0', () => {
+    it('should return early when operationInProgress is true', () => {
+      component.operationInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.identificarHuella();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should show info and return early when enrolled.length === 0', () => {
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.identificarHuella();
+      expect(toastService.info).toHaveBeenCalledWith(
+        'No hay usuarios enrolados. Enrole al menos una huella primero.'
+      );
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('enrolarHuella – operationInProgress guard', () => {
+    it('should return early when operationInProgress is true', () => {
+      component.operationInProgress.set(true);
+      const sendSpy = spyOn(middlewareWs, 'send');
+      component.enrolarHuella();
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('registrarEscaner – valid vs invalid form branches', () => {
+    it('should not register when both nombre and ubicacion are empty', () => {
+      component.nuevoEscaner = { nombre: '', ubicacion: '', online: true };
+      component.registrarEscaner();
+      expect(component.escaneres.length).toBe(0);
+      expect(toastService.info).toHaveBeenCalledWith(
+        'Complete los campos obligatorios: Nombre y Ubicación'
+      );
+    });
+
+    it('should not register when nombre is empty', () => {
+      component.nuevoEscaner = { nombre: '', ubicacion: 'Lobby', online: true };
+      component.registrarEscaner();
+      expect(component.escaneres.length).toBe(0);
+    });
+
+    it('should not register when ubicacion is empty', () => {
+      component.nuevoEscaner = { nombre: 'Scanner', ubicacion: '', online: true };
+      component.registrarEscaner();
+      expect(component.escaneres.length).toBe(0);
+    });
+
+    it('should register and reset form when both fields valid', () => {
+      component.nuevoEscaner = { nombre: 'Scanner', ubicacion: 'Lobby', online: true };
+      component.registrarEscaner();
+      expect(component.escaneres.length).toBe(1);
+      expect(component.escaneres[0].nombre).toBe('Scanner');
+      expect(component.nuevoEscaner.nombre).toBe('');
+    });
+  });
+
+  describe('eliminarEscaner – null escanerAEliminar branch', () => {
+    it('should keep escanerAEliminar null when id not found', () => {
+      component.escaneres = [{ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true }];
+      component.eliminarEscaner(999);
+      expect(component.escanerAEliminar).toBeNull();
+    });
+  });
+
+  describe('confirmarEliminarEscaner – null escanerAEliminar branch', () => {
+    it('should do nothing when escanerAEliminar is null', () => {
+      component.escaneres = [
+        { id: 1, nombre: 'A', ubicacion: 'X', online: true },
+        { id: 2, nombre: 'B', ubicacion: 'Y', online: true },
+      ];
+      component.escanerAEliminar = null;
+      component.confirmarEliminarEscaner();
+      expect(component.escaneres.length).toBe(2);
+    });
+  });
+
+  describe('agregarEventoAsistencia – time-based branch coverage', () => {
+    const _OrigDate = globalThis.Date;
+
+    afterEach(() => {
+      (globalThis as any).Date = _OrigDate;
+    });
+
+    function freezeTimeAt(hours: number): void {
+      const base = new _OrigDate(2025, 5, 15, hours, 30, 0);
+      const FakeDate = function () {
+        return new _OrigDate(base.getTime());
+      } as any;
+      FakeDate.now = () => base.getTime();
+      FakeDate.parse = _OrigDate.parse;
+      FakeDate.UTC = _OrigDate.UTC;
+      (globalThis as any).Date = FakeDate;
+    }
+
+    it('should set A TIEMPO when hour < 9', () => {
+      freezeTimeAt(8);
+      (component as any).agregarEventoAsistencia('Early', '001');
+      expect(component.eventos[0].estado).toBe('A TIEMPO');
+      expect(component.metricas.tardanzas).toBe(0);
+    });
+
+    it('should set TARDE when hour >= 9', () => {
+      freezeTimeAt(10);
+      (component as any).agregarEventoAsistencia('Late', '002');
+      expect(component.eventos[0].estado).toBe('TARDE');
+    });
+
+    it('should increment tardanzas when estado is TARDE', () => {
+      freezeTimeAt(14);
+      component.metricas.tardanzas = 0;
+      (component as any).agregarEventoAsistencia('Late', '003');
+      expect(component.metricas.tardanzas).toBe(1);
+    });
+
+    it('should not increment tardanzas when estado is A TIEMPO', () => {
+      freezeTimeAt(7);
+      component.metricas.tardanzas = 5;
+      (component as any).agregarEventoAsistencia('Early', '004');
+      expect(component.metricas.tardanzas).toBe(5);
+    });
+  });
+
+  describe('toggleEscaner – escaner not found guard', () => {
+    it('should do nothing when escaner with given id does not exist', () => {
+      component.escaneres = [{ id: 1, nombre: 'Test', ubicacion: 'Ubi', online: true }];
+      component.toggleEscaner(999);
+      expect(component.escaneres[0].online).toBeTrue();
+    });
+  });
+
+  describe('eliminarEvento – TARDE decrement branch', () => {
+    it('should decrement tardanzas when eliminating TARDE event', () => {
+      component.eventos.unshift({
+        id: 100, nombre: 'Late', rol: '', hora: '', idDispositivo: '',
+        estado: 'TARDE', escaner: '', ubicacion: '', online: true,
+      });
+      component.metricas.tardanzas = 10;
+      component.eliminarEvento(100);
+      expect(component.metricas.tardanzas).toBe(9);
+    });
+
+    it('should not decrement tardanzas when eliminating A TIEMPO event', () => {
+      component.eventos.unshift({
+        id: 101, nombre: 'OnTime', rol: '', hora: '', idDispositivo: '',
+        estado: 'A TIEMPO', escaner: '', ubicacion: '', online: true,
+      });
+      component.metricas.tardanzas = 10;
+      component.eliminarEvento(101);
+      expect(component.metricas.tardanzas).toBe(10);
+    });
+  });
+
+  describe('handleFingerprintResult – uncovered inner branches', () => {
+    it('should default templateSize to 0 when property not in data', fakeAsync(() => {
+      const data = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        quality: null,
+        fingerprintImageDataUrl: 'data:image/png;base64,img',
+        templateBase64: 'dGVzdA==',
+      } as any;
+      (component as any).handleFingerprintResult(data);
+      expect(component.fpTemplateSize()).toBe(0);
+      expect(component.fpTemplatePreview()).toBe('—');
+      tick(800);
+    }));
+
+    it('should show (cifrado) when templateBase64 is falsy and templateSize > 0', fakeAsync(() => {
+      const data = {
+        type: 'fingerprint.capture.result',
+        success: true,
+        message: 'OK',
+        templateSize: 200,
+        quality: null,
+        fingerprintImageDataUrl: null,
+        templateBase64: null,
+      } as any;
+      (component as any).handleFingerprintResult(data);
+      expect(component.fpTemplatePreview()).toBe('(cifrado)');
+      tick(800);
+    }));
+
+    it('should handle identify result without templateSize property', fakeAsync(() => {
+      fingerprintStore.save({
+        userId: 1, userName: 'Test', userDisplayId: '123',
+        templateBase64: 'x', templateSize: 500,
+        referenceTemplateBase64: 'y', referenceTemplateSize: 100,
+        encryptedTemplate: null, enrolledAt: '',
+      });
+
+      const data = {
+        type: 'fingerprint.identify.result',
+        success: true,
+        message: 'Identified',
+        quality: null,
+        fingerprintImageDataUrl: null,
+        templateBase64: 'dGVzdA==',
+      } as any;
+      (component as any).handleFingerprintResult(data);
+      expect(component.fpTemplateSize()).toBe(0);
+      tick(800);
+    }));
+  });
+
+  describe('deep branch coverage – 17 targeted branches', () => {
+    function dispatch(type: string, data: unknown): void {
+      const handlers = (middlewareWs as any).messageHandlers as Map<string, Set<(msg: unknown) => void>>;
+      handlers.get(type)?.forEach(h => h(data));
+    }
+
+    afterEach(() => {
+      component.ngOnDestroy();
+    });
+
+    it('should cover device.status.changed handler isConnected=true with readerDetail Conectado', () => {
+      component.ngOnInit();
+      dispatch('device.status.changed', {
+        type: 'device.status.changed', success: true, isConnected: true, message: 'Conectado',
+      });
+      expect(component.readerConnected()).toBeTrue();
+      expect(component.readerDetail()).toBe('Conectado');
+    });
+
+    it('should cover device.status.changed handler isConnected=false with readerDetail Desconectado', () => {
+      component.ngOnInit();
+      dispatch('device.status.changed', {
+        type: 'device.status.changed', success: true, isConnected: false, message: 'Desconectado',
+      });
+      expect(component.readerConnected()).toBeFalse();
+      expect(component.readerDetail()).toBe('Desconectado');
+    });
+
+    it('should set fpImageUrl null when fingerprintImageDataUrl is null on success', fakeAsync(() => {
+      (component as any).handleFingerprintResult({
+        type: 'fingerprint.capture.result', success: true, message: 'Capturada',
+        templateBase64: 'dGVzdA==', templateSize: 200, quality: null,
+        fingerprintImageDataUrl: null,
+      } as any);
+      expect(component.fpImageUrl()).toBeNull();
+      expect(toastService.success).toHaveBeenCalledWith('Huella verificada correctamente');
+      tick(800);
+    }));
+
+    it('should default capturedSamples to 0/3 when undefined on enroll success', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: true, message: 'Enrolled',
+        registeredTemplateBase64: 'abc', registeredTemplateSize: 500,
+      });
+      expect(component.enrollmentProgress()).toBe('0/3');
+      tick(800);
+    }));
+
+    it('should use Enrolamiento completado when enroll message is empty on success', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: true, message: '',
+        registeredTemplateBase64: 'abc', registeredTemplateSize: 500, capturedSamples: 2,
+      });
+      expect(component.fpStatus()).toBe('Enrolamiento completado.');
+      tick(800);
+    }));
+
+    it('should use Enrolamiento fallido when enroll message is empty on failure', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: false, message: '',
+        registeredTemplateBase64: null, registeredTemplateSize: 0,
+      });
+      expect(component.fpStatus()).toBe('Enrolamiento fallido.');
+      tick(800);
+    }));
+
+    it('should show (cifrado) when registeredTemplateBase64 is null on enroll success', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.result', {
+        type: 'fingerprint.enroll.result', success: true, message: 'OK',
+        registeredTemplateBase64: null, registeredTemplateSize: 300, capturedSamples: 3,
+      });
+      expect(component.fpTemplatePreview()).toBe('(cifrado)');
+      expect(component.fpTemplateSize()).toBe(300);
+      tick(800);
+    }));
+
+    it('should use Enrolamiento en progreso when enroll progress message is empty', () => {
+      component.ngOnInit();
+      dispatch('fingerprint.enroll.progress', {
+        type: 'fingerprint.enroll.progress', step: 2, totalSteps: 3, message: '',
+      });
+      expect(component.fpStatus()).toBe('Enrolamiento en progreso.');
+    });
+
+    it('should use Error del middleware when error event message is empty', fakeAsync(() => {
+      component.ngOnInit();
+      dispatch('error', { type: 'error', success: false, message: '' });
+      expect(toastService.error).toHaveBeenCalledWith('Error del middleware');
+      tick(800);
+    }));
+
+    it('should reset escanerAEliminar in cancelarEliminarEscaner', () => {
+      component.escanerAEliminar = { id: 1, nombre: 'X', ubicacion: 'Y', online: true };
+      component.cancelarEliminarEscaner();
+      expect(component.escanerAEliminar).toBeNull();
+    });
+
+    it('should cap system events at 10 in agregarEventoDeSistema', () => {
+      for (let i = 0; i < 15; i++) {
+        component.agregarEventoDeSistema(`evt-${i}`);
+      }
+      expect(component.eventos.length).toBe(10);
+    });
+
+    it('should calculate correct next id when registering scanner with existing scanners', () => {
+      component.escaneres.push(
+        { id: 3, nombre: 'A', ubicacion: 'X', online: true },
+        { id: 7, nombre: 'B', ubicacion: 'Y', online: true },
+      );
+      component.nuevoEscaner = { nombre: 'C', ubicacion: 'Z', online: true };
+      component.registrarEscaner();
+      expect(component.escaneres[2].id).toBe(8);
+      expect(component.escaneres[2].nombre).toBe('C');
+    });
+
+    it('should return No for centrada when isCentered is false', () => {
+      component.fpQuality.set({
+        isAcceptable: false, foregroundPixelCount: 50,
+        foregroundCoveragePercent: 30.0, contrastScore: 0.3,
+        isCentered: false, message: 'Baja calidad',
+      });
+      expect(component.centrada).toBe('No');
+      expect(component.calidadMensaje).toBe('Baja calidad');
+    });
+
+    it('should return — for calidadMensaje when message is empty string', () => {
+      component.fpQuality.set({
+        isAcceptable: true, foregroundPixelCount: 200,
+        foregroundCoveragePercent: 90.0, contrastScore: 0.9,
+        isCentered: true, message: '',
+      });
+      expect(component.calidadMensaje).toBe('—');
+    });
+
+    it('should handle ngOnDestroy when intervalId is null', () => {
+      (component as any).intervalId = null;
+      const disconnectSpy = spyOn(middlewareWs, 'disconnect');
+      component.ngOnDestroy();
+      expect(disconnectSpy).toHaveBeenCalled();
+    });
+
+    it('should update existing physical scanner via device.status.changed event', () => {
+      component.ngOnInit();
+      dispatch('device.status.changed', {
+        type: 'device.status.changed', success: true, isConnected: true, message: 'Connected',
+      });
+      expect(component.escaneres.length).toBe(1);
+      expect(component.escaneres[0].online).toBeTrue();
+      dispatch('device.status.changed', {
+        type: 'device.status.changed', success: true, isConnected: false, message: 'Disconnected',
+      });
+      expect(component.escaneres[0].online).toBeFalse();
+      expect(component.escaneres.length).toBe(1);
+    });
+
+    it('should add system event via device.status.changed handler', () => {
+      spyOn(middlewareWs, 'connect');
+      component.ngOnInit();
+      const lenBefore = component.eventos.length;
+      dispatch('device.status.changed', {
+        type: 'device.status.changed', success: true, isConnected: true, message: 'Device online',
+      });
+      expect(component.eventos.length).toBeGreaterThanOrEqual(lenBefore + 1);
+      expect(component.eventos[0].nombre).toBe('SISTEMA');
+    });
+  });
 });

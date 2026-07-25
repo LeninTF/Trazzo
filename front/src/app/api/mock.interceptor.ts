@@ -97,9 +97,10 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
 
   // Skip non-API requests
   if (!url.startsWith('/auth/') && !url.startsWith('/usuarios') && !url.startsWith('/saas/')
-    && !url.startsWith('/incidentes') && !url.startsWith('/corehr/')
+    && !url.startsWith('/incidentes')
     && !url.startsWith('/asistencia/') && !url.startsWith('/security/')
     && !url.startsWith('/audit/') && !url.startsWith('/reports/')
+    && !url.startsWith('/corehr/')
     && !url.startsWith('/ws/')) {
     return next(req);
   }

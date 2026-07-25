@@ -10,10 +10,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class UserBiometriaMapperTest {
 
+    private static final String TEMPLATE = "YmFzZTY0dGVtcGxhdGU=";
+    private static final String AES_KEY = "YmFzZTY0YWVzS2V5";
+    private static final String IV = "YmFzZTY0aXY=";
+    private static final String TAG = "YmFzZTY0dGFn";
+
     @Test
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
-        var domain = UserBiometria.restore(1L, 10L, 5L, 1, "tmpl", "key",
+        var domain = UserBiometria.restore(1L, 10L, 5L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG,
                 now, true, now, now);
 
         var entity = UserBiometriaMapper.toEntity(domain);
@@ -22,8 +27,8 @@ class UserBiometriaMapperTest {
         assertEquals(10L, entity.getTenantUserId());
         assertEquals(5L, entity.getDeviceId());
         assertEquals(1, entity.getFingerIndex());
-        assertEquals("tmpl", entity.getTemplateCifrado());
-        assertEquals("key", entity.getLlaveCifrado());
+        assertEquals(TEMPLATE, entity.getEncryptedTemplateBase64());
+        assertEquals(AES_KEY, entity.getEncryptedAesKeyBase64());
         assertTrue(entity.isActivo());
     }
 
@@ -34,9 +39,12 @@ class UserBiometriaMapperTest {
         entity.setId(1L);
         entity.setTenantUserId(10L);
         entity.setDeviceId(5L);
+        entity.setDeviceCode("DVC-001");
         entity.setFingerIndex(2);
-        entity.setTemplateCifrado("tmpl2");
-        entity.setLlaveCifrado("key2");
+        entity.setEncryptedTemplateBase64("dGVtcGxhdGUy");
+        entity.setEncryptedAesKeyBase64("a2V5Mg==");
+        entity.setIvBase64("aXYy");
+        entity.setTagBase64("dGFnMg==");
         entity.setCapturadoEn(now);
         entity.setActivo(true);
         entity.setCreatedAt(now);
@@ -52,7 +60,7 @@ class UserBiometriaMapperTest {
     @Test
     void shouldHandleNullOptionalFields() {
         var now = LocalDateTime.now();
-        var domain = UserBiometria.restore(2L, 20L, null, null, "tmpl", "key",
+        var domain = UserBiometria.restore(2L, 20L, null, null, null, TEMPLATE, AES_KEY, null, null,
                 null, false, now, now);
 
         var entity = UserBiometriaMapper.toEntity(domain);
@@ -60,7 +68,7 @@ class UserBiometriaMapperTest {
 
         assertNull(restored.getDeviceId());
         assertNull(restored.getFingerIndex());
-        assertEquals("key", restored.getLlaveCifrado());
+        assertEquals(AES_KEY, restored.getEncryptedAesKeyBase64());
         assertNull(restored.getCapturadoEn());
         assertFalse(restored.isActivo());
     }

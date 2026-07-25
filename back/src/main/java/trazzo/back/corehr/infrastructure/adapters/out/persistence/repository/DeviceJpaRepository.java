@@ -13,6 +13,8 @@ public interface DeviceJpaRepository extends JpaRepository<DeviceEntity, Long> {
 
     boolean existsByCode(String code);
 
+    java.util.Optional<DeviceEntity> findByCode(String code);
+
     @Query("SELECT d FROM DeviceEntity d WHERE " +
            "(:branchId IS NULL OR d.branchId = :branchId) AND " +
            "(:state IS NULL OR d.state = :state)")

@@ -162,4 +162,38 @@ describe('Planes (tenant)', () => {
     component.descargarFactura();
     expect(mockToast.info).toHaveBeenCalled();
   });
+
+  it('should return undefined for planSeleccionado when planSeleccionadoId is null', () => {
+    component.planSeleccionadoId = null;
+    expect(component.planSeleccionado).toBeUndefined();
+  });
+
+  it('should return undefined for facturaSeleccionada when facturaSeleccionadaId is null', () => {
+    component.facturaSeleccionadaId = null;
+    expect(component.facturaSeleccionada).toBeUndefined();
+  });
+
+  it('should return null for limiteUsuarios when max is not a number', () => {
+    (component as any).planActual.set({ ...mockPlanActual, features: { max_trabajadores: 'unlimited' } });
+    expect(component.limiteUsuarios).toBeNull();
+  });
+
+  it('should return null for porcentajeUsuarios when limite is null', () => {
+    component.planActual.set({ ...mockPlanActual, features: {} });
+    expect(component.porcentajeUsuarios).toBeNull();
+  });
+
+  it('should default to planActual in abrirModalActualizarPlan when no alternate plan exists', () => {
+    component.planes.set([mockPlanActual]);
+    component.planSeleccionadoId = null;
+    component.abrirModalActualizarPlan();
+    expect((component as any).planSeleccionadoId).toBe(mockPlanActual.id);
+    expect(component.modalActualizarOpen).toBeTrue();
+  });
+
+  it('should return only present features in featureLabel', () => {
+    const labels = component.featureLabel(mockPlanStarter);
+    expect(labels).toContain('Hasta 100 empleados');
+    expect(labels.length).toBe(1);
+  });
 });

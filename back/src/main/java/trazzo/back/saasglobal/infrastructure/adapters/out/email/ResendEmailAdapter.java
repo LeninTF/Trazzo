@@ -27,7 +27,7 @@ public class ResendEmailAdapter implements EmailService {
     public ResendEmailAdapter(
             RestClient.Builder restClientBuilder,
             @Value("${resend.api-key:}") String apiKey,
-            @Value("${resend.from-email:notificaciones@trazzo.pe}") String fromEmail
+            @Value("${resend.from:}") String fromEmail
     ) {
         this.restClient = restClientBuilder.baseUrl(RESEND_URL).build();
         this.apiKey = apiKey;

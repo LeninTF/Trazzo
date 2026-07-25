@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -104,7 +105,7 @@ class ScheduleRepositoryAdapterTest {
     }
 
     @Test
-    void findAll_withSort_shouldApplySort() {
+    void findAll_withSortByName_shouldApplySort() {
         var entity = createEntity(1L);
         var pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "name"));
         when(scheduleRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(entity)));
@@ -112,6 +113,105 @@ class ScheduleRepositoryAdapterTest {
         var result = adapter.findAll(null, 0, 10, "name");
 
         assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void findAll_withSortByEntryTime_shouldApplySort() {
+        var entity = createEntity(1L);
+        var pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "entryTime"));
+        when(scheduleRepo.findAll(pageable)).thenReturn(new PageImpl<>(List.of(entity)));
+
+        var result = adapter.findAll(null, 0, 10, "entryTime");
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void findAll_withSortByEntryTimeSnake_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "entry_time,desc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("entryTime").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void findAll_withSortByDepartureTime_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "departureTime");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("departureTime")).isNotNull();
+    }
+
+    @Test
+    void findAll_withSortByDepartureTimeSnake_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "departure_time,asc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("departureTime")).isNotNull();
+    }
+
+    @Test
+    void findAll_withSortByCreatedAt_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "createdAt,desc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
+
+    @Test
+    void findAll_withSortByCreatedAtSnake_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "created_at,asc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt").getDirection()).isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void findAll_withSortByUpdatedAt_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "updatedAt");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("updatedAt")).isNotNull();
+    }
+
+    @Test
+    void findAll_withSortByUpdatedAtSnake_shouldApplySort() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "updated_at,desc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("updatedAt")).isNotNull();
+    }
+
+    @Test
+    void findAll_withUnknownSortField_shouldDefaultToCreatedAt() {
+        when(scheduleRepo.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of()));
+
+        adapter.findAll(null, 0, 10, "unknownField,asc");
+
+        var captor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(scheduleRepo).findAll(captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("createdAt")).isNotNull();
     }
 
     @Test

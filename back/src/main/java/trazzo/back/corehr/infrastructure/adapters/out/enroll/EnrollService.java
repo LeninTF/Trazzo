@@ -8,6 +8,7 @@ import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 
+import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -45,13 +46,19 @@ public class EnrollService {
         return new EnrollSessionResponse(enrollToken, tenantUserId, deviceId, fingerIndex, device.getCode(), expiresAt);
     }
 
+    public Optional<EnrollSession> findPendingSession(String deviceCode) {
+        return enrollSessionStore.findPendingByDeviceCode(deviceCode);
+    }
+
     public UserBiometriaResult completeEnroll(
             String enrollToken,
-            String templateCifrado,
-            String llaveCifrado,
-            Integer fingerIndex,
             String deviceCode,
-            LocalDateTime capturadoEn
+            Integer fingerIndex,
+            String encryptedTemplateBase64,
+            String encryptedAesKeyBase64,
+            String ivBase64,
+            String tagBase64,
+            LocalDateTime capturedAtUtc
     ) {
         var session = enrollSessionStore.findAndConsume(enrollToken);
         if (session == null) {
@@ -75,10 +82,13 @@ public class EnrollService {
         var biometria = UserBiometria.create(
                 session.tenantUserId(),
                 session.deviceId(),
+                deviceCode,
                 fingerIndex,
-                templateCifrado,
-                llaveCifrado,
-                capturadoEn
+                encryptedTemplateBase64,
+                encryptedAesKeyBase64,
+                ivBase64,
+                tagBase64,
+                capturedAtUtc
         );
 
         var saved = userBiometriaRepository.save(biometria);
@@ -90,7 +100,7 @@ public class EnrollService {
                 ub.getId(),
                 ub.getTenantUserId(),
                 ub.getDeviceId(),
-                null,
+                ub.getDeviceCode(),
                 ub.getFingerIndex(),
                 ub.isActivo(),
                 ub.getCapturadoEn(),

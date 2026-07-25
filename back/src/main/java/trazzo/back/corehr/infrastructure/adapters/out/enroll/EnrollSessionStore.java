@@ -3,6 +3,7 @@ package trazzo.back.corehr.infrastructure.adapters.out.enroll;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -27,5 +28,12 @@ public class EnrollSessionStore {
                         && s.deviceId().equals(deviceId)
                         && LocalDateTime.now().isBefore(s.expiresAt())
         );
+    }
+
+    public Optional<EnrollSession> findPendingByDeviceCode(String deviceCode) {
+        return sessions.values().stream()
+                .filter(s -> s.deviceCode().equals(deviceCode))
+                .filter(s -> LocalDateTime.now().isBefore(s.expiresAt()))
+                .findFirst();
     }
 }

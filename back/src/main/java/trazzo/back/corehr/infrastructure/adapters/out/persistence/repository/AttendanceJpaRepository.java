@@ -10,9 +10,18 @@ import trazzo.back.corehr.domain.model.AttendanceState;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.AttendanceEntity;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Repository
 public interface AttendanceJpaRepository extends JpaRepository<AttendanceEntity, String> {
+
+    Optional<AttendanceEntity> findByTenantUserIdAndAttendanceDate(Long tenantUserId, LocalDate attendanceDate);
+
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AttendanceEntity a " +
+           "WHERE a.offlineEventId = :offlineEventId AND a.deviceCode = :deviceCode")
+    boolean existsByOfflineEventIdAndDeviceCode(
+            @Param("offlineEventId") Integer offlineEventId,
+            @Param("deviceCode") String deviceCode);
 
     @Query("SELECT a FROM AttendanceEntity a WHERE " +
            "(:tenantUserId IS NULL OR a.tenantUserId = :tenantUserId) AND " +

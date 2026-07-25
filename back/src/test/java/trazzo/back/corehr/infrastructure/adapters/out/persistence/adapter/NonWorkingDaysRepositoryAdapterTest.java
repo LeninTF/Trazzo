@@ -100,6 +100,33 @@ class NonWorkingDaysRepositoryAdapterTest {
     }
 
     @Test
+    void count_withOnlyDateFrom_shouldReturnFilteredCount() {
+        when(nonWorkingDaysRepo.countByDateBetweenOrIsRecurring(date, null, null)).thenReturn(3L);
+
+        var result = adapter.count(date, null, null);
+
+        assertThat(result).isEqualTo(3L);
+    }
+
+    @Test
+    void count_withOnlyDateTo_shouldReturnFilteredCount() {
+        when(nonWorkingDaysRepo.countByDateBetweenOrIsRecurring(null, date, null)).thenReturn(2L);
+
+        var result = adapter.count(null, date, null);
+
+        assertThat(result).isEqualTo(2L);
+    }
+
+    @Test
+    void count_withOnlyIsRecurring_shouldReturnFilteredCount() {
+        when(nonWorkingDaysRepo.countByDateBetweenOrIsRecurring(null, null, true)).thenReturn(4L);
+
+        var result = adapter.count(null, null, true);
+
+        assertThat(result).isEqualTo(4L);
+    }
+
+    @Test
     void count_withoutFilters_shouldReturnTotalCount() {
         when(nonWorkingDaysRepo.count()).thenReturn(10L);
 

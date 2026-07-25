@@ -95,4 +95,52 @@ describe('FeriadosComponent', () => {
     await component.deleteFeriado(1);
     expect(mockApi.corehr.deleteNonWorkingDay).toHaveBeenCalledWith(1);
   });
+
+  it('should handle cargarFeriados error', async () => {
+    mockApi.corehr.listNonWorkingDays.and.callFake(() => { throw new Error('fail'); });
+    await component.cargarFeriados();
+    expect(component.error()).toBe('Error al cargar feriados');
+    expect(mockToast.error).toHaveBeenCalledWith('Error al cargar feriados');
+    expect(component.loading()).toBeFalse();
+  });
+
+  it('should handle addFeriado API error', async () => {
+    mockApi.corehr.createNonWorkingDay.and.callFake(() => { throw new Error('fail'); });
+    component.openNewForm();
+    component.feriadoForm.setValue({ fecha: '2025-07-28', nombre: 'Fiestas Patrias', tipo: 'nacional' });
+    await component.addFeriado();
+    expect(mockToast.error).toHaveBeenCalledWith('Error al crear feriado');
+    expect(component.showNewForm).toBeFalse();
+  });
+
+  it('should handle saveEdit API error', async () => {
+    mockApi.corehr.patchNonWorkingDay.and.callFake(() => { throw new Error('fail'); });
+    const feriado = { id: 1, fecha: '2025-01-01', nombre: 'Año Nuevo', tipo: 'nacional' };
+    component.startEdit(feriado);
+    component.editFeriadoForm.setValue({ fecha: '2025-01-01', nombre: 'Año Nuevo Editado', tipo: 'nacional' });
+    await component.saveEdit(feriado);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al actualizar feriado');
+    expect(component.editingFeriadoId).toBeNull();
+  });
+
+  it('should handle deleteFeriado API error', async () => {
+    mockApi.corehr.deleteNonWorkingDay.and.callFake(() => { throw new Error('fail'); });
+    await component.deleteFeriado(1);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al eliminar feriado');
+  });
+
+  it('should openNewForm reset the form with default tipo', () => {
+    component.openNewForm();
+    expect(component.showNewForm).toBeTrue();
+    expect(component.feriadoForm.value.tipo).toBe('nacional');
+  });
+
+  it('should cancelEdit reset editingFeriadoId', () => {
+    const feriado = { id: 1, fecha: '2025-01-01', nombre: 'Año Nuevo', tipo: 'nacional' };
+    component.startEdit(feriado);
+    expect(component.editingFeriadoId).toBe(1);
+    component.cancelEdit();
+    expect(component.editingFeriadoId).toBeNull();
+    expect(component.editFeriadoForm.pristine).toBeTrue();
+  });
 });

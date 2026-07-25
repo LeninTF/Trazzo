@@ -33,7 +33,7 @@ class AttendanceServiceTest {
     @Test
     void findByIdReturnsAttendance() {
         var now = LocalDateTime.now();
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
 
         var result = service.findById("id-1");
@@ -52,7 +52,7 @@ class AttendanceServiceTest {
     @Test
     void findAllReturnsPaginatedResults() {
         var now = LocalDateTime.now();
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findAll("scope", 1L, 2L, 3L, null, null, null, null, 0, 10, "asc")).thenReturn(List.of(attendance));
         when(repository.count("scope", 1L, 2L, 3L, null, null, null, null)).thenReturn(1L);
 
@@ -66,7 +66,7 @@ class AttendanceServiceTest {
     @Test
     void correctUpdatesStateAndMinutes() {
         var now = LocalDateTime.now();
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<Attendance>getArgument(0));
 
@@ -83,7 +83,7 @@ class AttendanceServiceTest {
     void correctUpdatesCheckIn() {
         var now = LocalDateTime.now();
         var newCheckIn = now.plusHours(1);
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<Attendance>getArgument(0));
 
@@ -99,7 +99,7 @@ class AttendanceServiceTest {
     void correctUpdatesCheckOut() {
         var now = LocalDateTime.now();
         var checkOut = now.plusHours(8);
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<Attendance>getArgument(0));
 
@@ -113,7 +113,7 @@ class AttendanceServiceTest {
     @Test
     void correctRejectsCheckOutBeforeCheckIn() {
         var now = LocalDateTime.now();
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
 
         var command = new PatchAttendanceCommand(null, now.minusHours(1), null, null);
@@ -135,7 +135,7 @@ class AttendanceServiceTest {
     @Test
     void correctPublishesDomainEvents() {
         var now = LocalDateTime.now();
-        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, now, now);
+        var attendance = Attendance.restore("id-1", 1L, 10L, 100L, now, null, LocalDate.now(), 0, AttendanceState.PUNTUAL, null, null, now, now);
         when(repository.findById("id-1")).thenReturn(Optional.of(attendance));
         when(repository.save(any())).thenAnswer(invocation -> invocation.<Attendance>getArgument(0));
 
