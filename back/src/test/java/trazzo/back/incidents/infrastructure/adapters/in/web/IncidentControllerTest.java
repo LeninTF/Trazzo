@@ -72,10 +72,10 @@ class IncidentControllerTest {
     @BeforeEach
     void setUp() {
         var now = LocalDateTime.now();
-        sampleResult = new IncidentResult("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        sampleResult = new IncidentResult(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), null, now, now);
-        sampleEvidenceResult = new IncidentEvidenceResult("ev-1", "inc-1", "doc.pdf",
-                "file-key", "/api/v1/incidentes/inc-1/evidencias/ev-1/descarga", "application/pdf", 100, now, now);
+        sampleEvidenceResult = new IncidentEvidenceResult(1, 1, "doc.pdf",
+                "file-key", "/api/v1/incidentes/1/evidencias/1/descarga", "application/pdf", 100, now, now);
         testUser = new AuthenticatedUser(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 "test@mail.com", "pass",
@@ -102,14 +102,14 @@ class IncidentControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value("inc-1"));
+                .andExpect(jsonPath("$.content[0].id").value("1"));
     }
 
     @Test
     void listWithScopeSelfResolvesTenantUser() throws Exception {
         var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
         when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
-        when(incidentUseCase.findAll(eq("42"), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
+        when(incidentUseCase.findAll(eq(42), eq("SELF"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), anyInt(), anyInt(), isNull()))
                 .thenReturn(paginated);
 
         mockMvc.perform(get("/incidentes")
@@ -117,7 +117,7 @@ class IncidentControllerTest {
                         .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value("inc-1"))
+                .andExpect(jsonPath("$.content[0].id").value("1"))
                 .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
 
         verify(tenantUserPort).findIdByMasterUserId(testUser.id());
@@ -155,20 +155,20 @@ class IncidentControllerTest {
         when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.of(42L));
         when(incidentUseCase.create(any())).thenReturn(sampleResult);
 
-        var request = new CreateIncidentRequest("t-1", "comment");
+        var request = new CreateIncidentRequest("1", "comment");
         mockMvc.perform(post("/incidentes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value("inc-1"));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     @Test
     void createReturns400WhenTenantUserNotFound() throws Exception {
         when(tenantUserPort.findIdByMasterUserId(testUser.id())).thenReturn(Optional.empty());
 
-        var request = new CreateIncidentRequest("t-1", "comment");
+        var request = new CreateIncidentRequest("1", "comment");
         mockMvc.perform(post("/incidentes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
@@ -178,87 +178,87 @@ class IncidentControllerTest {
 
     @Test
     void getByIdReturns200() throws Exception {
-        when(incidentUseCase.findById("inc-1")).thenReturn(Optional.of(sampleResult));
+        when(incidentUseCase.findById(1)).thenReturn(Optional.of(sampleResult));
 
-        mockMvc.perform(get("/incidentes/inc-1"))
+        mockMvc.perform(get("/incidentes/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("inc-1"));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     @Test
     void getByIdReturns404() throws Exception {
-        when(incidentUseCase.findById("not-found")).thenReturn(Optional.empty());
+        when(incidentUseCase.findById(999)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/incidentes/not-found"))
+        mockMvc.perform(get("/incidentes/999"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void patchReturns200() throws Exception {
-        when(incidentUseCase.patch(anyString(), any())).thenReturn(sampleResult);
+        when(incidentUseCase.patch(eq(1), any())).thenReturn(sampleResult);
 
         var request = new PatchIncidentRequest("nuevo comentario");
-        mockMvc.perform(patch("/incidentes/inc-1")
+        mockMvc.perform(patch("/incidentes/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("inc-1"));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     @Test
     void changeStateReturns200() throws Exception {
-        when(incidentUseCase.changeState(anyString(), any())).thenReturn(sampleResult);
+        when(incidentUseCase.changeState(eq(1), any())).thenReturn(sampleResult);
 
         var request = new IncidentStateChangeRequest(IncidentState.APROBADO, null, null);
-        mockMvc.perform(patch("/incidentes/inc-1/estado")
+        mockMvc.perform(patch("/incidentes/1/estado")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("inc-1"));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     @Test
     void createEvidenceReturns201() throws Exception {
-        when(evidenceUseCase.create(anyString(), any())).thenReturn(sampleEvidenceResult);
+        when(evidenceUseCase.create(eq(1), any())).thenReturn(sampleEvidenceResult);
 
         var request = new CreateEvidenceRequest("doc.pdf", "file-key", "application/pdf", 100);
-        mockMvc.perform(post("/incidentes/inc-1/evidencias")
+        mockMvc.perform(post("/incidentes/1/evidencias")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.file_name").value("doc.pdf"))
-                .andExpect(jsonPath("$.download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
+                .andExpect(jsonPath("$.download_url").value("/api/v1/incidentes/1/evidencias/1/descarga"));
     }
 
     @Test
     void listEvidencesReturns200() throws Exception {
-        when(evidenceUseCase.findAllByIncidentId("inc-1")).thenReturn(List.of(sampleEvidenceResult));
+        when(evidenceUseCase.findAllByIncidentId(1)).thenReturn(List.of(sampleEvidenceResult));
 
-        mockMvc.perform(get("/incidentes/inc-1/evidencias"))
+        mockMvc.perform(get("/incidentes/1/evidencias"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].file_name").value("doc.pdf"))
-                .andExpect(jsonPath("$[0].download_url").value("/api/v1/incidentes/inc-1/evidencias/ev-1/descarga"));
+                .andExpect(jsonPath("$[0].download_url").value("/api/v1/incidentes/1/evidencias/1/descarga"));
     }
 
     @Test
     void deleteEvidenceReturns204() throws Exception {
-        doNothing().when(evidenceUseCase).delete("inc-1", "ev-1");
+        doNothing().when(evidenceUseCase).delete(1, 1);
 
-        mockMvc.perform(delete("/incidentes/inc-1/evidencias/ev-1")
+        mockMvc.perform(delete("/incidentes/1/evidencias/1")
                         .with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void downloadEvidenceReturns200() throws Exception {
-        when(evidenceUseCase.findEvidence("inc-1", "ev-1")).thenReturn(sampleEvidenceResult);
+        when(evidenceUseCase.findEvidence(1, 1)).thenReturn(sampleEvidenceResult);
         InputStream stream = new java.io.ByteArrayInputStream("evidence-bytes".getBytes());
         when(fileStoragePort.downloadFile("file-key")).thenReturn(stream);
 
-        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+        mockMvc.perform(get("/incidentes/1/evidencias/1/descarga"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition",
                         org.hamcrest.Matchers.containsString("attachment; filename=\"doc.pdf\"")))
@@ -267,10 +267,10 @@ class IncidentControllerTest {
 
     @Test
     void downloadEvidenceReturns404WhenEvidenceNotFound() throws Exception {
-        when(evidenceUseCase.findEvidence("inc-1", "missing"))
-                .thenThrow(new IllegalArgumentException("Evidencia no encontrada: missing"));
+        when(evidenceUseCase.findEvidence(1, 999))
+                .thenThrow(new IllegalArgumentException("Evidencia no encontrada: 999"));
 
-        mockMvc.perform(get("/incidentes/inc-1/evidencias/missing/descarga"))
+        mockMvc.perform(get("/incidentes/1/evidencias/999/descarga"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -283,7 +283,7 @@ class IncidentControllerTest {
         var restrictedAuth = new UsernamePasswordAuthenticationToken(restrictedUser, null, restrictedUser.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(restrictedAuth);
 
-        mockMvc.perform(get("/incidentes/inc-1/evidencias/ev-1/descarga"))
+        mockMvc.perform(get("/incidentes/1/evidencias/1/descarga"))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(evidenceUseCase);
@@ -292,10 +292,10 @@ class IncidentControllerTest {
 
     @Test
     void notifyReturns202() throws Exception {
-        doNothing().when(notificationUseCase).notify(anyString(), any());
+        doNothing().when(notificationUseCase).notify(eq(1), any());
 
         var request = new NotifyIncidentRequest("JUSTIFICACION");
-        mockMvc.perform(post("/incidentes/inc-1/notificar")
+        mockMvc.perform(post("/incidentes/1/notificar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))
@@ -304,9 +304,9 @@ class IncidentControllerTest {
 
     @Test
     void justifyReturns202() throws Exception {
-        doNothing().when(notificationUseCase).justifyAttendance("inc-1");
+        doNothing().when(notificationUseCase).justifyAttendance(1);
 
-        mockMvc.perform(post("/incidentes/inc-1/justificar")
+        mockMvc.perform(post("/incidentes/1/justificar")
                         .with(csrf()))
                 .andExpect(status().isAccepted());
     }

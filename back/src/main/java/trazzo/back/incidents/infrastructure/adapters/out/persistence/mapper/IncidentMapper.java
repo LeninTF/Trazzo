@@ -19,9 +19,9 @@ public final class IncidentMapper {
 
     public static IncidentEntity toEntity(Incident domain) {
         var entity = new IncidentEntity();
-        entity.setId(toInt(domain.getId()));
-        entity.setTenantUserId(toInt(domain.getTenantUserId()));
-        entity.setIncidentTypeId(toInt(domain.getIncidentTypeId()));
+        entity.setId(domain.getId());
+        entity.setTenantUserId(domain.getTenantUserId());
+        entity.setIncidentTypeId(domain.getIncidentTypeId());
         entity.setState(domain.getState());
         entity.setComment(domain.getComment());
         entity.setRejectionReason(domain.getRejectionReason());
@@ -29,7 +29,7 @@ public final class IncidentMapper {
         entity.setUpdatedAt(domain.getUpdatedAt());
 
         if (domain.getType() != null) {
-            entity.setIncidentTypeId(toInt(domain.getType().getId()));
+            entity.setIncidentTypeId(domain.getType().getId());
         }
 
         var evidenceEntities = Optional.ofNullable(domain.getEvidences())
@@ -59,9 +59,9 @@ public final class IncidentMapper {
                 .toList();
 
         return Incident.restore(
-                toString(entity.getId()),
-                toString(entity.getTenantUserId()),
-                toString(entity.getIncidentTypeId()),
+                entity.getId(),
+                entity.getTenantUserId(),
+                entity.getIncidentTypeId(),
                 entity.getState(),
                 entity.getComment(),
                 entity.getRejectionReason(),
@@ -75,8 +75,8 @@ public final class IncidentMapper {
 
     public static IncidentEvidenceEntity toEntity(IncidentEvidence domain) {
         var entity = new IncidentEvidenceEntity();
-        entity.setId(toInt(domain.getId()));
-        entity.setIncidentId(toInt(domain.getIncidentId()));
+        entity.setId(domain.getId());
+        entity.setIncidentId(domain.getIncidentId());
         entity.setFileName(domain.getFileName());
         entity.setFileKey(domain.getFileKey());
         entity.setMimeType(domain.getMimeType());
@@ -91,8 +91,8 @@ public final class IncidentMapper {
 
     public static IncidentEvidence toDomain(IncidentEvidenceEntity entity) {
         return IncidentEvidence.restore(
-                toString(entity.getId()),
-                toString(entity.getIncidentId()),
+                entity.getId(),
+                entity.getIncidentId(),
                 entity.getFileName(),
                 entity.getFileKey(),
                 entity.getMimeType(),
@@ -107,8 +107,8 @@ public final class IncidentMapper {
 
     public static IncidentPermissionEntity toEntity(IncidentPermission domain) {
         var entity = new IncidentPermissionEntity();
-        entity.setId(toInt(domain.getId()));
-        entity.setIncidentId(toInt(domain.getIncidentId()));
+        entity.setId(domain.getId());
+        entity.setIncidentId(domain.getIncidentId());
         entity.setStartDate(domain.getStartDate());
         entity.setEndDate(domain.getEndDate());
         entity.setDaysGranted(domain.getDaysGranted());
@@ -119,26 +119,13 @@ public final class IncidentMapper {
 
     public static IncidentPermission toDomain(IncidentPermissionEntity entity) {
         return IncidentPermission.restore(
-                toString(entity.getId()),
-                toString(entity.getIncidentId()),
+                entity.getId(),
+                entity.getIncidentId(),
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getDaysGranted(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
-    }
-
-    private static Integer toInt(String value) {
-        if (value == null || value.isBlank()) return null;
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static String toString(Integer value) {
-        return value != null ? String.valueOf(value) : null;
     }
 }

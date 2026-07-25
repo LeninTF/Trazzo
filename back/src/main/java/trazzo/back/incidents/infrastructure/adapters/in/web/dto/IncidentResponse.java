@@ -35,9 +35,13 @@ public record IncidentResponse(
                 ? TenantUserBasicInfoResponse.from(result.tenantUser())
                 : null;
 
-        return new IncidentResponse(result.id(), result.tenantUserId(), result.incidenciaTypeId(),
+        return new IncidentResponse(toStr(result.id()), toStr(result.tenantUserId()), toStr(result.incidenciaTypeId()),
                 result.state(), result.comment(), result.rejectionReason(), tipoResp,
                 permisoResp, evidResp, userResp, result.createdAt(), result.updatedAt());
+    }
+
+    private static String toStr(Integer value) {
+        return value != null ? String.valueOf(value) : null;
     }
 
     public record TenantUserBasicInfoResponse(

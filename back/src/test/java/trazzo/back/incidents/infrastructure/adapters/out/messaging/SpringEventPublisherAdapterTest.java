@@ -14,7 +14,7 @@ class SpringEventPublisherAdapterTest {
     void publishDelegatesToSpringPublisher() {
         var springPublisher = mock(ApplicationEventPublisher.class);
         var adapter = new SpringEventPublisherAdapter(springPublisher);
-        var event = new IncidentCreatedEvent("inc-1", "u-1", "t-1", LocalDateTime.now());
+        var event = new IncidentCreatedEvent(1, 1, 1, LocalDateTime.now());
 
         adapter.publish(event);
 

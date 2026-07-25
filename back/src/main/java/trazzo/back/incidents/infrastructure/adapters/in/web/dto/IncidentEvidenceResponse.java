@@ -17,7 +17,11 @@ public record IncidentEvidenceResponse(
         @JsonProperty("updated_at") LocalDateTime updatedAt
 ) {
     public static IncidentEvidenceResponse from(IncidentEvidenceResult result) {
-        return new IncidentEvidenceResponse(result.id(), result.incidenciaId(), result.fileName(),
+        return new IncidentEvidenceResponse(toStr(result.id()), toStr(result.incidenciaId()), result.fileName(),
                 result.downloadUrl(), result.fileKey(), result.mimeType(), result.fileSize(), result.createdAt(), result.updatedAt());
+    }
+
+    private static String toStr(Integer value) {
+        return value != null ? String.valueOf(value) : null;
     }
 }

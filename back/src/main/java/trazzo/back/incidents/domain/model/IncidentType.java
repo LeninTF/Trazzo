@@ -2,7 +2,6 @@ package trazzo.back.incidents.domain.model;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +11,7 @@ import trazzo.back.incidents.domain.exception.IncidentValidationException;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class IncidentType {
 
-    private String id;
+    private Integer id;
     private String nombre;
     private String descripcion;
     private boolean activo;
@@ -21,14 +20,14 @@ public class IncidentType {
     transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentType(
-            String id,
+            Integer id,
             String nombre,
             String descripcion,
             boolean activo,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = normalizeOptionalId(id);
+        this.id = id;
         this.nombre = requireText(nombre, "nombre");
         this.descripcion = normalizeOptionalText(descripcion);
         this.activo = activo;
@@ -38,11 +37,11 @@ public class IncidentType {
 
     public static IncidentType create(String nombre, String descripcion) {
         LocalDateTime now = LocalDateTime.now();
-        return new IncidentType(UUID.randomUUID().toString(), nombre, descripcion, true, now, now);
+        return new IncidentType(null, nombre, descripcion, true, now, now);
     }
 
     public static IncidentType restore(
-            String id,
+            Integer id,
             String nombre,
             String descripcion,
             boolean activo,
@@ -79,13 +78,6 @@ public class IncidentType {
     private static String requireText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IncidentValidationException(fieldName + " is required");
-        }
-        return value.trim();
-    }
-
-    private static String normalizeOptionalId(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
         }
         return value.trim();
     }

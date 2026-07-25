@@ -11,7 +11,7 @@ public class NotificationService implements NotificationUseCase {
     private final IncidentRepositoryPort incidentRepository;
 
     @Override
-    public void notify(String incidentId, NotifyIncidentCommand command) {
+    public void notify(Integer incidentId, NotifyIncidentCommand command) {
         var incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
         if (incident == null) {
@@ -20,7 +20,7 @@ public class NotificationService implements NotificationUseCase {
     }
 
     @Override
-    public void justifyAttendance(String incidentId) {
+    public void justifyAttendance(Integer incidentId) {
         var incident = incidentRepository.findById(incidentId)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + incidentId));
         if (incident == null) {

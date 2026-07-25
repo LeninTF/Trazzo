@@ -11,11 +11,11 @@ import java.util.Optional;
 
 public interface IncidentUseCase {
     IncidentResult create(CreateIncidentCommand command);
-    Optional<IncidentResult> findById(String id);
-    PaginatedResult<IncidentResult> findAll(String currentTenantUserId, String scope, String sedeId, String areaId,
-                                             String departamentoId, String state, String tipoId,
+    Optional<IncidentResult> findById(Integer id);
+    PaginatedResult<IncidentResult> findAll(Integer currentTenantUserId, String scope, Integer sedeId, Integer areaId,
+                                             Integer departamentoId, String state, Integer tipoId,
                                              LocalDate desde, LocalDate hasta, String search,
                                              int page, int size, String sort);
-    IncidentResult patch(String id, PatchIncidentCommand command);
-    IncidentResult changeState(String id, IncidentStateChangeCommand command);
+    IncidentResult patch(Integer id, PatchIncidentCommand command);
+    IncidentResult changeState(Integer id, IncidentStateChangeCommand command);
 }

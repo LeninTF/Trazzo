@@ -39,14 +39,14 @@ class IncidentServiceTest {
     @Test
     void createWithValidCommand() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("t-1", "Permiso", "Desc", true, now, now);
-        when(typeRepo.findById("t-1")).thenReturn(Optional.of(type));
+        var type = IncidentType.restore(1, "Permiso", "Desc", true, now, now);
+        when(typeRepo.findById(1)).thenReturn(Optional.of(type));
         when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
-        var command = new CreateIncidentCommand("u-1", "t-1", "comment");
+        var command = new CreateIncidentCommand(1, 1, "comment");
         var result = service.create(command);
 
-        assertEquals("u-1", result.tenantUserId());
+        assertEquals(1, result.tenantUserId());
         assertEquals(IncidentState.PENDIENTE, result.state());
         assertEquals("comment", result.comment());
         assertNotNull(result.tipo());
@@ -56,10 +56,10 @@ class IncidentServiceTest {
     @Test
     void createWithInactiveTypeThrowsException() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("t-1", "Permiso", "Desc", false, now, now);
-        when(typeRepo.findById("t-1")).thenReturn(Optional.of(type));
+        var type = IncidentType.restore(1, "Permiso", "Desc", false, now, now);
+        when(typeRepo.findById(1)).thenReturn(Optional.of(type));
 
-        var command = new CreateIncidentCommand("u-1", "t-1", "comment");
+        var command = new CreateIncidentCommand(1, 1, "comment");
 
         assertThrows(IllegalStateException.class, () -> service.create(command));
         verify(incidentRepo, never()).save(any());
@@ -67,9 +67,9 @@ class IncidentServiceTest {
 
     @Test
     void createWithNonExistentTypeThrowsException() {
-        when(typeRepo.findById("bad-type")).thenReturn(Optional.empty());
+        when(typeRepo.findById(999)).thenReturn(Optional.empty());
 
-        var command = new CreateIncidentCommand("u-1", "bad-type", "comment");
+        var command = new CreateIncidentCommand(1, 999, "comment");
 
         assertThrows(IllegalArgumentException.class, () -> service.create(command));
     }
@@ -77,26 +77,26 @@ class IncidentServiceTest {
     @Test
     void findByIdReturnsIncident() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, java.util.List.of(), now, now);
-        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
 
-        var result = service.findById("inc-1");
+        var result = service.findById(1);
 
         assertTrue(result.isPresent());
-        assertEquals("inc-1", result.get().id());
+        assertEquals(1, result.get().id());
     }
 
     @Test
     void patchUpdatesComment() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "original", null, null, null, java.util.List.of(), now, now);
-        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
         when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
         var command = new PatchIncidentCommand("modificado");
-        var result = service.patch("inc-1", command);
+        var result = service.patch(1, command);
 
         assertEquals("modificado", result.comment());
     }
@@ -104,13 +104,13 @@ class IncidentServiceTest {
     @Test
     void changeStateToApproved() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, java.util.List.of(), now, now);
-        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
         when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
         var command = new IncidentStateChangeCommand(IncidentState.APROBADO, null, null);
-        var result = service.changeState("inc-1", command);
+        var result = service.changeState(1, command);
 
         assertEquals(IncidentState.APROBADO, result.state());
         verify(eventPublisher, atLeastOnce()).publish(any());
@@ -119,13 +119,13 @@ class IncidentServiceTest {
     @Test
     void changeStateToApprovedWithPermission() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, java.util.List.of(), now, now);
-        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
         when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
         var command = new IncidentStateChangeCommand(IncidentState.APROBADO, 3, null);
-        var result = service.changeState("inc-1", command);
+        var result = service.changeState(1, command);
 
         assertEquals(IncidentState.APROBADO, result.state());
         assertNotNull(result.permiso());
@@ -135,13 +135,13 @@ class IncidentServiceTest {
     @Test
     void changeStateToDenied() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, java.util.List.of(), now, now);
-        when(incidentRepo.findById("inc-1")).thenReturn(Optional.of(incident));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
         when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
         var command = new IncidentStateChangeCommand(IncidentState.DENEGADO, null, "motivo");
-        var result = service.changeState("inc-1", command);
+        var result = service.changeState(1, command);
 
         assertEquals(IncidentState.DENEGADO, result.state());
         assertEquals("motivo", result.rejectionReason());

@@ -13,7 +13,7 @@ class IncidentTypeMapperTest {
     @Test
     void toEntityMapsAllFields() {
         var now = LocalDateTime.now();
-        var domain = IncidentType.restore("1", "Permiso", "Desc", true, now, now);
+        var domain = IncidentType.restore(1, "Permiso", "Desc", true, now, now);
         var entity = IncidentTypeMapper.toEntity(domain);
 
         assertEquals(1, entity.getId());
@@ -30,7 +30,7 @@ class IncidentTypeMapperTest {
         var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
         var domain = IncidentTypeMapper.toDomain(entity);
 
-        assertEquals("1", domain.getId());
+        assertEquals(1, domain.getId());
         assertEquals("Permiso", domain.getNombre());
         assertEquals("Desc", domain.getDescripcion());
         assertTrue(domain.isActivo());
@@ -41,7 +41,7 @@ class IncidentTypeMapperTest {
     @Test
     void roundTripPreservesData() {
         var now = LocalDateTime.now();
-        var original = IncidentType.restore("1", "Permiso", "Desc", false, now, now);
+        var original = IncidentType.restore(1, "Permiso", "Desc", false, now, now);
         var entity = IncidentTypeMapper.toEntity(original);
         var restored = IncidentTypeMapper.toDomain(entity);
 
@@ -57,12 +57,5 @@ class IncidentTypeMapperTest {
         entity.setNombre("Test");
         var domain = IncidentTypeMapper.toDomain(entity);
         assertNull(domain.getId());
-    }
-
-    @Test
-    void nonNumericStringIdMapsToNull() {
-        var domain = IncidentType.restore("abc", "Test", null, true, LocalDateTime.now(), LocalDateTime.now());
-        var entity = IncidentTypeMapper.toEntity(domain);
-        assertNull(entity.getId());
     }
 }

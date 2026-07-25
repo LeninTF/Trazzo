@@ -45,7 +45,7 @@ class IncidentTypeControllerTest {
     @BeforeEach
     void setUp() {
         var now = LocalDateTime.now();
-        sampleResult = new IncidentTypeResult("id-1", "Permiso", "Desc", true, now, now);
+        sampleResult = new IncidentTypeResult(1, "Permiso", "Desc", true, now, now);
     }
 
     @Test
@@ -85,27 +85,27 @@ class IncidentTypeControllerTest {
 
     @Test
     void getByIdReturns200() throws Exception {
-        when(useCase.findById("id-1")).thenReturn(Optional.of(sampleResult));
+        when(useCase.findById(1)).thenReturn(Optional.of(sampleResult));
 
-        mockMvc.perform(get("/incidentes/tipos/id-1"))
+        mockMvc.perform(get("/incidentes/tipos/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("id-1"));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     @Test
     void getByIdReturns404() throws Exception {
-        when(useCase.findById("not-found")).thenReturn(Optional.empty());
+        when(useCase.findById(999)).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/incidentes/tipos/not-found"))
+        mockMvc.perform(get("/incidentes/tipos/999"))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void patchReturns200() throws Exception {
-        when(useCase.patch(anyString(), any())).thenReturn(sampleResult);
+        when(useCase.patch(eq(1), any())).thenReturn(sampleResult);
 
         var request = new trazzo.back.incidents.infrastructure.adapters.in.web.dto.PatchIncidentTypeRequest("Nuevo", null, false);
-        mockMvc.perform(patch("/incidentes/tipos/id-1")
+        mockMvc.perform(patch("/incidentes/tipos/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request))
                         .with(csrf()))

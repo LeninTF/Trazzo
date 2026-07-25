@@ -53,15 +53,15 @@ public class IncidentController {
             @RequestParam(required = false) String sort,
             @AuthenticationPrincipal AuthenticatedUser user
     ) {
-        String tenantUserId = null;
+        Integer tenantUserId = null;
         if ("SELF".equals(scope) && user != null) {
             tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
-                    .map(String::valueOf)
+                    .map(Long::intValue)
                     .orElseThrow(() -> new AccessDeniedException(
                             "No se encontró usuario de tenant para el usuario autenticado"));
         }
-        var result = incidentUseCase.findAll(tenantUserId, scope, sedeId, areaId, departamentoId,
-                state, tipoId, desde, hasta, search, page, size, sort);
+        var result = incidentUseCase.findAll(tenantUserId, scope, toInt(sedeId), toInt(areaId), toInt(departamentoId),
+                state, toInt(tipoId), desde, hasta, search, page, size, sort);
         return ResponseEntity.ok(IncidentListResponse.from(result, scope));
     }
 
@@ -74,8 +74,8 @@ public class IncidentController {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No se encontró usuario de tenant para el usuario autenticado"));
         var command = new CreateIncidentCommand(
-                String.valueOf(tenantUserId),
-                request.incidenciaTypeId(),
+                tenantUserId.intValue(),
+                toInt(request.incidenciaTypeId()),
                 request.comment());
         var result = incidentUseCase.create(command);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentResponse.from(result));
@@ -84,7 +84,7 @@ public class IncidentController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<IncidentResponse> getById(@PathVariable String id) {
-        return incidentUseCase.findById(id)
+        return incidentUseCase.findById(toInt(id))
                 .map(result -> ResponseEntity.ok(IncidentResponse.from(result)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -95,7 +95,7 @@ public class IncidentController {
             @Valid @RequestBody PatchIncidentRequest request
     ) {
         var command = new PatchIncidentCommand(request.comment());
-        var result = incidentUseCase.patch(id, command);
+        var result = incidentUseCase.patch(toInt(id), command);
         return ResponseEntity.ok(IncidentResponse.from(result));
     }
 
@@ -106,7 +106,7 @@ public class IncidentController {
             @Valid @RequestBody IncidentStateChangeRequest request
     ) {
         var command = new IncidentStateChangeCommand(request.state(), request.daysGranted(), request.motivoRechazo());
-        var result = incidentUseCase.changeState(id, command);
+        var result = incidentUseCase.changeState(toInt(id), command);
         return ResponseEntity.ok(IncidentResponse.from(result));
     }
 
@@ -118,14 +118,14 @@ public class IncidentController {
     ) {
         var command = new trazzo.back.incidents.application.dto.command.CreateEvidenceCommand(
                 request.fileName(), request.fileKey(), request.mimeType(), request.fileSize());
-        var result = evidenceUseCase.create(id, command);
+        var result = evidenceUseCase.create(toInt(id), command);
         return ResponseEntity.status(HttpStatus.CREATED).body(IncidentEvidenceResponse.from(result));
     }
 
     @GetMapping("/{id}/evidencias")
     @PreAuthorize("hasAuthority('incidencias.ver-propias')")
     public ResponseEntity<java.util.List<IncidentEvidenceResponse>> listEvidences(@PathVariable String id) {
-        var results = evidenceUseCase.findAllByIncidentId(id);
+        var results = evidenceUseCase.findAllByIncidentId(toInt(id));
         var response = results.stream().map(IncidentEvidenceResponse::from).toList();
         return ResponseEntity.ok(response);
     }
@@ -136,7 +136,7 @@ public class IncidentController {
             @PathVariable String id,
             @PathVariable String evidenceId
     ) {
-        var result = evidenceUseCase.findEvidence(id, evidenceId);
+        var result = evidenceUseCase.findEvidence(toInt(id), toInt(evidenceId));
         InputStream stream = fileStoragePort.downloadFile(result.fileKey());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(
@@ -150,7 +150,7 @@ public class IncidentController {
     @DeleteMapping("/{id}/evidencias/{evidenceId}")
     @PreAuthorize("hasAuthority('incidencias.crear')")
     public ResponseEntity<Void> deleteEvidence(@PathVariable String id, @PathVariable String evidenceId) {
-        evidenceUseCase.delete(id, evidenceId);
+        evidenceUseCase.delete(toInt(id), toInt(evidenceId));
         return ResponseEntity.noContent().build();
     }
 
@@ -158,14 +158,23 @@ public class IncidentController {
     @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
     public ResponseEntity<Void> notify(@PathVariable String id, @Valid @RequestBody NotifyIncidentRequest request) {
         var command = new trazzo.back.incidents.application.dto.command.NotifyIncidentCommand(request.tipo());
-        notificationUseCase.notify(id, command);
+        notificationUseCase.notify(toInt(id), command);
         return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/{id}/justificar")
     public ResponseEntity<Void> justify(@PathVariable String id) {
-        notificationUseCase.justifyAttendance(id);
+        notificationUseCase.justifyAttendance(toInt(id));
         return ResponseEntity.accepted().build();
+    }
+
+    private static Integer toInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("ID no válido: " + value);
+        }
     }
 
     private static String sanitizeFileName(String fileName) {

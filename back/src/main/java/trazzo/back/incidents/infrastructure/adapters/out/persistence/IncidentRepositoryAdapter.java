@@ -46,31 +46,30 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
             entity.getPermission().setIncidentId(saved.getId());
             permissionRepo.save(entity.getPermission());
         }
-        return findById(String.valueOf(saved.getId())).orElseThrow();
+        return findById(saved.getId()).orElseThrow();
     }
 
     @Override
-    public Optional<Incident> findById(String id) {
-        Integer intId = toInt(id);
-        if (intId == null) return Optional.empty();
-        return incidentRepo.findById(intId).map(entity -> {
-            var permission = permissionRepo.findByIncidentId(intId).orElse(null);
+    public Optional<Incident> findById(Integer id) {
+        if (id == null) return Optional.empty();
+        return incidentRepo.findById(id).map(entity -> {
+            var permission = permissionRepo.findByIncidentId(id).orElse(null);
             entity.setPermission(permission);
             return IncidentMapper.toDomain(entity);
         });
     }
 
     @Override
-    public List<Incident> findAll(String tenantUserId, String state, String tipoId,
-                                   LocalDateTime desde, LocalDateTime hasta, String search,
-                                   int page, int size, String sort) {
+    public List<Incident> findAll(Integer tenantUserId, String state, Integer tipoId,
+                                  LocalDateTime desde, LocalDateTime hasta, String search,
+                                  int page, int size, String sort) {
         var sortObj = parseSort(sort);
         var pageable = PageRequest.of(page, size, sortObj);
         var incidentState = parseState(state);
         var specification = IncidentSpecifications.byFilters(
-                toInt(tenantUserId),
+                tenantUserId,
                 incidentState,
-                toInt(tipoId),
+                tipoId,
                 desde,
                 hasta,
                 search
@@ -90,13 +89,13 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     @Override
-    public long count(String tenantUserId, String state, String tipoId,
-                       LocalDateTime desde, LocalDateTime hasta, String search) {
+    public long count(Integer tenantUserId, String state, Integer tipoId,
+                      LocalDateTime desde, LocalDateTime hasta, String search) {
         var incidentState = parseState(state);
         var specification = IncidentSpecifications.byFilters(
-                toInt(tenantUserId),
+                tenantUserId,
                 incidentState,
-                toInt(tipoId),
+                tipoId,
                 desde,
                 hasta,
                 search
@@ -105,12 +104,11 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
     }
 
     @Override
-    public void deleteById(String id) {
-        Integer intId = toInt(id);
-        if (intId == null) return;
-        evidenceRepo.deleteByIncidentId(intId);
-        permissionRepo.deleteByIncidentId(intId);
-        incidentRepo.deleteById(intId);
+    public void deleteById(Integer id) {
+        if (id == null) return;
+        evidenceRepo.deleteByIncidentId(id);
+        permissionRepo.deleteByIncidentId(id);
+        incidentRepo.deleteById(id);
     }
 
     private Map<Integer, IncidentPermissionEntity> loadPermissions(Page<IncidentEntity> page) {
@@ -149,14 +147,5 @@ public class IncidentRepositoryAdapter implements IncidentRepositoryPort {
             case "state" -> "state";
             default -> "createdAt";
         };
-    }
-
-    private static Integer toInt(String value) {
-        if (value == null || value.isBlank()) return null;
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 }

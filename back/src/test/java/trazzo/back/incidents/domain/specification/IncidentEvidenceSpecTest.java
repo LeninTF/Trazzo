@@ -24,23 +24,23 @@ class IncidentEvidenceSpecTest {
 
     @Test
     void allowsSingleActiveEvidenceWithOneActive() {
-        var ev = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf", 100, false, null, LocalDateTime.now(), LocalDateTime.now());
+        var ev = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf", 100, false, null, LocalDateTime.now(), LocalDateTime.now());
         assertTrue(spec.allowsSingleActiveEvidence(List.of(ev)));
     }
 
     @Test
     void allowsSingleActiveEvidenceWithAllDeleted() {
         var now = LocalDateTime.now();
-        var ev1 = IncidentEvidence.restore("ev-1", "inc-1", "a.pdf", "http://a", "pdf", 100, true, now, now, now);
-        var ev2 = IncidentEvidence.restore("ev-2", "inc-1", "b.pdf", "http://b", "pdf", 200, true, now, now, now);
+        var ev1 = IncidentEvidence.restore(1, 1, "a.pdf", "http://a", "pdf", 100, true, now, now, now);
+        var ev2 = IncidentEvidence.restore(2, 1, "b.pdf", "http://b", "pdf", 200, true, now, now, now);
         assertTrue(spec.allowsSingleActiveEvidence(List.of(ev1, ev2)));
     }
 
     @Test
     void rejectsMultipleActiveEvidences() {
         var now = LocalDateTime.now();
-        var ev1 = IncidentEvidence.restore("ev-1", "inc-1", "a.pdf", "http://a", "pdf", 100, false, null, now, now, now);
-        var ev2 = IncidentEvidence.restore("ev-2", "inc-1", "b.pdf", "http://b", "pdf", 200, false, null, now, now, now);
+        var ev1 = IncidentEvidence.restore(1, 1, "a.pdf", "http://a", "pdf", 100, false, null, now, now, now);
+        var ev2 = IncidentEvidence.restore(2, 1, "b.pdf", "http://b", "pdf", 200, false, null, now, now, now);
         assertFalse(spec.allowsSingleActiveEvidence(List.of(ev1, ev2)));
     }
 

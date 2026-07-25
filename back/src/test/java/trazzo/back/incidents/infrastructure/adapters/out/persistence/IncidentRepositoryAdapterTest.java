@@ -37,7 +37,7 @@ class IncidentRepositoryAdapterTest {
     @Test
     void saveWithoutPermission() {
         var now = LocalDateTime.now();
-        var incident = Incident.restore("1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), now, now);
         var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(), null);
@@ -47,16 +47,16 @@ class IncidentRepositoryAdapterTest {
 
         var saved = adapter.save(incident);
 
-        assertEquals("1", saved.getId());
+        assertEquals(1, saved.getId());
         verify(permissionRepo, never()).save(any());
     }
 
     @Test
     void saveWithPermission() {
         var now = LocalDateTime.now();
-        var permission = trazzo.back.incidents.domain.model.IncidentPermission.create("1",
+        var permission = trazzo.back.incidents.domain.model.IncidentPermission.create(1,
                 java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(1), 1);
-        var incident = Incident.restore("1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, permission, List.of(), now, now);
         var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(), null);
@@ -74,7 +74,7 @@ class IncidentRepositoryAdapterTest {
     @Test
     void findByIdWhenNotFound() {
         when(incidentRepo.findById(999)).thenReturn(Optional.empty());
-        assertTrue(adapter.findById("999").isEmpty());
+        assertTrue(adapter.findById(999).isEmpty());
     }
 
     @Test
@@ -87,7 +87,7 @@ class IncidentRepositoryAdapterTest {
         when(incidentRepo.findById(1)).thenReturn(Optional.of(entity));
         when(permissionRepo.findByIncidentId(1)).thenReturn(Optional.of(permEntity));
 
-        var result = adapter.findById("1");
+        var result = adapter.findById(1);
 
         assertTrue(result.isPresent());
         assertNotNull(result.get().getPermission());
@@ -102,7 +102,7 @@ class IncidentRepositoryAdapterTest {
         when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        var results = adapter.findAll("1", "PENDIENTE", null, null, null, null, 0, 20, null);
+        var results = adapter.findAll(1, "PENDIENTE", null, null, null, null, 0, 20, null);
 
         assertEquals(1, results.size());
     }
@@ -124,7 +124,7 @@ class IncidentRepositoryAdapterTest {
     void countWithFilters() {
         when(incidentRepo.count(any(Specification.class))).thenReturn(5L);
 
-        var count = adapter.count("1", null, null, null, null, null);
+        var count = adapter.count(1, null, null, null, null, null);
 
         assertEquals(5, count);
     }
@@ -140,7 +140,7 @@ class IncidentRepositoryAdapterTest {
 
     @Test
     void deleteById() {
-        adapter.deleteById("1");
+        adapter.deleteById(1);
 
         verify(evidenceRepo).deleteByIncidentId(1);
         verify(permissionRepo).deleteByIncidentId(1);
@@ -159,7 +159,7 @@ class IncidentRepositoryAdapterTest {
     void parseSortWithFieldAndAscDirection() {
         when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        adapter.findAll("1", null, null, null, null, null, 0, 20, "state,asc");
+        adapter.findAll(1, null, null, null, null, null, 0, 20, "state,asc");
         verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "state"))));
     }
@@ -168,7 +168,7 @@ class IncidentRepositoryAdapterTest {
     void parseSortWithFieldAndDescDirection() {
         when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        adapter.findAll("1", null, null, null, null, null, 0, 20, "updatedAt,desc");
+        adapter.findAll(1, null, null, null, null, null, 0, 20, "updatedAt,desc");
         verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "updatedAt"))));
     }
@@ -177,7 +177,7 @@ class IncidentRepositoryAdapterTest {
     void parseSortMapsCreatedAtField() {
         when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
-        adapter.findAll("1", null, null, null, null, null, 0, 20, "created_at,asc");
+        adapter.findAll(1, null, null, null, null, null, 0, 20, "created_at,asc");
         verify(incidentRepo).findAll(any(Specification.class),
                 eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "createdAt"))));
     }
@@ -191,7 +191,7 @@ class IncidentRepositoryAdapterTest {
         when(incidentRepo.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(page);
 
-        var results = adapter.findAll("1", "PENDIENTE", null, null, null, "comm", 0, 20, null);
+        var results = adapter.findAll(1, "PENDIENTE", null, null, null, "comm", 0, 20, null);
 
         assertEquals(1, results.size());
         verify(incidentRepo).findAll(any(Specification.class), any(Pageable.class));
@@ -201,7 +201,7 @@ class IncidentRepositoryAdapterTest {
     void countWithSearchUsesSearchQuery() {
         when(incidentRepo.count(any(Specification.class))).thenReturn(3L);
 
-        var count = adapter.count("1", null, null, null, null, "term");
+        var count = adapter.count(1, null, null, null, null, "term");
 
         assertEquals(3, count);
         verify(incidentRepo).count(any(Specification.class));

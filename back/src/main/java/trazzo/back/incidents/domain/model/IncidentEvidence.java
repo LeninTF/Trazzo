@@ -2,7 +2,6 @@ package trazzo.back.incidents.domain.model;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,8 +15,8 @@ public class IncidentEvidence {
 
     public static final int MAX_FILE_SIZE_BYTES = IncidentEvidenceSpec.MAX_FILE_SIZE_BYTES;
 
-    private String id;
-    private String incidentId;
+    private Integer id;
+    private Integer incidentId;
     private String fileName;
     private String fileKey;
     private String mimeType;
@@ -30,8 +29,8 @@ public class IncidentEvidence {
     transient Clock clock = Clock.systemDefaultZone();
 
     private IncidentEvidence(
-            String id,
-            String incidentId,
+            Integer id,
+            Integer incidentId,
             String fileName,
             String fileKey,
             String mimeType,
@@ -42,8 +41,8 @@ public class IncidentEvidence {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = normalizeOptionalId(id);
-        this.incidentId = requireText(incidentId, "incidentId");
+        this.id = id;
+        this.incidentId = requireNonNull(incidentId, "incidentId");
         this.fileName = requireText(fileName, "fileName");
         this.fileKey = requireText(fileKey, "fileKey");
         this.mimeType = requireText(mimeType, "mimeType");
@@ -56,7 +55,7 @@ public class IncidentEvidence {
     }
 
     public static IncidentEvidence create(
-            String incidentId,
+            Integer incidentId,
             String fileName,
             String fileKey,
             String mimeType,
@@ -64,7 +63,7 @@ public class IncidentEvidence {
     ) {
         LocalDateTime now = LocalDateTime.now();
         return new IncidentEvidence(
-                UUID.randomUUID().toString(),
+                null,
                 incidentId,
                 fileName,
                 fileKey,
@@ -79,8 +78,8 @@ public class IncidentEvidence {
     }
 
     public static IncidentEvidence restore(
-            String id,
-            String incidentId,
+            Integer id,
+            Integer incidentId,
             String fileName,
             String fileKey,
             String mimeType,
@@ -106,8 +105,8 @@ public class IncidentEvidence {
     }
 
     public static IncidentEvidence restore(
-            String id,
-            String incidentId,
+            Integer id,
+            Integer incidentId,
             String fileName,
             String fileKey,
             String mimeType,
@@ -146,8 +145,8 @@ public class IncidentEvidence {
         return !deleted && new EvidenceDeletionWindowSpec().isSatisfiedBy(this, clock);
     }
 
-    public boolean belongsTo(String incidentId) {
-        return this.incidentId.equals(requireText(incidentId, "incidentId"));
+    public boolean belongsTo(Integer incidentId) {
+        return this.incidentId.equals(requireNonNull(incidentId, "incidentId"));
     }
 
     private void touch() {
@@ -168,11 +167,11 @@ public class IncidentEvidence {
         return value.trim();
     }
 
-    private static String normalizeOptionalId(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
+    private static Integer requireNonNull(Integer value, String fieldName) {
+        if (value == null) {
+            throw new InvalidIncidentEvidenceException(fieldName + " is required");
         }
-        return value.trim();
+        return value;
     }
 
     private static LocalDateTime requireUploadTimestamp(
