@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
+import trazzo.back.audit.application.port.out.SessionRepositoryPort;
+import trazzo.back.audit.domain.model.tenant.SessionState;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -12,6 +14,7 @@ import java.time.ZoneId;
 public class AuditMetricsService implements AuditMetricsUseCase {
 
     private final AuditRepositoryPort auditRepository;
+    private final SessionRepositoryPort sessionRepository;
 
     @Override
     public AuditMetricsResult getMetrics() {
@@ -27,6 +30,11 @@ public class AuditMetricsService implements AuditMetricsUseCase {
                 ? ((double) (todayCount - yesterdayCount) / yesterdayCount) * 100.0
                 : 0.0;
 
-        return new AuditMetricsResult(totalEventos, 0, 0, crecimiento, 0.0);
+        long sesionesActivas = sessionRepository.count(null, SessionState.ACTIVE, null);
+        double porcentajeSesiones = totalEventos > 0
+                ? ((double) sesionesActivas / totalEventos) * 100.0
+                : 0.0;
+
+        return new AuditMetricsResult(totalEventos, 0, sesionesActivas, crecimiento, porcentajeSesiones);
     }
 }

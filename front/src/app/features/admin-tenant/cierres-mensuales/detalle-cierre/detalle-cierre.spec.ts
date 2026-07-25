@@ -78,24 +78,24 @@ describe('DetalleCierre', () => {
 
     it('should load report on init', () => {
       expect(reportsSpy.getFullReport).toHaveBeenCalledWith('c1');
-      expect(component.report).toEqual(mockReport);
+      expect(component.report()).toEqual(mockReport);
       expect(component.loading()).toBeFalse();
     });
 
     it('should compute total hours worked', () => {
-      expect(component.totalHorasTrabajadas).toBe(300);
+      expect(component.totalHorasTrabajadas()).toBe(300);
     });
 
     it('should compute total tardiness', () => {
-      expect(component.totalTardanzas).toBe(15);
+      expect(component.totalTardanzas()).toBe(15);
     });
 
     it('should compute total absences', () => {
-      expect(component.totalAusencias).toBe(1);
+      expect(component.totalAusencias()).toBe(1);
     });
 
     it('should compute total overtime', () => {
-      expect(component.totalHorasExtras).toBe(8);
+      expect(component.totalHorasExtras()).toBe(8);
     });
 
     it('should get month name', () => {
@@ -131,14 +131,14 @@ describe('DetalleCierre', () => {
   describe('with null report', () => {
     beforeEach(() => {
       setup('c1');
-      component.report = null;
+      component.report.set(null);
     });
 
     it('should return 0 for computed totals when report is null', () => {
-      expect(component.totalHorasTrabajadas).toBe(0);
-      expect(component.totalTardanzas).toBe(0);
-      expect(component.totalAusencias).toBe(0);
-      expect(component.totalHorasExtras).toBe(0);
+      expect(component.totalHorasTrabajadas()).toBe(0);
+      expect(component.totalTardanzas()).toBe(0);
+      expect(component.totalAusencias()).toBe(0);
+      expect(component.totalHorasExtras()).toBe(0);
     });
   });
 });

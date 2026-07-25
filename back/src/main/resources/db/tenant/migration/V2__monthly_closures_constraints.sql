@@ -33,7 +33,13 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'uq_monthly_closures_period'
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE c.conname = 'uq_monthly_closures_period'
+          AND n.nspname = current_schema()
+          AND t.relname = 'monthly_closures'
     ) THEN
         ALTER TABLE monthly_closures ADD CONSTRAINT uq_monthly_closures_period UNIQUE (year, month);
     END IF;

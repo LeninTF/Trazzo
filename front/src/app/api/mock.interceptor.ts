@@ -1136,11 +1136,11 @@ const mockAuditLogs = [
 ];
 
 const mockAuditMetrics = {
-  totalEventos: 1247,
+  total_eventos: 1247,
   errores: 23,
-  sesionesActivas: 34,
+  sesiones_activas: 34,
   crecimiento: 12.5,
-  porcentajeSesiones: 8.2,
+  porcentaje_sesiones: 8.2,
 };
 
 function handleAuditLogs(
@@ -1219,6 +1219,30 @@ function handleReportsClosures(
       createdAt: new Date().toISOString(),
     };
     mockMonthlyClosures.unshift(newClosure);
+
+    const mockDetails = [
+      { tenantUserFullName: 'Josselin Anais Rojas Luque', tenantUserDocument: '76543210', departmentName: 'Matemáticas', roleName: 'Super Administrador' },
+      { tenantUserFullName: 'Carlos Alberto Mendoza González', tenantUserDocument: '87654321', departmentName: 'Comunicación', roleName: 'Administrador' },
+      { tenantUserFullName: 'María Fernanda López Torres', tenantUserDocument: '98765432', departmentName: 'Arte y Cultura', roleName: 'Supervisor' },
+      { tenantUserFullName: 'Roberto Castro Díaz', tenantUserDocument: '12345678', departmentName: 'Ciencias', roleName: 'Trabajador' },
+    ];
+    for (const emp of mockDetails) {
+      mockMonthlyClosureDetails.push({
+        id: crypto.randomUUID(),
+        monthClosureId: newId,
+        tenantUserId: mockMonthlyClosureDetails.length + 1,
+        tenantUserFullName: emp.tenantUserFullName,
+        tenantUserDocument: emp.tenantUserDocument,
+        departmentName: emp.departmentName,
+        roleName: emp.roleName,
+        totalWorkedHours: 150 + Math.round(Math.random() * 30),
+        totalTardinessMinutes: Math.round(Math.random() * 45),
+        totalAbsences: Math.round(Math.random() * 3),
+        totalOvertimeHours: Math.round(Math.random() * 12),
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     return created(newClosure);
   }
 

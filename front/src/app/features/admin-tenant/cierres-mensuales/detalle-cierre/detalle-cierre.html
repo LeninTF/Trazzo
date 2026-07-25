@@ -15,7 +15,7 @@
     <p class="mt-3 text-muted">Cargando reporte...</p>
   </div>
 </div>
-} @else if (report) {
+} @else if (report()) {
 <div class="dc-wrapper">
 
   <!-- HEADER -->
@@ -25,18 +25,18 @@
         <i class="bi bi-arrow-left"></i>
       </button>
       <div>
-        <h1 class="dc-title">{{ getMonthName(report.month) }} {{ report.year }}</h1>
-        <p class="dc-subtitle">Reporte mensual de asistencia — {{ report.totalEmployees }} empleados</p>
+        <h1 class="dc-title">{{ getMonthName(report()!.month) }} {{ report()!.year }}</h1>
+        <p class="dc-subtitle">Reporte mensual de asistencia — {{ report()!.totalEmployees }} empleados</p>
       </div>
     </div>
     <div class="dc-header__actions">
-      @if (report.excelReportUrl) {
-        <a class="btn btn-outline-secondary" [href]="report.excelReportUrl" target="_blank" rel="noopener noreferrer">
+      @if (report()!.excelReportUrl) {
+        <a class="btn btn-outline-secondary" [href]="report()!.excelReportUrl" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-file-earmark-excel me-2"></i> Excel
         </a>
       }
-      @if (report.pdfReportUrl) {
-        <a class="btn btn-outline-secondary" [href]="report.pdfReportUrl" target="_blank" rel="noopener noreferrer">
+      @if (report()!.pdfReportUrl) {
+        <a class="btn btn-outline-secondary" [href]="report()!.pdfReportUrl" target="_blank" rel="noopener noreferrer">
           <i class="bi bi-file-earmark-pdf me-2"></i> PDF
         </a>
       }
@@ -49,35 +49,35 @@
       <div class="metric-card__icon"><i class="bi bi-people-fill"></i></div>
       <div class="metric-card__content">
         <small class="metric-card__label">Empleados</small>
-        <h3 class="metric-card__value">{{ report.totalEmployees }}</h3>
+        <h3 class="metric-card__value">{{ report()!.totalEmployees }}</h3>
       </div>
     </div>
     <div class="metric-card metric-card--success">
       <div class="metric-card__icon"><i class="bi bi-clock-fill"></i></div>
       <div class="metric-card__content">
         <small class="metric-card__label">Total Horas Trabajadas</small>
-        <h3 class="metric-card__value">{{ totalHorasTrabajadas | number:'1.1-1' }}</h3>
+        <h3 class="metric-card__value">{{ totalHorasTrabajadas() | number:'1.1-1' }}</h3>
       </div>
     </div>
     <div class="metric-card metric-card--warning">
       <div class="metric-card__icon"><i class="bi bi-exclamation-circle-fill"></i></div>
       <div class="metric-card__content">
         <small class="metric-card__label">Total Tardanzas (min)</small>
-        <h3 class="metric-card__value">{{ totalTardanzas }}</h3>
+        <h3 class="metric-card__value">{{ totalTardanzas() }}</h3>
       </div>
     </div>
     <div class="metric-card metric-card--danger">
       <div class="metric-card__icon"><i class="bi bi-x-circle-fill"></i></div>
       <div class="metric-card__content">
         <small class="metric-card__label">Total Ausencias</small>
-        <h3 class="metric-card__value">{{ totalAusencias }}</h3>
+        <h3 class="metric-card__value">{{ totalAusencias() }}</h3>
       </div>
     </div>
     <div class="metric-card metric-card--info">
       <div class="metric-card__icon"><i class="bi bi-lightning-fill"></i></div>
       <div class="metric-card__content">
         <small class="metric-card__label">Total Horas Extras</small>
-        <h3 class="metric-card__value">{{ totalHorasExtras | number:'1.1-1' }}</h3>
+        <h3 class="metric-card__value">{{ totalHorasExtras() | number:'1.1-1' }}</h3>
       </div>
     </div>
   </div>
@@ -88,7 +88,7 @@
       <h3 class="table-card__title">
         <i class="bi bi-list-check me-2"></i> Detalle por Empleado
       </h3>
-      <span class="text-muted">{{ report.details.length }} registros</span>
+      <span class="text-muted">{{ report()!.details.length }} registros</span>
     </div>
     <div class="table-responsive">
       <table class="dc-table">
@@ -104,7 +104,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (d of report.details; track d.id) {
+          @for (d of report()!.details; track d.id) {
             <tr>
               <td>
                 <div class="employee-info">
@@ -161,7 +161,7 @@
   <div class="dc-footer">
     <span class="text-muted">
       <i class="bi bi-info-circle me-1"></i>
-      Creado el {{ report.createdAt | date:'dd/MM/yyyy HH:mm' }}
+      Creado el {{ report()!.createdAt | date:'dd/MM/yyyy HH:mm' }}
     </span>
   </div>
 </div>

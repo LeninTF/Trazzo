@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ReportsService } from '../../../../api/services/reports.service';
@@ -20,23 +20,23 @@ export class DetalleCierre implements OnInit {
   private readonly router = inject(Router);
   private readonly reportsService = inject(ReportsService);
 
-  report: MonthlyClosureWithDetails | null = null;
+  readonly report = signal<MonthlyClosureWithDetails | null>(null);
 
-  get totalHorasTrabajadas(): number {
-    return this.report?.details.reduce((sum, d) => sum + d.totalWorkedHours, 0) ?? 0;
-  }
+  readonly totalHorasTrabajadas = computed(() =>
+    this.report()?.details.reduce((sum, d) => sum + d.totalWorkedHours, 0) ?? 0
+  );
 
-  get totalTardanzas(): number {
-    return this.report?.details.reduce((sum, d) => sum + d.totalTardinessMinutes, 0) ?? 0;
-  }
+  readonly totalTardanzas = computed(() =>
+    this.report()?.details.reduce((sum, d) => sum + d.totalTardinessMinutes, 0) ?? 0
+  );
 
-  get totalAusencias(): number {
-    return this.report?.details.reduce((sum, d) => sum + d.totalAbsences, 0) ?? 0;
-  }
+  readonly totalAusencias = computed(() =>
+    this.report()?.details.reduce((sum, d) => sum + d.totalAbsences, 0) ?? 0
+  );
 
-  get totalHorasExtras(): number {
-    return this.report?.details.reduce((sum, d) => sum + d.totalOvertimeHours, 0) ?? 0;
-  }
+  readonly totalHorasExtras = computed(() =>
+    this.report()?.details.reduce((sum, d) => sum + d.totalOvertimeHours, 0) ?? 0
+  );
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -53,7 +53,7 @@ export class DetalleCierre implements OnInit {
     this.error.set('');
     this.reportsService.getFullReport(id).subscribe({
       next: data => {
-        this.report = data;
+        this.report.set(data);
         this.loading.set(false);
       },
       error: () => {

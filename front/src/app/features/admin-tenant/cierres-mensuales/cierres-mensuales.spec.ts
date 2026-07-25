@@ -149,7 +149,7 @@ describe('CierresMensuales', () => {
   it('should not create if already creating', () => {
     component.creando = true;
     component.crearCierre();
-    expect(reportsSpy.createClosure).not.toHaveBeenCalledTimes(2);
+    expect(reportsSpy.createClosure).toHaveBeenCalledTimes(1);
   });
 
   it('should navigate to detail', () => {

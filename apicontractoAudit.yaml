@@ -229,29 +229,29 @@ components:
       type: object
       properties:
         id:
-          type: integer
-          format: int64
+          type: string
+          description: "UUID del registro de auditoria."
         entity:
           type: string
-        entityId:
+        entity_id:
           type: string
         action:
           $ref: '#/components/schemas/Action'
-        userId:
+        user_id:
           type: string
         endpoint:
           type: string
-        ipAdress:
+        ip_address:
           type: string
-        userAgent:
+        user_agent:
           type: string
-        previousValue:
+        previous_value:
           type: object
           nullable: true
-        newValue:
+        new_value:
           type: object
           nullable: true
-        createdAt:
+        created_at:
           type: string
           format: date-time
 
@@ -456,7 +456,7 @@ components:
     AuditMetricsResponse:
       type: object
       properties:
-        totalEventos:
+        total_eventos:
           type: integer
           format: int64
           description: "Total de eventos de auditoria registrados."
@@ -464,7 +464,7 @@ components:
           type: integer
           format: int64
           description: "Cantidad de eventos con resultado de error."
-        sesionesActivas:
+        sesiones_activas:
           type: integer
           format: int64
           description: "Cantidad de sesiones activas en el sistema."
@@ -472,7 +472,7 @@ components:
           type: number
           format: double
           description: "Porcentaje de crecimiento de eventos respecto al periodo anterior."
-        porcentajeSesiones:
+        porcentaje_sesiones:
           type: number
           format: double
           description: "Porcentaje de sesiones activas respecto al total historico."
