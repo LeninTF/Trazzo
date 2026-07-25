@@ -3327,6 +3327,101 @@ components:
             type: string
           example: ["ROLE_ADMIN_SAAS"]
 
+    # ==========================================
+    # SECCIÓN: DASHBOARD
+    # ==========================================
+    DashboardMetricas:
+      type: object
+      description: "Métricas de asistencia del período."
+      properties:
+        total_inasistencias:
+          type: integer
+          example: 5
+        total_incidencias:
+          type: integer
+          example: 3
+
+    DashboardSummaryResponse:
+      type: object
+      description: "Resumen consolidado del dashboard."
+      properties:
+        usuarios_activos:
+          type: integer
+          example: 18
+        capacidad_plan:
+          type: number
+          format: float
+          description: "Porcentaje de capacidad del plan (0-100)."
+          example: 90.0
+        metricas:
+          $ref: '#/components/schemas/DashboardMetricas'
+        indice_puntualidad_anual:
+          type: number
+          format: float
+          description: "Índice de puntualidad global del año actual (0-100)."
+          example: 87.5
+
+    PuntualidadRolItem:
+      type: object
+      properties:
+        nombre:
+          type: string
+          example: "Director"
+        porcentaje:
+          type: number
+          format: float
+          example: 95.2
+
+    PuntualidadRolResponse:
+      type: object
+      description: "Puntualidad agrupada por rol del tenant."
+      properties:
+        periodo:
+          type: string
+          enum: [dia, semana, mes, anio]
+          example: "mes"
+        desde:
+          type: string
+          format: date
+          example: "2026-07-01"
+        hasta:
+          type: string
+          format: date
+          example: "2026-07-31"
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/PuntualidadRolItem'
+
+    AlertaItem:
+      type: object
+      properties:
+        icono:
+          type: string
+          example: "bi-clock-fill"
+        titulo:
+          type: string
+          example: "Tardanzas hoy"
+        descripcion:
+          type: string
+          example: "3 empleados registraron ingreso tarde hoy"
+        fecha_hora:
+          type: string
+          format: date-time
+        tipo:
+          type: string
+          enum: [danger, warning]
+          example: "danger"
+
+    AlertasResponse:
+      type: object
+      description: "Alertas críticas generadas automáticamente."
+      properties:
+        alertas:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlertaItem'
+
 security:
   - bearerAuth: []
     tenantHeader: []
@@ -7344,3 +7439,113 @@ paths:
           description: Token JWT inválido o expirado.
         "403":
           description: Sin permiso para eliminar features.
+
+  # ========================================
+  # DASHBOARD
+  # ========================================
+  /dashboard/summary:
+    get:
+      tags:
+        - Dashboard
+      summary: Resumen KPIs del dashboard
+      description: |
+        Devuelve las métricas principales del dashboard: usuarios activos,
+        capacidad del plan, total de inasistencias e incidencias del período,
+        e índice de puntualidad anual.
+        **Requiere permiso:** `dashboard.ver`
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: periodo
+          in: query
+          schema:
+            type: string
+            enum: [dia, semana, mes, anio]
+            default: mes
+          description: Granularidad temporal
+        - name: desde
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Fecha inicio (inclusive). Si se omite se calcula desde periodo.
+        - name: hasta
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Fecha fin (inclusive). Si se omite se calcula desde periodo.
+      responses:
+        "200":
+          description: Resumen del dashboard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para ver el dashboard.
+
+  /dashboard/puntualidad-por-rol:
+    get:
+      tags:
+        - Dashboard
+      summary: Puntualidad por rol
+      description: |
+        Devuelve el porcentaje de puntualidad agrupado por rol del tenant
+        para el período indicado.
+        **Requiere permiso:** `dashboard.ver`
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: periodo
+          in: query
+          schema:
+            type: string
+            enum: [dia, semana, mes, anio]
+            default: mes
+        - name: desde
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: hasta
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Puntualidad por rol.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PuntualidadRolResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para ver el dashboard.
+
+  /dashboard/alertas:
+    get:
+      tags:
+        - Dashboard
+      summary: Alertas críticas del dashboard
+      description: |
+        Devuelve las alertas generadas automáticamente basadas en
+        tardanzas del día y personal sin registro.
+        **Requiere permiso:** `dashboard.ver`
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de alertas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertasResponse'
+        "401":
+          description: Token JWT inválido o expirado.
+        "403":
+          description: Sin permiso para ver el dashboard.

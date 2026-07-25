@@ -8,6 +8,7 @@ import {
   mockUserSchedules, mockDevices, mockBiometria, mockAttendance,
   mockNonWorkingDays, mockTenantContacts, mockUserDepartments,
   mockPublicKey, paginate,
+  mockDashboardSummary, mockPuntualidadPorRol, mockDashboardAlertas,
 } from './mock-data';
 import type { AuthResponse, MessageResponse, SoftDeleteResponse } from './types';
 import { API_BASE_URL } from './services/helpers';
@@ -150,6 +151,7 @@ function handleRoute(
     handleCorehrNonWorkingDays(method, u, req, page, size, qp) ??
     handleCorehrTenantContacts(method, u, req, page, size, qp) ??
     handleCorehrUserDepartments(method, u, req, page, size, qp) ??
+    handleDashboard(method, u, req, page, size, qp) ??
     handleWebsocket(method, u, req, page, size, qp) ??
     null
   );
@@ -1127,6 +1129,22 @@ function handleCorehrUserDepartments(
     });
   }
 
+  return null;
+}
+
+function handleDashboard(
+  _method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u === '/dashboard/summary' && _method === 'GET') {
+    return ok(mockDashboardSummary);
+  }
+  if (u === '/dashboard/puntualidad-por-rol' && _method === 'GET') {
+    return ok(mockPuntualidadPorRol);
+  }
+  if (u === '/dashboard/alertas' && _method === 'GET') {
+    return ok(mockDashboardAlertas);
+  }
   return null;
 }
 

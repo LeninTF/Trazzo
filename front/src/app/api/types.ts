@@ -1060,3 +1060,49 @@ export interface ChangeRequestStatusPayload {
   status: RequestStatus;
   comment?: string;
 }
+
+// ==========================================
+// SECCIÓN: DASHBOARD
+// ==========================================
+
+export interface DashboardQueryParams {
+  periodo?: 'dia' | 'semana' | 'mes' | 'anio';
+  desde?: string;
+  hasta?: string;
+}
+
+export interface DashboardMetricas {
+  total_inasistencias: number;
+  total_incidencias: number;
+}
+
+export interface DashboardSummaryResponse {
+  usuarios_activos: number;
+  capacidad_plan: number;
+  metricas: DashboardMetricas;
+  indice_puntualidad_anual: number;
+}
+
+export interface PuntualidadRolItem {
+  nombre: string;
+  porcentaje: number;
+}
+
+export interface PuntualidadRolResponse {
+  periodo: string;
+  desde: string;
+  hasta: string;
+  roles: PuntualidadRolItem[];
+}
+
+export interface AlertaDashboard {
+  icono: string;
+  titulo: string;
+  descripcion: string;
+  fecha_hora: string;
+  tipo: 'danger' | 'warning';
+}
+
+export interface AlertasResponse {
+  alertas: AlertaDashboard[];
+}

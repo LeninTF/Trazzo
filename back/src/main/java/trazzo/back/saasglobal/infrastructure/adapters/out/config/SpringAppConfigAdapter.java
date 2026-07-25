@@ -14,7 +14,7 @@ public class SpringAppConfigAdapter implements AppConfigPort {
             @Value("${app.frontend-url:http://localhost:4200}") String frontendUrl,
             @Value("${trazzo.requests.notification-email:solicitudes@trazzo.pe}") String requestsNotificationEmail
     ) {
-        this.frontendUrl = frontendUrl;
+        this.frontendUrl = ensureProtocol(frontendUrl);
         this.requestsNotificationEmail = requestsNotificationEmail;
     }
 
@@ -26,5 +26,15 @@ public class SpringAppConfigAdapter implements AppConfigPort {
     @Override
     public String requestsNotificationEmail() {
         return requestsNotificationEmail;
+    }
+
+    private static String ensureProtocol(String url) {
+        if (url == null || url.isBlank()) {
+            return "https://trazzosaas.noahtechperu.com";
+        }
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return "https://" + url;
+        }
+        return url;
     }
 }

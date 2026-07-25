@@ -6,6 +6,7 @@ import type {
   UserBiometriaProfile, AttendanceProfile, NonWorkingDayProfile,
   TenantContactProfile, TenantUserDepartmentProfile, UserScheduleProfile,
   MasterRoleProfile, PageResponse, PersonaBase, PublicKeyResponse,
+  DashboardSummaryResponse, PuntualidadRolResponse, AlertasResponse,
 } from './types';
 
 const now = new Date().toISOString();
@@ -625,6 +626,51 @@ mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock
 mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock-mock
 -----END RSA PUBLIC KEY-----`,
   kid: 'pubkey-abc123',
+};
+
+// ==========================================
+// DASHBOARD MOCK DATA
+// ==========================================
+
+export const mockDashboardSummary: DashboardSummaryResponse = {
+  usuarios_activos: 18,
+  capacidad_plan: 90.0,
+  metricas: {
+    total_inasistencias: 5,
+    total_incidencias: 3,
+  },
+  indice_puntualidad_anual: 87.5,
+};
+
+export const mockPuntualidadPorRol: PuntualidadRolResponse = {
+  periodo: 'mes',
+  desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
+  hasta: new Date().toISOString().slice(0, 10),
+  roles: [
+    { nombre: 'Director', porcentaje: 95.2 },
+    { nombre: 'RRHH', porcentaje: 88.0 },
+    { nombre: 'Docentes', porcentaje: 72.1 },
+    { nombre: 'Personal de Servicio', porcentaje: 64.5 },
+  ],
+};
+
+export const mockDashboardAlertas: AlertasResponse = {
+  alertas: [
+    {
+      icono: 'bi-clock-fill',
+      titulo: 'Tardanzas hoy',
+      descripcion: '3 empleados registraron ingreso tarde hoy',
+      fecha_hora: new Date().toISOString(),
+      tipo: 'danger',
+    },
+    {
+      icono: 'bi-person-dash-fill',
+      titulo: 'Personal sin registro',
+      descripcion: '2 empleados no han marcado ingreso hoy',
+      fecha_hora: new Date().toISOString(),
+      tipo: 'warning',
+    },
+  ],
 };
 
 // ==========================================
