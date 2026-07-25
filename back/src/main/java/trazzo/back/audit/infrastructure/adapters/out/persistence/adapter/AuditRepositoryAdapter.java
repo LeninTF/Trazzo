@@ -34,8 +34,7 @@ public class AuditRepositoryAdapter implements AuditRepositoryPort {
     @Override
     public long count(String searchTerm, Action action, String entity,
             LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        return jpaRepository.findByFilters(searchTerm, action, entity, fechaDesde, fechaHasta, Pageable.unpaged())
-                .getTotalElements();
+        return jpaRepository.countByFilters(searchTerm, action, entity, fechaDesde, fechaHasta);
     }
 
     @Override

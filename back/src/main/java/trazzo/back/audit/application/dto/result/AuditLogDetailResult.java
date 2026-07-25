@@ -11,7 +11,7 @@ public record AuditLogDetailResult(
     Action action,
     String userId,
     String endpoint,
-    String ipAdress,
+    String ipAddress,
     String userAgent,
     Map<String, Object> previousValue,
     Map<String, Object> newValue,

@@ -21,7 +21,7 @@ class AuditTest {
         assertEquals(Action.UPDATE, a.getAction());
         assertEquals("user-1", a.getUserId());
         assertEquals("/api/users/42", a.getEndpoint());
-        assertEquals("192.168.1.1", a.getIpAdress());
+        assertEquals("192.168.1.1", a.getIpAddress());
         assertEquals("Mozilla/5.0", a.getUserAgent());
         assertEquals(previous, a.getPreviousValue());
         assertEquals(value, a.getNewValue());
