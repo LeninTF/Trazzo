@@ -25,7 +25,7 @@ class SessionResultTest {
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals("fp-abc-123", result.deviceFingerprint());
         assertEquals(now, result.loginAt());
-        assertEquals(now.plusHours(1), result.lasActivityAt());
+        assertEquals(now.plusHours(1), result.lastActivityAt());
         assertEquals(now.plusHours(8), result.logoutAt());
         assertEquals(now.plusDays(1), result.expiresAt());
         assertEquals(SessionState.ACTIVE, result.state());
@@ -43,7 +43,7 @@ class SessionResultTest {
         );
         assertNull(result.userAgent());
         assertNull(result.deviceFingerprint());
-        assertNull(result.lasActivityAt());
+        assertNull(result.lastActivityAt());
         assertNull(result.logoutAt());
     }
 

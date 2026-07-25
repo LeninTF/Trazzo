@@ -71,4 +71,66 @@ class SaasInvoiceControllerTest {
         mockMvc.perform(get("/saas/invoices"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void getById_returns200() throws Exception {
+        when(invoiceUseCase.getById("inv-1")).thenReturn(invoiceResult());
+
+        mockMvc.perform(get("/saas/invoices/inv-1")
+                        .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "billing-suscripciones.historial-facturacion"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("inv-1"));
+    }
+
+    @Test
+    void exportExcel_returns200WithSpreadsheet() throws Exception {
+        when(invoiceUseCase.listAllMatching(any(), any(), any(), any())).thenReturn(List.of(invoiceResult()));
+        when(excelExportPort.toExcel(any())).thenReturn(new byte[]{1, 2, 3});
+
+        mockMvc.perform(get("/saas/invoices/export/excel")
+                        .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "billing-suscripciones.historial-facturacion"))))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    byte[] body = result.getResponse().getContentAsByteArray();
+                    assert body.length > 0;
+                });
+    }
+
+    @Test
+    void exportPdf_returns200WithPdf() throws Exception {
+        when(invoiceUseCase.listAllMatching(any(), any(), any(), any())).thenReturn(List.of(invoiceResult()));
+        when(pdfExportPort.toPdf(any())).thenReturn(new byte[]{4, 5, 6});
+
+        mockMvc.perform(get("/saas/invoices/export/pdf")
+                        .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "billing-suscripciones.historial-facturacion"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void listAll_passesFilterParams() throws Exception {
+        when(invoiceUseCase.listAll(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PaginatedResult.of(List.of(), 0, 20, 0));
+
+        mockMvc.perform(get("/saas/invoices")
+                        .param("paymentStatus", "APPROVED")
+                        .param("tenantId", "t-1")
+                        .param("dateFrom", "2026-01-01")
+                        .param("dateTo", "2026-12-31")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "billing-suscripciones.historial-facturacion"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void exportExcel_passesFilterParams() throws Exception {
+        when(invoiceUseCase.listAllMatching(any(), any(), any(), any())).thenReturn(List.of());
+        when(excelExportPort.toExcel(any())).thenReturn(new byte[]{});
+
+        mockMvc.perform(get("/saas/invoices/export/excel")
+                        .param("paymentStatus", "APPROVED")
+                        .param("tenantId", "t-1")
+                        .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "billing-suscripciones.historial-facturacion"))))
+                .andExpect(status().isOk());
+    }
 }

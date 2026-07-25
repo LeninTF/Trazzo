@@ -15,7 +15,7 @@ class LogInHistoryListResponseTest {
     @Test
     void shouldCreateFromPaginatedResult() {
         var now = LocalDateTime.now();
-        var entry1 = new LogInHistoryResult("1", "u1", "a@b.com", StatusLogin.SUCCES,
+        var entry1 = new LogInHistoryResult("1", "u1", "a@b.com", StatusLogin.SUCCESS,
                 "ip1", "ua1", now);
         var entry2 = new LogInHistoryResult("2", "u2", "c@d.com", StatusLogin.FAILED_WRONG_PASSWORD,
                 "ip2", "ua2", now);

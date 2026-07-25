@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
+import trazzo.back.incidents.application.port.out.EvidenceUrlResolver;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;

@@ -124,4 +124,59 @@ class SaasUserControllerTest {
         mockMvc.perform(get("/saas/users"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void getById_returns200() throws Exception {
+        when(userUseCase.getById("user-1")).thenReturn(result("user-1"));
+
+        mockMvc.perform(get("/saas/users/user-1").with(authentication(adminAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-1"));
+    }
+
+    @Test
+    void update_returns200() throws Exception {
+        when(userUseCase.update(any())).thenReturn(result("user-1"));
+
+        mockMvc.perform(patch("/saas/users/user-1")
+                        .with(authentication(adminAuth()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"new@example.com","phone":"999999999"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-1"));
+    }
+
+    @Test
+    void updateMe_returns200() throws Exception {
+        when(userUseCase.update(any())).thenReturn(result(PRINCIPAL_ID.toString()));
+
+        mockMvc.perform(patch("/saas/users/me")
+                        .with(authentication(adminAuth()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"updated@example.com"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("ana@example.com"));
+    }
+
+    @Test
+    void listAll_withSearchParam() throws Exception {
+        when(userUseCase.listAll(eq("ana"), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PaginatedResult.of(List.of(result("user-1")), 0, 20, 1));
+
+        mockMvc.perform(get("/saas/users")
+                        .param("search", "ana")
+                        .with(authentication(adminAuth())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
+    private static String eq(String value) {
+        return org.mockito.ArgumentMatchers.eq(value);
+    }
 }

@@ -71,7 +71,9 @@ jobs:
           fi
 
       - name: Ejecutar OpenCode Agent (Big Pickle)
+        id: opencode_agent
         uses: anomalyco/opencode/github@latest # Usamos la acción oficial con el comando recomendado de OpenCode para GitHub
+        continue-on-error: true
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -115,7 +117,7 @@ jobs:
                OC_REVIEW_EFFORT: Review effort 5/5
 
       - name: Aplicar Etiqueta Dinámica de 'Review Effort'
-        if: success()
+        if: steps.opencode_agent.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}

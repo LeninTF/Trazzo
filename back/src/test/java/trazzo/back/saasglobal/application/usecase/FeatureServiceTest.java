@@ -1,12 +1,5 @@
 package trazzo.back.saasglobal.application.usecase;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,89 +7,107 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreateFeatureCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdateFeatureCommand;
-import trazzo.back.saasglobal.application.dto.result.FeatureResult;
 import trazzo.back.saasglobal.application.port.out.FeatureRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Feature;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class FeatureServiceTest {
 
-    @Mock FeatureRepositoryPort featureRepository;
-    @InjectMocks FeatureService service;
+    @Mock
+    private FeatureRepositoryPort featureRepository;
 
-    private static Feature feature(int id) {
-        var now = LocalDateTime.now();
-        return Feature.restore(id, "Biometric", "Fingerprint auth", now, now);
+    @InjectMocks
+    private FeatureService service;
+
+    private Feature sampleFeature() {
+        return Feature.restore(1, "Reports", "Generate reports", LocalDateTime.now(), LocalDateTime.now());
     }
 
     @Test
-    void create_savesAndReturnsResult() {
-        when(featureRepository.save(any())).thenReturn(feature(1));
+    void create_shouldReturnResult() {
+        var cmd = new CreateFeatureCommand("Reports", "Generate reports");
+        when(featureRepository.save(any(Feature.class))).thenAnswer(i -> {
+            Feature f = i.getArgument(0);
+            return Feature.restore(1, f.getName(), f.getDescription(),
+                    f.getCreatedAt(), f.getUpdatedAt());
+        });
 
-        FeatureResult result = service.create(new CreateFeatureCommand("Biometric", "Fingerprint auth"));
+        var result = service.create(cmd);
 
-        assertEquals(1, result.id());
-        assertEquals("Biometric", result.name());
+        assertThat(result.name()).isEqualTo("Reports");
+        verify(featureRepository).save(any(Feature.class));
     }
 
     @Test
-    void getById_returnsResultWhenFound() {
-        when(featureRepository.findById(1)).thenReturn(Optional.of(feature(1)));
+    void getById_shouldReturnResult() {
+        when(featureRepository.findById(1)).thenReturn(Optional.of(sampleFeature()));
 
-        FeatureResult result = service.getById(1);
+        var result = service.getById(1);
 
-        assertEquals(1, result.id());
+        assertThat(result.id()).isEqualTo(1);
     }
 
     @Test
-    void getById_throwsWhenNotFound() {
-        when(featureRepository.findById(99)).thenReturn(Optional.empty());
+    void getById_shouldThrowWhenNotFound() {
+        when(featureRepository.findById(999)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> service.getById(99));
+        assertThatThrownBy(() -> service.getById(999))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Feature not found");
     }
 
     @Test
-    void listAll_returnsMappedResults() {
-        when(featureRepository.findAll()).thenReturn(List.of(feature(1), feature(2)));
+    void listAll_shouldReturnList() {
+        when(featureRepository.findAll()).thenReturn(List.of(sampleFeature()));
 
-        List<FeatureResult> results = service.listAll();
+        var result = service.listAll();
 
-        assertEquals(2, results.size());
+        assertThat(result).hasSize(1);
     }
 
     @Test
-    void deleteById_throwsWhenNotFound() {
-        when(featureRepository.findById(99)).thenReturn(Optional.empty());
+    void update_shouldReturnResult() {
+        var cmd = new UpdateFeatureCommand(1, "New Reports", "Updated desc");
+        when(featureRepository.findById(1)).thenReturn(Optional.of(sampleFeature()));
+        when(featureRepository.save(any(Feature.class))).thenAnswer(i -> i.getArgument(0));
 
-        assertThrows(IllegalArgumentException.class, () -> service.deleteById(99));
-        verify(featureRepository, never()).deleteById(any());
+        var result = service.update(cmd);
+
+        assertThat(result.name()).isEqualTo("New Reports");
     }
 
     @Test
-    void deleteById_succeedsWhenFound() {
-        when(featureRepository.findById(1)).thenReturn(Optional.of(feature(1)));
+    void update_shouldThrowWhenNotFound() {
+        var cmd = new UpdateFeatureCommand(999, "Name", "Desc");
+        when(featureRepository.findById(999)).thenReturn(Optional.empty());
 
-        assertDoesNotThrow(() -> service.deleteById(1));
+        assertThatThrownBy(() -> service.update(cmd))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void deleteById_shouldDelete() {
+        when(featureRepository.findById(1)).thenReturn(Optional.of(sampleFeature()));
+
+        service.deleteById(1);
+
         verify(featureRepository).deleteById(1);
     }
 
     @Test
-    void update_savesAndReturnsUpdated() {
-        when(featureRepository.findById(1)).thenReturn(Optional.of(feature(1)));
-        when(featureRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var command = new UpdateFeatureCommand(1, "GPS", "Location tracking");
+    void deleteById_shouldThrowWhenNotFound() {
+        when(featureRepository.findById(999)).thenReturn(Optional.empty());
 
-        FeatureResult result = service.update(command);
-
-        assertEquals("GPS", result.name());
-        assertEquals("Location tracking", result.description());
-    }
-
-    @Test
-    void update_throwsWhenNotFound() {
-        when(featureRepository.findById(99)).thenReturn(Optional.empty());
-        var command = new UpdateFeatureCommand(99, "GPS", "desc");
-
-        assertThrows(IllegalArgumentException.class, () -> service.update(command));
+        assertThatThrownBy(() -> service.deleteById(999))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

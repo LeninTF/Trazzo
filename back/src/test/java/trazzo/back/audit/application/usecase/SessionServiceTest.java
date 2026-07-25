@@ -33,7 +33,7 @@ class SessionServiceTest {
         var now = LocalDateTime.now();
         var session = new Session(1L, "user-1", "hash-123", "192.168.1.1",
                 "Mozilla/5.0", "fp-123", now, now, null, now.plusHours(1),
-                SessionState.ACTIVE, now, now);
+                SessionState.ACTIVE, now, now, now);
         when(sessionRepository.findById(1L)).thenReturn(Optional.of(session));
 
         var result = service.findById(1L);
@@ -45,7 +45,7 @@ class SessionServiceTest {
         assertEquals("Mozilla/5.0", result.userAgent());
         assertEquals("fp-123", result.deviceFingerprint());
         assertEquals(now, result.loginAt());
-        assertEquals(now, result.lasActivityAt());
+        assertEquals(now, result.lastActivityAt());
         assertNull(result.logoutAt());
         assertEquals(now.plusHours(1), result.expiresAt());
         assertEquals(SessionState.ACTIVE, result.state());
@@ -65,7 +65,7 @@ class SessionServiceTest {
         var now = LocalDateTime.now();
         var session = new Session(1L, "user-1", "hash-123", "192.168.1.1",
                 "Mozilla/5.0", "fp-123", now, now, null, now.plusHours(1),
-                SessionState.ACTIVE, now, now);
+                SessionState.ACTIVE, now, now, now);
         when(sessionRepository.findAll(eq(null), eq(null), eq(null), any())).thenReturn(List.of(session));
         when(sessionRepository.count(null, null, null)).thenReturn(1L);
 

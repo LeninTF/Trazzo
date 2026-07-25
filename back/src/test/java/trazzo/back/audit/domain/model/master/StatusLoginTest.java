@@ -12,7 +12,7 @@ class StatusLoginTest {
 
     @Test
     void shouldContainSucces() {
-        assertEquals(StatusLogin.SUCCES, StatusLogin.valueOf("SUCCES"));
+        assertEquals(StatusLogin.SUCCESS, StatusLogin.valueOf("SUCCESS"));
     }
 
     @Test

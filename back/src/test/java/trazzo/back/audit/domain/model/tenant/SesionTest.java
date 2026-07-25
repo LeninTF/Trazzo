@@ -8,9 +8,19 @@ class SesionTest {
 
     private final LocalDateTime now = LocalDateTime.now();
 
+    private Session createSession(Long id, String tenantUserId, String refreshTokenHash,
+            String ipAddress, String userAgent, String deviceFingerprint,
+            LocalDateTime loginAt, LocalDateTime lastActivityAt, LocalDateTime logoutAt,
+            LocalDateTime expiresAt, SessionState state, LocalDateTime createdAt,
+            LocalDateTime updatedAt) {
+        return new Session(id, tenantUserId, refreshTokenHash, ipAddress, userAgent,
+                deviceFingerprint, loginAt, lastActivityAt, logoutAt, expiresAt,
+                state, createdAt, updatedAt, now);
+    }
+
     @Test
     void shouldCreateActiveSession() {
-        var s = new Session(1L, "tenant-user-1", "hash123", "10.0.0.1",
+        var s = createSession(1L, "tenant-user-1", "hash123", "10.0.0.1",
                 "Mozilla/5.0", "fp-abc", now, now, null,
                 now.plusHours(2), SessionState.ACTIVE, now, now);
         assertEquals(1L, s.getId());
@@ -20,7 +30,7 @@ class SesionTest {
         assertEquals("Mozilla/5.0", s.getUserAgent());
         assertEquals("fp-abc", s.getDeviceFingerprint());
         assertEquals(now, s.getLoginAt());
-        assertEquals(now, s.getLasActivityAt());
+        assertEquals(now, s.getLastActivityAt());
         assertNull(s.getLogoutAt());
         assertEquals(now.plusHours(2), s.getExpiresAt());
         assertEquals(SessionState.ACTIVE, s.getState());
@@ -32,7 +42,7 @@ class SesionTest {
     void shouldCreateLoggedOutSession() {
         var loginAt = now.minusDays(1);
         var logoutAt = now.minusHours(1);
-        var s = new Session(1L, "tenant-user-1", "hash123", "10.0.0.1",
+        var s = createSession(1L, "tenant-user-1", "hash123", "10.0.0.1",
                 "Mozilla/5.0", null, loginAt, loginAt, logoutAt,
                 loginAt.plusHours(2), SessionState.LOGGED_OUT, now, now);
         assertEquals(logoutAt, s.getLogoutAt());
@@ -43,7 +53,7 @@ class SesionTest {
     void shouldCreateExpiredSession() {
         var loginAt = now.minusDays(2);
         var expiresAt = now.minusDays(1);
-        var s = new Session(1L, "tenant-user-1", "hash123", "10.0.0.1",
+        var s = createSession(1L, "tenant-user-1", "hash123", "10.0.0.1",
                 "Mozilla/5.0", null, loginAt, loginAt, null,
                 expiresAt, SessionState.EXPIRED, now, now);
         assertEquals(expiresAt, s.getExpiresAt());
@@ -53,7 +63,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenTenantUserIdIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, null, "hash", "ip", "ua", null,
+                () -> createSession(1L, null, "hash", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -61,7 +71,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenTenantUserIdIsBlank() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, " ", "hash", "ip", "ua", null,
+                () -> createSession(1L, " ", "hash", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -69,7 +79,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenRefreshTokenHashIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", null, "ip", "ua", null,
+                () -> createSession(1L, "user-1", null, "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -77,7 +87,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenRefreshTokenHashIsBlank() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -85,7 +95,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenIpAddressIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", null, "ua", null,
+                () -> createSession(1L, "user-1", "hash", null, "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -93,7 +103,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenIpAddressIsBlank() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -101,7 +111,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenUserAgentIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", null, null,
+                () -> createSession(1L, "user-1", "hash", "ip", null, null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -109,7 +119,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenUserAgentIsBlank() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "", null,
                         now, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -117,7 +127,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenLoginAtIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         null, now, null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -125,7 +135,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenStateIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         null, now, now));
     }
@@ -133,7 +143,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenExpiresAtIsBeforeLoginAt() {
         var ex = assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, null, now.minusHours(1),
                         SessionState.ACTIVE, now, now));
         assertTrue(ex.getMessage().contains("before"));
@@ -142,7 +152,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenExpiresAtEqualsLoginAt() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, null, now,
                         SessionState.ACTIVE, now, now));
     }
@@ -150,15 +160,15 @@ class SesionTest {
     @Test
     void shouldThrowWhenLogoutAtIsBeforeLoginAt() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, now.minusHours(1), now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
 
     @Test
-    void shouldThrowWhenLasActivityAtIsBeforeLoginAt() {
+    void shouldThrowWhenLastActivityAtIsBeforeLoginAt() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now.minusHours(1), null, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -166,7 +176,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenLoggedOutAndLogoutAtIsNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.LOGGED_OUT, now, now));
     }
@@ -174,7 +184,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenActiveAndLogoutAtIsNotNull() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, now, now.plusHours(1),
                         SessionState.ACTIVE, now, now));
     }
@@ -182,7 +192,7 @@ class SesionTest {
     @Test
     void shouldThrowWhenExpiredAndNotYetExpired() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Session(1L, "user-1", "hash", "ip", "ua", null,
+                () -> createSession(1L, "user-1", "hash", "ip", "ua", null,
                         now, now, null, now.plusHours(1),
                         SessionState.EXPIRED, now, now));
     }

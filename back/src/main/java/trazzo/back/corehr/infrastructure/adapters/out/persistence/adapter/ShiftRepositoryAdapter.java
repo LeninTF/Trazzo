@@ -8,6 +8,7 @@ import trazzo.back.corehr.application.port.out.ShiftRepositoryPort;
 import trazzo.back.corehr.domain.model.schedule.Shift;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.mapper.ShiftMapper;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.ShiftJpaRepository;
+import trazzo.back.shared.util.SortUtils;
 
 import java.util.List;
 import java.util.Optional;

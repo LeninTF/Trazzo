@@ -1,6 +1,8 @@
 package trazzo.back.shared.tenancy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -57,5 +59,29 @@ class TenantContextTest {
 
         assertEquals("public", otherThreadValue[0]);
         assertEquals("tenant_main", TenantContext.get());
+    }
+
+    @Test
+    void isTenantSchema_trueWhenSetToNonPublic() {
+        TenantContext.set("tenant_acme");
+        assertTrue(TenantContext.isTenantSchema());
+    }
+
+    @Test
+    void isTenantSchema_falseWhenPublic() {
+        assertFalse(TenantContext.isTenantSchema());
+    }
+
+    @Test
+    void isTenantSchema_falseWhenNotSet() {
+        TenantContext.clear();
+        assertFalse(TenantContext.isTenantSchema());
+    }
+
+    @Test
+    void isTenantSchema_falseAfterClear() {
+        TenantContext.set("tenant_acme");
+        TenantContext.clear();
+        assertFalse(TenantContext.isTenantSchema());
     }
 }

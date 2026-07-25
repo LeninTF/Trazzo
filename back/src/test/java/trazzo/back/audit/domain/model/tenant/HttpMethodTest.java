@@ -26,13 +26,13 @@ class HttpMethodTest {
     }
 
     @Test
-    void shouldContainDelete() {
-        assertEquals(HttpMethod.DELETE, HttpMethod.valueOf("DELETE"));
+    void shouldContainPatch() {
+        assertEquals(HttpMethod.PATCH, HttpMethod.valueOf("PATCH"));
     }
 
     @Test
-    void shouldContainRead() {
-        assertEquals(HttpMethod.READ, HttpMethod.valueOf("READ"));
+    void shouldContainDelete() {
+        assertEquals(HttpMethod.DELETE, HttpMethod.valueOf("DELETE"));
     }
 
 }

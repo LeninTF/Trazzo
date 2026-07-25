@@ -21,6 +21,7 @@ import trazzo.back.corehr.domain.model.attendance.Attendance;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.AttendanceEntity;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.mapper.AttendanceMapper;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.repository.AttendanceJpaRepository;
+import trazzo.back.shared.util.SortUtils;
 
 @Component
 @RequiredArgsConstructor

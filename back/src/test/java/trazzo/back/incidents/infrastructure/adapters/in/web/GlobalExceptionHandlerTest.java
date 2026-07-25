@@ -90,4 +90,60 @@ class GlobalExceptionHandlerTest {
         assertEquals(1, response.getBody().details().size());
         assertEquals("nombre", response.getBody().details().getFirst().field());
     }
+
+    @Test
+    void handleGenericReturns500() {
+        var ex = new RuntimeException("Unexpected");
+        var response = handler.handleGeneric(ex);
+
+        assertEquals(500, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("Internal Server Error", response.getBody().error());
+        assertEquals("An unexpected error occurred", response.getBody().message());
+    }
+
+    @Test
+    void handleValidationBodyHasCorrectMessage() {
+        var ex = new IncidentValidationException("field is required");
+        var response = handler.handleValidation(ex);
+
+        assertEquals("field is required", response.getBody().message());
+        assertEquals("Validation Error", response.getBody().error());
+    }
+
+    @Test
+    void handleInvalidStateBodyHasCorrectMessage() {
+        var ex = new InvalidIncidentStateException("cannot transition");
+        var response = handler.handleInvalidState(ex);
+
+        assertEquals("cannot transition", response.getBody().message());
+        assertEquals("Invalid State", response.getBody().error());
+    }
+
+    @Test
+    void handleInvalidEvidenceBodyHasCorrectMessage() {
+        var ex = new InvalidIncidentEvidenceException("file too large");
+        var response = handler.handleInvalidEvidence(ex);
+
+        assertEquals("file too large", response.getBody().message());
+        assertEquals("Invalid Evidence", response.getBody().error());
+    }
+
+    @Test
+    void handleInvalidPermissionBodyHasCorrectMessage() {
+        var ex = new InvalidIncidentPermissionException("not allowed");
+        var response = handler.handleInvalidPermission(ex);
+
+        assertEquals("not allowed", response.getBody().message());
+        assertEquals("Invalid Permission", response.getBody().error());
+    }
+
+    @Test
+    void handleInactiveTypeBodyHasCorrectMessage() {
+        var ex = new InactiveIncidentTypeException("type is inactive");
+        var response = handler.handleInactiveType(ex);
+
+        assertEquals("type is inactive", response.getBody().message());
+        assertEquals("Inactive Type", response.getBody().error());
+    }
 }

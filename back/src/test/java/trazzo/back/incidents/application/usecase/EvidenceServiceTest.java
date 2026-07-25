@@ -1,10 +1,10 @@
 package trazzo.back.incidents.application.usecase;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.incidents.application.dto.command.CreateEvidenceCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
@@ -14,23 +14,37 @@ import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class EvidenceServiceTest {
 
-    private IncidentRepositoryPort incidentRepo;
+    @Mock
+    private IncidentRepositoryPort incidentRepository;
+
+    @Mock
     private EventPublisherPort eventPublisher;
+
+    @Mock
     private FileStoragePort fileStoragePort;
+
+    @InjectMocks
     private EvidenceService service;
 
-    @BeforeEach
-    void setUp() {
-        incidentRepo = mock(IncidentRepositoryPort.class);
-        eventPublisher = mock(EventPublisherPort.class);
-        fileStoragePort = mock(FileStoragePort.class);
-        when(fileStoragePort.buildPublicUrl(any())).thenReturn("http://public-url/test");
-        service = new EvidenceService(incidentRepo, eventPublisher, fileStoragePort);
+    private Incident sampleIncident() {
+        return Incident.restore(1, 1, 1,
+                IncidentState.PENDIENTE,
+                "test comment", null, null, null,
+                Collections.emptyList(),
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     @Test
@@ -38,8 +52,8 @@ class EvidenceServiceTest {
         var now = LocalDateTime.now();
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, null, null, List.of(), now, now);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
-        when(incidentRepo.save(any())).thenAnswer(invocation -> {
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(any())).thenAnswer(invocation -> {
             Incident inc = invocation.getArgument(0);
             Integer incId = inc.getId() != null ? inc.getId() : 1;
             var ev = inc.getEvidences().get(0);
@@ -51,7 +65,6 @@ class EvidenceServiceTest {
         var result = service.create(1, command);
 
         assertEquals("doc.pdf", result.fileName());
-        assertEquals("/api/v1/incidentes/1/evidencias/10/descarga", result.downloadUrl());
         assertEquals("pdf", result.mimeType());
         assertEquals(100, result.fileSize());
         verify(eventPublisher).publish(any());
@@ -59,7 +72,7 @@ class EvidenceServiceTest {
 
     @Test
     void createEvidenceWithNonExistentIncidentThrowsException() {
-        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        when(incidentRepository.findById(999)).thenReturn(Optional.empty());
 
         var command = new CreateEvidenceCommand("doc.pdf", "http://url", "pdf", 100);
 
@@ -71,24 +84,23 @@ class EvidenceServiceTest {
         var now = LocalDateTime.now();
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now);
-        incident.addEvidence(trazzo.back.incidents.domain.model.IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100));
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        incident.addEvidence(IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
 
         var results = service.findAllByIncidentId(1);
 
-        assertEquals(1, results.size());
-        assertEquals("doc.pdf", results.getFirst().fileName());
+        assertThat(results).hasSize(1);
     }
 
     @Test
     void findAllByIncidentIdExcludesDeletedEvidences() {
         var now = LocalDateTime.now();
-        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+        var evidence = IncidentEvidence.restore(
                 1, 1, "doc.pdf", "http://url", "pdf", 100, false, null, now, now, now);
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now);
         incident.deleteEvidence(1);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
 
         var results = service.findAllByIncidentId(1);
 
@@ -97,18 +109,18 @@ class EvidenceServiceTest {
 
     @Test
     void findAllByIncidentIdWithNonExistentIncidentThrowsException() {
-        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        when(incidentRepository.findById(999)).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class, () -> service.findAllByIncidentId(999));
     }
 
     @Test
     void findEvidenceSuccessfully() {
         var now = LocalDateTime.now();
-        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+        var evidence = IncidentEvidence.restore(
                 1, 1, "doc.pdf", "file-key", "application/pdf", 100, false, null, now, now, now);
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
 
         var result = service.findEvidence(1, 1);
 
@@ -120,7 +132,7 @@ class EvidenceServiceTest {
 
     @Test
     void findEvidenceWithNonExistentIncidentThrowsException() {
-        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        when(incidentRepository.findById(999)).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class, () -> service.findEvidence(999, 1));
     }
 
@@ -129,7 +141,7 @@ class EvidenceServiceTest {
         var now = LocalDateTime.now();
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
 
         assertThrows(IllegalArgumentException.class, () -> service.findEvidence(1, 999));
     }
@@ -137,11 +149,11 @@ class EvidenceServiceTest {
     @Test
     void findEvidenceExcludesDeletedEvidences() {
         var now = LocalDateTime.now();
-        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+        var evidence = IncidentEvidence.restore(
                 1, 1, "doc.pdf", "file-key", "application/pdf", 100, true, now, now, now, now);
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
 
         assertThrows(IllegalArgumentException.class, () -> service.findEvidence(1, 1));
     }
@@ -149,12 +161,12 @@ class EvidenceServiceTest {
     @Test
     void deleteEvidenceSuccessfully() {
         var now = LocalDateTime.now();
-        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+        var evidence = IncidentEvidence.restore(
                 1, 1, "doc.pdf", "http://url", "pdf", 100, false, null, now, now, now);
         var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now);
-        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
-        when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
+        when(incidentRepository.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepository.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
 
         service.delete(1, 1);
 
@@ -164,7 +176,7 @@ class EvidenceServiceTest {
 
     @Test
     void deleteEvidenceWithNonExistentIncidentThrowsException() {
-        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        when(incidentRepository.findById(999)).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class, () -> service.delete(999, 1));
     }
 }

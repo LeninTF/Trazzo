@@ -6,6 +6,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,6 +24,7 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
 // from its manual authenticationManager.authenticate() call must keep surfacing as 401 via
 // Spring Security's own resolution, not get swallowed by this advice's Exception catch-all.
 @RestControllerAdvice(assignableTypes = {
+        AuthController.class,
         PlanController.class,
         TenantController.class,
         HoldingController.class,
@@ -41,6 +43,16 @@ import trazzo.back.saasglobal.infrastructure.adapters.in.web.dto.ErrorResponse.V
 public class SaasGlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(SaasGlobalExceptionHandler.class);
+
+    // AuthController: BadCredentialsException must surface as 401 via Spring Security.
+    // Without this explicit handler, the generic Exception catch-all below would swallow it
+    // into a misleading 500 now that AuthController is in assignableTypes.
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("Bad credentials: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Unauthorized", "Credenciales inválidas"));
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {

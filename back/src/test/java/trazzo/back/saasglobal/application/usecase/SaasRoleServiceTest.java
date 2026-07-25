@@ -134,4 +134,44 @@ class SaasRoleServiceTest {
         assertThrows(RuntimeException.class, () -> service.updatePermissions(command));
         verify(roleRepository, never()).replacePermissions(any(), any());
     }
+
+    @Test
+    void update_throwsWhenRoleNotFound() {
+        when(roleRepository.findById(99)).thenReturn(Optional.empty());
+        var command = new UpdateRoleCommand(99, "x", "X", null);
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(command));
+    }
+
+    @Test
+    void deleteById_throwsWhenRoleNotFound() {
+        when(roleRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(IllegalArgumentException.class, () -> service.deleteById(99));
+    }
+
+    @Test
+    void listAll_returnsEmptyList() {
+        when(roleRepository.findAll()).thenReturn(List.of());
+
+        List<SaasRoleResult> results = service.listAll();
+
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void create_savesWithCorrectFields() {
+        when(roleRepository.save(any())).thenAnswer(inv -> {
+            var r = inv.getArgument(0, RoleMaster.class);
+            return RoleMaster.restore(5, r.getName(), r.getDisplayName(), r.getDescription(), r.getPermissionCodes());
+        });
+        var command = new CreateRoleCommand("nuevo", "Nuevo Rol", "Descripción nueva");
+
+        SaasRoleResult result = service.create(command);
+
+        assertEquals("nuevo", result.name());
+        assertEquals("Nuevo Rol", result.displayName());
+        assertEquals("Descripción nueva", result.description());
+        assertFalse(result.systemManaged());
+    }
 }

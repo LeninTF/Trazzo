@@ -13,7 +13,6 @@ import trazzo.back.audit.application.dto.result.AuditLogResult;
 import trazzo.back.audit.application.dto.result.PaginatedResult;
 import trazzo.back.audit.application.port.in.AuditLogUseCase;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
-import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.shared.security.AuthenticatedUser;
 import trazzo.back.shared.security.SecurityConfig;
 
@@ -46,7 +45,7 @@ class AuditLogsControllerTest {
     }
 
     private static AuditLogDetailResult aDetailResult() {
-        return new AuditLogDetailResult("1", "Entity", "e-1", Action.CREATE,
+        return new AuditLogDetailResult("1", "Entity", "e-1", "CREATE",
                 "u-1", "/api/test", "127.0.0.1", "Mozilla/5.0",
                 Map.of("old", "value"), Map.of("new", "value"), LocalDateTime.now());
     }
@@ -67,7 +66,7 @@ class AuditLogsControllerTest {
                         .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "monitoreo-sistema.logs-sistema"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("1"))
-                .andExpect(jsonPath("$.content[0].event_id").value("evt-1"))
+                .andExpect(jsonPath("$.content[0].eventId").value("evt-1"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
@@ -80,7 +79,7 @@ class AuditLogsControllerTest {
                         .with(authentication(authWithAuthorities("ROLE_SAAS_ADMIN", "monitoreo-sistema.logs-sistema"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("1"))
-                .andExpect(jsonPath("$.action").value("CREATE"));
+                .andExpect(jsonPath("$.accion").value("CREATE"));
     }
 
     @Test

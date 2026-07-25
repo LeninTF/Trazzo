@@ -1,10 +1,14 @@
 package trazzo.back.audit.infrastructure.adapters.out.persistence.mapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import trazzo.back.audit.domain.model.tenant.HttpMethod;
 import trazzo.back.audit.domain.model.tenant.SystemAudit;
 import trazzo.back.audit.infrastructure.adapters.out.persistence.entity.SystemAuditEntity;
 
 public final class SystemAuditMapper {
+
+    private static final Logger log = LoggerFactory.getLogger(SystemAuditMapper.class);
 
     private SystemAuditMapper() {
     }
@@ -14,7 +18,7 @@ public final class SystemAuditMapper {
         try {
             httpMethod = HttpMethod.valueOf(entity.getAccionSistema().toUpperCase());
         } catch (IllegalArgumentException e) {
-            // not mappable, leave null
+            log.trace("Cannot map accionSistema '{}' to HttpMethod", entity.getAccionSistema());
         }
 
         return new SystemAudit(

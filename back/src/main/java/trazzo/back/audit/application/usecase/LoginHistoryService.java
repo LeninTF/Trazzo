@@ -8,7 +8,7 @@ import trazzo.back.audit.application.port.out.LogInHistoryRepositoryPort;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.master.LogInHistory;
 import trazzo.back.audit.domain.model.master.StatusLogin;
-import trazzo.back.audit.infrastructure.adapters.out.persistence.adapter.SortUtils;
+import trazzo.back.shared.util.SortUtils;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;

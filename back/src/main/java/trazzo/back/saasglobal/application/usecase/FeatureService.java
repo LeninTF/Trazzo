@@ -3,6 +3,7 @@ package trazzo.back.saasglobal.application.usecase;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.dto.command.CreateFeatureCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdateFeatureCommand;
 import trazzo.back.saasglobal.application.dto.result.FeatureResult;
@@ -12,6 +13,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.Feature;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class FeatureService implements FeatureUseCase {
 
     private static final String NOT_FOUND_MSG = "Feature not found: ";

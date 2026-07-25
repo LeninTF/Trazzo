@@ -7,6 +7,7 @@ import trazzo.back.incidents.application.port.in.IncidentTypeUseCase;
 import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
+import trazzo.back.incidents.application.port.out.EvidenceUrlResolver;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;

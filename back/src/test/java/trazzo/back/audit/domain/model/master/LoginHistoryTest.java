@@ -10,11 +10,11 @@ class LoginHistoryTest {
     void shouldCreateLoginHistory() {
         var now = LocalDateTime.now();
         var h = new LogInHistory("1", "user-1", "test@example.com",
-                StatusLogin.SUCCES, "192.168.1.1", "Chrome", now);
+                StatusLogin.SUCCESS, "192.168.1.1", "Chrome", now);
         assertEquals("1", h.getId());
         assertEquals("user-1", h.getUserId());
         assertEquals("test@example.com", h.getAttemptedEmail());
-        assertEquals(StatusLogin.SUCCES, h.getStatus());
+        assertEquals(StatusLogin.SUCCESS, h.getStatus());
         assertEquals("192.168.1.1", h.getIpAddress());
         assertEquals("Chrome", h.getUserAgent());
         assertEquals(now, h.getCreatedAt());

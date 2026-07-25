@@ -8,7 +8,7 @@ import trazzo.back.audit.application.port.out.SessionRepositoryPort;
 import trazzo.back.audit.domain.exception.AuditNotFoundException;
 import trazzo.back.audit.domain.model.tenant.Session;
 import trazzo.back.audit.domain.model.tenant.SessionState;
-import trazzo.back.audit.infrastructure.adapters.out.persistence.adapter.SortUtils;
+import trazzo.back.shared.util.SortUtils;
 import org.springframework.data.domain.PageRequest;
 
 @RequiredArgsConstructor
@@ -38,7 +38,7 @@ public class SessionService implements SessionUseCase {
         return new SessionResult(
                 session.getId(), session.getTenantUserId(), session.getRefreshTokenHash(),
                 session.getIpAddress(), session.getUserAgent(), session.getDeviceFingerprint(),
-                session.getLoginAt(), session.getLasActivityAt(), session.getLogoutAt(),
+                session.getLoginAt(), session.getLastActivityAt(), session.getLogoutAt(),
                 session.getExpiresAt(), session.getState(),
                 session.getCreatedAt(), session.getUpdatedAt()
         );

@@ -4,6 +4,6 @@ public enum HttpMethod {
     GET,
     PUT,
     POST,
-    DELETE,
-    READ
+    PATCH,
+    DELETE
 }

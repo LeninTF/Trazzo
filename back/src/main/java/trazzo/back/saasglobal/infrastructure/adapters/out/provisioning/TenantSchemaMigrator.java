@@ -85,30 +85,44 @@ public class TenantSchemaMigrator implements ApplicationRunner {
             throw new TenantProvisioningException("Invalid schema name for tenant " + tenantId + ": " + schemaName, null);
         }
         try (Connection conn = rawDataSource.getConnection()) {
-            try (Statement stmt = conn.createStatement()) {
-                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
-                // since PG13, always implicitly searched first) but kept for defense in depth
-                // and to match TenantAwareDataSource's runtime search_path exactly.
-                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
-            }
-            Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
-            // Each script runs independently: this migrator has no per-tenant applied-migration
-            // tracking (every script re-runs on every startup), so one broken/non-idempotent
-            // script must not prevent unrelated later scripts from ever being applied.
-            List.of(resources).stream()
-                    .sorted(Comparator.comparing(Resource::getFilename))
-                    .forEach(script -> {
-                        try {
-                            ScriptUtils.executeSqlScript(conn, script);
-                            log.info("Executed {} on tenant {} (schema {})", script.getFilename(), tenantId, schemaName);
-                        } catch (Exception e) {
-                            log.error("Failed to execute {} on tenant {} (schema {}): {}",
-                                    script.getFilename(), tenantId, schemaName, e.getMessage());
-                        }
-                    });
+            setSearchPath(conn, schemaName);
+            runMigrationScripts(conn, tenantId, schemaName);
             log.info("Migrated tenant {} (schema {})", tenantId, schemaName);
-        } catch (SQLException | IOException e) {
+        } catch (SQLException e) {
             throw new TenantProvisioningException("Failed to migrate tenant schema: " + schemaName, e);
         }
+    }
+
+    @SuppressWarnings("java:S2077")
+    private void setSearchPath(Connection conn, String schemaName) throws SQLException {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("SET search_path TO \"" + schemaName + "\", public");
+        }
+    }
+
+    private void runMigrationScripts(Connection conn, String tenantId, String schemaName) {
+        Resource[] resources;
+        try {
+            resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
+        } catch (IOException e) {
+            log.error("Failed to resolve migration resources for tenant {} (schema {}): {}",
+                    tenantId, schemaName, e.getMessage());
+            throw new TenantProvisioningException(
+                    "Failed to resolve migration resources for schema " + schemaName, e);
+        }
+        // Each script runs independently: this migrator has no per-tenant applied-migration
+        // tracking (every script re-runs on every startup), so one broken/non-idempotent
+        // script must not prevent unrelated later scripts from ever being applied.
+        List.of(resources).stream()
+                .sorted(Comparator.comparing(Resource::getFilename))
+                .forEach(script -> {
+                    try {
+                        ScriptUtils.executeSqlScript(conn, script);
+                        log.info("Executed {} on tenant {} (schema {})", script.getFilename(), tenantId, schemaName);
+                    } catch (Exception e) {
+                        log.error("Failed to execute {} on tenant {} (schema {}): {}",
+                                script.getFilename(), tenantId, schemaName, e.getMessage());
+                    }
+                });
     }
 }

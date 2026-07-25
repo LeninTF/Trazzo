@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import trazzo.back.saasglobal.application.dto.command.CreatePlanCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdatePlanCommand;
 import trazzo.back.saasglobal.application.dto.result.PlanResult;
@@ -20,6 +21,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.PlanFeature;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PlanService implements PlanUseCase {
 
     private static final String NOT_FOUND_MSG = "Plan not found: ";
