@@ -1,5 +1,6 @@
 import { routes } from './app.routes';
 import { authGuard } from './auth/auth.guard';
+import { roleGuard } from './auth/role.guard';
 
 describe('app.routes', () => {
   it('should have 36 route definitions', () => {
@@ -94,14 +95,14 @@ describe('app.routes', () => {
       'ayuda/:seccion', 'ayuda',
     ]);
 
-    it('should apply authGuard to every tenant/usuario/saas data route', () => {
+    it('should apply authGuard and roleGuard to every tenant/usuario/saas data route', () => {
       const protectedRoutes = routes.filter(r =>
         (r.path?.startsWith('tenant/') || r.path?.startsWith('usuario/') || r.path?.startsWith('saas/'))
         && !r.redirectTo,
       );
       expect(protectedRoutes.length).toBeGreaterThan(0);
       protectedRoutes.forEach(r => {
-        expect(r.canActivate).toEqual([authGuard]);
+        expect(r.canActivate).toEqual([authGuard, roleGuard]);
       });
     });
 

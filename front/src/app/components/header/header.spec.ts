@@ -67,7 +67,24 @@ describe('Header', () => {
   });
 
   describe('roles', () => {
-    it('should contain 3 role options', () => {
+    it('should be empty when availableRoles is empty', () => {
+      roleService.setAvailableRoles([]);
+      fixture.detectChanges();
+      expect(component['roles']().length).toBe(0);
+    });
+
+    it('should expose only the roles the user actually has', () => {
+      roleService.setAvailableRoles(['admin-tenant', 'usuario']);
+      fixture.detectChanges();
+
+      const values = component['roles']().map(r => r.value);
+      expect(values).toEqual(['admin-tenant', 'usuario']);
+    });
+
+    it('should expose all three roles when all are available', () => {
+      roleService.setAvailableRoles(['admin-tenant', 'admin-saas', 'usuario']);
+      fixture.detectChanges();
+
       expect(component['roles']().length).toBe(3);
       expect(component['roles']()[0].value).toBe('admin-tenant');
       expect(component['roles']()[1].value).toBe('admin-saas');

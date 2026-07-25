@@ -44,6 +44,22 @@ describe('Login', () => {
       status: 'ACTIVO',
       ultimo_acceso: '',
       rol: [{ id: 2, name: 'admin_tenant', permissions: {} }],
+      tenant_permissions: ['administrador_tenant'],
+    },
+  };
+
+  const mockUsuarioResponse: AuthResponse = {
+    accessToken: 'usuario-token',
+    tokenType: 'Bearer',
+    usuario: {
+      id: 3,
+      nombre: 'Usuario Basico',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: 'usuario@trazzo.pe',
+      status: 'ACTIVO',
+      ultimo_acceso: '',
+      rol: [{ id: 3, name: 'usuario', permissions: {} }],
       tenant_permissions: [],
     },
   };
@@ -51,7 +67,7 @@ describe('Login', () => {
   beforeEach(async () => {
     routerSpy = jasmine.createSpyObj<Router>('Router', ['navigate']);
     toastSpy = jasmine.createSpyObj<ToastService>('ToastService', ['error', 'success']);
-    roleSpy = jasmine.createSpyObj<RoleService>('RoleService', ['setUserInfo', 'switchRole']);
+    roleSpy = jasmine.createSpyObj<RoleService>('RoleService', ['setUserInfo', 'switchRole', 'setAvailableRoles']);
 
     authLoginSpy = jasmine.createSpy('auth.login');
 
@@ -183,6 +199,7 @@ describe('Login', () => {
       expect(authLoginSpy).toHaveBeenCalledWith({ email: 'admin@trazzo.com', password: 'validpass' });
       expect(localStorage.getItem('trazzo_token')).toBe('master-token');
       expect(roleSpy.setUserInfo).toHaveBeenCalledWith('Admin Trazzo', 'admin@trazzo.com');
+      expect(roleSpy.setAvailableRoles).toHaveBeenCalledWith(['admin-saas']);
       expect(roleSpy.switchRole).toHaveBeenCalledWith('admin-saas');
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/saas/tenants']);
       expect(toastSpy.success).toHaveBeenCalledWith('Bienvenido(a), Admin Trazzo');
@@ -201,9 +218,29 @@ describe('Login', () => {
       expect(authLoginSpy).toHaveBeenCalledWith({ email: 'user@tenant.com', password: 'validpass' });
       expect(localStorage.getItem('trazzo_token')).toBe('tenant-token');
       expect(roleSpy.setUserInfo).toHaveBeenCalledWith('User Tenant', 'user@tenant.com');
+      expect(roleSpy.setAvailableRoles).toHaveBeenCalledWith(['admin-tenant']);
       expect(roleSpy.switchRole).toHaveBeenCalledWith('admin-tenant');
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/tenant/dashboard']);
       expect(toastSpy.success).toHaveBeenCalledWith('Bienvenido(a), User Tenant');
+      expect(component.isLoading()).toBeFalse();
+    });
+
+    it('should navigate to /usuario/dashboard for a plain usuario without tenant permissions', () => {
+      component.email.set('usuario@trazzo.pe');
+      component.password.set('validpass');
+      authLoginSpy.and.returnValue(of(mockUsuarioResponse));
+
+      const event = createSubmitEvent();
+      component.onSubmit(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(authLoginSpy).toHaveBeenCalledWith({ email: 'usuario@trazzo.pe', password: 'validpass' });
+      expect(localStorage.getItem('trazzo_token')).toBe('usuario-token');
+      expect(roleSpy.setUserInfo).toHaveBeenCalledWith('Usuario Basico', 'usuario@trazzo.pe');
+      expect(roleSpy.setAvailableRoles).toHaveBeenCalledWith(['usuario']);
+      expect(roleSpy.switchRole).toHaveBeenCalledWith('usuario');
+      expect(routerSpy.navigate).toHaveBeenCalledWith(['/usuario/dashboard']);
+      expect(toastSpy.success).toHaveBeenCalledWith('Bienvenido(a), Usuario Basico');
       expect(component.isLoading()).toBeFalse();
     });
 
