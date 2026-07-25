@@ -16,7 +16,7 @@ class IncidentListResponseTest {
     void fromPaginatedMapsAllFields() {
         var now = LocalDateTime.now();
         var results = List.of(
-                new IncidentResult("i-1", "u-1", "t-1", IncidentState.PENDIENTE,
+                new IncidentResult(1, 1, 1, IncidentState.PENDIENTE,
                         null, null, null, null, List.of(), null, now, now)
         );
         var paginated = new PaginatedResult<IncidentResult>(results, 0, 20, 1, 1);

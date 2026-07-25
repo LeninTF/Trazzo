@@ -3,10 +3,13 @@ package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -80,6 +83,14 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     }
 
     @Override
+    public Optional<Long> findIdByMasterUserId(UUID masterUserId) {
+        var results = jdbc.query("""
+                SELECT id FROM tenant_user WHERE master_user_id = ?::uuid AND deleted_at IS NULL
+                """, (rs, rowNum) -> rs.getLong("id"), masterUserId.toString());
+        return results.stream().findFirst();
+    }
+
+    @Override
     public List<TenantUserProfileProjection> findAllProfiles(String search, String status, int page, int size, String sort) {
         var sql = new StringBuilder(PROFILE_SELECT);
         var params = new ArrayList<>();
@@ -139,6 +150,61 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     public Optional<TenantUserProfileProjection> findProfileById(Long id) {
         var sql = PROFILE_SELECT + " WHERE tu.id = ? AND tu.deleted_at IS NULL";
         return jdbc.query(sql, new TenantUserProfileRowMapper(), id).stream().findFirst();
+    }
+
+    @Override
+    public Map<Long, TenantUserPort.OrgAssignmentBundle> findOrgAssignmentsByUserIds(Collection<Long> tenantUserIds) {
+        if (tenantUserIds.isEmpty()) return Map.of();
+
+        var placeholders = tenantUserIds.stream().map(id -> "?").collect(Collectors.joining(","));
+        var sql = """
+                SELECT tud.tenant_user_id,
+                       b.id AS branch_id, b.name AS branch_name,
+                       a.id AS area_id, a.name AS area_name,
+                       d.id AS department_id, d.name AS department_name
+                FROM tenant_user_department tud
+                JOIN department d ON d.id = tud.department_id AND d.deleted_at IS NULL
+                JOIN area a ON a.id = d.area_id AND a.deleted_at IS NULL
+                JOIN branch b ON b.id = a.branch_id AND b.deleted_at IS NULL
+                WHERE tud.tenant_user_id IN (%s)
+                """.formatted(placeholders);
+
+        var rows = jdbc.query(sql, (rs, rowNum) -> {
+            var tenantUserId = rs.getLong("tenant_user_id");
+            var branchId = rs.getLong("branch_id");
+            var branchName = rs.getString("branch_name");
+            var areaId = rs.getLong("area_id");
+            var areaName = rs.getString("area_name");
+            var departmentId = rs.getLong("department_id");
+            var departmentName = rs.getString("department_name");
+            return new Object[] {
+                tenantUserId,
+                new TenantUserPort.OrgAssignmentRow(branchId, branchName),
+                new TenantUserPort.OrgAssignmentRow(areaId, areaName),
+                new TenantUserPort.OrgAssignmentRow(departmentId, departmentName)
+            };
+        }, tenantUserIds.toArray());
+
+        Map<Long, List<TenantUserPort.OrgAssignmentRow>> sedesByUser = new HashMap<>();
+        Map<Long, List<TenantUserPort.OrgAssignmentRow>> areasByUser = new HashMap<>();
+        Map<Long, List<TenantUserPort.OrgAssignmentRow>> deptosByUser = new HashMap<>();
+
+        for (var row : rows) {
+            var userId = (Long) row[0];
+            sedesByUser.computeIfAbsent(userId, k -> new ArrayList<>()).add((TenantUserPort.OrgAssignmentRow) row[1]);
+            areasByUser.computeIfAbsent(userId, k -> new ArrayList<>()).add((TenantUserPort.OrgAssignmentRow) row[2]);
+            deptosByUser.computeIfAbsent(userId, k -> new ArrayList<>()).add((TenantUserPort.OrgAssignmentRow) row[3]);
+        }
+
+        var result = new HashMap<Long, TenantUserPort.OrgAssignmentBundle>();
+        for (var userId : tenantUserIds) {
+            result.put(userId, new TenantUserPort.OrgAssignmentBundle(
+                    sedesByUser.getOrDefault(userId, List.of()),
+                    areasByUser.getOrDefault(userId, List.of()),
+                    deptosByUser.getOrDefault(userId, List.of())
+            ));
+        }
+        return result;
     }
 
     @Override

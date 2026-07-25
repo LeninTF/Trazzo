@@ -261,6 +261,7 @@ export interface UsuarioProfile {
   status: 'ACTIVO' | 'SUSPENDIDO' | 'INACTIVO';
   ultimo_acceso: string;
   rol: RoleProfile[];
+  tenant_permissions: string[];
 }
 
 export interface RoleProfile {
@@ -319,7 +320,8 @@ export interface IncidentEvidenceProfile {
   id: number;
   incidencia_id: number;
   file_name: string;
-  file_url: string;
+  download_url: string;
+  file_key: string;
   mime_type: string;
   file_size: number;
   created_at: string;
@@ -342,6 +344,7 @@ export interface IncidentProfile {
   incidencia_type_id: number;
   state: 'PENDIENTE' | 'APROBADO' | 'DENEGADO';
   comment: string | null;
+  rejection_reason?: string | null;
   tipo: IncidentTypeProfile;
   permiso: IncidentPermissionProfile | null;
   evidencias: IncidentEvidenceProfile[];
@@ -363,7 +366,6 @@ export interface IncidentListResponse extends PageResponse<IncidentProfile> {
 export interface CreateIncidentRequest {
   incidencia_type_id: number;
   comment?: string | null;
-  tenant_user_id?: number | null;
 }
 
 export interface PatchIncidentRequest {
@@ -378,9 +380,14 @@ export interface IncidentStateChangeRequest {
 
 export interface CreateEvidenceRequest {
   file_name: string;
-  file_url: string;
+  file_key: string;
   mime_type: string;
   file_size: number;
+}
+
+export interface PresignedUrlResponse {
+  presigned_url: string;
+  object_key: string;
 }
 
 export interface NotifyIncidentRequest {

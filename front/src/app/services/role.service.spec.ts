@@ -45,6 +45,29 @@ describe('RoleService', () => {
     });
   });
 
+  describe('availableRoles', () => {
+    it('should have an empty availableRoles signal on creation', () => {
+      expect(service.availableRoles()).toEqual([]);
+    });
+
+    it('should set availableRoles via setAvailableRoles', () => {
+      service.setAvailableRoles(['admin-saas']);
+      expect(service.availableRoles()).toEqual(['admin-saas']);
+    });
+
+    it('should overwrite previously set availableRoles', () => {
+      service.setAvailableRoles(['admin-saas', 'admin-tenant']);
+      service.setAvailableRoles(['usuario']);
+      expect(service.availableRoles()).toEqual(['usuario']);
+    });
+
+    it('clearSession should reset availableRoles to empty', () => {
+      service.setAvailableRoles(['admin-tenant', 'usuario']);
+      service.clearSession();
+      expect(service.availableRoles()).toEqual([]);
+    });
+  });
+
   describe('switchRole', () => {
     it('should update role signal', () => {
       service.switchRole('admin-saas');

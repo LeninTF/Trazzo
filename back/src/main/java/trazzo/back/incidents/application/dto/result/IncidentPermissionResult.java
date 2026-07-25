@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record IncidentPermissionResult(
-        String id,
-        String incidenciaId,
+        Integer id,
+        Integer incidenciaId,
         LocalDate startDate,
         LocalDate endDate,
         int daysGranted,

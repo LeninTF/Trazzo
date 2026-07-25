@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import trazzo.back.incidents.domain.exception.InvalidIncidentEvidenceException;
 
 class IncidentEvidenceTest {
 
@@ -18,13 +19,13 @@ class IncidentEvidenceTest {
     void createWithValidFields() {
         var before = LocalDateTime.now();
         var evidence = IncidentEvidence.create(
-                "inc-1", "documento.pdf", "http://files/doc.pdf",
+                1, "documento.pdf", "http://files/doc.pdf",
                 "application/pdf", 1024
         );
         var after = LocalDateTime.now();
 
-        assertNotNull(evidence.getId());
-        assertEquals("inc-1", evidence.getIncidentId());
+        assertNull(evidence.getId());
+        assertEquals(1, evidence.getIncidentId());
         assertEquals("documento.pdf", evidence.getFileName());
         assertEquals("http://files/doc.pdf", evidence.getFileKey());
         assertEquals("application/pdf", evidence.getMimeType());
@@ -42,14 +43,12 @@ class IncidentEvidenceTest {
         assertFalse(evidence.getUpdatedAt().isAfter(after));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void createWithBlankIncidentIdThrowsException(String incidentId) {
+    @Test
+    void createWithNullIncidentIdThrowsException() {
         assertThrows(
-                IllegalArgumentException.class,
+                InvalidIncidentEvidenceException.class,
                 () -> IncidentEvidence.create(
-                        incidentId, "doc.pdf", "http://url", "pdf", 100
+                        null, "doc.pdf", "http://url", "pdf", 100
                 )
         );
     }
@@ -61,7 +60,7 @@ class IncidentEvidenceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentEvidence.create(
-                        "inc-1", fileName, "http://url", "pdf", 100
+                        1, fileName, "http://url", "pdf", 100
                 )
         );
     }
@@ -73,7 +72,7 @@ class IncidentEvidenceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentEvidence.create(
-                        "inc-1", "doc.pdf", fileKey, "pdf", 100
+                        1, "doc.pdf", fileKey, "pdf", 100
                 )
         );
     }
@@ -85,7 +84,7 @@ class IncidentEvidenceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentEvidence.create(
-                        "inc-1", "doc.pdf", "http://url", mimeType, 100
+                        1, "doc.pdf", "http://url", mimeType, 100
                 )
         );
     }
@@ -94,7 +93,7 @@ class IncidentEvidenceTest {
     void createWithZeroFileSizeThrowsException() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 0)
+                () -> IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 0)
         );
     }
 
@@ -102,7 +101,7 @@ class IncidentEvidenceTest {
     void createWithNegativeFileSizeThrowsException() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", -1)
+                () -> IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", -1)
         );
     }
 
@@ -111,7 +110,7 @@ class IncidentEvidenceTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> IncidentEvidence.create(
-                        "inc-1", "doc.pdf", "http://url", "pdf",
+                        1, "doc.pdf", "http://url", "pdf",
                         IncidentEvidence.MAX_FILE_SIZE_BYTES + 1
                 )
         );
@@ -120,7 +119,7 @@ class IncidentEvidenceTest {
     @Test
     void createWithMaxFileSizeIsValid() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf",
+                1, "doc.pdf", "http://url", "pdf",
                 IncidentEvidence.MAX_FILE_SIZE_BYTES
         );
         assertEquals(IncidentEvidence.MAX_FILE_SIZE_BYTES, evidence.getFileSize());
@@ -132,12 +131,12 @@ class IncidentEvidenceTest {
     void restoreWithAllFields() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 1024, false, null, now, now
         );
 
-        assertEquals("ev-1", evidence.getId());
-        assertEquals("inc-1", evidence.getIncidentId());
+        assertEquals(1, evidence.getId());
+        assertEquals(1, evidence.getIncidentId());
         assertEquals("doc.pdf", evidence.getFileName());
         assertEquals("http://url", evidence.getFileKey());
         assertEquals("pdf", evidence.getMimeType());
@@ -150,10 +149,10 @@ class IncidentEvidenceTest {
     }
 
     @Test
-    void restoreWithBlankIdNormalizesToNull() {
+    void restoreWithNullIdIsAllowed() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                " ", "inc-1", "doc.pdf", "http://url", "pdf",
+                null, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, now, now
         );
         assertNull(evidence.getId());
@@ -163,7 +162,7 @@ class IncidentEvidenceTest {
     void restoreWithDeletedIsTrue() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, true, now, now, now
         );
 
@@ -175,7 +174,7 @@ class IncidentEvidenceTest {
     void restoreWithNullDeletedAt() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, true, null, now, now
         );
 
@@ -190,7 +189,7 @@ class IncidentEvidenceTest {
         var updatedAt = createdAt.plusMinutes(1);
 
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, uploadedAt, createdAt, updatedAt
         );
 
@@ -204,7 +203,7 @@ class IncidentEvidenceTest {
         var updatedAt = LocalDateTime.now();
 
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, null, updatedAt
         );
 
@@ -218,7 +217,7 @@ class IncidentEvidenceTest {
     @Test
     void markAsDeletedSetsDeletedAndDeletedAt() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf", 100
+                1, "doc.pdf", "http://url", "pdf", 100
         );
 
         assertFalse(evidence.isDeleted());
@@ -234,7 +233,7 @@ class IncidentEvidenceTest {
     void markAsDeletedWhenAlreadyDeletedDoesNothing() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, true, now, now, now
         );
         var deletedAtBefore = evidence.getDeletedAt();
@@ -254,7 +253,7 @@ class IncidentEvidenceTest {
     @Test
     void markAsDeletedUpdatesUpdatedAt() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf", 100
+                1, "doc.pdf", "http://url", "pdf", 100
         );
         var originalUpdatedAt = evidence.getUpdatedAt();
         evidence.clock = Clock.fixed(
@@ -273,7 +272,7 @@ class IncidentEvidenceTest {
         var createdAt = uploadedAt.minusHours(1);
         var updatedAt = uploadedAt.plusHours(1);
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, uploadedAt, createdAt, updatedAt
         );
         var clock = Clock.fixed(
@@ -289,48 +288,38 @@ class IncidentEvidenceTest {
     @Test
     void belongsToReturnsTrueForMatchingIncidentId() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf", 100
+                1, "doc.pdf", "http://url", "pdf", 100
         );
 
-        assertTrue(evidence.belongsTo("inc-1"));
+        assertTrue(evidence.belongsTo(1));
     }
 
     @Test
     void belongsToReturnsFalseForDifferentIncidentId() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf", 100
+                1, "doc.pdf", "http://url", "pdf", 100
         );
 
-        assertFalse(evidence.belongsTo("other-inc"));
+        assertFalse(evidence.belongsTo(99));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void belongsToWithBlankIncidentIdThrowsException(String incidentId) {
+    @Test
+    void belongsToWithNullIncidentIdThrowsException() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "pdf", 100
+                1, "doc.pdf", "http://url", "pdf", 100
         );
         assertThrows(
-                IllegalArgumentException.class,
-                () -> evidence.belongsTo(incidentId)
+                InvalidIncidentEvidenceException.class,
+                () -> evidence.belongsTo(null)
         );
     }
 
     /* == VALIDATION TESTS == */
 
     @Test
-    void createTrimsWhitespaceFromIncidentId() {
-        var evidence = IncidentEvidence.create(
-                "  inc-1  ", "doc.pdf", "http://url", "pdf", 100
-        );
-        assertEquals("inc-1", evidence.getIncidentId());
-    }
-
-    @Test
     void createTrimsWhitespaceFromFileName() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "  doc.pdf  ", "http://url", "pdf", 100
+                1, "  doc.pdf  ", "http://url", "pdf", 100
         );
         assertEquals("doc.pdf", evidence.getFileName());
     }
@@ -338,7 +327,7 @@ class IncidentEvidenceTest {
     @Test
     void createTrimsWhitespaceFromFileKey() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "  http://url  ", "pdf", 100
+                1, "doc.pdf", "  http://url  ", "pdf", 100
         );
         assertEquals("http://url", evidence.getFileKey());
     }
@@ -346,7 +335,7 @@ class IncidentEvidenceTest {
     @Test
     void createTrimsWhitespaceFromMimeType() {
         var evidence = IncidentEvidence.create(
-                "inc-1", "doc.pdf", "http://url", "  pdf  ", 100
+                1, "doc.pdf", "http://url", "  pdf  ", 100
         );
         assertEquals("pdf", evidence.getMimeType());
     }

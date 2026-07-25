@@ -11,9 +11,9 @@ class IncidentTypeEntityTest {
     @Test
     void createInstance() {
         var now = LocalDateTime.now();
-        var entity = new IncidentTypeEntity("id-1", "Permiso", "Desc", true, now, now);
+        var entity = new IncidentTypeEntity(1, "Permiso", "Desc", true, now, now);
 
-        assertEquals("id-1", entity.getId());
+        assertEquals(1, entity.getId());
         assertEquals("Permiso", entity.getNombre());
         assertEquals("Desc", entity.getDescripcion());
         assertTrue(entity.isActivo());
@@ -24,12 +24,12 @@ class IncidentTypeEntityTest {
     @Test
     void settersWorkCorrectly() {
         var entity = new IncidentTypeEntity();
-        entity.setId("id-1");
+        entity.setId(1);
         entity.setNombre("Permiso");
         entity.setDescripcion("Desc");
         entity.setActivo(false);
 
-        assertEquals("id-1", entity.getId());
+        assertEquals(1, entity.getId());
         assertEquals("Permiso", entity.getNombre());
         assertFalse(entity.isActivo());
     }

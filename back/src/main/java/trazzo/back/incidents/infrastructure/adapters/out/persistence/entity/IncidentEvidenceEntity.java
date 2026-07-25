@@ -17,16 +17,16 @@ import java.time.LocalDateTime;
 public class IncidentEvidenceEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "incidencia_id", nullable = false, length = 36)
-    private String incidentId;
+    @Column(name = "incidencia_id", nullable = false)
+    private Integer incidentId;
 
     @Column(name = "file_name", nullable = false, length = 255)
     private String fileName;
 
-    @Column(name = "file_url", nullable = false, length = 500)
+    @Column(name = "file_key", nullable = false, length = 500)
     private String fileKey;
 
     @Column(name = "mime_type", nullable = false, length = 100)

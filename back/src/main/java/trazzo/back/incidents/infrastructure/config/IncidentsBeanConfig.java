@@ -24,9 +24,8 @@ public class IncidentsBeanConfig {
     public IncidentUseCase incidentUseCase(IncidentRepositoryPort incidentRepository,
                                            IncidentTypeRepositoryPort typeRepository,
                                            TenantUserPort tenantUserPort,
-                                           EventPublisherPort eventPublisher,
-                                           EvidenceUrlResolver evidenceUrlResolver) {
-        return new IncidentService(incidentRepository, typeRepository, tenantUserPort, eventPublisher, evidenceUrlResolver);
+                                           EventPublisherPort eventPublisher) {
+        return new IncidentService(incidentRepository, typeRepository, tenantUserPort, eventPublisher);
     }
 
     @Bean

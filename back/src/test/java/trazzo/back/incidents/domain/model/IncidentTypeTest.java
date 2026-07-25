@@ -20,7 +20,7 @@ class IncidentTypeTest {
         var type = IncidentType.create("Urgente", "Incidencias urgentes");
         var after = LocalDateTime.now();
 
-        assertNotNull(type.getId());
+        assertNull(type.getId());
         assertEquals("Urgente", type.getNombre());
         assertEquals("Incidencias urgentes", type.getDescripcion());
         assertTrue(type.isActivo());
@@ -53,7 +53,7 @@ class IncidentTypeTest {
     @Test
     void createInitialState() {
         var type = IncidentType.create("Urgente", "Desc");
-        assertNotNull(type.getId());
+        assertNull(type.getId());
         assertTrue(type.isActivo());
         assertNotNull(type.getCreatedAt());
         assertNotNull(type.getUpdatedAt());
@@ -66,11 +66,11 @@ class IncidentTypeTest {
     void restoreWithAllFields() {
         var now = LocalDateTime.now();
         var type = IncidentType.restore(
-                "id-1", "Normal", "Incidencias normales",
+                1, "Normal", "Incidencias normales",
                 false, now, now
         );
 
-        assertEquals("id-1", type.getId());
+        assertEquals(1, type.getId());
         assertEquals("Normal", type.getNombre());
         assertEquals("Incidencias normales", type.getDescripcion());
         assertFalse(type.isActivo());
@@ -79,10 +79,10 @@ class IncidentTypeTest {
     }
 
     @Test
-    void restoreWithBlankIdNormalizesToNull() {
+    void restoreWithNullIdIsAllowed() {
         var now = LocalDateTime.now();
         var type = IncidentType.restore(
-                " ", "Normal", null, true, now, now
+                null, "Normal", null, true, now, now
         );
         assertNull(type.getId());
     }
@@ -92,7 +92,7 @@ class IncidentTypeTest {
         var now = LocalDateTime.now();
         assertThrows(
                 IllegalArgumentException.class,
-                () -> IncidentType.restore("id-1", " ", "desc", true, now, now)
+                () -> IncidentType.restore(1, " ", "desc", true, now, now)
         );
     }
 
@@ -100,7 +100,7 @@ class IncidentTypeTest {
     void restoreWithBlankDescripcionNormalizesToNull() {
         var now = LocalDateTime.now();
         var type = IncidentType.restore(
-                "id-1", "Normal", " ", true, now, now
+                1, "Normal", " ", true, now, now
         );
         assertNull(type.getDescripcion());
     }
@@ -180,7 +180,7 @@ class IncidentTypeTest {
     @Test
     void activateInactiveType() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Tipo", "Desc", false, now, now);
+        var type = IncidentType.restore(1, "Tipo", "Desc", false, now, now);
 
         assertFalse(type.isActivo());
         type.activate();
@@ -201,7 +201,7 @@ class IncidentTypeTest {
     @Test
     void activationUpdatesUpdatedAt() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "Tipo", "Desc", false, now, now);
+        var type = IncidentType.restore(1, "Tipo", "Desc", false, now, now);
         var originalUpdatedAt = type.getUpdatedAt();
         type.clock = Clock.fixed(
                 originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
@@ -256,16 +256,9 @@ class IncidentTypeTest {
     }
 
     @Test
-    void restoreTrimsWhitespaceFromId() {
-        var now = LocalDateTime.now();
-        var type = IncidentType.restore("  id-1  ", "Normal", null, true, now, now);
-        assertEquals("id-1", type.getId());
-    }
-
-    @Test
     void restoreTrimsWhitespaceFromNombre() {
         var now = LocalDateTime.now();
-        var type = IncidentType.restore("id-1", "  Normal  ", null, true, now, now);
+        var type = IncidentType.restore(1, "  Normal  ", null, true, now, now);
         assertEquals("Normal", type.getNombre());
     }
 

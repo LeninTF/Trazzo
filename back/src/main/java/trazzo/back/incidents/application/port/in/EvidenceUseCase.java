@@ -6,7 +6,8 @@ import trazzo.back.incidents.application.dto.result.IncidentEvidenceResult;
 import java.util.List;
 
 public interface EvidenceUseCase {
-    IncidentEvidenceResult create(String incidentId, CreateEvidenceCommand command);
-    List<IncidentEvidenceResult> findAllByIncidentId(String incidentId);
-    void delete(String incidentId, String evidenceId);
+    IncidentEvidenceResult create(Integer incidentId, CreateEvidenceCommand command);
+    List<IncidentEvidenceResult> findAllByIncidentId(Integer incidentId);
+    IncidentEvidenceResult findEvidence(Integer incidentId, Integer evidenceId);
+    void delete(Integer incidentId, Integer evidenceId);
 }

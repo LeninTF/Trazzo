@@ -20,6 +20,8 @@ import org.springframework.security.web.header.writers.DelegatingRequestMatcherH
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter.XFrameOptionsMode;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import javax.sql.DataSource;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -56,6 +58,12 @@ public class SecurityConfig {
     }
 
     @Bean
+    @ConditionalOnBean(DataSource.class)
+    TenantContextGuard tenantContextGuard(DataSource dataSource) {
+        return new TenantContextGuard(dataSource);
+    }
+
+    @Bean
     FilterRegistrationBean<JwtAuthFilter> jwtAuthFilterRegistration(JwtAuthFilter jwtAuthFilter) {
         FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(jwtAuthFilter);
         registration.setEnabled(false);
@@ -67,6 +75,7 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
+            @org.springframework.lang.Nullable TenantContextGuard tenantContextGuard,
             @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
             @Value("${spring.h2.console.path:/h2-console}") String h2ConsolePath
     ) throws Exception {
@@ -95,6 +104,10 @@ public class SecurityConfig {
                 .authenticationEntryPoint((req, res, e) -> res.setStatus(401))
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        if (tenantContextGuard != null) {
+            http.addFilterAfter(tenantContextGuard, UsernamePasswordAuthenticationFilter.class);
+        }
 
         return http.build();
     }

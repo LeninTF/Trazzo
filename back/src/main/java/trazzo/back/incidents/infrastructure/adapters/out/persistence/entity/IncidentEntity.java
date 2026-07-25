@@ -20,14 +20,14 @@ import java.util.List;
 public class IncidentEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "tenant_user_id", nullable = false, length = 36)
-    private String tenantUserId;
+    @Column(name = "tenant_user_id", nullable = false)
+    private Integer tenantUserId;
 
-    @Column(name = "incidencia_type_id", nullable = false, length = 36)
-    private String incidentTypeId;
+    @Column(name = "incidencia_type_id", nullable = false)
+    private Integer incidentTypeId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

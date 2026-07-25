@@ -16,7 +16,11 @@ public record IncidentPermissionResponse(
         @JsonProperty("updated_at") LocalDateTime updatedAt
 ) {
     public static IncidentPermissionResponse from(IncidentPermissionResult result) {
-        return new IncidentPermissionResponse(result.id(), result.incidenciaId(), result.startDate(),
+        return new IncidentPermissionResponse(toStr(result.id()), toStr(result.incidenciaId()), result.startDate(),
                 result.endDate(), result.daysGranted(), result.createdAt(), result.updatedAt());
+    }
+
+    private static String toStr(Integer value) {
+        return value != null ? String.valueOf(value) : null;
     }
 }

@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface IncidentTypeUseCase {
     IncidentTypeResult create(CreateIncidentTypeCommand command);
-    Optional<IncidentTypeResult> findById(String id);
+    Optional<IncidentTypeResult> findById(Integer id);
     PaginatedResult<IncidentTypeResult> findAll(Boolean activo, int page, int size);
-    IncidentTypeResult patch(String id, PatchIncidentTypeCommand command);
+    IncidentTypeResult patch(Integer id, PatchIncidentTypeCommand command);
 }

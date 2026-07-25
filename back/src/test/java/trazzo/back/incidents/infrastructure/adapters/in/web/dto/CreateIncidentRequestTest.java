@@ -20,21 +20,21 @@ class CreateIncidentRequestTest {
 
     @Test
     void validRequestPassesValidation() {
-        var request = new CreateIncidentRequest("u-1", "comment", "t-1");
+        var request = new CreateIncidentRequest("t-1", "comment");
         var violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }
 
     @Test
-    void blankTenantUserIdFailsValidation() {
-        var request = new CreateIncidentRequest(" ", "comment", "t-1");
+    void blankIncidenciaTypeIdFailsValidation() {
+        var request = new CreateIncidentRequest(" ", "comment");
         var violations = validator.validate(request);
         assertFalse(violations.isEmpty());
     }
 
     @Test
     void nullCommentIsValid() {
-        var request = new CreateIncidentRequest("u-1", null, "t-1");
+        var request = new CreateIncidentRequest("t-1", null);
         var violations = validator.validate(request);
         assertTrue(violations.isEmpty());
     }

@@ -47,6 +47,33 @@ describe('FeriadosComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should not call create when addFeriado form is invalid', async () => {
+    component.openNewForm();
+    component.feriadoForm.setValue({ fecha: '', nombre: '', tipo: '' });
+    mockApi.corehr.createNonWorkingDay.calls.reset();
+    await component.addFeriado();
+    expect(mockApi.corehr.createNonWorkingDay).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
+  });
+
+  it('should not start adding when addFeriado is invalid even after setting only fecha', async () => {
+    component.openNewForm();
+    component.feriadoForm.setValue({ fecha: '2025-07-28', nombre: '', tipo: 'nacional' });
+    mockApi.corehr.createNonWorkingDay.calls.reset();
+    await component.addFeriado();
+    expect(mockApi.corehr.createNonWorkingDay).not.toHaveBeenCalled();
+  });
+
+  it('should not call patch when saveEdit form is invalid', async () => {
+    const feriado = { id: 1, fecha: '2025-01-01', nombre: 'Año Nuevo', tipo: 'nacional' };
+    component.startEdit(feriado);
+    component.editFeriadoForm.setValue({ fecha: '', nombre: '', tipo: '' });
+    mockApi.corehr.patchNonWorkingDay.calls.reset();
+    await component.saveEdit(feriado);
+    expect(mockApi.corehr.patchNonWorkingDay).not.toHaveBeenCalled();
+    expect(mockToast.success).not.toHaveBeenCalled();
+  });
+
   it('should load feriados on init', () => {
     expect(mockApi.corehr.listNonWorkingDays).toHaveBeenCalled();
     expect(component.feriados.length).toBe(2);
@@ -142,5 +169,17 @@ describe('FeriadosComponent', () => {
     component.cancelEdit();
     expect(component.editingFeriadoId).toBeNull();
     expect(component.editFeriadoForm.pristine).toBeTrue();
+  });
+
+  it('should fall back to empty string when description is null', async () => {
+    mockApi.corehr.listNonWorkingDays.and.returnValue(of({
+      content: [
+        { id: 5, date: '2025-08-06', description: null, is_recurring: false, created_at: new Date().toISOString() },
+      ],
+      page: 0, size: 100, totalElements: 1, totalPages: 1,
+    }));
+    await component.cargarFeriados();
+    expect(component.feriados[0].nombre).toBe('');
+    expect(component.feriados[0].id).toBe(5);
   });
 });

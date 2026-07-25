@@ -40,4 +40,11 @@ class LocalStorageStubTest {
                 () -> stub.buildPublicUrl("key"));
         assertTrue(ex.getMessage().contains("Cloudflare R2 is not configured"));
     }
+
+    @Test
+    void downloadFileShouldThrowStorageException() {
+        var ex = assertThrows(StorageException.class,
+                () -> stub.downloadFile("key"));
+        assertTrue(ex.getMessage().contains("Cloudflare R2 is not configured"));
+    }
 }

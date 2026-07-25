@@ -17,8 +17,8 @@ import java.time.LocalDateTime;
 public class IncidentTypeEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     @Column(nullable = false, unique = true, length = 100)
     private String nombre;

@@ -13,11 +13,11 @@ class IncidentEntityTest {
     @Test
     void createInstance() {
         var now = LocalDateTime.now();
-        var entity = new IncidentEntity("inc-1", "u-1", "t-1", IncidentState.PENDIENTE,
+        var entity = new IncidentEntity(1, 1, 1, IncidentState.PENDIENTE,
                 "comment", null, now, now, List.of(), null);
 
-        assertEquals("inc-1", entity.getId());
-        assertEquals("u-1", entity.getTenantUserId());
+        assertEquals(1, entity.getId());
+        assertEquals(1, entity.getTenantUserId());
         assertEquals(IncidentState.PENDIENTE, entity.getState());
         assertEquals("comment", entity.getComment());
         assertNull(entity.getRejectionReason());
@@ -28,11 +28,11 @@ class IncidentEntityTest {
     @Test
     void settersWorkCorrectly() {
         var entity = new IncidentEntity();
-        entity.setId("inc-1");
+        entity.setId(1);
         entity.setState(IncidentState.APROBADO);
         entity.setComment("test");
 
-        assertEquals("inc-1", entity.getId());
+        assertEquals(1, entity.getId());
         assertEquals(IncidentState.APROBADO, entity.getState());
         assertEquals("test", entity.getComment());
     }

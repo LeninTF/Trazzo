@@ -3,8 +3,8 @@ package trazzo.back.incidents.domain.event;
 import java.time.LocalDateTime;
 
 public record IncidentEvidenceDeletedEvent(
-        String incidentId,
-        String evidenceId,
+        Integer incidentId,
+        Integer evidenceId,
         LocalDateTime occurredAt
 ) implements IncidentDomainEvent {
 }

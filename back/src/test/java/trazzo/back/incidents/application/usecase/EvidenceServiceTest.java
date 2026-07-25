@@ -9,6 +9,8 @@ import trazzo.back.incidents.application.dto.command.CreateEvidenceCommand;
 import trazzo.back.incidents.application.port.out.EventPublisherPort;
 import trazzo.back.incidents.application.port.out.IncidentRepositoryPort;
 import trazzo.back.incidents.domain.model.Incident;
+import trazzo.back.incidents.domain.model.IncidentEvidence;
+import trazzo.back.incidents.domain.model.IncidentState;
 import trazzo.back.shared.application.port.out.FileStoragePort;
 
 import java.util.Optional;
@@ -42,61 +44,136 @@ class EvidenceServiceTest {
     }
 
     @Test
-    void create_shouldReturnResult() {
-        var cmd = new CreateEvidenceCommand("file.pdf", "key-1", "application/pdf", 1024);
-        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
-        when(fileStoragePort.buildPublicUrl("key-1")).thenReturn("http://url/key-1");
+    void createEvidenceSuccessfully() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                "comment", null, null, null, List.of(), now, now);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepo.save(any())).thenAnswer(invocation -> {
+            Incident inc = invocation.getArgument(0);
+            Integer incId = inc.getId() != null ? inc.getId() : 1;
+            var ev = inc.getEvidences().get(0);
+            var persistedEv = IncidentEvidence.restore(10, incId, ev.getFileName(), ev.getFileKey(), ev.getMimeType(), ev.getFileSize(), false, null, ev.getUploadedAt(), ev.getCreatedAt(), ev.getUpdatedAt());
+            return Incident.restore(incId, inc.getTenantUserId(), inc.getIncidentTypeId(), inc.getState(), inc.getComment(), inc.getRejectionReason(), inc.getType(), inc.getPermission(), List.of(persistedEv), inc.getCreatedAt(), inc.getUpdatedAt());
+        });
 
-        var result = service.create("inc-1", cmd);
+        var command = new CreateEvidenceCommand("doc.pdf", "file-key", "pdf", 100);
+        var result = service.create(1, command);
 
-        assertThat(result.fileName()).isEqualTo("file.pdf");
-        verify(incidentRepository).save(any(Incident.class));
+        assertEquals("doc.pdf", result.fileName());
+        assertEquals("/api/v1/incidentes/1/evidencias/10/descarga", result.downloadUrl());
+        assertEquals("pdf", result.mimeType());
+        assertEquals(100, result.fileSize());
+        verify(eventPublisher).publish(any());
     }
 
     @Test
-    void create_shouldThrowWhenIncidentNotFound() {
-        var cmd = new CreateEvidenceCommand("file.pdf", "key-1", "application/pdf", 1024);
-        when(incidentRepository.findById("bad-id")).thenReturn(Optional.empty());
+    void createEvidenceWithNonExistentIncidentThrowsException() {
+        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.create("bad-id", cmd))
-                .isInstanceOf(IllegalArgumentException.class);
+        var command = new CreateEvidenceCommand("doc.pdf", "http://url", "pdf", 100);
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(999, command));
     }
 
     @Test
-    void findAllByIncidentId_shouldReturnList() {
-        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(sampleIncident()));
+    void findAllByIncidentId() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now);
+        incident.addEvidence(trazzo.back.incidents.domain.model.IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100));
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
 
-        var result = service.findAllByIncidentId("inc-1");
+        var results = service.findAllByIncidentId(1);
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    void findAllByIncidentId_shouldThrowWhenNotFound() {
-        when(incidentRepository.findById("bad-id")).thenReturn(Optional.empty());
+    void findAllByIncidentIdExcludesDeletedEvidences() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                1, 1, "doc.pdf", "http://url", "pdf", 100, false, null, now, now, now);
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        incident.deleteEvidence(1);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
 
-        assertThatThrownBy(() -> service.findAllByIncidentId("bad-id"))
-                .isInstanceOf(IllegalArgumentException.class);
+        var results = service.findAllByIncidentId(1);
+
+        assertTrue(results.isEmpty());
     }
 
     @Test
-    void delete_shouldDeleteEvidence() {
-        var incident = sampleIncident();
-        incident.addEvidence(trazzo.back.incidents.domain.model.IncidentEvidence.create(
-                "inc-1", "file.pdf", "key-1", "application/pdf", 1024));
-        when(incidentRepository.findById("inc-1")).thenReturn(Optional.of(incident));
-
-        var evidenceId = incident.getEvidences().get(0).getId();
-        service.delete("inc-1", evidenceId);
-
-        verify(incidentRepository).save(any(Incident.class));
+    void findAllByIncidentIdWithNonExistentIncidentThrowsException() {
+        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.findAllByIncidentId(999));
     }
 
     @Test
-    void delete_shouldThrowWhenIncidentNotFound() {
-        when(incidentRepository.findById("bad-id")).thenReturn(Optional.empty());
+    void findEvidenceSuccessfully() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                1, 1, "doc.pdf", "file-key", "application/pdf", 100, false, null, now, now, now);
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
 
-        assertThatThrownBy(() -> service.delete("bad-id", "ev-id"))
-                .isInstanceOf(IllegalArgumentException.class);
+        var result = service.findEvidence(1, 1);
+
+        assertEquals(1, result.id());
+        assertEquals("doc.pdf", result.fileName());
+        assertEquals("file-key", result.fileKey());
+        assertEquals("/api/v1/incidentes/1/evidencias/1/descarga", result.downloadUrl());
+    }
+
+    @Test
+    void findEvidenceWithNonExistentIncidentThrowsException() {
+        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence(999, 1));
+    }
+
+    @Test
+    void findEvidenceWithNonExistentEvidenceIdThrowsException() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence(1, 999));
+    }
+
+    @Test
+    void findEvidenceExcludesDeletedEvidences() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                1, 1, "doc.pdf", "file-key", "application/pdf", 100, true, now, now, now, now);
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+
+        assertThrows(IllegalArgumentException.class, () -> service.findEvidence(1, 1));
+    }
+
+    @Test
+    void deleteEvidenceSuccessfully() {
+        var now = LocalDateTime.now();
+        var evidence = trazzo.back.incidents.domain.model.IncidentEvidence.restore(
+                1, 1, "doc.pdf", "http://url", "pdf", 100, false, null, now, now, now);
+        var incident = Incident.restore(1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(evidence), now, now);
+        when(incidentRepo.findById(1)).thenReturn(Optional.of(incident));
+        when(incidentRepo.save(any())).thenAnswer(invocation -> invocation.<Incident>getArgument(0));
+
+        service.delete(1, 1);
+
+        assertTrue(evidence.isDeleted());
+        verify(eventPublisher).publish(any());
+    }
+
+    @Test
+    void deleteEvidenceWithNonExistentIncidentThrowsException() {
+        when(incidentRepo.findById(999)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.delete(999, 1));
     }
 }

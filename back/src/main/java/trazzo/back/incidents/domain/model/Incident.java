@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,9 +29,9 @@ import trazzo.back.incidents.domain.specification.IncidentStateTransitionSpec;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Incident {
 
-    private String id;
-    private String tenantUserId;
-    private String incidentTypeId;
+    private Integer id;
+    private Integer tenantUserId;
+    private Integer incidentTypeId;
     private IncidentState state;
     private String comment;
     private String rejectionReason;
@@ -46,9 +45,9 @@ public class Incident {
     transient Clock clock = Clock.systemDefaultZone();
 
     private Incident(
-            String id,
-            String tenantUserId,
-            String incidentTypeId,
+            Integer id,
+            Integer tenantUserId,
+            Integer incidentTypeId,
             IncidentState state,
             String comment,
             String rejectionReason,
@@ -58,9 +57,9 @@ public class Incident {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this.id = normalizeOptionalId(id);
-        this.tenantUserId = requireText(tenantUserId, "tenantUserId");
-        this.incidentTypeId = requireText(incidentTypeId, "incidentTypeId");
+        this.id = id;
+        this.tenantUserId = requireNonNull(tenantUserId, "tenantUserId");
+        this.incidentTypeId = requireNonNull(incidentTypeId, "incidentTypeId");
         this.state = requireState(state);
         this.comment = normalizeOptionalText(comment);
         this.rejectionReason = normalizeOptionalText(rejectionReason);
@@ -86,10 +85,10 @@ public class Incident {
         }
     }
 
-    public static Incident create(String tenantUserId, String incidentTypeId, String comment) {
+    public static Incident create(Integer tenantUserId, Integer incidentTypeId, String comment) {
         LocalDateTime now = LocalDateTime.now();
         Incident incident = new Incident(
-                generateId(),
+                null,
                 tenantUserId,
                 incidentTypeId,
                 IncidentState.PENDIENTE,
@@ -111,9 +110,9 @@ public class Incident {
     }
 
     public static Incident restore(
-            String id,
-            String tenantUserId,
-            String incidentTypeId,
+            Integer id,
+            Integer tenantUserId,
+            Integer incidentTypeId,
             IncidentState state,
             String comment,
             String rejectionReason,
@@ -161,6 +160,18 @@ public class Incident {
 
     public void attachType(IncidentType type) {
         requirePending("Only pending incidents can accept a type");
+        assignActiveType(type);
+        touch();
+    }
+
+    public void hydrateType(IncidentType type) {
+        if (type == null) {
+            return;
+        }
+        assignActiveType(type);
+    }
+
+    private void assignActiveType(IncidentType type) {
         if (type == null) {
             throw new IllegalArgumentException("type is required");
         }
@@ -168,7 +179,6 @@ public class Incident {
             throw new InactiveIncidentTypeException("incident type must be active");
         }
         this.type = type;
-        touch();
     }
 
     public void addEvidence(IncidentEvidence evidence) {
@@ -188,7 +198,7 @@ public class Incident {
         recordEvent(new IncidentEvidenceRegisteredEvent(id, evidence.getId(), evidence.getFileName(), evidence.getFileKey(), updatedAt));
     }
 
-    public void deleteEvidence(String evidenceId) {
+    public void deleteEvidence(Integer evidenceId) {
         requirePending("Only pending incidents can delete evidence");
         IncidentEvidence evidence = findEvidence(evidenceId);
         if (!evidence.canBeDeleted(clock)) {
@@ -245,7 +255,7 @@ public class Incident {
     }
 
     private void requirePersistedId() {
-        if (id == null || id.isBlank()) {
+        if (id == null) {
             throw new InvalidIncidentStateException("incident id is required to create a permission");
         }
     }
@@ -254,8 +264,8 @@ public class Incident {
         return evidences.stream().anyMatch(evidence -> !evidence.isDeleted());
     }
 
-    private IncidentEvidence findEvidence(String evidenceId) {
-        String normalizedId = requireText(evidenceId, "evidenceId");
+    private IncidentEvidence findEvidence(Integer evidenceId) {
+        Integer normalizedId = requireNonNull(evidenceId, "evidenceId");
         return evidences.stream()
                 .filter(evidence -> normalizedId.equals(evidence.getId()))
                 .findFirst()
@@ -294,11 +304,11 @@ public class Incident {
         return value.trim();
     }
 
-    private static String normalizeOptionalId(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
+    private static Integer requireNonNull(Integer value, String fieldName) {
+        if (value == null) {
+            throw new IncidentValidationException(fieldName + " is required");
         }
-        return value.trim();
+        return value;
     }
 
     private static String normalizeOptionalText(String value) {
@@ -306,9 +316,5 @@ public class Incident {
             return null;
         }
         return value.trim();
-    }
-
-    private static String generateId() {
-        return UUID.randomUUID().toString();
     }
 }

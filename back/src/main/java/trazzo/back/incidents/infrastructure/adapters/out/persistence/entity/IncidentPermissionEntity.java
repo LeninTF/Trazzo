@@ -18,11 +18,11 @@ import java.time.LocalDateTime;
 public class IncidentPermissionEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "incidencia_id", nullable = false, length = 36, unique = true)
-    private String incidentId;
+    @Column(name = "incidencia_id", nullable = false, unique = true)
+    private Integer incidentId;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;

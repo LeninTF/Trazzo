@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
@@ -33,20 +34,49 @@ class TenantDataSeederTest {
         jdbc = mock(JdbcTemplate.class);
         passwordEncoder = mock(PasswordEncoder.class);
         userRepository = mock(UserRepositoryPort.class);
-        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "demo", "demo123");
+        seeder = new TenantDataSeeder(
+                tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                "demo",
+                "demo@trazzo.pe", "demo123",
+                "usuario@trazzo.pe", "usuario123"
+        );
     }
 
     @Test
     void constructor_throwsWhenSubDomainBlank() {
         assertThrows(IllegalStateException.class,
-                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "  ", "pass"));
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "  ",
+                        "demo@trazzo.pe", "demo123",
+                        "usuario@trazzo.pe", "usuario123"));
+    }
+
+    @Test
+    void constructor_throwsWhenDemoEmailBlank() {
+        assertThrows(IllegalStateException.class,
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "demo",
+                        "  ", "demo123",
+                        "usuario@trazzo.pe", "usuario123"));
+    }
+
+    @Test
+    void constructor_throwsWhenUsuarioPasswordBlank() {
+        assertThrows(IllegalStateException.class,
+                () -> new TenantDataSeeder(
+                        tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository,
+                        "demo",
+                        "demo@trazzo.pe", "demo123",
+                        "usuario@trazzo.pe", "  "));
     }
 
     @Test
     void run_whenDemoTenantExistsSkipsSeed() {
         when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.of(mock(Tenant.class)));
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verifyNoInteractions(schemaProvisioning);
         verify(tenantRepository, never()).save(any());
@@ -60,7 +90,7 @@ class TenantDataSeederTest {
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         mockTenantUserCreation();
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verify(jdbc, never()).queryForObject(contains("INSERT INTO plans"), eq(Integer.class), any());
         var settingsCaptor = ArgumentCaptor.forClass(TenantSettings.class);
@@ -84,7 +114,7 @@ class TenantDataSeederTest {
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         mockTenantUserCreation();
 
-        seeder.run();
+        seeder.run(mock(ApplicationArguments.class));
 
         verify(schemaProvisioning).provisionExisting(any(TenantSettings.class));
         var tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
@@ -98,7 +128,10 @@ class TenantDataSeederTest {
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(jdbc.queryForObject(eq("SELECT LASTVAL()"), eq(Integer.class))).thenReturn(42);
         when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class))).thenReturn(1L);
-        when(jdbc.queryForList(eq("SELECT id::text FROM role WHERE name = 'administrador'"), eq(String.class)))
-                .thenReturn(List.of("role-uuid"));
+        when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'administrador'"), eq(String.class))).thenReturn("role-uuid");
+
+        when(userRepository.findByEmail("usuario@trazzo.pe")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("usuario123")).thenReturn("encoded-usuario");
+        when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'usuario'"), eq(String.class))).thenReturn("usuario-role-uuid");
     }
 }
