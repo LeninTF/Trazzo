@@ -161,4 +161,59 @@ describe('Shop', () => {
       expect(component['submitting']()).toBeFalse();
     });
   });
+
+  it('should load plan matching the provided planId query param', async () => {
+    await setup('2', [plan(1, 'Basic', 9.99), plan(2, 'Pro', 49.99)]);
+    expect(component['plan']()?.id).toBe(2);
+  });
+
+  it('should return early from onSectionToggle when target is null', () => {
+    const event = { target: null } as unknown as Event;
+    component['onSectionToggle'](2, event);
+    expect(component['activeSection']()).toBe(1);
+  });
+
+  it('should not change activeSection when closing non-active section', () => {
+    component['setSection'](1);
+    const details = { open: false } as HTMLDetailsElement;
+    const event = { target: details } as unknown as Event;
+    component['onSectionToggle'](3, event);
+    expect(component['activeSection']()).toBe(1);
+  });
+
+  it('should set activeSection to 3 when unchecking anotherAdmin', () => {
+    component['formState'].update(s => ({ ...s, anotherAdmin: true }));
+    const event = { target: { checked: false } } as unknown as Event;
+    component['updateCheckboxField']('anotherAdmin', event);
+    expect(component['formState']().anotherAdmin).toBeFalse();
+    expect(component['activeSection']()).toBe(3);
+  });
+
+  it('should include admin fields in completedFields when anotherAdmin is true', () => {
+    component['formState'].update(s => ({
+      ...s, anotherAdmin: true,
+      firstName: 'A', lastNamePaterno: 'B', lastNameMaterno: 'C',
+      documentType: 'DNI', documentNumber: '1', email: 'e@e', phone: '9',
+      ruc: '20', companyName: 'Co', businessName: 'Bu', address: 'Av',
+      adminFirstName: 'X', adminLastNamePaterno: 'Y', adminLastNameMaterno: 'Z',
+      adminDocumentType: 'DNI', adminDocumentNumber: '2', adminEmail: 'f@f', adminPhone: '8',
+      terms: true,
+    }));
+    expect(component['completedFields']()).toBe(20);
+  });
+
+  it('should submit checkout with anotherAdmin fields when anotherAdmin is true', () => {
+    component['formState'].update(s => ({
+      ...s, terms: true, anotherAdmin: true,
+      adminFirstName: 'Jane', adminLastNamePaterno: 'Doe', adminLastNameMaterno: 'M',
+      adminDocumentType: 'DNI', adminDocumentNumber: '87654321',
+      adminEmail: 'admin@test.com', adminPhone: '999',
+    }));
+    const evt = { preventDefault: jasmine.createSpy('preventDefault') } as unknown as Event;
+    component['submitCheckout'](evt);
+    expect(mockSaas.checkout).toHaveBeenCalled();
+    const req = mockSaas.checkout.calls.mostRecent().args[0];
+    expect(req.anotherAdmin).toBeTrue();
+    expect(req.adminFirstName).toBe('Jane');
+  });
 });

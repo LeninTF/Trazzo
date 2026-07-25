@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClient } from '@angular/common/http';
 import { provideHttpClient } from '@angular/common/http';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
 import { Incidencias } from './incidencias';
@@ -164,5 +164,163 @@ describe('Incidencias (admin-tenant)', () => {
     spyOn(URL, 'revokeObjectURL');
     component.exportarCSV();
     expect(URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  it('should compute filtradas with combined estado and tipo filters', () => {
+    component.setFilterEstado('Pendiente');
+    component.setFilterTipo('Vacaciones');
+    expect(component.filtradas().length).toBe(1);
+    expect(component.filtradas()[0].tipo).toBe('Vacaciones');
+    expect(component.filtradas()[0].estado).toBe('Pendiente');
+  });
+
+  it('should clear filterTipo when toggling the same type', () => {
+    component.setFilterTipo('Vacaciones');
+    expect(component.filterTipo()).toBe('Vacaciones');
+    component.setFilterTipo('Vacaciones');
+    expect(component.filterTipo()).toBe('');
+  });
+
+  it('should return early from descargarArchivo when archivo is null', async () => {
+    const spy = spyOn(HttpClient.prototype, 'get');
+    await component.descargarArchivo({ ...component.solicitudes()[1], archivo: null });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should zero-pad metricas rechazadas value when count < 10', () => {
+    expect(component.metricas[2].valor).toBe('01');
+  });
+
+  it('should show Requieren atención when rechazadas > 0', () => {
+    expect(component.metricas[2].subtitulo).toBe('Requieren atención');
+  });
+
+  it('should show Sin incidencias críticas and zero-padded 00 when rechazadas is zero', () => {
+    component.solicitudes.set(component.solicitudes().filter(s => s.estado !== 'Rechazado'));
+    expect(component.metricas[2].valor).toBe('00');
+    expect(component.metricas[2].subtitulo).toBe('Sin incidencias críticas');
+  });
+
+  it('should not zero-pad metricas rechazadas when count >= 10', () => {
+    const rechazadas = Array.from({ length: 10 }, (_, i) => ({
+      id: 100 + i, colaborador: `User ${i}`, rol: '', tipo: 'Vacaciones',
+      periodo: '', detalle: '', estado: 'Rechazado' as const,
+      descripcion: '', fechaCreacion: '', archivo: null,
+    }));
+    component.solicitudes.set([...component.solicitudes().filter(s => s.estado !== 'Rechazado'), ...rechazadas]);
+    expect(component.metricas[2].valor).toBe(10);
+  });
+
+  it('should map evidence data to archivo in toSolicitud', () => {
+    const sol = component.solicitudes()[0];
+    expect(sol.archivo).not.toBeNull();
+    expect(sol.archivo?.nombre).toBe('doc.pdf');
+    expect(sol.archivo?.tipo).toBe('application/pdf');
+  });
+
+  it('should set archivo to null in toSolicitud when no evidence exists', () => {
+    const sol = component.solicitudes()[1];
+    expect(sol.archivo).toBeNull();
+  });
+
+  describe('deep branch coverage - 9 targeted branches', () => {
+    it('should handle cargarIncidencias error gracefully', async () => {
+      spyOn(mockApi.incidents, 'list').and.returnValue(throwError(() => new Error('Network fail')));
+      await component.cargarIncidencias();
+      expect(component.loading()).toBeFalse();
+    });
+
+    it('should handle aprobar error gracefully', async () => {
+      spyOn(mockApi.incidents, 'changeState').and.returnValue(throwError(() => new Error('fail')));
+      component.openModal(component.solicitudes()[0]);
+      await component.aprobar(component.solicitudes()[0]);
+      expect(component.modalOpen).toBeFalse();
+    });
+
+    it('should handle rechazar error gracefully', async () => {
+      spyOn(mockApi.incidents, 'changeState').and.returnValue(throwError(() => new Error('fail')));
+      component.openModal(component.solicitudes()[0]);
+      await component.rechazar(component.solicitudes()[0]);
+      expect(component.modalOpen).toBeFalse();
+    });
+
+    it('should handle descargarArchivo HTTP error gracefully', async () => {
+      spyOn(HttpClient.prototype, 'get').and.returnValue(throwError(() => new Error('Download fail')));
+      await component.descargarArchivo(component.solicitudes()[0]);
+      expect(component).toBeTruthy();
+    });
+
+    it('should handle toSolicitud with null created_at and null comment', async () => {
+      incidentsData = [{
+        id: 50, tenant_user_id: 50, incidencia_type_id: 50, state: 'PENDIENTE',
+        comment: null as any,
+        tipo: { id: 50, nombre: 'Vacaciones', descripcion: null, activo: true, created_at: '', updated_at: '' },
+        permiso: null, evidencias: [],
+        tenant_user: { id: 50, nombre: 'Ana', apellido_paterno: 'García', apellido_materno: 'López', email: 'ana@test.com' },
+        created_at: null as any, updated_at: '',
+      }];
+      await component.cargarIncidencias();
+      const sol = component.solicitudes()[0];
+      expect(sol.periodo).toBe('');
+      expect(sol.detalle).toBe('');
+      expect(sol.descripcion).toBe('');
+      expect(sol.fechaCreacion).toBe('');
+    });
+
+    it('should handle toSolicitud with unknown state mapping to Pendiente', async () => {
+      incidentsData = [{
+        id: 60, tenant_user_id: 60, incidencia_type_id: 60, state: 'UNKNOWN' as any,
+        comment: 'Test comment that is long enough to be sliced by the detail field',
+        tipo: { id: 60, nombre: 'Permiso', descripcion: null, activo: true, created_at: '', updated_at: '' },
+        permiso: null, evidencias: [],
+        tenant_user: { id: 60, nombre: 'Bob', apellido_paterno: 'Smith', apellido_materno: 'Jones', email: 'bob@test.com' },
+        created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
+      }];
+      await component.cargarIncidencias();
+      const sol = component.solicitudes()[0];
+      expect(sol.estado).toBe('Pendiente');
+      expect(sol.detalle).toBe('Test comment that is long enough to be s');
+    });
+
+    it('should handle toSolicitud with evidence file_size null', async () => {
+      incidentsData = [{
+        id: 70, tenant_user_id: 70, incidencia_type_id: 70, state: 'APROBADO',
+        comment: 'Test',
+        tipo: { id: 70, nombre: 'Permiso', descripcion: null, activo: true, created_at: '', updated_at: '' },
+        permiso: null,
+        evidencias: [{ id: 70, incidencia_id: 70, file_name: null as any, file_url: '#', mime_type: null as any, file_size: null as any, created_at: '', updated_at: '' }],
+        tenant_user: { id: 70, nombre: 'Eve', apellido_paterno: 'Lee', apellido_materno: '', email: 'eve@test.com' },
+        created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
+      }];
+      await component.cargarIncidencias();
+      const sol = component.solicitudes()[0];
+      expect(sol.archivo).not.toBeNull();
+      expect(sol.archivo?.nombre).toBe('archivo');
+      expect(sol.archivo?.tipo).toBe('application/octet-stream');
+      expect(sol.archivo?.tamano).toBe('—');
+    });
+
+    it('should set document.body.style.overflow on openModal and closeModal', () => {
+      component.openModal(component.solicitudes()[0]);
+      expect(document.body.style.overflow).toBe('hidden');
+      component.closeModal();
+      expect(document.body.style.overflow).toBe('');
+    });
+
+    it('should handle toSolicitud with file_size of 0 showing —', async () => {
+      incidentsData = [{
+        id: 80, tenant_user_id: 80, incidencia_type_id: 80, state: 'PENDIENTE',
+        comment: 'Zero size',
+        tipo: { id: 80, nombre: 'Otro', descripcion: null, activo: true, created_at: '', updated_at: '' },
+        permiso: null,
+        evidencias: [{ id: 80, incidencia_id: 80, file_name: 'empty.txt', file_url: '#', mime_type: 'text/plain', file_size: 0, created_at: '', updated_at: '' }],
+        tenant_user: { id: 80, nombre: 'Zoe', apellido_paterno: 'Kim', apellido_materno: '', email: 'zoe@test.com' },
+        created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
+      }];
+      await component.cargarIncidencias();
+      const sol = component.solicitudes()[0];
+      expect(sol.archivo).not.toBeNull();
+      expect(sol.archivo?.tamano).toBe('—');
+    });
   });
 });

@@ -1,6 +1,7 @@
 package trazzo.back.saasglobal.infrastructure.config;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -9,8 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantSchemaProvisioningPort;
+import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 
@@ -19,6 +22,8 @@ class TenantDataSeederTest {
     private TenantRepositoryPort tenantRepository;
     private TenantSchemaProvisioningPort schemaProvisioning;
     private JdbcTemplate jdbc;
+    private PasswordEncoder passwordEncoder;
+    private UserRepositoryPort userRepository;
     private TenantDataSeeder seeder;
 
     @BeforeEach
@@ -26,13 +31,15 @@ class TenantDataSeederTest {
         tenantRepository = mock(TenantRepositoryPort.class);
         schemaProvisioning = mock(TenantSchemaProvisioningPort.class);
         jdbc = mock(JdbcTemplate.class);
-        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, "demo");
+        passwordEncoder = mock(PasswordEncoder.class);
+        userRepository = mock(UserRepositoryPort.class);
+        seeder = new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "demo");
     }
 
     @Test
     void constructor_throwsWhenSubDomainBlank() {
         assertThrows(IllegalStateException.class,
-                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, "  "));
+                () -> new TenantDataSeeder(tenantRepository, schemaProvisioning, jdbc, passwordEncoder, userRepository, "  "));
     }
 
     @Test
@@ -51,6 +58,7 @@ class TenantDataSeederTest {
         when(jdbc.queryForList("SELECT id FROM plans WHERE name = ?", Integer.class, "Plan Demo"))
                 .thenReturn(List.of(7));
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mockTenantUserCreation();
 
         seeder.run();
 
@@ -74,6 +82,7 @@ class TenantDataSeederTest {
         when(jdbc.queryForObject(contains("INSERT INTO plans"), eq(Integer.class), eq("Plan Demo")))
                 .thenReturn(3);
         when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mockTenantUserCreation();
 
         seeder.run();
 
@@ -81,5 +90,14 @@ class TenantDataSeederTest {
         var tenantCaptor = ArgumentCaptor.forClass(Tenant.class);
         verify(tenantRepository).save(tenantCaptor.capture());
         assertEquals(3, tenantCaptor.getValue().getPlanId());
+    }
+
+    private void mockTenantUserCreation() {
+        when(userRepository.findByEmail("demo@trazzo.pe")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("demo123")).thenReturn("encoded");
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(jdbc.queryForObject(eq("SELECT LASTVAL()"), eq(Integer.class))).thenReturn(42);
+        when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class))).thenReturn(1L);
+        when(jdbc.queryForObject(eq("SELECT id FROM role WHERE name = 'administrador'"), eq(String.class))).thenReturn("role-uuid");
     }
 }

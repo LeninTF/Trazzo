@@ -22,6 +22,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class UserBiometriaRepositoryAdapterTest {
 
+    private static final String TEMPLATE = "YmFzZTY0dGVtcGxhdGU=";
+    private static final String AES_KEY = "YmFzZTY0YWVzS2V5";
+
     @Mock
     private UserBiometriaJpaRepository userBiometriaRepo;
 
@@ -35,9 +38,10 @@ class UserBiometriaRepositoryAdapterTest {
         e.setId(id);
         e.setTenantUserId(100L);
         e.setDeviceId(200L);
+        e.setDeviceCode("DVC-001");
         e.setFingerIndex(1);
-        e.setTemplateCifrado("template");
-        e.setLlaveCifrado("key");
+        e.setEncryptedTemplateBase64(TEMPLATE);
+        e.setEncryptedAesKeyBase64(AES_KEY);
         e.setCapturadoEn(now);
         e.setActivo(true);
         e.setCreatedAt(now);
@@ -47,7 +51,7 @@ class UserBiometriaRepositoryAdapterTest {
 
     @Test
     void save_shouldPersistAndReturnDomain() {
-        var domain = UserBiometria.restore(null, 100L, 200L, 1, "template", "key", now, true, now, now);
+        var domain = UserBiometria.restore(null, 100L, 200L, "DVC-001", 1, TEMPLATE, AES_KEY, null, null, now, true, now, now);
         var entity = createEntity(1L);
         when(userBiometriaRepo.save(any())).thenReturn(entity);
 

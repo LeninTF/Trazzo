@@ -202,6 +202,93 @@ describe('GestionRoles (tenant)', () => {
     component['cargarRoles']();
     expect(component.error()).toBe('No se pudieron cargar los roles.');
   });
+
+  it('should guardarCambios skip unchanged permissions and produce no API calls when toggled back', () => {
+    component.togglePermiso('gestion-trabajadores', 'crear');
+    component.togglePermiso('gestion-trabajadores', 'crear');
+
+    component.guardarCambios();
+
+    expect(mockOrg.assignPermissionToRole).not.toHaveBeenCalled();
+    expect(mockOrg.removePermissionFromRole).not.toHaveBeenCalled();
+    expect(component.mensajeGuardado).toBeTrue();
+  });
+
+  it('should guardarRol update path clear editandoRol and close modal on success', () => {
+    component.abrirModalEditarRol(component.roles[0]);
+    component.nuevoRolNombre = 'Admin Actualizado';
+    component.nuevoRolDescripcion = 'desc updated';
+
+    component.guardarRol();
+
+    expect(mockOrg.updateRole).toHaveBeenCalledWith('role-admin', { name: 'Admin Actualizado', description: 'desc updated' });
+    expect(component.editandoRol).toBeNull();
+    expect(component.mostrarModalRol).toBeFalse();
+  });
+
+  it('should eliminarRol clear rolSeleccionado when deleting the selected role', () => {
+    component.seleccionarRol('role-docente');
+    expect(component.rolSeleccionado).toBe('role-docente');
+
+    component.eliminarRol('role-docente');
+
+    expect(component.rolSeleccionado).toBe('role-admin');
+  });
+
+  it('should set error when listRolePermissions fails', () => {
+    mockOrg.listRolePermissions.and.returnValue(throwError(() => new Error('fail')));
+    component['cargarRoles']();
+    expect(component.error()).toBe('No se pudieron cargar los permisos de los roles.');
+  });
+
+  it('should show error toast when guardarRol create fails', () => {
+    mockOrg.createRole.and.returnValue(throwError(() => new Error('fail')));
+    component.abrirModalNuevoRol();
+    component.nuevoRolNombre = 'Fallo al crear';
+    component.guardarRol();
+    expect(mockToast.error).toHaveBeenCalledWith('No se pudo crear el rol.');
+  });
+
+  it('should show error toast when guardarRol update fails', () => {
+    mockOrg.updateRole.and.returnValue(throwError(() => new Error('fail')));
+    component.abrirModalEditarRol(component.roles[0]);
+    component.nuevoRolNombre = 'Fallo al editar';
+    component.guardarRol();
+    expect(mockToast.error).toHaveBeenCalledWith('No se pudo actualizar el rol.');
+  });
+
+  it('should toRol use DEFAULT_META for unknown role name', () => {
+    mockOrg.listRoles.and.returnValue(of({
+      content: [{ id: 'role-unknown', name: 'desconocido', description: 'x', createdAt: '2026-01-01', updatedAt: '2026-01-01' }],
+      page: 0, size: 100, total: 1, totalPages: 1,
+    }));
+    mockOrg.listRolePermissions.and.returnValue(of([]));
+    component['cargarRoles']();
+    const unknownRole = component.roles.find(r => r.id === 'role-unknown');
+    expect(unknownRole).toBeDefined();
+    expect(unknownRole!.color).toBe('#6B7280');
+    expect(unknownRole!.icono).toBe('bi-person');
+  });
+
+  it('should guardarCambios with both assign and remove changes', () => {
+    component.togglePermiso('perfil', 'ver-actualizar-datos');
+    component.togglePermiso('gestion-trabajadores', 'crear');
+    component.guardarCambios();
+    expect(mockOrg.assignPermissionToRole).toHaveBeenCalledWith('role-admin', 'perm-perfil');
+    expect(mockOrg.removePermissionFromRole).toHaveBeenCalledWith('role-admin', 'perm-crear');
+  });
+
+  it('should modulosVisibles filter to admin modules for non-docente non-admin roles', () => {
+    mockOrg.listRoles.and.returnValue(of({
+      content: [{ id: 'role-coord', name: 'coordinador', description: 'x', createdAt: '2026-01-01', updatedAt: '2026-01-01' }],
+      page: 0, size: 100, total: 1, totalPages: 1,
+    }));
+    mockOrg.listRolePermissions.and.returnValue(of([]));
+    component['cargarRoles']();
+    const ids = component.modulosVisibles().map(m => m.id);
+    expect(ids).toContain('gestion-trabajadores');
+    expect(ids).not.toContain('asistencia-docente');
+  });
 });
 
 // Regression test for a bug where the first render (before the backend responds)

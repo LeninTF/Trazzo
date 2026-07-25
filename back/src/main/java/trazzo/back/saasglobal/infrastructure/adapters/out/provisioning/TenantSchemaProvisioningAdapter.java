@@ -24,7 +24,7 @@ import trazzo.back.saasglobal.domain.model.multitenancy.TenantSettings;
 @Component
 public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioningPort {
 
-    private static final String SCHEMA_SCRIPT = "db/tenant/schema.sql";
+    private static final String SCHEMA_SCRIPT = "db/tenant/V1__tenant_db.sql";
     private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
     private final DataSource rawDataSource;
@@ -85,11 +85,6 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
         }
     }
 
-    // DDL statements cannot use JDBC parameters — identifiers are sanitized to [a-z0-9_] only.
-    // No IF NOT EXISTS: a name collision (e.g. two tenants deriving the same schema name) must
-    // fail loudly here rather than silently reusing another tenant's schema. Not wrapped in
-    // cleanup: if this itself fails, the schema was never created by us, so there is nothing to
-    // drop — dropping here on a collision would destroy the other tenant's existing schema.
     @SuppressWarnings("java:S2077")
     private void createSchema(String schemaName) {
         try (Connection conn = rawDataSource.getConnection();
@@ -97,6 +92,21 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
             stmt.execute("CREATE SCHEMA \"" + schemaName + "\"");
         } catch (SQLException e) {
             throw new TenantProvisioningException("Failed to provision schema: " + schemaName, e);
+        }
+    }
+
+    /**
+     * Drops the schema if it exists. Used by {@code TenantDataSeeder} to remove
+     * orphaned schemas before {@link #provisionExisting} creates them fresh.
+     */
+    @SuppressWarnings("java:S2077")
+    public void recreateSchema(String schemaName) {
+        validateIdentifier(schemaName);
+        try (Connection conn = rawDataSource.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP SCHEMA IF EXISTS \"" + schemaName + "\" CASCADE");
+        } catch (SQLException e) {
+            throw new TenantProvisioningException("Failed to drop schema: " + schemaName, e);
         }
     }
 

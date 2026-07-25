@@ -568,16 +568,19 @@ export interface EnrollSessionResponse {
   device_id: number;
   tenant_user_id: number;
   finger_index: number;
+  device_code: string;
   expires_at: string;
 }
 
-export interface CompleteEnrollRequest {
+export interface CompleteEnrollHttpRequest {
   enroll_token: string;
   device_code: string;
   finger_index: number;
-  template_cifrado: string;
-  llave_cifrado: string;
-  capturado_en?: string;
+  encrypted_template_base64: string;
+  encrypted_aes_key_base64: string;
+  iv_base64?: string | null;
+  tag_base64?: string | null;
+  captured_at_utc?: string | null;
 }
 
 // ── Attendance ──

@@ -46,4 +46,10 @@ public class AttendanceEntity extends AuditableEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AttendanceState state;
+
+    @Column(name = "offline_event_id")
+    private Integer offlineEventId;
+
+    @Column(name = "device_code", length = 100)
+    private String deviceCode;
 }

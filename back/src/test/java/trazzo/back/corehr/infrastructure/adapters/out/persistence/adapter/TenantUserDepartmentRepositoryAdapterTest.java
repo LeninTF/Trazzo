@@ -142,6 +142,28 @@ class TenantUserDepartmentRepositoryAdapterTest {
     }
 
     @Test
+    void countByTenantUserId_shouldDelegate() {
+        when(tenantUserDepartmentRepo.countByTenantUserId(100L)).thenReturn(5L);
+
+        var result = adapter.countByTenantUserId(100L);
+
+        assertThat(result).isEqualTo(5L);
+    }
+
+    @Test
+    void findAllByTenantUserIdWithPagination_shouldReturnMappedPage() {
+        var entity = createEntity(1L);
+        var page = new org.springframework.data.domain.PageImpl<>(List.of(entity));
+        when(tenantUserDepartmentRepo.findByTenantUserId(eq(100L), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(page);
+
+        var result = adapter.findAllByTenantUserId(100L, 0, 10);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getTenantUserId()).isEqualTo(100L);
+    }
+
+    @Test
     void deleteById_shouldDelegate() {
         adapter.deleteById(1L);
 

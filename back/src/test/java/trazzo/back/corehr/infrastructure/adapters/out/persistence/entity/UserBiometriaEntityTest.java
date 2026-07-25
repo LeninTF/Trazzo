@@ -15,13 +15,13 @@ class UserBiometriaEntityTest {
     @Test
     void allArgsConstructor() {
         var now = LocalDateTime.now();
-        var entity = new UserBiometriaEntity(1L, 10L, 5L, 3, "tmpl", "key", now, true);
+        var entity = new UserBiometriaEntity(1L, 10L, 5L, "DVC-001", 3, "dGVtcGxhdGU=", "YWVzS2V5", "aXY=", "dGFn", now, true);
         assertThat(entity.getId()).isEqualTo(1L);
         assertThat(entity.getTenantUserId()).isEqualTo(10L);
         assertThat(entity.getDeviceId()).isEqualTo(5L);
         assertThat(entity.getFingerIndex()).isEqualTo(3);
-        assertThat(entity.getTemplateCifrado()).isEqualTo("tmpl");
-        assertThat(entity.getLlaveCifrado()).isEqualTo("key");
+        assertThat(entity.getEncryptedTemplateBase64()).isEqualTo("dGVtcGxhdGU=");
+        assertThat(entity.getEncryptedAesKeyBase64()).isEqualTo("YWVzS2V5");
         assertThat(entity.getCapturadoEn()).isEqualTo(now);
         assertThat(entity.isActivo()).isTrue();
     }
@@ -33,15 +33,15 @@ class UserBiometriaEntityTest {
         entity.setTenantUserId(20L);
         entity.setDeviceId(null);
         entity.setFingerIndex(null);
-        entity.setTemplateCifrado("tmpl2");
-        entity.setLlaveCifrado(null);
+        entity.setEncryptedTemplateBase64("dGVtcGxhdGUy");
+        entity.setEncryptedAesKeyBase64(null);
         entity.setCapturadoEn(null);
         entity.setActivo(false);
 
         assertThat(entity.getId()).isEqualTo(2L);
         assertThat(entity.getDeviceId()).isNull();
         assertThat(entity.getFingerIndex()).isNull();
-        assertThat(entity.getLlaveCifrado()).isNull();
+        assertThat(entity.getEncryptedAesKeyBase64()).isNull();
         assertThat(entity.getCapturadoEn()).isNull();
         assertThat(entity.isActivo()).isFalse();
     }

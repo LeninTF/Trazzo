@@ -32,6 +32,8 @@ public class Attendance {
     private LocalDate attendanceDate;
     private int minutesLate;
     private AttendanceState state;
+    private Integer offlineEventId;
+    private String deviceCode;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     @JsonIgnore
@@ -49,6 +51,8 @@ public class Attendance {
             LocalDate attendanceDate,
             int minutesLate,
             AttendanceState state,
+            Integer offlineEventId,
+            String deviceCode,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -61,6 +65,8 @@ public class Attendance {
         this.attendanceDate = requireDate(attendanceDate, "attendanceDate");
         this.minutesLate = minutesLate;
         this.state = requireState(state);
+        this.offlineEventId = offlineEventId;
+        this.deviceCode = deviceCode;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         validateConsistency();
@@ -108,6 +114,8 @@ public class Attendance {
                 today,
                 lateMinutes,
                 initialState,
+                null,
+                null,
                 now,
                 now
         );
@@ -117,6 +125,57 @@ public class Attendance {
                 attendance.getScheduleId(),
                 attendance.getDeviceId(),
                 now
+        ));
+        return attendance;
+    }
+
+    public static Attendance registerCheckInAt(
+            Long tenantUserId,
+            Long scheduleId,
+            Long deviceId,
+            LocalTime scheduledEntryTime,
+            int toleranceMinutes,
+            LocalDateTime capturedAt
+    ) {
+        LocalDate today = capturedAt.toLocalDate();
+        LocalTime actualCheckIn = capturedAt.toLocalTime();
+
+        int lateMinutes = 0;
+        AttendanceState initialState;
+        if (scheduledEntryTime != null) {
+            if (actualCheckIn.isAfter(scheduledEntryTime)) {
+                int diffMinutes = (int) java.time.Duration.between(scheduledEntryTime, actualCheckIn).toMinutes();
+                int effectiveLate = diffMinutes - toleranceMinutes;
+                lateMinutes = Math.max(effectiveLate, 0);
+                initialState = lateMinutes > 0 ? AttendanceState.TARDANZA : AttendanceState.PUNTUAL;
+            } else {
+                initialState = AttendanceState.PUNTUAL;
+            }
+        } else {
+            initialState = AttendanceState.PUNTUAL;
+        }
+
+        Attendance attendance = new Attendance(
+                generateId(),
+                tenantUserId,
+                scheduleId,
+                deviceId,
+                capturedAt,
+                null,
+                today,
+                lateMinutes,
+                initialState,
+                null,
+                null,
+                capturedAt,
+                capturedAt
+        );
+        attendance.recordEvent(new AttendanceRegisteredEvent(
+                attendance.getId(),
+                attendance.getTenantUserId(),
+                attendance.getScheduleId(),
+                attendance.getDeviceId(),
+                capturedAt
         ));
         return attendance;
     }
@@ -131,10 +190,12 @@ public class Attendance {
             LocalDate attendanceDate,
             int minutesLate,
             AttendanceState state,
+            Integer offlineEventId,
+            String deviceCode,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        return new Attendance(id, tenantUserId, scheduleId, deviceId, checkIn, checkOut, attendanceDate, minutesLate, state, createdAt, updatedAt);
+        return new Attendance(id, tenantUserId, scheduleId, deviceId, checkIn, checkOut, attendanceDate, minutesLate, state, offlineEventId, deviceCode, createdAt, updatedAt);
     }
 
     public void registerCheckOut() {
@@ -146,6 +207,18 @@ public class Attendance {
             throw new InvalidAttendanceException("Check-out date cannot be before attendance date");
         }
         this.checkOut = now;
+        touch();
+        recordEvent(new AttendanceCompletedEvent(id, tenantUserId, checkOut, state, updatedAt));
+    }
+
+    public void registerCheckOutAt(LocalDateTime capturedAt) {
+        if (checkOut != null) {
+            throw new InvalidAttendanceException("Attendance already has a check-out");
+        }
+        if (capturedAt.toLocalDate().isBefore(attendanceDate)) {
+            throw new InvalidAttendanceException("Check-out date cannot be before attendance date");
+        }
+        this.checkOut = capturedAt;
         touch();
         recordEvent(new AttendanceCompletedEvent(id, tenantUserId, checkOut, state, updatedAt));
     }
