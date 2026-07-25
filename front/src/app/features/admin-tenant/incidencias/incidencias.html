@@ -329,23 +329,26 @@
       @if (showRejectionForm() && selectedSolicitud.estado === 'Pendiente') {
         <div class="rejection-form">
           <div class="rejection-form-header">
-            <span class="rejection-form-title">
+            <label class="rejection-form-title" for="rejectionReason">
               <i class="bi bi-exclamation-triangle me-2"></i>
               Motivo de rechazo
-            </span>
+            </label>
             <button class="rejection-cancel" type="button" (click)="toggleRejectionForm()" title="Cancelar rechazo">
               <i class="bi bi-x-lg"></i>
             </button>
           </div>
-          <p class="rejection-form-help">Indica el motivo por el que se rechaza esta incidencia. Es obligatorio y será visible para el colaborador.</p>
+          <p id="rejectionHelp" class="rejection-form-help">Indica el motivo por el que se rechaza esta incidencia. Es obligatorio y será visible para el colaborador.</p>
           <textarea
+            id="rejectionReason"
+            name="rejectionReason"
             class="rejection-textarea"
             [class.has-error]="showRejectionError()"
             [value]="rejectionReason()"
             (input)="onRejectionReasonInput($event)"
             placeholder="Ej: Documentación insuficiente, fuera del rango permitido..."
             rows="3"
-            maxlength="500"></textarea>
+            maxlength="500"
+            aria-describedby="rejectionHelp"></textarea>
           @if (showRejectionError()) {
             <p class="rejection-error-msg">
               <i class="bi bi-exclamation-circle me-1"></i>
