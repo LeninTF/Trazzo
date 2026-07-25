@@ -1,9 +1,10 @@
 import { routes } from './app.routes';
 import { authGuard } from './auth/auth.guard';
+import { roleGuard } from './auth/role.guard';
 
 describe('app.routes', () => {
-  it('should have 35 route definitions', () => {
-    expect(routes.length).toBe(35);
+  it('should have 36 route definitions', () => {
+    expect(routes.length).toBe(36);
   });
 
   it('should define public routes', () => {
@@ -24,6 +25,7 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/dashboard');
     expect(paths).toContain('tenant/monitoreo');
     expect(paths).toContain('tenant/incidencias');
+    expect(paths).toContain('tenant/tipos-incidencia');
     expect(paths).toContain('tenant/reglas-asistencia');
     expect(paths).toContain('tenant/sedes');
     expect(paths).toContain('tenant/gestion-roles');
@@ -93,14 +95,14 @@ describe('app.routes', () => {
       'ayuda/:seccion', 'ayuda',
     ]);
 
-    it('should apply authGuard to every tenant/usuario/saas data route', () => {
+    it('should apply authGuard and roleGuard to every tenant/usuario/saas data route', () => {
       const protectedRoutes = routes.filter(r =>
         (r.path?.startsWith('tenant/') || r.path?.startsWith('usuario/') || r.path?.startsWith('saas/'))
         && !r.redirectTo,
       );
       expect(protectedRoutes.length).toBeGreaterThan(0);
       protectedRoutes.forEach(r => {
-        expect(r.canActivate).toEqual([authGuard]);
+        expect(r.canActivate).toEqual([authGuard, roleGuard]);
       });
     });
 

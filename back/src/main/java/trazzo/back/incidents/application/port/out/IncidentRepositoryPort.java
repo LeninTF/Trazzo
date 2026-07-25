@@ -8,11 +8,11 @@ import java.util.Optional;
 
 public interface IncidentRepositoryPort {
     Incident save(Incident incident);
-    Optional<Incident> findById(String id);
-    List<Incident> findAll(String tenantUserId, String state, String tipoId,
+    Optional<Incident> findById(Integer id);
+    List<Incident> findAll(Integer tenantUserId, String state, Integer tipoId,
                            LocalDateTime desde, LocalDateTime hasta, String search,
                            int page, int size, String sort);
-    long count(String tenantUserId, String state, String tipoId,
+    long count(Integer tenantUserId, String state, Integer tipoId,
                LocalDateTime desde, LocalDateTime hasta, String search);
-    void deleteById(String id);
+    void deleteById(Integer id);
 }

@@ -66,6 +66,17 @@ describe('authInterceptor', () => {
     done();
   });
 
+  it('should not add Authorization header for external origins (e.g. R2 presigned PUT)', (done) => {
+    localStorage.setItem('trazzo_token', 'my-token');
+    const req = createReq('PUT', 'https://trazzo-dev.8220604f6632ea9d9c36299baa7e86b5.r2.cloudflarestorage.com/evidences/2/1/uuid/file.pdf?X-Amz-Signature=abc');
+    next.and.callFake((r: HttpRequest<unknown>) => {
+      expect(r.headers.has('Authorization')).toBeFalse();
+      return of({} as any);
+    });
+    TestBed.runInInjectionContext(() => authInterceptor(req, next));
+    done();
+  });
+
   it('should redirect to /login on 401 error', (done) => {
     localStorage.setItem('trazzo_token', 'my-token');
     const req = createReq('GET', '/api/v1/usuarios');

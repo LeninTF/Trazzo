@@ -11,5 +11,6 @@ public record UsuarioResponse(
         String email,
         String status,
         @JsonProperty("ultimo_acceso") String ultimoAcceso,
-        List<RoleProfileResponse> rol
+        List<RoleProfileResponse> rol,
+        @JsonProperty("tenant_permissions") List<String> tenantPermissions
 ) {}

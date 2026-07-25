@@ -15,6 +15,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import trazzo.back.incidents.domain.event.IncidentCreatedEvent;
+import trazzo.back.incidents.domain.exception.IncidentValidationException;
+import trazzo.back.incidents.domain.exception.InvalidIncidentEvidenceException;
 
 class IncidentTest {
 
@@ -23,13 +25,12 @@ class IncidentTest {
     @Test
     void createWithValidFields() {
         var before = LocalDateTime.now();
-        var incident = Incident.create("user-1", "type-1", "Comentario");
+        var incident = Incident.create(1, 1, "Comentario");
         var after = LocalDateTime.now();
 
-        assertNotNull(incident.getId());
-        assertFalse(incident.getId().isBlank());
-        assertEquals("user-1", incident.getTenantUserId());
-        assertEquals("type-1", incident.getIncidentTypeId());
+        assertNull(incident.getId());
+        assertEquals(1, incident.getTenantUserId());
+        assertEquals(1, incident.getIncidentTypeId());
         assertEquals(IncidentState.PENDIENTE, incident.getState());
         assertEquals("Comentario", incident.getComment());
         assertNull(incident.getRejectionReason());
@@ -46,12 +47,12 @@ class IncidentTest {
 
     @Test
     void createRecordsCreatedEventWithIncidentId() {
-        var incident = Incident.create("user-1", "type-1", "Comentario");
+        var incident = Incident.create(1, 1, "Comentario");
 
         assertEquals(1, incident.getDomainEvents().size());
         var event = assertInstanceOf(IncidentCreatedEvent.class, incident.getDomainEvents().getFirst());
         assertEquals(incident.getId(), event.incidentId());
-        assertFalse(event.incidentId().isBlank());
+        assertNull(event.incidentId());
     }
 
     @Test
@@ -63,7 +64,7 @@ class IncidentTest {
 
     @Test
     void domainEventsAreNotSerialized() throws Exception {
-        var incident = Incident.create("user-1", "type-1", "Comentario");
+        var incident = Incident.create(1, 1, "Comentario");
         var mapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
         var json = mapper.writeValueAsString(incident);
@@ -71,23 +72,19 @@ class IncidentTest {
         assertFalse(json.contains("domainEvents"));
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void createWithBlankTenantUserIdThrowsException(String tenantUserId) {
+    @Test
+    void createWithNullTenantUserIdThrowsException() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> Incident.create(tenantUserId, "type-1", "comment")
+                IncidentValidationException.class,
+                () -> Incident.create(null, 1, "comment")
         );
     }
 
-    @ParameterizedTest
-    @NullAndEmptySource
-    @ValueSource(strings = {" "})
-    void createWithBlankIncidentTypeIdThrowsException(String incidentTypeId) {
+    @Test
+    void createWithNullIncidentTypeIdThrowsException() {
         assertThrows(
-                IllegalArgumentException.class,
-                () -> Incident.create("user-1", incidentTypeId, "comment")
+                IncidentValidationException.class,
+                () -> Incident.create(1, null, "comment")
         );
     }
 
@@ -95,7 +92,7 @@ class IncidentTest {
     @NullAndEmptySource
     @ValueSource(strings = {" "})
     void createWithBlankCommentNormalizesToNull(String comment) {
-        var incident = Incident.create("user-1", "type-1", comment);
+        var incident = Incident.create(1, 1, comment);
         assertNull(incident.getComment());
     }
 
@@ -105,23 +102,23 @@ class IncidentTest {
     void restoreWithAllFields() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "application/pdf",
+                1, 1, "doc.pdf", "http://url", "application/pdf",
                 1024, false, null, now, now
         );
         var type = IncidentType.create("Urgente", "Desc");
         var permission = IncidentPermission.restore(
-                "perm-1", "inc-1", LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
+                1, 1, LocalDate.now(), LocalDate.now().plusDays(1), 1, now, now
         );
 
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 "comment", "reason", type, permission, List.of(evidence),
                 now, now
         );
 
-        assertEquals("inc-1", incident.getId());
-        assertEquals("user-1", incident.getTenantUserId());
-        assertEquals("type-1", incident.getIncidentTypeId());
+        assertEquals(1, incident.getId());
+        assertEquals(1, incident.getTenantUserId());
+        assertEquals(1, incident.getIncidentTypeId());
         assertEquals(IncidentState.APROBADO, incident.getState());
         assertEquals("comment", incident.getComment());
         assertEquals("reason", incident.getRejectionReason());
@@ -134,22 +131,22 @@ class IncidentTest {
     }
 
     @Test
-    void restoreWithBlankIdNormalizesToNull() {
+    void restoreWithNullIdIsAllowed() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                " ", "user-1", "type-1", IncidentState.PENDIENTE,
+                null, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
         assertNull(incident.getId());
     }
 
     @Test
-    void restoreWithBlankTenantUserIdThrowsException() {
+    void restoreWithNullTenantUserIdThrowsException() {
         var now = LocalDateTime.now();
         assertThrows(
-                IllegalArgumentException.class,
+                IncidentValidationException.class,
                 () -> Incident.restore(
-                        "id-1", " ", "type-1", IncidentState.PENDIENTE,
+                        1, null, 1, IncidentState.PENDIENTE,
                         null, null, null, null, List.of(), now, now
                 )
         );
@@ -159,9 +156,9 @@ class IncidentTest {
     void restoreWithNullStateThrowsException() {
         var now = LocalDateTime.now();
         assertThrows(
-                IllegalArgumentException.class,
+                IncidentValidationException.class,
                 () -> Incident.restore(
-                        "id-1", "user-1", "type-1", null,
+                        1, 1, 1, null,
                         null, null, null, null, List.of(), now, now
                 )
         );
@@ -171,15 +168,15 @@ class IncidentTest {
     void restoreWithMultipleActiveEvidencesThrowsException() {
         var now = LocalDateTime.now();
         var ev1 = IncidentEvidence.restore(
-                "ev-1", "inc-1", "a.pdf", "http://a", "pdf", 100, false, null, now, now
+                1, 1, "a.pdf", "http://a", "pdf", 100, false, null, now, now
         );
         var ev2 = IncidentEvidence.restore(
-                "ev-2", "inc-1", "b.pdf", "http://b", "pdf", 200, false, null, now, now
+                2, 1, "b.pdf", "http://b", "pdf", 200, false, null, now, now
         );
         assertThrows(
                 IllegalArgumentException.class,
                 () -> Incident.restore(
-                        "id-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                        1, 1, 1, IncidentState.PENDIENTE,
                         null, null, null, null, List.of(ev1, ev2), now, now
                 )
         );
@@ -189,13 +186,13 @@ class IncidentTest {
     void restoreWithDeletedEvidencesAllowsMultiple() {
         var now = LocalDateTime.now();
         var ev1 = IncidentEvidence.restore(
-                "ev-1", "inc-1", "a.pdf", "http://a", "pdf", 100, true, null, now, now
+                1, 1, "a.pdf", "http://a", "pdf", 100, true, null, now, now
         );
         var ev2 = IncidentEvidence.restore(
-                "ev-2", "inc-1", "b.pdf", "http://b", "pdf", 200, true, null, now, now
+                2, 1, "b.pdf", "http://b", "pdf", 200, true, null, now, now
         );
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(ev1, ev2), now, now
         );
         assertEquals(2, incident.getEvidences().size());
@@ -205,7 +202,7 @@ class IncidentTest {
 
     @Test
     void updateCommentSuccessfully() {
-        var incident = Incident.create("user-1", "type-1", "Original");
+        var incident = Incident.create(1, 1, "Original");
         incident.updateComment("Modificado");
 
         assertEquals("Modificado", incident.getComment());
@@ -215,7 +212,7 @@ class IncidentTest {
     @NullAndEmptySource
     @ValueSource(strings = {" "})
     void updateCommentWithBlankNormalizesToNull(String comment) {
-        var incident = Incident.create("user-1", "type-1", "Original");
+        var incident = Incident.create(1, 1, "Original");
         incident.updateComment(comment);
 
         assertNull(incident.getComment());
@@ -225,7 +222,7 @@ class IncidentTest {
     void updateCommentWhenNotPendingThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
         assertThrows(
@@ -236,7 +233,7 @@ class IncidentTest {
 
     @Test
     void updateCommentUpdatesUpdatedAt() {
-        var incident = Incident.create("user-1", "type-1", "Original");
+        var incident = Incident.create(1, 1, "Original");
         var originalUpdatedAt = incident.getUpdatedAt();
         incident.clock = Clock.fixed(
                 originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
@@ -252,7 +249,7 @@ class IncidentTest {
 
     @Test
     void attachType() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         var type = IncidentType.create("Urgente", "Desc");
 
         assertNull(incident.getType());
@@ -261,16 +258,88 @@ class IncidentTest {
         assertSame(type, incident.getType());
     }
 
+    @Test
+    void attachTypeWhenNotPendingThrowsException() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+        var type = IncidentType.create("Urgente", "Desc");
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.attachType(type)
+        );
+    }
+
+    @Test
+    void hydrateTypeOnApprovedIncidentDoesNotThrow() {
+        var now = LocalDateTime.now();
+        var originalUpdatedAt = now;
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, originalUpdatedAt
+        );
+        var type = IncidentType.create("Vacaciones", "Desc");
+
+        incident.hydrateType(type);
+
+        assertSame(type, incident.getType());
+        assertEquals(originalUpdatedAt, incident.getUpdatedAt());
+    }
+
+    @Test
+    void hydrateTypeOnDeniedIncidentDoesNotThrow() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.DENEGADO,
+                null, "reason", null, null, List.of(), now, now
+        );
+        var type = IncidentType.create("Permiso", "Desc");
+
+        incident.hydrateType(type);
+
+        assertSame(type, incident.getType());
+    }
+
+    @Test
+    void hydrateTypeWithNullSkipsAssignment() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+
+        incident.hydrateType(null);
+
+        assertNull(incident.getType());
+    }
+
+    @Test
+    void hydrateTypeWithInactiveTypeThrowsException() {
+        var now = LocalDateTime.now();
+        var inactiveType = IncidentType.restore(1, "Inactivo", "Desc", false, now, now);
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.APROBADO,
+                null, null, null, null, List.of(), now, now
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.hydrateType(inactiveType)
+        );
+    }
+
     /* == ADD EVIDENCE TESTS == */
 
     @Test
     void addEvidenceToPendingIncident() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
-        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
+        var evidence = IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100);
 
         incident.addEvidence(evidence);
 
@@ -282,7 +351,7 @@ class IncidentTest {
     void addEvidenceWhenEvidenceIsNullThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
         assertThrows(
@@ -295,11 +364,11 @@ class IncidentTest {
     void addEvidenceWhenActiveEvidenceExistsThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
-        var ev1 = IncidentEvidence.create("inc-1", "a.pdf", "http://a", "pdf", 100);
-        var ev2 = IncidentEvidence.create("inc-1", "b.pdf", "http://b", "pdf", 200);
+        var ev1 = IncidentEvidence.create(1, "a.pdf", "http://a", "pdf", 100);
+        var ev2 = IncidentEvidence.create(1, "b.pdf", "http://b", "pdf", 200);
 
         incident.addEvidence(ev1);
         assertThrows(
@@ -312,10 +381,10 @@ class IncidentTest {
     void addEvidenceWhenEvidenceDoesNotBelongToIncidentThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
-        var evidence = IncidentEvidence.create("other-incident", "doc.pdf", "http://url", "pdf", 100);
+        var evidence = IncidentEvidence.create(99, "doc.pdf", "http://url", "pdf", 100);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -327,10 +396,10 @@ class IncidentTest {
     void addEvidenceWhenNotPendingThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
-        var evidence = IncidentEvidence.create("user-1", "doc.pdf", "http://url", "pdf", 100);
+        var evidence = IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100);
 
         assertThrows(
                 IllegalStateException.class,
@@ -340,8 +409,12 @@ class IncidentTest {
 
     @Test
     void addEvidenceWhenEvidenceBelongsToDifferentIncidentThrowsException() {
-        var incident = Incident.create("user-1", "type-1", "comment");
-        var evidence = IncidentEvidence.create("different-id", "doc.pdf", "http://url", "pdf", 100);
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
+        var evidence = IncidentEvidence.create(99, "doc.pdf", "http://url", "pdf", 100);
 
         assertThrows(
                 IllegalArgumentException.class,
@@ -353,10 +426,10 @@ class IncidentTest {
     void addEvidenceUpdatesUpdatedAt() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
-        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
+        var evidence = IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100);
         var originalUpdatedAt = incident.getUpdatedAt();
         incident.clock = Clock.fixed(
                 originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
@@ -374,11 +447,11 @@ class IncidentTest {
     void deleteEvidenceFromPendingIncident() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, now, now
         );
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now
         );
 
@@ -390,33 +463,45 @@ class IncidentTest {
     }
 
     @Test
-    void deleteEvidenceWithBlankIdThrowsException() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+    void deleteEvidenceWithNullIdThrowsException() {
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
         assertThrows(
-                IllegalArgumentException.class,
-                () -> incident.deleteEvidence(" ")
+                IncidentValidationException.class,
+                () -> incident.deleteEvidence(null)
         );
     }
 
     @Test
     void deleteEvidenceNotFoundThrowsException() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
         assertThrows(
-                IllegalArgumentException.class,
-                () -> incident.deleteEvidence("non-existent")
+                InvalidIncidentEvidenceException.class,
+                () -> incident.deleteEvidence(999)
         );
     }
 
     @Test
     void deleteEvidenceWhenNotPendingThrowsException() {
         var now = LocalDateTime.now();
+        var evidence = IncidentEvidence.restore(
+                1, 1, "doc.pdf", "http://url", "pdf",
+                100, false, null, now, now
+        );
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
-                null, null, null, null, List.of(), now, now
+                1, 1, 1, IncidentState.APROBADO,
+                null, null, null, null, List.of(evidence), now, now
         );
         assertThrows(
                 IllegalStateException.class,
-                () -> incident.deleteEvidence("any-id")
+                () -> incident.deleteEvidence(1)
         );
     }
 
@@ -424,11 +509,11 @@ class IncidentTest {
     void deleteEvidenceUpdatesUpdatedAt() {
         var now = LocalDateTime.now();
         var evidence = IncidentEvidence.restore(
-                "ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+                1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, now, now
         );
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence), now, now
         );
         var originalUpdatedAt = incident.getUpdatedAt();
@@ -446,7 +531,11 @@ class IncidentTest {
 
     @Test
     void approvePendingIncident() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
 
         assertEquals(IncidentState.PENDIENTE, incident.getState());
         incident.approve();
@@ -460,7 +549,7 @@ class IncidentTest {
     void approveWhenNotPendingThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
         assertThrows(
@@ -471,7 +560,11 @@ class IncidentTest {
 
     @Test
     void approveUpdatesUpdatedAt() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var now = LocalDateTime.now();
+        var incident = Incident.restore(
+                1, 1, 1, IncidentState.PENDIENTE,
+                null, null, null, null, List.of(), now, now
+        );
         var originalUpdatedAt = incident.getUpdatedAt();
         incident.clock = Clock.fixed(
                 originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
@@ -489,7 +582,7 @@ class IncidentTest {
     void approveWithPermissionCreatesPermissionAndChangesState() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
 
@@ -506,21 +599,20 @@ class IncidentTest {
     }
 
     @Test
-    void approveWithPermissionCreatedIncidentCreatesPermissionAndChangesState() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+    void approveWithPermissionCreatedIncidentThrowsBecauseIdIsNull() {
+        var incident = Incident.create(1, 1, "comment");
 
-        incident.approveWithPermission(LocalDate.now(), LocalDate.now().plusDays(1), 1);
-
-        assertEquals(IncidentState.APROBADO, incident.getState());
-        assertNotNull(incident.getPermission());
-        assertEquals(incident.getId(), incident.getPermission().getIncidentId());
+        assertThrows(
+                IllegalStateException.class,
+                () -> incident.approveWithPermission(LocalDate.now(), LocalDate.now().plusDays(1), 1)
+        );
     }
 
     @Test
     void approveWithPermissionUpdatesUpdatedAt() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(), now, now
         );
         var originalUpdatedAt = incident.getUpdatedAt();
@@ -538,7 +630,7 @@ class IncidentTest {
 
     @Test
     void denyPendingIncidentWithReason() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
 
         assertEquals(IncidentState.PENDIENTE, incident.getState());
         incident.deny("No cumple requisitos");
@@ -553,7 +645,7 @@ class IncidentTest {
     @NullAndEmptySource
     @ValueSource(strings = {" "})
     void denyWithBlankRejectionReasonThrowsException(String reason) {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         assertThrows(
                 IllegalArgumentException.class,
                 () -> incident.deny(reason)
@@ -564,7 +656,7 @@ class IncidentTest {
     void denyWhenNotPendingThrowsException() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
         assertThrows(
@@ -575,7 +667,7 @@ class IncidentTest {
 
     @Test
     void denyUpdatesUpdatedAt() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         var originalUpdatedAt = incident.getUpdatedAt();
         incident.clock = Clock.fixed(
                 originalUpdatedAt.plusSeconds(1).atZone(ZoneId.systemDefault()).toInstant(),
@@ -591,7 +683,7 @@ class IncidentTest {
 
     @Test
     void isPendingReturnsTrueForPendingState() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         assertTrue(incident.isPending());
     }
 
@@ -599,7 +691,7 @@ class IncidentTest {
     void isPendingReturnsFalseForNonPendingState() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
         assertFalse(incident.isPending());
@@ -609,7 +701,7 @@ class IncidentTest {
     void isApprovedReturnsTrueForApprovedState() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.APROBADO,
+                1, 1, 1, IncidentState.APROBADO,
                 null, null, null, null, List.of(), now, now
         );
         assertTrue(incident.isApproved());
@@ -617,7 +709,7 @@ class IncidentTest {
 
     @Test
     void isApprovedReturnsFalseForNonApprovedState() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         assertFalse(incident.isApproved());
     }
 
@@ -625,7 +717,7 @@ class IncidentTest {
     void isDeniedReturnsTrueForDeniedState() {
         var now = LocalDateTime.now();
         var incident = Incident.restore(
-                "id-1", "user-1", "type-1", IncidentState.DENEGADO,
+                1, 1, 1, IncidentState.DENEGADO,
                 null, null, null, null, List.of(), now, now
         );
         assertTrue(incident.isDenied());
@@ -633,49 +725,37 @@ class IncidentTest {
 
     @Test
     void isDeniedReturnsFalseForNonDeniedState() {
-        var incident = Incident.create("user-1", "type-1", "comment");
+        var incident = Incident.create(1, 1, "comment");
         assertFalse(incident.isDenied());
     }
 
     /* == VALIDATION TESTS == */
 
     @Test
-    void createTrimsWhitespaceFromTenantUserId() {
-        var incident = Incident.create("  user-1  ", "type-1", "comment");
-        assertEquals("user-1", incident.getTenantUserId());
-    }
-
-    @Test
-    void createTrimsWhitespaceFromIncidentTypeId() {
-        var incident = Incident.create("user-1", "  type-1  ", "comment");
-        assertEquals("type-1", incident.getIncidentTypeId());
-    }
-
-    @Test
     void createTrimsWhitespaceFromComment() {
-        var incident = Incident.create("user-1", "type-1", "  comment  ");
+        var incident = Incident.create(1, 1, "  comment  ");
         assertEquals("comment", incident.getComment());
     }
 
     @Test
     void updateCommentTrimsWhitespace() {
-        var incident = Incident.create("user-1", "type-1", "original");
+        var incident = Incident.create(1, 1, "original");
         incident.updateComment("  nuevo  ");
         assertEquals("nuevo", incident.getComment());
     }
 
     @Test
     void getEvidencesReturnsUnmodifiableList() {
-        var evidence = IncidentEvidence.create("inc-1", "doc.pdf", "http://url", "pdf", 100);
+        var evidence = IncidentEvidence.create(1, "doc.pdf", "http://url", "pdf", 100);
         var incident = Incident.restore(
-                "inc-1", "user-1", "type-1", IncidentState.PENDIENTE,
+                1, 1, 1, IncidentState.PENDIENTE,
                 null, null, null, null, List.of(evidence),
                 LocalDateTime.now(), LocalDateTime.now()
         );
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> incident.getEvidences().add(
-                        IncidentEvidence.create("inc-1", "b.pdf", "http://b", "pdf", 200)
+                        IncidentEvidence.create(1, "b.pdf", "http://b", "pdf", 200)
                 )
         );
     }

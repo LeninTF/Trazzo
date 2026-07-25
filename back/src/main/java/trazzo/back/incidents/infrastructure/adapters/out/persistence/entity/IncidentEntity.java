@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "incidents")
+@Table(name = "incidencias")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,14 +20,14 @@ import java.util.List;
 public class IncidentEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @Column(name = "tenant_user_id", nullable = false, length = 36)
-    private String tenantUserId;
+    @Column(name = "tenant_user_id", nullable = false)
+    private Integer tenantUserId;
 
-    @Column(name = "incident_type_id", nullable = false, length = 36)
-    private String incidentTypeId;
+    @Column(name = "incidencia_type_id", nullable = false)
+    private Integer incidentTypeId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -46,7 +46,7 @@ public class IncidentEntity {
     private LocalDateTime updatedAt;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "incident_id")
+    @JoinColumn(name = "incidencia_id")
     private List<IncidentEvidenceEntity> evidences = new ArrayList<>();
 
     @Transient

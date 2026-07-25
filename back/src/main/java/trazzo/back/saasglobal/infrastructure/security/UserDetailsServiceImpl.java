@@ -13,12 +13,15 @@ import org.springframework.stereotype.Service;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 import trazzo.back.shared.security.AuthenticatedUser;
+import trazzo.back.shared.security.TenantPermissionPort;
+import trazzo.back.shared.tenancy.TenantContext;
 
 @Service
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepositoryPort userRepository;
+    private final TenantPermissionPort tenantPermissionPort;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -30,16 +33,17 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .toList());
 
-        // Blanket marker granted to any SaaS-role-bearing user, regardless of which specific
-        // role: this is the outer path-level gate in SecurityConfig ("/saas/**" requires
-        // hasRole("SAAS_ADMIN")). It guarantees a tenant user (zero roles_master roles) can
-        // never reach /saas/** even if a specific endpoint's @PreAuthorize was forgotten.
-        if (!user.getRoles().isEmpty()) {
+        if (user.getRoles().contains("admin_trazzo")) {
             authorities.add(new SimpleGrantedAuthority("ROLE_SAAS_ADMIN"));
         }
 
-        // Unprefixed authority per granted permission code, for hasAuthority(...) checks.
         user.getPermissionCodes().forEach(code -> authorities.add(new SimpleGrantedAuthority(code)));
+
+        String tenantSchema = TenantContext.get();
+        if (tenantSchema != null && !"public".equals(tenantSchema)) {
+            tenantPermissionPort.findPermissionCodesByMasterUserId(UUID.fromString(user.getId()))
+                    .forEach(code -> authorities.add(new SimpleGrantedAuthority(code)));
+        }
 
         return new AuthenticatedUser(
                 UUID.fromString(user.getId()),

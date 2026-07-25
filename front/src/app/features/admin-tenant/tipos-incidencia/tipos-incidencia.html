@@ -1,0 +1,186 @@
+@if (loading()) {
+  <div class="ti-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <output class="spinner-border text-primary">
+        <span class="visually-hidden">Cargando...</span>
+      </output>
+      <p class="mt-2 text-muted small">Cargando tipos de incidencia...</p>
+    </div>
+  </div>
+} @else if (error()) {
+  <div class="ti-section d-flex justify-content-center align-items-center" style="min-height: 200px;">
+    <div class="text-center">
+      <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2rem;"></i>
+      <p class="mt-2 text-muted">{{ error() }}</p>
+      <button class="ti-btn-outline ti-btn-outline--primary mt-2" (click)="cargarTipos()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+      </button>
+    </div>
+  </div>
+} @else {
+<div class="ti-section">
+  <header class="ti-header">
+    <div>
+      <h1 class="ti-title">Tipos de Incidencia</h1>
+      <p class="ti-subtitle">Gestiona los tipos de solicitudes disponibles para el personal.</p>
+    </div>
+    <div class="ti-header-actions">
+      <span class="ti-badge">{{ tipos.length }} tipo{{ tipos.length !== 1 ? 's' : '' }}</span>
+      <button class="ti-btn-primary" (click)="openCreateModal()">
+        <i class="bi bi-plus-lg me-1"></i>Nuevo Tipo
+      </button>
+    </div>
+  </header>
+
+  <div class="ti-card">
+    <div class="ti-card__header">
+      <h2 class="ti-card__title">
+        <i class="bi bi-tags me-2" style="color:var(--primary)"></i>
+        Catálogo de Tipos
+      </h2>
+    </div>
+    <div class="ti-card__body">
+      @if (tipos.length === 0) {
+        <div class="ti-empty">
+          <i class="bi bi-inbox fs-1" style="color:var(--text-soft)"></i>
+          <p>No hay tipos de incidencia registrados.</p>
+        </div>
+      } @else {
+        <div class="ti-table-responsive">
+          <table class="ti-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Creado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (tipo of tipos; track tipo.id) {
+                @if (isEditing(tipo)) {
+                  <tr class="ti-row--editing" [formGroup]="editForm">
+                    <td>
+                      <label class="visually-hidden" for="edit-tipo-nombre">Nombre</label>
+                      <input id="edit-tipo-nombre" type="text" class="ti-input" formControlName="nombre" placeholder="Nombre del tipo" />
+                    </td>
+                    <td>
+                      <label class="visually-hidden" for="edit-tipo-descripcion">Descripción</label>
+                      <input id="edit-tipo-descripcion" type="text" class="ti-input" formControlName="descripcion" placeholder="Descripción (opcional)" />
+                    </td>
+                    <td>
+                      <label class="ti-toggle-wrap">
+                        <input type="checkbox" class="ti-toggle-input" formControlName="activo" />
+                        <span class="ti-toggle-slider"></span>
+                        <span class="ti-toggle-label">{{ editForm.value.activo ? 'Activo' : 'Inactivo' }}</span>
+                      </label>
+                    </td>
+                    <td class="ti-td-date">{{ formatFecha(tipo.created_at) }}</td>
+                    <td>
+                      <div class="ti-actions">
+                        <button class="ti-icon-btn ti-icon-btn--success" (click)="saveEdit(tipo)" title="Guardar">
+                          <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button class="ti-icon-btn ti-icon-btn--ghost" (click)="cancelEdit()" title="Cancelar">
+                          <i class="bi bi-x-lg"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
+                  <tr>
+                    <td>
+                      <span class="ti-tipo-name">{{ tipo.nombre }}</span>
+                    </td>
+                    <td>
+                      <span class="ti-tipo-desc">{{ tipo.descripcion || '—' }}</span>
+                    </td>
+                    <td>
+                      <span class="ti-status" [class.ti-status--active]="tipo.activo" [class.ti-status--inactive]="!tipo.activo">
+                        <span class="ti-status__dot"></span>
+                        {{ tipo.activo ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </td>
+                    <td class="ti-td-date">{{ formatFecha(tipo.created_at) }}</td>
+                    <td>
+                      <div class="ti-actions">
+                        <button class="ti-icon-btn ti-icon-btn--ghost" (click)="startEdit(tipo)" title="Editar">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="ti-icon-btn" [class.ti-icon-btn--warning]="tipo.activo" [class.ti-icon-btn--danger]="!tipo.activo"
+                          (click)="toggleActivo(tipo)" [title]="tipo.activo ? 'Desactivar' : 'Activar'">
+                          <i class="bi" [class.bi-toggle-on]="tipo.activo" [class.bi-toggle-off]="!tipo.activo"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (showCreateModal) {
+  <div class="ti-overlay" (click)="closeCreateModal()" (keydown.escape)="closeCreateModal()" tabindex="0" role="button"></div>
+  <div class="ti-modal-wrap">
+    <div class="ti-modal-dialog" (click)="$event.stopPropagation()" (keydown.escape)="$event.stopPropagation()" tabindex="0" role="button">
+      <div class="ti-modal">
+        <div class="ti-modal-header">
+          <div class="d-flex align-items-center gap-3">
+            <div class="ti-modal-icon">
+              <i class="bi bi-plus-circle"></i>
+            </div>
+            <div>
+              <h5 class="mb-0 fw-bold" style="color: var(--page-ink);">Nuevo Tipo de Incidencia</h5>
+              <span class="small" style="color: var(--page-muted);">Registra un nuevo tipo de solicitud</span>
+            </div>
+          </div>
+          <button type="button" class="ti-modal-close" (click)="closeCreateModal()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <form [formGroup]="createForm" (ngSubmit)="createTipo()">
+          <div class="ti-modal-body">
+            <div class="mb-3">
+              <label class="ti-label" for="tipo-nombre">Nombre *</label>
+              <input
+                id="tipo-nombre"
+                type="text"
+                class="ti-input"
+                [class.is-invalid]="createForm.get('nombre')?.invalid && createForm.get('nombre')?.touched"
+                formControlName="nombre"
+                placeholder="Ej. Permiso por Salud"
+                maxlength="100"
+              />
+              @if (createForm.get('nombre')?.invalid && createForm.get('nombre')?.touched) {
+                <div class="ti-error">El nombre es requerido (máx. 100 caracteres).</div>
+              }
+            </div>
+            <div>
+              <label class="ti-label" for="tipo-descripcion">Descripción</label>
+              <textarea
+                id="tipo-descripcion"
+                class="ti-input ti-textarea"
+                formControlName="descripcion"
+                placeholder="Descripción breve del tipo de incidencia..."
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+          <div class="ti-modal-footer">
+            <button type="button" class="ti-btn-ghost" (click)="closeCreateModal()">Cancelar</button>
+            <button type="submit" class="ti-btn-primary" [disabled]="createForm.invalid">
+              <i class="bi bi-check-lg me-1"></i>Crear Tipo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+}

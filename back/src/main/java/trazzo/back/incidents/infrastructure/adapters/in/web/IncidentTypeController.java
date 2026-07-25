@@ -39,7 +39,7 @@ public class IncidentTypeController {
 
     @GetMapping("/{id}")
     public ResponseEntity<IncidentTypeResponse> getById(@PathVariable String id) {
-        return useCase.findById(id)
+        return useCase.findById(toInt(id))
                 .map(result -> ResponseEntity.ok(IncidentTypeResponse.from(result)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -50,7 +50,16 @@ public class IncidentTypeController {
             @Valid @RequestBody PatchIncidentTypeRequest request
     ) {
         var command = new PatchIncidentTypeCommand(request.nombre(), request.descripcion(), request.activo());
-        var result = useCase.patch(id, command);
+        var result = useCase.patch(toInt(id), command);
         return ResponseEntity.ok(IncidentTypeResponse.from(result));
+    }
+
+    private static Integer toInt(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("ID no válido: " + value);
+        }
     }
 }

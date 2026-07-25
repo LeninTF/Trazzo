@@ -9,6 +9,7 @@ import trazzo.back.incidents.infrastructure.adapters.out.persistence.mapper.Inci
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.repository.IncidentTypeSpringDataRepository;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Component
@@ -25,13 +26,15 @@ public class IncidentTypeRepositoryAdapter implements IncidentTypeRepositoryPort
     }
 
     @Override
-    public Optional<IncidentType> findById(String id) {
+    public Optional<IncidentType> findById(Integer id) {
+        if (id == null) return Optional.empty();
         return repository.findById(id).map(IncidentTypeMapper::toDomain);
     }
 
     @Override
-    public List<IncidentType> findByIdIn(List<String> ids) {
-        return repository.findByIdIn(ids)
+    public List<IncidentType> findByIdIn(List<Integer> ids) {
+        var intIds = ids.stream().filter(Objects::nonNull).toList();
+        return repository.findByIdIn(intIds)
                 .stream()
                 .map(IncidentTypeMapper::toDomain)
                 .toList();

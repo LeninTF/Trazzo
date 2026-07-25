@@ -245,6 +245,7 @@ export const mockUsuarioProfile: UsuarioProfile = {
       permissions: { VIEW_USUARIOS: true, VIEW_ALL_TENANT_USERS: true },
     },
   ],
+  tenant_permissions: [],
 };
 
 export const mockAuthResponse: AuthResponse = {
@@ -282,7 +283,7 @@ export const mockIncidencias: IncidentProfile[] = [
     tipo: mockIncidentTypes[0],
     permiso: null,
     evidencias: [
-      { id: 1, incidencia_id: 1, file_name: 'certificado_medico.pdf', file_url: 'https://r2.trazzo.pe/evidencias/1/certificado_medico.pdf', mime_type: 'application/pdf', file_size: 1048576, created_at: daysAgo(3), updated_at: daysAgo(3) },
+      { id: 1, incidencia_id: 1, file_name: 'certificado_medico.pdf', file_key: 'evidences/42/1/uuid/certificado_medico.pdf', download_url: '/api/v1/incidentes/1/evidencias/1/descarga', mime_type: 'application/pdf', file_size: 1048576, created_at: daysAgo(3), updated_at: daysAgo(3) },
     ],
     tenant_user: { id: 3, nombre: 'María Fernanda', apellido_paterno: 'López', apellido_materno: 'Torres', email: 'maria.lopez@colegio.edu.pe' },
     created_at: daysAgo(3),
@@ -323,7 +324,7 @@ export const mockIncidencias: IncidentProfile[] = [
     tipo: mockIncidentTypes[5],
     permiso: null,
     evidencias: [
-      { id: 2, incidencia_id: 4, file_name: 'programa_capacitacion.pdf', file_url: 'https://r2.trazzo.pe/evidencias/4/programa_capacitacion.pdf', mime_type: 'application/pdf', file_size: 524288, created_at: daysAgo(2), updated_at: daysAgo(2) },
+      { id: 2, incidencia_id: 4, file_name: 'programa_capacitacion.pdf', file_key: 'evidences/42/4/uuid/programa_capacitacion.pdf', download_url: '/api/v1/incidentes/4/evidencias/2/descarga', mime_type: 'application/pdf', file_size: 524288, created_at: daysAgo(2), updated_at: daysAgo(2) },
     ],
     tenant_user: { id: 6, nombre: 'Luis Enrique', apellido_paterno: 'García', apellido_materno: 'Pérez', email: 'luis.garcia@colegio.edu.pe' },
     created_at: daysAgo(2),
@@ -377,7 +378,7 @@ export const mockIncidencias: IncidentProfile[] = [
     tipo: mockIncidentTypes[2],
     permiso: null,
     evidencias: [
-      { id: 3, incidencia_id: 8, file_name: 'reporte_policial.jpg', file_url: 'https://r2.trazzo.pe/evidencias/8/reporte_policial.jpg', mime_type: 'image/jpeg', file_size: 2097152, created_at: today + 'T08:00:00Z', updated_at: today + 'T08:00:00Z' },
+      { id: 3, incidencia_id: 8, file_name: 'reporte_policial.jpg', file_key: 'evidences/42/8/uuid/reporte_policial.jpg', download_url: '/api/v1/incidentes/8/evidencias/3/descarga', mime_type: 'image/jpeg', file_size: 2097152, created_at: today + 'T08:00:00Z', updated_at: today + 'T08:00:00Z' },
     ],
     tenant_user: { id: 9, nombre: 'Diana', apellido_paterno: 'Morales', apellido_materno: 'Ríos', email: 'diana.morales@colegio.edu.pe' },
     created_at: today + 'T07:30:00Z',

@@ -1,12 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
   IncidentTypeProfile, IncidentTypeListResponse,
   IncidentProfile, IncidentListResponse,
   CreateIncidentRequest, PatchIncidentRequest, IncidentStateChangeRequest,
   CreateIncidentTypeRequest, PatchIncidentTypeRequest,
-  IncidentEvidenceProfile, CreateEvidenceRequest,
+  IncidentEvidenceProfile, CreateEvidenceRequest, PresignedUrlResponse,
 } from '../types';
 import { API_BASE_URL, params } from './helpers';
 
@@ -65,5 +65,25 @@ export class IncidentsService {
 
   deleteEvidence(incidentId: number, evidenceId: number): Observable<void> {
     return this.http.delete<void>(`${this.apiBase}/incidentes/${incidentId}/evidencias/${evidenceId}`);
+  }
+
+  // ========== STORAGE (R2 presigned) ==========
+  getPresignedUrl(
+    fileName: string,
+    contentType: string,
+    incidentId?: number
+  ): Observable<PresignedUrlResponse> {
+    const body = incidentId != null
+      ? { fileName, contentType, incident_id: incidentId }
+      : { fileName, contentType };
+    return this.http.get<PresignedUrlResponse>(`${this.apiBase}/storage/presigned-url`, { params: params(body) });
+  }
+
+  uploadToR2(presignedUrl: string, file: File, contentType: string): Observable<HttpResponse<unknown>> {
+    return this.http.put(presignedUrl, file, {
+      observe: 'response',
+      responseType: 'text' as const,
+      headers: { 'Content-Type': contentType },
+    }) as Observable<HttpResponse<unknown>>;
   }
 }

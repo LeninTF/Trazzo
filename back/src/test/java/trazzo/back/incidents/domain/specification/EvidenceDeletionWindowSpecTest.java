@@ -13,7 +13,7 @@ class EvidenceDeletionWindowSpecTest {
     void defaultWindowIs15Minutes() {
         var spec = new EvidenceDeletionWindowSpec();
         var now = LocalDateTime.now();
-        var evidence = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+        var evidence = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, now, now, now);
         var clock = Clock.fixed(now.plusMinutes(14).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         assertTrue(spec.isSatisfiedBy(evidence, clock));
@@ -23,7 +23,7 @@ class EvidenceDeletionWindowSpecTest {
     void evidenceOutsideWindowIsNotSatisfied() {
         var spec = new EvidenceDeletionWindowSpec();
         var uploadedAt = LocalDateTime.now();
-        var evidence = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+        var evidence = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, uploadedAt, uploadedAt, uploadedAt);
         var clock = Clock.fixed(uploadedAt.plusMinutes(16).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         assertFalse(spec.isSatisfiedBy(evidence, clock));
@@ -33,7 +33,7 @@ class EvidenceDeletionWindowSpecTest {
     void evidenceExactlyAtDeadlineIsSatisfied() {
         var spec = new EvidenceDeletionWindowSpec();
         var uploadedAt = LocalDateTime.now();
-        var evidence = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+        var evidence = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, uploadedAt, uploadedAt, uploadedAt);
         var clock = Clock.fixed(uploadedAt.plusMinutes(15).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         assertTrue(spec.isSatisfiedBy(evidence, clock));
@@ -49,7 +49,7 @@ class EvidenceDeletionWindowSpecTest {
     void evidenceWithBackfilledUploadedAtIsSatisfied() {
         var spec = new EvidenceDeletionWindowSpec();
         var now = LocalDateTime.now();
-        var evidence = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+        var evidence = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, null, now, now);
         assertNotNull(evidence.getUploadedAt());
         assertTrue(spec.isSatisfiedBy(evidence, Clock.fixed(now.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault())));
@@ -59,7 +59,7 @@ class EvidenceDeletionWindowSpecTest {
     void customWindowDuration() {
         var spec = new EvidenceDeletionWindowSpec(Duration.ofHours(1));
         var uploadedAt = LocalDateTime.now();
-        var evidence = IncidentEvidence.restore("ev-1", "inc-1", "doc.pdf", "http://url", "pdf",
+        var evidence = IncidentEvidence.restore(1, 1, "doc.pdf", "http://url", "pdf",
                 100, false, null, uploadedAt, uploadedAt, uploadedAt);
         var clock = Clock.fixed(uploadedAt.plusMinutes(59).atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         assertTrue(spec.isSatisfiedBy(evidence, clock));

@@ -1681,11 +1681,15 @@ components:
         file_name:
           type: string
           example: "certificado_medico.pdf"
-        file_url:
+        download_url:
           type: string
           format: uri
-          description: "URL pública del archivo en Cloudflare R2."
-          example: "https://r2.trazzo.pe/evidencias/42/certificado_medico.pdf"
+          description: |
+            URL del endpoint backend que retorna el contenido del archivo (streaming
+            proxy). El bucket R2 es privado, por lo que el frontend NO puede
+            descargar directamente del storage; debe usar esta URL autenticada
+            vía cookies/JWT. Ejemplo: `GET /api/v1/incidentes/{id}/evidencias/{eid}/descarga`.
+          example: "/api/v1/incidentes/42/evidencias/12/descarga"
         file_key:
           type: string
           description: "Clave (object key) del archivo en Cloudflare R2."
@@ -1763,6 +1767,11 @@ components:
             Comentario o justificación del trabajador.
             Almacenado en Redis para acceso rápido.
           example: "Adjunto certificado médico por inasistencia del 15 al 17 de junio"
+        rejection_reason:
+          type: string
+          nullable: true
+          description: "Motivo del rechazo. Presente solo cuando `state = DENEGADO`."
+          example: "Documentación insuficiente"
         tipo:
           $ref: '#/components/schemas/IncidentTypeProfile'
         permiso:
@@ -1933,7 +1942,21 @@ components:
           example: "evidences/uuid/certificado_medico.pdf"
         mime_type:
           type: string
-          description: "Tipo MIME del archivo."
+          description: |
+            Tipo MIME del archivo. Debe ser uno de los permitidos por la whitelist
+            del backend: `application/pdf`, `image/png`, `image/jpeg`,
+            `application/msword`,
+            `application/vnd.openxmlformats-officedocument.wordprocessingml.document`,
+            `video/mp4`, `video/quicktime`. El frontend además valida los magic
+            bytes antes de subir para impedir spoofing.
+          enum:
+            - application/pdf
+            - image/png
+            - image/jpeg
+            - application/msword
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - video/mp4
+            - video/quicktime
           example: "application/pdf"
         file_size:
           type: integer
@@ -4696,7 +4719,8 @@ paths:
         "400":
           description: |
             - Estado actual no es `PENDIENTE`.
-            - `motivo_rechazo` ausente al denegar.
+            - `motivo_rechazo` ausente o vacío al denegar (retorna `ErrorResponse`
+              con `details[]` incluyendo `field: "motivo_rechazo"`).
             - `days_granted` inválido.
           content:
             application/json:
@@ -4850,6 +4874,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /incidentes/{id}/evidencias/{evidenceId}/descarga:
+    parameters:
+      - $ref: '#/components/parameters/IncidentId'
+      - $ref: '#/components/parameters/IncidentEvidenceId'
+      - $ref: '#/components/parameters/TenantIdHeader'
+
+    get:
+      tags:
+        - Incidencias (Evidencias)
+      summary: Descargar el archivo de una evidencia (streaming proxy)
+      operationId: downloadEvidence
+      description: |
+        Retorna el contenido binario del archivo de una evidencia, leyéndolo
+        directamente desde el bucket privado de Cloudflare R2 mediante el
+        `S3Client` (no expone el bucket público). El backend actúa como proxy
+        autenticado.
+
+        **Reglas:**
+        - Solo retorna evidencias no eliminadas (soft-delete).
+        - El propietario de la incidencia o un administrador con permiso
+          `VIEW_EVIDENCE` pueden descargarla.
+        - El `Content-Type` y `Content-Disposition` se derivan de los
+          metadatos registrados en BD (`mime_type`, `file_name`, `file_size`).
+
+        **Permisos requeridos:** `VIEW_EVIDENCE` o ser el propietario de la incidencia.
+      responses:
+        "200":
+          description: Contenido binario del archivo.
+          headers:
+            Content-Type:
+              description: Tipo MIME del archivo (registrado al subir la evidencia).
+              schema:
+                type: string
+            Content-Disposition:
+              description: Cabecera de descarga con el nombre del archivo.
+              schema:
+                type: string
+            Content-Length:
+              description: Tamaño del archivo en bytes.
+              schema:
+                type: integer
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Sin permiso `VIEW_EVIDENCE` o no eres el propietario.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Evidencia o incidencia no encontrada (o evidencia eliminada lógicamente).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+
   # ── Notifications ──────────────────────────────────────────────────────
   /incidentes/{id}/notificar:
     parameters:
@@ -4980,13 +5065,21 @@ paths:
       summary: Obtener presigned URL para subir archivo a Cloudflare R2
       description: |
         Genera una presigned URL PUT para que el frontend suba archivos
-        directamente a Cloudflare R2. La URL expira en 15 minutos.
+        directamente a Cloudflare R2 (bucket privado). La URL expira en 15 minutos.
+
+        El `object_key` retornado incorpora el `tenant_id` del usuario autenticado
+        para aislar los objetos por tenant (`evidences/{tenantId}/...`). Si se
+        proporciona `incident_id`, se anida también en la clave.
+
+        **Permisos requeridos:** `incidencias.crear`.
 
         **Flujo:**
         1. Frontend solicita `GET /storage/presigned-url?fileName=...&contentType=...`
         2. Backend genera una presigned URL con un `objectKey` único.
         3. Frontend sube el archivo vía HTTP PUT a la presigned URL.
         4. Frontend usa el `object_key` retornado en `POST /incidentes/{id}/evidencias`.
+      security:
+        - bearerAuth: []
       parameters:
         - name: fileName
           in: query
@@ -5000,8 +5093,15 @@ paths:
           required: true
           schema:
             type: string
-          description: "Tipo MIME del archivo."
+          description: "Tipo MIME del archivo (debe estar en la whitelist)."
           example: "application/pdf"
+        - name: incident_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "ID opcional de la incidencia para anidar en el object_key."
+          example: 42
       responses:
         "200":
           description: Presigned URL generada exitosamente.
@@ -5018,9 +5118,15 @@ paths:
                   object_key:
                     type: string
                     description: "Object key único que debe enviarse a `POST /incidentes/{id}/evidencias` como `file_key`."
-                    example: "evidences/uuid/certificado_medico.pdf"
+                    example: "evidences/42/uuid/certificado_medico.pdf"
         "400":
           description: Parámetros inválidos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin permiso `incidencias.crear`.
           content:
             application/json:
               schema:

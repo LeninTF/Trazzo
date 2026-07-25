@@ -91,6 +91,7 @@ export function mockInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn):
   // Skip non-API requests
   if (!url.startsWith('/auth/') && !url.startsWith('/usuarios') && !url.startsWith('/saas/')
     && !url.startsWith('/incidentes')
+    && !url.startsWith('/storage')
     && !url.startsWith('/asistencia/') && !url.startsWith('/security/')
     && !url.startsWith('/corehr/')
     && !url.startsWith('/ws/')) {
@@ -138,6 +139,7 @@ function handleRoute(
     handleIncidenteById(method, u, req, page, size, qp) ??
     handleIncidenteEstadoActions(method, u, req, page, size, qp) ??
     handleIncidenteEvidencias(method, u, req, page, size, qp) ??
+    handleStoragePresigned(method, u, req, page, size, qp) ??
     handleCorehrShifts(method, u, req, page, size, qp) ??
     handleCorehrSchedules(method, u, req, page, size, qp) ??
     handleCorehrTolerancias(method, u, req, page, size, qp) ??
@@ -518,27 +520,33 @@ function handleIncidenteEstadoActions(
   _page: number, _size: number, _qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   const incStateMatch = /^\/incidentes\/(\d+)\/estado$/.exec(u);
-  if (incStateMatch && method === 'PATCH') {
-    const id = Number.parseInt(incStateMatch[1], 10);
-    const incident = mockIncidencias.find(i => i.id === id);
-    if (!incident) return _error(404, 'Incidencia no encontrada');
-    const body = req.body as { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string };
-    return ok({
-      ...incident,
-      state: body.state,
-      permiso: body.state === 'APROBADO' && body.days_granted
-        ? {
-            id: (incident.permiso?.id ?? 0) + 1,
-            incidencia_id: incident.id,
-            start_date: new Date().toISOString().slice(0, 10),
-            end_date: new Date(Date.now() + (body.days_granted * 86400000)).toISOString().slice(0, 10),
-            days_granted: body.days_granted,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }
-        : null,
-    } as typeof incident);
-  }
+    if (incStateMatch && method === 'PATCH') {
+      const id = Number.parseInt(incStateMatch[1], 10);
+      const incident = mockIncidencias.find(i => i.id === id);
+      if (!incident) return _error(404, 'Incidencia no encontrada');
+      const body = req.body as { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string };
+      if (body.state === 'DENEGADO' && (!body.motivo_rechazo || !body.motivo_rechazo.trim())) {
+        return _error(400, 'motivo_rechazo is required when state is DENEGADO', [
+          { field: 'motivo_rechazo', message: 'Debes ingresar un motivo para rechazar la incidencia.' },
+        ]);
+      }
+      return ok({
+        ...incident,
+        state: body.state,
+        rejection_reason: body.state === 'DENEGADO' ? body.motivo_rechazo : null,
+        permiso: body.state === 'APROBADO' && body.days_granted
+          ? {
+              id: (incident.permiso?.id ?? 0) + 1,
+              incidencia_id: incident.id,
+              start_date: new Date().toISOString().slice(0, 10),
+              end_date: new Date(Date.now() + (body.days_granted * 86400000)).toISOString().slice(0, 10),
+              days_granted: body.days_granted,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }
+          : null,
+      } as typeof incident);
+    }
 
   if (/^\/incidentes\/(\d+)\/notificar$/.test(u) && method === 'POST') {
     return accepted<MessageResponse>({ message: 'Notificación encolada para envío.', status: 'queued' });
@@ -563,13 +571,16 @@ function handleIncidenteEvidencias(
 
     if (method === 'GET') return ok(incident.evidencias);
     if (method === 'POST') {
+      const body = req.body as { file_name: string; file_key: string; mime_type: string; file_size: number };
+      const newId = Math.max(0, ...mockIncidencias.flatMap(i => i.evidencias.map(e => e.id))) + 1;
       return created({
-        id: Math.max(0, ...mockIncidencias.flatMap(i => i.evidencias.map(e => e.id))) + 1,
+        id: newId,
         incidencia_id: id,
-        file_name: (req.body as { file_name: string }).file_name,
-        file_url: (req.body as { file_url: string }).file_url,
-        mime_type: (req.body as { mime_type: string }).mime_type,
-        file_size: (req.body as { file_size: number }).file_size,
+        file_name: body.file_name,
+        file_key: body.file_key,
+        download_url: `/api/v1/incidentes/${id}/evidencias/${newId}/descarga`,
+        mime_type: body.mime_type,
+        file_size: body.file_size,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -579,7 +590,33 @@ function handleIncidenteEvidencias(
   const evDelMatch = /^\/incidentes\/(\d+)\/evidencias\/(\d+)$/.exec(u);
   if (evDelMatch && method === 'DELETE') return noContent();
 
+  const evDownloadMatch = /^\/incidentes\/(\d+)\/evidencias\/(\d+)\/descarga$/.exec(u);
+  if (evDownloadMatch && method === 'GET') {
+    const incidentId = Number.parseInt(evDownloadMatch[1], 10);
+    const evidenceId = Number.parseInt(evDownloadMatch[2], 10);
+    const incident = mockIncidencias.find(i => i.id === incidentId);
+    const evidence = incident?.evidencias.find(e => e.id === evidenceId);
+    if (!evidence) return _error(404, 'Evidencia no encontrada');
+    const blob = new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31])], { type: evidence.mime_type });
+    return ok(blob);
+  }
+
   return null;
+}
+
+function handleStoragePresigned(
+  method: string, u: string, req: HttpRequest<unknown>,
+  _page: number, _size: number, qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  if (u !== '/storage/presigned-url' || method !== 'GET') return null;
+  const fileName = qp['fileName'] ?? 'archivo';
+  const contentType = qp['contentType'] ?? 'application/octet-stream';
+  const incidentId = qp['incident_id'];
+  const objectKey = `evidences/42/${incidentId ? incidentId + '/' : ''}${crypto.randomUUID()}/${fileName}`;
+  return ok({
+    presigned_url: `https://r2.mock.dev/${objectKey}?X-Amz-Mock=1&contentType=${encodeURIComponent(contentType)}`,
+    object_key: objectKey,
+  });
 }
 
 function handleCorehrShiftListCreate(

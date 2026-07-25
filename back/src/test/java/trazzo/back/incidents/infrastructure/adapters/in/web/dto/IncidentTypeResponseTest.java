@@ -12,10 +12,10 @@ class IncidentTypeResponseTest {
     @Test
     void fromResultMapsAllFields() {
         var now = LocalDateTime.now();
-        var result = new IncidentTypeResult("id-1", "Permiso", "Desc", true, now, now);
+        var result = new IncidentTypeResult(1, "Permiso", "Desc", true, now, now);
         var response = IncidentTypeResponse.from(result);
 
-        assertEquals("id-1", response.id());
+        assertEquals("1", response.id());
         assertEquals("Permiso", response.nombre());
         assertEquals("Desc", response.descripcion());
         assertTrue(response.activo());
@@ -26,10 +26,20 @@ class IncidentTypeResponseTest {
     @Test
     void fromResultWithNullDescripcion() {
         var now = LocalDateTime.now();
-        var result = new IncidentTypeResult("id-1", "Permiso", null, false, now, now);
+        var result = new IncidentTypeResult(1, "Permiso", null, false, now, now);
         var response = IncidentTypeResponse.from(result);
 
         assertNull(response.descripcion());
         assertFalse(response.activo());
+    }
+
+    @Test
+    void fromResultWithNullId_returnsNullIdString() {
+        var now = LocalDateTime.now();
+        var result = new IncidentTypeResult(null, "Permiso", "Desc", false, now, now);
+        var response = IncidentTypeResponse.from(result);
+
+        assertNull(response.id());
+        assertEquals("Permiso", response.nombre());
     }
 }

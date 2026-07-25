@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface IncidentPermissionSpringDataRepository extends JpaRepository<IncidentPermissionEntity, String> {
-    Optional<IncidentPermissionEntity> findByIncidentId(String incidentId);
-    List<IncidentPermissionEntity> findByIncidentIdIn(List<String> incidentIds);
-    void deleteByIncidentId(String incidentId);
+public interface IncidentPermissionSpringDataRepository extends JpaRepository<IncidentPermissionEntity, Integer> {
+    Optional<IncidentPermissionEntity> findByIncidentId(Integer incidentId);
+    List<IncidentPermissionEntity> findByIncidentIdIn(List<Integer> incidentIds);
+    void deleteByIncidentId(Integer incidentId);
 }

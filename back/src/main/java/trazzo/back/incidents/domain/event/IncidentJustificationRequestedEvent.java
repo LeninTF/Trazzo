@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record IncidentJustificationRequestedEvent(
-        String incidentId,
-        String tenantUserId,
+        Integer incidentId,
+        Integer tenantUserId,
         LocalDate startDate,
         LocalDate endDate,
         LocalDateTime occurredAt

@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClient } from '@angular/common/http';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../api/services/api.service';
 import type { IncidentProfile } from '../../../api/types';
+import { ToastService } from '../../../services/toast.service';
 import { Incidencias } from './incidencias';
 
 const makeIncident = (
@@ -23,12 +23,27 @@ let incidentsData: IncidentProfile[];
 const mockApi = {
   incidents: {
     list: () => of({ content: incidentsData, page: 0, size: 100, totalElements: incidentsData.length, totalPages: 1 }),
-    changeState: (id: number, body: { state: 'APROBADO' | 'DENEGADO' }) => {
+    changeState: (id: number, body: { state: 'APROBADO' | 'DENEGADO'; days_granted?: number; motivo_rechazo?: string }) => {
+      if (body.state === 'DENEGADO' && (!body.motivo_rechazo || !body.motivo_rechazo.trim())) {
+        return throwError(() => ({
+          error: {
+            status: 400,
+            error: 'Validation Error',
+            message: 'motivo_rechazo is required when state is DENEGADO',
+            details: [{ field: 'motivo_rechazo', message: 'Debes ingresar un motivo para rechazar la incidencia.' }],
+          },
+        }));
+      }
       const inc = incidentsData.find(x => x.id === id);
       if (inc) inc.state = body.state;
       return of({} as any);
     },
   },
+};
+
+const mockToast = {
+  success: jasmine.createSpy('success'),
+  error: jasmine.createSpy('error'),
 };
 
 describe('Incidencias (admin-tenant)', () => {
@@ -41,13 +56,17 @@ describe('Incidencias (admin-tenant)', () => {
       makeIncident(2, 'APROBADO', 'Juan', 'Pérez', 'Permiso Médico'),
       makeIncident(3, 'DENEGADO', 'Carlos', 'López', 'Capacitación'),
     ];
-    incidentsData[0].evidencias.push({ id: 1, incidencia_id: 1, file_name: 'doc.pdf', file_url: '#', mime_type: 'application/pdf', file_size: 2048, created_at: '', updated_at: '' });
+    incidentsData[0].evidencias.push({ id: 1, incidencia_id: 1, file_name: 'doc.pdf', file_key: 'k', download_url: '/api/v1/incidentes/1/evidencias/1/descarga', mime_type: 'application/pdf', file_size: 2048, created_at: '', updated_at: '' });
+
+    mockToast.success.calls.reset();
+    mockToast.error.calls.reset();
 
     await TestBed.configureTestingModule({
       imports: [Incidencias],
       providers: [
         provideHttpClient(),
         { provide: ApiService, useValue: mockApi },
+        { provide: ToastService, useValue: mockToast },
       ],
     }).compileComponents();
 
@@ -145,18 +164,90 @@ describe('Incidencias (admin-tenant)', () => {
     expect(component.modalOpen).toBeFalse();
   });
 
-  it('should rechazar solicitud', async () => {
-    const sol = component.solicitudes()[0];
-    await component.rechazar(sol);
+  it('should open rejection form on first rechazar click and not call api', async () => {
+    const spy = spyOn(mockApi.incidents, 'changeState').and.callThrough();
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    expect(component.showRejectionForm()).toBeTrue();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should show rejection error and not call api when motivo is empty', async () => {
+    const spy = spyOn(mockApi.incidents, 'changeState').and.callThrough();
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]); // abre form
+    await component.rechazar(component.solicitudes()[0]); // intenta sin motivo
+    expect(component.showRejectionError()).toBeTrue();
+    expect(spy).not.toHaveBeenCalled();
+    expect(component.modalOpen).toBeTrue();
+  });
+
+  it('should rechazar solicitud when motivo provided', async () => {
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]); // abre form
+    component.rejectionReason.set('Documentación insuficiente');
+    await component.rechazar(component.solicitudes()[0]); // confirma
     expect(component.solicitudes()[0].estado).toBe('Rechazado');
     expect(component.modalOpen).toBeFalse();
   });
 
+  it('should show toast on aprobar error', async () => {
+    mockApi.incidents.changeState = () => throwError(() => new Error('fail'));
+    const sol = component.solicitudes()[0];
+    await component.aprobar(sol);
+    expect(mockToast.error).toHaveBeenCalledWith('Error al aprobar');
+  });
+
+  it('should show toast on rechazar error from api with other message', async () => {
+    mockApi.incidents.changeState = () => throwError(() => ({ error: { message: 'Server boom' } }));
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    component.rejectionReason.set('algo');
+    await component.rechazar(component.solicitudes()[0]);
+    expect(mockToast.error).toHaveBeenCalledWith('Server boom');
+  });
+
+  it('should set rejection error flag when api returns motivo_rechazo detail', async () => {
+    mockApi.incidents.changeState = () => throwError(() => ({
+      error: { details: [{ field: 'motivo_rechazo', message: 'Inválido' }] },
+    }));
+    component.openModal(component.solicitudes()[0]);
+    await component.rechazar(component.solicitudes()[0]);
+    component.rejectionReason.set('x');
+    await component.rechazar(component.solicitudes()[0]);
+    expect(component.showRejectionError()).toBeTrue();
+    expect(mockToast.error).toHaveBeenCalledWith('Inválido');
+  });
+
+  it('should clear showRejectionError when typing non-empty value', () => {
+    component.showRejectionError.set(true);
+    component.onRejectionReasonInput({ target: { value: 'texto' } } as unknown as Event);
+    expect(component.showRejectionError()).toBeFalse();
+  });
+
+  it('should toggleRejectionForm and clear state on cancel', () => {
+    component.showRejectionForm.set(true);
+    component.rejectionReason.set('x');
+    component.showRejectionError.set(true);
+    component.toggleRejectionForm();
+    expect(component.showRejectionForm()).toBeFalse();
+    expect(component.rejectionReason()).toBe('');
+    expect(component.showRejectionError()).toBeFalse();
+  });
+
   it('should descargarArchivo', async () => {
-    spyOn(HttpClient.prototype, 'get').and.returnValue(of(new Blob(['test'])));
     const createSpy = spyOn(document, 'createElement').and.returnValue({ href: '', download: '', click: () => {} } as unknown as HTMLAnchorElement);
+    spyOn(globalThis, 'fetch').and.returnValue(Promise.resolve(new Response(new Blob(['test']))));
+    spyOn(URL, 'createObjectURL').and.returnValue('blob:test');
+    spyOn(URL, 'revokeObjectURL');
     await component.descargarArchivo(component.solicitudes()[0]);
     expect(createSpy).toHaveBeenCalledWith('a');
+  });
+
+  it('should not descargar when no archivo', async () => {
+    const sol = component.solicitudes()[2];
+    sol.archivo = null;
+    await component.descargarArchivo(sol);
   });
 
   it('should exportarCSV', () => {
@@ -240,8 +331,11 @@ describe('Incidencias (admin-tenant)', () => {
     it('should handle rechazar error gracefully', async () => {
       spyOn(mockApi.incidents, 'changeState').and.returnValue(throwError(() => new Error('fail')));
       component.openModal(component.solicitudes()[0]);
-      await component.rechazar(component.solicitudes()[0]);
-      expect(component.modalOpen).toBeFalse();
+      await component.rechazar(component.solicitudes()[0]); // abre form
+      component.rejectionReason.set('motivo');
+      await component.rechazar(component.solicitudes()[0]); // intenta confirmar
+      expect(component.modalOpen).toBeTrue();
+      expect(mockToast.error).toHaveBeenCalled();
     });
 
     it('should handle descargarArchivo HTTP error gracefully', async () => {
@@ -288,7 +382,7 @@ describe('Incidencias (admin-tenant)', () => {
         comment: 'Test',
         tipo: { id: 70, nombre: 'Permiso', descripcion: null, activo: true, created_at: '', updated_at: '' },
         permiso: null,
-        evidencias: [{ id: 70, incidencia_id: 70, file_name: null as any, file_url: '#', mime_type: null as any, file_size: null as any, created_at: '', updated_at: '' }],
+        evidencias: [{ id: 70, incidencia_id: 70, file_name: null as any, file_key: 'k', download_url: 'd', mime_type: null as any, file_size: null as any, created_at: '', updated_at: '' }],
         tenant_user: { id: 70, nombre: 'Eve', apellido_paterno: 'Lee', apellido_materno: '', email: 'eve@test.com' },
         created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
       }];
@@ -313,7 +407,7 @@ describe('Incidencias (admin-tenant)', () => {
         comment: 'Zero size',
         tipo: { id: 80, nombre: 'Otro', descripcion: null, activo: true, created_at: '', updated_at: '' },
         permiso: null,
-        evidencias: [{ id: 80, incidencia_id: 80, file_name: 'empty.txt', file_url: '#', mime_type: 'text/plain', file_size: 0, created_at: '', updated_at: '' }],
+        evidencias: [{ id: 80, incidencia_id: 80, file_name: 'empty.txt', file_key: 'k', download_url: 'd', mime_type: 'text/plain', file_size: 0, created_at: '', updated_at: '' }],
         tenant_user: { id: 80, nombre: 'Zoe', apellido_paterno: 'Kim', apellido_materno: '', email: 'zoe@test.com' },
         created_at: '2025-07-01T10:00:00Z', updated_at: '2025-07-01T10:00:00Z',
       }];

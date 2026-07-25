@@ -7,7 +7,6 @@ import trazzo.back.incidents.domain.model.IncidentType;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentEvidenceEntity;
 import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentPermissionEntity;
-import trazzo.back.incidents.infrastructure.adapters.out.persistence.entity.IncidentTypeEntity;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,8 +47,6 @@ public final class IncidentMapper {
     }
 
     public static Incident toDomain(IncidentEntity entity) {
-        IncidentType type = null;
-
         IncidentPermission permission = null;
         if (entity.getPermission() != null) {
             permission = toDomain(entity.getPermission());
@@ -68,7 +65,7 @@ public final class IncidentMapper {
                 entity.getState(),
                 entity.getComment(),
                 entity.getRejectionReason(),
-                type,
+                null,
                 permission,
                 evidences,
                 entity.getCreatedAt(),

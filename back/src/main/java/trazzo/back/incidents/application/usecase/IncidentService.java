@@ -12,7 +12,6 @@ import trazzo.back.incidents.application.port.out.IncidentTypeRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.incidents.domain.model.Incident;
 import trazzo.back.incidents.domain.model.IncidentState;
-import trazzo.back.shared.application.port.out.FileStoragePort;
 import trazzo.back.incidents.domain.model.IncidentType;
 
 import java.time.LocalDate;
@@ -29,7 +28,6 @@ public class IncidentService implements IncidentUseCase {
     private final IncidentTypeRepositoryPort typeRepository;
     private final TenantUserPort tenantUserPort;
     private final EventPublisherPort eventPublisher;
-    private final FileStoragePort fileStoragePort;
 
     @Override
     public IncidentResult create(CreateIncidentCommand command) {
@@ -50,21 +48,28 @@ public class IncidentService implements IncidentUseCase {
     }
 
     @Override
-    public Optional<IncidentResult> findById(String id) {
+    public Optional<IncidentResult> findById(Integer id) {
         return incidentRepository.findById(id).map(this::toResult);
     }
 
     @Override
-    public PaginatedResult<IncidentResult> findAll(String scope, String sedeId, String areaId,
-                                                    String departamentoId, String state, String tipoId,
+    public PaginatedResult<IncidentResult> findAll(Integer currentTenantUserId, String scope, Integer sedeId, Integer areaId,
+                                                    Integer departamentoId, String state, Integer tipoId,
                                                     LocalDate desde, LocalDate hasta, String search,
                                                     int page, int size, String sort) {
 
         LocalDateTime desdeDt = desde != null ? desde.atStartOfDay() : null;
         LocalDateTime hastaDt = hasta != null ? hasta.plusDays(1).atStartOfDay() : null;
 
-        var incidents = incidentRepository.findAll(null, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
-        var total = incidentRepository.count(null, state, tipoId, desdeDt, hastaDt, search);
+        if ("SELF".equals(scope) && currentTenantUserId == null) {
+            throw new IllegalStateException(
+                    "No se encontró usuario de tenant para el usuario autenticado con scope=SELF");
+        }
+
+        Integer tenantUserFilter = "SELF".equals(scope) ? currentTenantUserId : null;
+
+        var incidents = incidentRepository.findAll(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search, page, size, sort);
+        var total = incidentRepository.count(tenantUserFilter, state, tipoId, desdeDt, hastaDt, search);
 
         attachTypes(incidents);
 
@@ -74,7 +79,7 @@ public class IncidentService implements IncidentUseCase {
     }
 
     @Override
-    public IncidentResult patch(String id, PatchIncidentCommand command) {
+    public IncidentResult patch(Integer id, PatchIncidentCommand command) {
         var incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + id));
 
@@ -84,7 +89,7 @@ public class IncidentService implements IncidentUseCase {
     }
 
     @Override
-    public IncidentResult changeState(String id, IncidentStateChangeCommand command) {
+    public IncidentResult changeState(Integer id, IncidentStateChangeCommand command) {
         var incident = incidentRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Incidencia no encontrada: " + id));
 
@@ -117,13 +122,13 @@ public class IncidentService implements IncidentUseCase {
                 .map(Incident::getIncidentTypeId)
                 .distinct()
                 .toList();
-        Map<String, IncidentType> typeMap = typeRepository.findByIdIn(typeIds)
+        Map<Integer, IncidentType> typeMap = typeRepository.findByIdIn(typeIds)
                 .stream()
                 .collect(Collectors.toMap(IncidentType::getId, t -> t));
         incidents.forEach(i -> {
             var type = typeMap.get(i.getIncidentTypeId());
             if (type != null) {
-                i.attachType(type);
+                i.hydrateType(type);
             }
         });
     }
@@ -151,18 +156,20 @@ public class IncidentService implements IncidentUseCase {
 
         List<IncidentEvidenceResult> evidenciasResult = incident.getEvidences().stream()
                 .filter(e -> !e.isDeleted())
-                .map(e -> new IncidentEvidenceResult(e.getId(), e.getIncidentId(),
-                        e.getFileName(), e.getFileKey(), fileStoragePort.buildPublicUrl(e.getFileKey()),
-                        e.getMimeType(), e.getFileSize(),
-                        e.getCreatedAt(), e.getUpdatedAt()))
+                .map(e -> {
+                    String downloadUrl = "/api/v1/incidentes/" + e.getIncidentId()
+                            + "/evidencias/" + e.getId() + "/descarga";
+                    return new IncidentEvidenceResult(e.getId(), e.getIncidentId(),
+                            e.getFileName(), e.getFileKey(), downloadUrl,
+                            e.getMimeType(), e.getFileSize(),
+                            e.getCreatedAt(), e.getUpdatedAt());
+                })
                 .toList();
 
         IncidentResult.TenantUserBasicInfoResult tenantUserResult = null;
         if (incident.getTenantUserId() != null) {
-            Long tenantUserId = tryParseTenantUserId(incident.getTenantUserId());
-            var optInfo = tenantUserId != null
-                    ? Optional.ofNullable(tenantUserPort.findBasicInfoById(tenantUserId)).orElse(Optional.empty())
-                    : Optional.<trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserBasicInfo>empty();
+            Long tenantUserId = incident.getTenantUserId().longValue();
+            var optInfo = Optional.ofNullable(tenantUserPort.findBasicInfoById(tenantUserId)).orElse(Optional.empty());
             if (optInfo.isPresent()) {
                 var info = optInfo.get();
                 tenantUserResult = new IncidentResult.TenantUserBasicInfoResult(
@@ -185,13 +192,5 @@ public class IncidentService implements IncidentUseCase {
                 incident.getCreatedAt(),
                 incident.getUpdatedAt()
         );
-    }
-
-    private Long tryParseTenantUserId(String tenantUserId) {
-        try {
-            return Long.valueOf(tenantUserId);
-        } catch (NumberFormatException ex) {
-            return null;
-        }
     }
 }

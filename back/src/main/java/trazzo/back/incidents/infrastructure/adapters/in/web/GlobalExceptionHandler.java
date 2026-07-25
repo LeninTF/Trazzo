@@ -2,6 +2,7 @@ package trazzo.back.incidents.infrastructure.adapters.in.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -62,5 +63,11 @@ public class GlobalExceptionHandler {
         var error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation Error",
                 "Validation failed for one or more fields", details);
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        var error = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Forbidden", "No tienes permiso para esta acción");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 }

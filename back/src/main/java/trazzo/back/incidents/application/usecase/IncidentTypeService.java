@@ -27,7 +27,7 @@ public class IncidentTypeService implements IncidentTypeUseCase {
     }
 
     @Override
-    public Optional<IncidentTypeResult> findById(String id) {
+    public Optional<IncidentTypeResult> findById(Integer id) {
         return repository.findById(id).map(this::toResult);
     }
 
@@ -41,7 +41,7 @@ public class IncidentTypeService implements IncidentTypeUseCase {
     }
 
     @Override
-    public IncidentTypeResult patch(String id, PatchIncidentTypeCommand command) {
+    public IncidentTypeResult patch(Integer id, PatchIncidentTypeCommand command) {
         var type = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de incidencia no encontrado: " + id));
 

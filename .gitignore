@@ -45,6 +45,7 @@ build/
 
 ### Security ###
 .env
+.env.local
 
 ### Frontend ###
 # Compiled output

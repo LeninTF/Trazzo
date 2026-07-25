@@ -13,13 +13,13 @@ class ActiveIncidentTypeSpecTest {
 
     @Test
     void isSatisfiedByActiveType() {
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", true, LocalDateTime.now(), LocalDateTime.now());
+        var type = IncidentType.restore(1, "Permiso", "Desc", true, LocalDateTime.now(), LocalDateTime.now());
         assertTrue(spec.isSatisfiedBy(type));
     }
 
     @Test
     void isNotSatisfiedByInactiveType() {
-        var type = IncidentType.restore("id-1", "Permiso", "Desc", false, LocalDateTime.now(), LocalDateTime.now());
+        var type = IncidentType.restore(1, "Permiso", "Desc", false, LocalDateTime.now(), LocalDateTime.now());
         assertFalse(spec.isSatisfiedBy(type));
     }
 
