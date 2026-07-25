@@ -10,12 +10,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
+import trazzo.back.audit.application.port.out.SessionRepositoryPort;
 
 @ExtendWith(MockitoExtension.class)
 class AuditMetricsServiceTest {
 
     @Mock
     private AuditRepositoryPort auditRepository;
+
+    @Mock
+    private SessionRepositoryPort sessionRepository;
 
     @InjectMocks
     private AuditMetricsService service;
@@ -27,12 +31,13 @@ class AuditMetricsServiceTest {
                     var desde = invocation.getArgument(3, java.time.LocalDateTime.class);
                     return desde == null ? 42L : 5L;
                 });
+        when(sessionRepository.count(isNull(), any(), isNull())).thenReturn(3L);
 
         var result = service.getMetrics();
 
         assertEquals(42, result.totalEventos());
-        assertEquals(0, result.sesionesActivas());
-        assertEquals(0.0, result.porcentajeSesiones());
+        assertEquals(3, result.sesionesActivas());
+        assertTrue(result.porcentajeSesiones() > 0.0);
     }
 
     @Test
@@ -42,6 +47,7 @@ class AuditMetricsServiceTest {
                     var desde = invocation.getArgument(3, java.time.LocalDateTime.class);
                     return desde == null ? 100L : 10L;
                 });
+        when(sessionRepository.count(isNull(), any(), isNull())).thenReturn(5L);
 
         var result = service.getMetrics();
 
@@ -55,6 +61,7 @@ class AuditMetricsServiceTest {
                     var desde = invocation.getArgument(3, java.time.LocalDateTime.class);
                     return desde == null ? 10L : 0L;
                 });
+        when(sessionRepository.count(isNull(), any(), isNull())).thenReturn(2L);
 
         var result = service.getMetrics();
 

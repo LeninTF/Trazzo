@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test;
 class ActionTest {
 
     @Test
-    void shouldHaveThreeValues() {
-        assertEquals(3, Action.values().length);
+    void shouldHaveFourValues() {
+        assertEquals(4, Action.values().length);
     }
 
     @Test
@@ -23,6 +23,11 @@ class ActionTest {
     @Test
     void shouldContainDelete() {
         assertEquals(Action.DELETE, Action.valueOf("DELETE"));
+    }
+
+    @Test
+    void shouldContainError() {
+        assertEquals(Action.ERROR, Action.valueOf("ERROR"));
     }
 
 }
