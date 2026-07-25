@@ -90,7 +90,8 @@ public class TenantDataSeeder implements CommandLineRunner {
         log.info("Creating tenant user for '{}'...", subDomain);
 
         Integer personId = insertPerson();
-        String encodedPassword = passwordEncoder.encode("demo123");
+        String rawPassword = System.getenv().getOrDefault("DEMO_USER_PASSWORD", "demo123");
+        String encodedPassword = passwordEncoder.encode(rawPassword);
 
         User tenantUser = User.create(
                 personId,

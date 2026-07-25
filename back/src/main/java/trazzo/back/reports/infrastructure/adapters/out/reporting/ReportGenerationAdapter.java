@@ -50,8 +50,8 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
                 org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowNum++);
                 row.createCell(0).setCellValue(detail.getTenantUserFullName());
                 row.createCell(1).setCellValue(detail.getTenantUserDocument());
-                row.createCell(2).setCellValue(detail.getDepartmentName());
-                row.createCell(3).setCellValue(detail.getRoleName());
+                row.createCell(2).setCellValue(detail.getDepartmentName() != null ? detail.getDepartmentName() : "Sin departamento");
+                row.createCell(3).setCellValue(detail.getRoleName() != null ? detail.getRoleName() : "Sin rol");
                 row.createCell(4).setCellValue(detail.getTotalWorkedHours());
                 row.createCell(5).setCellValue(detail.getTotalTardinessMinutes());
                 row.createCell(6).setCellValue(detail.getTotalAbsences());
@@ -102,12 +102,18 @@ public class ReportGenerationAdapter implements ReportGenerationPort {
             for (MonthlyClosureDetail detail : details) {
                 table.addCell(detail.getTenantUserFullName());
                 table.addCell(detail.getTenantUserDocument());
-                table.addCell(detail.getDepartmentName());
-                table.addCell(detail.getRoleName());
+                table.addCell(detail.getDepartmentName() != null ? detail.getDepartmentName() : "Sin departamento");
+                table.addCell(detail.getRoleName() != null ? detail.getRoleName() : "Sin rol");
                 table.addCell(String.valueOf(detail.getTotalWorkedHours()));
                 table.addCell(String.valueOf(detail.getTotalTardinessMinutes()));
                 table.addCell(String.valueOf(detail.getTotalAbsences()));
                 table.addCell(String.valueOf(detail.getTotalOvertimeHours()));
+            }
+
+            if (details.isEmpty()) {
+                com.lowagie.text.Font italicFont = com.lowagie.text.FontFactory.getFont(
+                        com.lowagie.text.FontFactory.HELVETICA, 10, com.lowagie.text.Font.ITALIC);
+                document.add(new Paragraph("Sin datos de asistencia para este periodo.", italicFont));
             }
 
             document.add(table);

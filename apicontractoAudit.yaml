@@ -69,7 +69,7 @@ components:
   schemas:
     Action:
       type: string
-      enum: [CREATE, UPDATE, DELETE]
+      enum: [CREATE, UPDATE, DELETE, ERROR]
       description: "Accion CRUD a nivel global (master_db)."
 
     StatusLogin:

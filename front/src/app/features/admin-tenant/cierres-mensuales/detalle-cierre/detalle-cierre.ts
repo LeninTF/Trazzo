@@ -70,4 +70,9 @@ export class DetalleCierre implements OnInit {
   volver(): void {
     this.router.navigate(['/tenant/cierres-mensuales']);
   }
+
+  retry(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) this.cargarReporte(id);
+  }
 }

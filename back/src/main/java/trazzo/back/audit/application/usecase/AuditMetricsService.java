@@ -5,6 +5,7 @@ import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
 import trazzo.back.audit.application.port.out.SessionRepositoryPort;
+import trazzo.back.audit.domain.model.master.Action;
 import trazzo.back.audit.domain.model.tenant.SessionState;
 
 import java.time.LocalDateTime;
@@ -31,10 +32,11 @@ public class AuditMetricsService implements AuditMetricsUseCase {
                 : 0.0;
 
         long sesionesActivas = sessionRepository.count(null, SessionState.ACTIVE, null);
+        long errores = auditRepository.count(null, Action.ERROR, null, null, null);
         double porcentajeSesiones = totalEventos > 0
                 ? ((double) sesionesActivas / totalEventos) * 100.0
                 : 0.0;
 
-        return new AuditMetricsResult(totalEventos, 0, sesionesActivas, crecimiento, porcentajeSesiones);
+        return new AuditMetricsResult(totalEventos, errores, sesionesActivas, crecimiento, porcentajeSesiones);
     }
 }

@@ -108,6 +108,12 @@ describe('DetalleCierre', () => {
       expect(routerSpy.navigate).toHaveBeenCalledWith(['/tenant/cierres-mensuales']);
     });
 
+    it('should retry loading report', () => {
+      reportsSpy.getFullReport.calls.reset();
+      component.retry();
+      expect(reportsSpy.getFullReport).toHaveBeenCalledWith('c1');
+    });
+
     it('should handle error loading report', () => {
       reportsSpy.getFullReport.and.returnValue(throwError(() => new Error('fail')));
       component.cargarReporte('c1');
