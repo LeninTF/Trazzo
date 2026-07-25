@@ -87,6 +87,7 @@ describe('HorariosService', () => {
     it('should get schedule', () => {
       service.getSchedule(1).subscribe();
       const req = httpMock.expectOne(`${apiBase}/corehr/schedules/1`);
+      expect(req.request.method).toBe('GET');
       req.flush({ id: 1 });
     });
 

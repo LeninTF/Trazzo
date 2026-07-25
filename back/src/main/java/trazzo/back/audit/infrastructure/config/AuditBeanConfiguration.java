@@ -8,7 +8,6 @@ import trazzo.back.audit.application.port.in.LoginHistoryUseCase;
 import trazzo.back.audit.application.port.in.SessionUseCase;
 import trazzo.back.audit.application.port.in.SystemAuditUseCase;
 import trazzo.back.audit.application.port.in.TenantSettingsUseCase;
-import trazzo.back.audit.application.port.out.AuditMetricsPort;
 import trazzo.back.audit.application.port.out.AuditRepositoryPort;
 import trazzo.back.audit.application.port.out.LogInHistoryRepositoryPort;
 import trazzo.back.audit.application.port.out.SessionRepositoryPort;
@@ -23,15 +22,8 @@ import trazzo.back.audit.application.usecase.SessionService;
 import trazzo.back.audit.application.usecase.SystemAuditService;
 import trazzo.back.audit.application.usecase.TenantSettingsService;
 
-import java.time.Clock;
-
 @Configuration
 public class AuditBeanConfiguration {
-
-    @Bean
-    public Clock clock() {
-        return Clock.systemDefaultZone();
-    }
 
     @Bean
     public AuditLogUseCase auditLogUseCase(
@@ -63,7 +55,9 @@ public class AuditBeanConfiguration {
     }
 
     @Bean
-    public AuditMetricsUseCase auditMetricsUseCase(AuditMetricsPort metricsPort, Clock clock) {
-        return new AuditMetricsService(metricsPort, clock);
+    public AuditMetricsUseCase auditMetricsUseCase(
+            AuditRepositoryPort auditRepositoryPort,
+            SessionRepositoryPort sessionRepositoryPort) {
+        return new AuditMetricsService(auditRepositoryPort, sessionRepositoryPort);
     }
 }

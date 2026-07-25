@@ -3,8 +3,8 @@ import { authGuard } from './auth/auth.guard';
 import { roleGuard } from './auth/role.guard';
 
 describe('app.routes', () => {
-  it('should have 36 route definitions', () => {
-    expect(routes.length).toBe(36);
+  it('should have 38 route definitions', () => {
+    expect(routes.length).toBe(38);
   });
 
   it('should define public routes', () => {
@@ -34,6 +34,8 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/directorio-personal');
     expect(paths).toContain('tenant/gestion-horarios');
     expect(paths).toContain('tenant/perfil');
+    expect(paths).toContain('tenant/cierres-mensuales');
+    expect(paths).toContain('tenant/cierres-mensuales/:id');
   });
 
   it('should define saas routes', () => {

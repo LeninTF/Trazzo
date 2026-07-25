@@ -1,50 +1,42 @@
 package trazzo.back.audit.application.usecase;
 
+import lombok.RequiredArgsConstructor;
 import trazzo.back.audit.application.dto.result.AuditMetricsResult;
 import trazzo.back.audit.application.port.in.AuditMetricsUseCase;
-import trazzo.back.audit.application.port.out.AuditMetricsPort;
+import trazzo.back.audit.application.port.out.AuditRepositoryPort;
+import trazzo.back.audit.application.port.out.SessionRepositoryPort;
+import trazzo.back.audit.domain.model.master.Action;
+import trazzo.back.audit.domain.model.tenant.SessionState;
 
-import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
+@RequiredArgsConstructor
 public class AuditMetricsService implements AuditMetricsUseCase {
 
-    private final AuditMetricsPort metricsPort;
-    private final Clock clock;
-
-    public AuditMetricsService(AuditMetricsPort metricsPort, Clock clock) {
-        this.metricsPort = metricsPort;
-        this.clock = clock;
-    }
+    private final AuditRepositoryPort auditRepository;
+    private final SessionRepositoryPort sessionRepository;
 
     @Override
     public AuditMetricsResult getMetrics() {
-        LocalDateTime now = LocalDateTime.now(clock);
-        LocalDateTime thirtyDaysAgo = now.minusDays(30);
-        LocalDateTime sixtyDaysAgo = now.minusDays(60);
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
 
-        long totalEventos = metricsPort.countAll();
-        long recentCount = metricsPort.countSince(thirtyDaysAgo);
-        long previousCount = metricsPort.countBetween(sixtyDaysAgo, thirtyDaysAgo);
-        long errores = metricsPort.countByAction("DELETE");
-        long sesionesActivas = metricsPort.countActiveSessions();
+        long totalEventos = auditRepository.count(null, null, null, null, null);
 
-        double crecimiento = 0.0;
-        if (previousCount > 0) {
-            crecimiento = ((double) (recentCount - previousCount) / previousCount) * 100;
-        }
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime startOfYesterday = now.toLocalDate().minusDays(1).atStartOfDay();
+        long todayCount = auditRepository.count(null, null, null, startOfToday, now);
+        long yesterdayCount = auditRepository.count(null, null, null, startOfYesterday, startOfToday);
+        double crecimiento = yesterdayCount > 0
+                ? ((double) (todayCount - yesterdayCount) / yesterdayCount) * 100.0
+                : 0.0;
 
-        double porcentajeSesiones = 0.0;
-        if (totalEventos > 0) {
-            porcentajeSesiones = ((double) sesionesActivas / totalEventos) * 100;
-        }
+        long sesionesActivas = sessionRepository.count(null, SessionState.ACTIVE, null);
+        long errores = auditRepository.count(null, Action.ERROR, null, null, null);
+        double porcentajeSesiones = totalEventos > 0
+                ? ((double) sesionesActivas / totalEventos) * 100.0
+                : 0.0;
 
-        return new AuditMetricsResult(
-                totalEventos,
-                errores,
-                sesionesActivas,
-                Math.round(crecimiento * 10.0) / 10.0,
-                Math.round(porcentajeSesiones * 10.0) / 10.0
-        );
+        return new AuditMetricsResult(totalEventos, errores, sesionesActivas, crecimiento, porcentajeSesiones);
     }
 }
