@@ -1,22 +1,27 @@
 package trazzo.back.corehr.infrastructure.adapters.out.persistence.adapter;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
-import trazzo.back.corehr.application.port.out.TenantUserPort.TenantUserProfileProjection;
 import trazzo.back.corehr.domain.model.TenantUserState;
-
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 class TenantUserJdbcAdapterTest {
 
@@ -30,287 +35,493 @@ class TenantUserJdbcAdapterTest {
     }
 
     @Test
-    void findBasicInfoByIdReturnsUser() throws Exception {
-        var rs = mock(ResultSet.class);
-        when(rs.getLong("id")).thenReturn(1L);
-        when(rs.getString("name")).thenReturn("Juan");
-        when(rs.getString("father_surname")).thenReturn("Perez");
-        when(rs.getString("mother_surname")).thenReturn("Lopez");
-        when(rs.getString("email")).thenReturn("juan@mail.com");
-        when(rs.getString("phone")).thenReturn("999888777");
+    void findBasicInfoById_returnsEmpty_whenNoRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(99L))).thenReturn(List.of());
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<RowMapper<TenantUserPort.TenantUserBasicInfo>> captor = ArgumentCaptor.forClass(RowMapper.class);
-        when(jdbc.query(anyString(), captor.capture(), anyLong())).thenAnswer(invocation -> {
-            RowMapper<TenantUserPort.TenantUserBasicInfo> mapper = captor.getValue();
-            return List.of(mapper.mapRow(rs, 0));
-        });
+        assertThat(adapter.findBasicInfoById(99L)).isEmpty();
+    }
+
+    @Test
+    void findBasicInfoById_returnsInfo_whenRowFound() {
+        var info = new TenantUserPort.TenantUserBasicInfo(1L, "Ana", "Perez", "Lopez",
+                "ana@trazzo.pe", "999999999");
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(1L))).thenReturn(List.of(info));
 
         var result = adapter.findBasicInfoById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals("Juan", result.get().nombre());
-        assertEquals("Perez", result.get().apellidoPaterno());
-        assertEquals("Lopez", result.get().apellidoMaterno());
-        assertEquals("juan@mail.com", result.get().email());
-        assertEquals("999888777", result.get().phone());
+        assertThat(result).isPresent();
+        assertThat(result.get().nombre()).isEqualTo("Ana");
+        assertThat(result.get().email()).isEqualTo("ana@trazzo.pe");
     }
 
     @Test
-    void findBasicInfoByIdReturnsEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+    void findStateById_returnsEmpty_whenNoRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(5L))).thenReturn(List.of());
 
-        var result = adapter.findBasicInfoById(99L);
-
-        assertTrue(result.isEmpty());
+        assertThat(adapter.findStateById(5L)).isEmpty();
     }
 
     @Test
-    void existsByIdReturnsTrueWhenUserFound() {
-        var user = new TenantUserPort.TenantUserBasicInfo(1L, "Juan", "Perez", "Lopez", "juan@mail.com", "999888777");
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(user));
+    void findStateById_returnsState_whenRowFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(1L)))
+                .thenReturn(List.of(TenantUserState.ACTIVO));
 
-        assertTrue(adapter.existsById(1L));
+        assertThat(adapter.findStateById(1L)).contains(TenantUserState.ACTIVO);
     }
 
     @Test
-    void existsByIdReturnsFalseWhenUserNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+    void existsById_returnsTrue_whenBasicInfoPresent() {
+        var info = new TenantUserPort.TenantUserBasicInfo(1L, "Ana", "P", "L", "a@x.pe", "111");
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(1L))).thenReturn(List.of(info));
 
-        assertFalse(adapter.existsById(99L));
+        assertThat(adapter.existsById(1L)).isTrue();
     }
 
     @Test
-    void findStateByIdReturnsState() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(TenantUserState.ACTIVO));
+    void existsById_returnsFalse_whenBasicInfoMissing() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(2L))).thenReturn(List.of());
 
-        var state = adapter.findStateById(1L);
-
-        assertTrue(state.isPresent());
-        assertEquals(TenantUserState.ACTIVO, state.get());
+        assertThat(adapter.existsById(2L)).isFalse();
     }
 
     @Test
-    void findStateByIdReturnsEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+    void findIdByMasterUserId_returnsEmpty_whenNoRow() {
+        var uuid = UUID.randomUUID();
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(uuid.toString())))
+                .thenReturn(List.of());
 
-        var state = adapter.findStateById(99L);
-
-        assertTrue(state.isEmpty());
+        assertThat(adapter.findIdByMasterUserId(uuid)).isEmpty();
     }
 
     @Test
-    void findAllProfiles_withoutFilters_shouldReturnAll() {
-        var projection = new TenantUserProfileProjection(
-                1L, "email@mail.com", "999888777", "ACTIVO", false,
-                LocalDateTime.now(), LocalDateTime.now(),
-                1, "DNI", "12345678", "Juan", "Perez", "Lopez",
-                UUID.randomUUID().toString(), "administrador"
-        );
+    void findIdByMasterUserId_returnsId_whenRowFound() {
+        var uuid = UUID.randomUUID();
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(uuid.toString())))
+                .thenReturn(List.of(7L));
+
+        assertThat(adapter.findIdByMasterUserId(uuid)).contains(7L);
+    }
+
+    @Test
+    void findAllProfiles_noFilters_usesDefaultOrderAndPagination() {
+        var projection = sampleProjection(1L, "user@x.pe", "ACTIVO");
         when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of(projection));
 
         var results = adapter.findAllProfiles(null, null, 0, 10, null);
 
-        assertEquals(1, results.size());
-        assertEquals("Juan", results.get(0).name());
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).email()).isEqualTo("user@x.pe");
     }
 
     @Test
-    void findAllProfiles_withSearchAndStatus_shouldFilter() {
-        var projection = new TenantUserProfileProjection(
-                1L, "email@mail.com", "999888777", "ACTIVO", false,
-                LocalDateTime.now(), LocalDateTime.now(),
-                1, "DNI", "12345678", "Juan", "Perez", "Lopez", null, null
-        );
+    void findAllProfiles_withSearch_addsSearchCondition() {
+        var projection = sampleProjection(1L, "ana@x.pe", "ACTIVO");
         when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of(projection));
 
-        var results = adapter.findAllProfiles("juan", "ACTIVO", 0, 10, "name");
+        var results = adapter.findAllProfiles("ana", null, 0, 10, null);
 
-        assertEquals(1, results.size());
+        assertThat(results).hasSize(1);
     }
 
     @Test
-    void findAllProfiles_withSortDesc_shouldApplySort() {
-        var projection = new TenantUserProfileProjection(
-                1L, "email@mail.com", "999888777", "ACTIVO", false,
-                LocalDateTime.now(), LocalDateTime.now(),
-                1, "DNI", "12345678", "Juan", "Perez", "Lopez", null, null
-        );
+    void findAllProfiles_withStatus_addsStatusCondition() {
+        var projection = sampleProjection(1L, "ana@x.pe", "ACTIVO");
         when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of(projection));
 
-        var results = adapter.findAllProfiles(null, null, 0, 10, "-name");
+        var results = adapter.findAllProfiles(null, "ACTIVO", 0, 10, null);
 
-        assertEquals(1, results.size());
+        assertThat(results).hasSize(1);
     }
 
     @Test
-    void countAllProfiles_withoutFilters_shouldReturnCount() {
-        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(5L);
+    void findAllProfiles_withBlankSearchAndStatus_ignoresBlankFilters() {
+        var projection = sampleProjection(1L, "ana@x.pe", "ACTIVO");
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(projection));
 
-        var count = adapter.countAllProfiles(null, null);
+        var results = adapter.findAllProfiles("   ", "   ", 0, 10, null);
 
-        assertEquals(5L, count);
+        assertThat(results).hasSize(1);
     }
 
     @Test
-    void countAllProfiles_withFilters_shouldReturnCount() {
-        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(3L);
+    void findAllProfiles_withSortName_usesMappedSortField() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
 
-        var count = adapter.countAllProfiles("juan", "ACTIVO");
+        adapter.findAllProfiles(null, null, 0, 10, "name");
 
-        assertEquals(3L, count);
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
     }
 
     @Test
-    void countAllProfiles_shouldReturnZeroWhenResultIsNull() {
-        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(null);
+    void findAllProfiles_withSortNameDesc_usesDescOrder() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
 
-        var count = adapter.countAllProfiles(null, null);
+        adapter.findAllProfiles(null, null, 0, 10, "-name");
 
-        assertEquals(0L, count);
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
     }
 
     @Test
-    void findProfileById_shouldReturnProjection() {
-        var projection = new TenantUserProfileProjection(
-                1L, "email@mail.com", "999888777", "ACTIVO", false,
-                LocalDateTime.now(), LocalDateTime.now(),
-                1, "DNI", "12345678", "Juan", "Perez", "Lopez", null, null
-        );
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(projection));
+    void findAllProfiles_withSortEmailPlusPrefix_stripsPlus() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAllProfiles(null, null, 0, 10, "+email");
+
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void findAllProfiles_withSortCreatedAt_mapsToCreatedAtAlias() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAllProfiles(null, null, 0, 10, "created_at,asc");
+
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void findAllProfiles_withSortUpdatedAt_mapsToUpdatedAtAlias() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAllProfiles(null, null, 0, 10, "updated_at");
+
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void findAllProfiles_withUnknownSort_fallsBackToCreatedAt() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAllProfiles(null, null, 0, 10, "unknownField");
+
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void findAllProfiles_withMultipleSortFields_appendsAll() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of());
+
+        adapter.findAllProfiles(null, null, 0, 10, "name,email");
+
+        verify(jdbc).query(anyString(), any(RowMapper.class), any(Object[].class));
+    }
+
+    @Test
+    void countAllProfiles_noFilters_returnsCount() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
+                .thenReturn(42L);
+
+        assertThat(adapter.countAllProfiles(null, null)).isEqualTo(42L);
+    }
+
+    @Test
+    void countAllProfiles_withSearch_returnsCount() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
+                .thenReturn(5L);
+
+        assertThat(adapter.countAllProfiles("ana", null)).isEqualTo(5L);
+    }
+
+    @Test
+    void countAllProfiles_withStatus_returnsCount() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
+                .thenReturn(3L);
+
+        assertThat(adapter.countAllProfiles(null, "ACTIVO")).isEqualTo(3L);
+    }
+
+    @Test
+    void countAllProfiles_returnsZero_whenJdbcReturnsNull() {
+        when(jdbc.queryForObject(anyString(), eq(Long.class), any(Object[].class)))
+                .thenReturn(null);
+
+        assertThat(adapter.countAllProfiles(null, null)).isZero();
+    }
+
+    @Test
+    void findProfileById_returnsEmpty_whenNoRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(99L))).thenReturn(List.of());
+
+        assertThat(adapter.findProfileById(99L)).isEmpty();
+    }
+
+    @Test
+    void findProfileById_returnsProfile_whenRowFound() {
+        var projection = sampleProjection(1L, "ana@x.pe", "ACTIVO");
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(1L))).thenReturn(List.of(projection));
 
         var result = adapter.findProfileById(1L);
 
-        assertTrue(result.isPresent());
-        assertEquals("email@mail.com", result.get().email());
+        assertThat(result).isPresent();
+        assertThat(result.get().email()).isEqualTo("ana@x.pe");
     }
 
     @Test
-    void findProfileById_shouldReturnEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+    void findOrgAssignmentsByUserIds_returnsEmptyMap_whenInputEmpty() {
+        var result = adapter.findOrgAssignmentsByUserIds(List.of());
 
-        var result = adapter.findProfileById(99L);
-
-        assertTrue(result.isEmpty());
+        assertThat(result).isEmpty();
+        verify(jdbc, never()).query(anyString(), any(RowMapper.class), any());
     }
 
     @Test
-    void saveTenantUser_shouldInsertAndReturnId() {
+    void findOrgAssignmentsByUserIds_buildsBundlePerUser_evenWhenNoAssignments() {
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> List.of());
+
+        var result = adapter.findOrgAssignmentsByUserIds(List.of(1L, 2L));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(1L).sedes()).isEmpty();
+        assertThat(result.get(1L).areas()).isEmpty();
+        assertThat(result.get(1L).departamentos()).isEmpty();
+    }
+
+    @Test
+    void findOrgAssignmentsByUserIds_aggregatesRows_byUserId() {
+        Object[] row1 = {1L,
+                new TenantUserPort.OrgAssignmentRow(10L, "Sede Norte"),
+                new TenantUserPort.OrgAssignmentRow(100L, "Operaciones"),
+                new TenantUserPort.OrgAssignmentRow(1000L, "Deps")};
+        Object[] row2 = {1L,
+                new TenantUserPort.OrgAssignmentRow(11L, "Sede Sur"),
+                new TenantUserPort.OrgAssignmentRow(101L, "Logistica"),
+                new TenantUserPort.OrgAssignmentRow(1001L, "Almacen")};
+        Object[] row3 = {2L,
+                new TenantUserPort.OrgAssignmentRow(12L, "Sede Este"),
+                new TenantUserPort.OrgAssignmentRow(102L, "Ventas"),
+                new TenantUserPort.OrgAssignmentRow(1002L, "Comercial")};
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> List.of((Object) row1, (Object) row2, (Object) row3));
+
+        var result = adapter.findOrgAssignmentsByUserIds(List.of(1L, 2L));
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(1L).sedes()).hasSize(2);
+        assertThat(result.get(1L).areas()).hasSize(2);
+        assertThat(result.get(1L).departamentos()).hasSize(2);
+        assertThat(result.get(2L).sedes()).hasSize(1);
+        assertThat(result.get(2L).sedes().get(0).nombre()).isEqualTo("Sede Este");
+    }
+
+    @Test
+    void findOrgAssignmentsByUserIds_onlyReturnsDataForRequestedIds() {
+        Object[] row = {99L,
+                new TenantUserPort.OrgAssignmentRow(1L, "Sede"),
+                new TenantUserPort.OrgAssignmentRow(2L, "Area"),
+                new TenantUserPort.OrgAssignmentRow(3L, "Depto")};
+
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> List.of((Object) row));
+
+        var result = adapter.findOrgAssignmentsByUserIds(List.of(1L));
+
+        assertThat(result).hasSize(1);
+        assertThat(result).containsKey(1L);
+        assertThat(result).doesNotContainKey(99L);
+        assertThat(result.get(1L).sedes()).isEmpty();
+    }
+
+    @Test
+    void saveTenantUser_insertsAndReturnsSequenceId() {
         var uuid = UUID.randomUUID();
-        when(jdbc.update(anyString(), anyString())).thenReturn(1);
-        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(42L);
+        when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class)))
+                .thenReturn(42L);
 
         var id = adapter.saveTenantUser(uuid);
 
-        assertEquals(42L, id);
+        assertThat(id).isEqualTo(42L);
+        verify(jdbc).update(anyString(), eq(uuid.toString()));
     }
 
     @Test
-    void saveTenantUser_shouldReturnZeroWhenNoSeqValue() {
+    void saveTenantUser_returnsZero_whenSequenceIsNull() {
         var uuid = UUID.randomUUID();
-        when(jdbc.update(anyString(), anyString())).thenReturn(1);
-        when(jdbc.queryForObject(anyString(), eq(Long.class))).thenReturn(null);
+        when(jdbc.queryForObject(eq("SELECT currval('tenant_user_id_seq')"), eq(Long.class)))
+                .thenReturn(null);
 
         var id = adapter.saveTenantUser(uuid);
 
-        assertEquals(0L, id);
+        assertThat(id).isZero();
     }
 
     @Test
-    void updateState_shouldExecuteUpdate() {
-        adapter.updateState(1L, TenantUserState.INACTIVO);
+    void updateState_executesUpdateWithStateName() {
+        adapter.updateState(5L, TenantUserState.INACTIVO);
 
-        verify(jdbc).update(anyString(), eq("INACTIVO"), eq(1L));
+        verify(jdbc).update(anyString(), eq("INACTIVO"), eq(5L));
     }
 
     @Test
-    void softDelete_shouldExecuteUpdate() {
-        adapter.softDelete(1L);
+    void softDelete_executesUpdateSoftDeleting() {
+        adapter.softDelete(7L);
 
-        verify(jdbc).update(anyString(), eq(1L));
+        verify(jdbc).update(anyString(), eq(7L));
     }
 
     @Test
-    void hardDelete_shouldExecuteUpdate() {
-        adapter.hardDelete(1L);
+    void hardDelete_executesPhysicalDelete() {
+        adapter.hardDelete(9L);
 
-        verify(jdbc).update(anyString(), eq(1L));
+        verify(jdbc).update(anyString(), eq(9L));
     }
 
     @Test
-    void assignRole_shouldRemoveThenInsert() {
-        var roleId = UUID.randomUUID().toString();
-        adapter.assignRole(1L, roleId);
+    void assignRole_removesExistingThenInsertsNew() {
+        adapter.assignRole(5L, "role-uuid-1");
 
-        verify(jdbc).update(contains("DELETE"), eq(1L));
-        verify(jdbc).update(contains("INSERT"), eq(1L), eq(roleId));
+        verify(jdbc).update(anyString(), eq(5L));
+        verify(jdbc).update(anyString(), eq(5L), eq("role-uuid-1"));
     }
 
     @Test
-    void removeRole_shouldExecuteDelete() {
-        adapter.removeRole(1L);
+    void removeRole_deletesAllAssignments() {
+        adapter.removeRole(5L);
 
-        verify(jdbc).update(anyString(), eq(1L));
+        verify(jdbc).update(anyString(), eq(5L));
     }
 
     @Test
-    void findRoleIdByTenantUserId_shouldReturnRoleId() {
-        var roleId = UUID.randomUUID().toString();
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of(roleId));
+    void findRoleIdByTenantUserId_returnsEmpty_whenNoRow() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(5L))).thenReturn(List.of());
 
-        var result = adapter.findRoleIdByTenantUserId(1L);
-
-        assertTrue(result.isPresent());
-        assertEquals(roleId, result.get());
+        assertThat(adapter.findRoleIdByTenantUserId(5L)).isEmpty();
     }
 
     @Test
-    void findRoleIdByTenantUserId_shouldReturnEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyLong())).thenReturn(List.of());
+    void findRoleIdByTenantUserId_returnsRoleId_whenFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(5L)))
+                .thenReturn(List.of("role-uuid-1"));
 
-        var result = adapter.findRoleIdByTenantUserId(99L);
-
-        assertTrue(result.isEmpty());
+        assertThat(adapter.findRoleIdByTenantUserId(5L)).contains("role-uuid-1");
     }
 
     @Test
-    void savePerson_shouldInsertAndReturnId() {
-        when(jdbc.update(anyString(), anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(1);
-        when(jdbc.queryForObject(anyString(), eq(Integer.class))).thenReturn(100);
+    void savePerson_insertsAndReturnsLastVal() {
+        when(jdbc.queryForObject(eq("SELECT LASTVAL()"), eq(Integer.class))).thenReturn(123);
 
-        var id = adapter.savePerson("DNI", "12345678", "Juan", "Perez", "Lopez");
+        Integer id = adapter.savePerson("DNI", "12345678", "Ana", "Perez", "Lopez");
 
-        assertEquals(100, id);
+        assertThat(id).isEqualTo(123);
+        verify(jdbc).update(anyString(), eq("DNI"), eq("12345678"),
+                eq("Ana"), eq("Perez"), eq("Lopez"));
     }
 
     @Test
-    void updatePerson_shouldExecuteUpdate() {
-        adapter.updatePerson(1, "Juan", "Perez", "Lopez");
+    void updatePerson_executesUpdate() {
+        adapter.updatePerson(7, "Nuevo", "Apellido", "Apellido2");
 
-        verify(jdbc).update(anyString(), eq("Juan"), eq("Perez"), eq("Lopez"), eq(1));
+        verify(jdbc).update(anyString(), eq("Nuevo"), eq("Apellido"),
+                eq("Apellido2"), eq(7));
     }
 
     @Test
-    void findPersonIdByDocument_shouldReturnId() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString(), anyString()))
-                .thenReturn(List.of(100));
-
-        var result = adapter.findPersonIdByDocument("DNI", "12345678");
-
-        assertTrue(result.isPresent());
-        assertEquals(100, result.get());
-    }
-
-    @Test
-    void findPersonIdByDocument_shouldReturnEmptyWhenNotFound() {
-        when(jdbc.query(anyString(), any(RowMapper.class), anyString(), anyString()))
+    void findPersonIdByDocument_returnsEmpty_whenNotFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq("DNI"), eq("111")))
                 .thenReturn(List.of());
 
-        var result = adapter.findPersonIdByDocument("DNI", "UNKNOWN");
+        assertThat(adapter.findPersonIdByDocument("DNI", "111")).isEmpty();
+    }
 
-        assertTrue(result.isEmpty());
+    @Test
+    void findPersonIdByDocument_returnsId_whenFound() {
+        when(jdbc.query(anyString(), any(RowMapper.class), eq("DNI"), eq("111")))
+                .thenReturn(List.of(42));
+
+        assertThat(adapter.findPersonIdByDocument("DNI", "111")).contains(42);
+    }
+
+    @Test
+    void profileRowMapper_mapsAllFields() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        var now = LocalDateTime.now();
+        var createdTs = Timestamp.valueOf(now);
+        var updatedTs = Timestamp.valueOf(now.plusHours(1));
+
+        when(rs.getTimestamp("created_at")).thenReturn(createdTs);
+        when(rs.getTimestamp("updated_at")).thenReturn(updatedTs);
+        when(rs.getLong("id")).thenReturn(1L);
+        when(rs.getString("email")).thenReturn("ana@x.pe");
+        when(rs.getString("phone")).thenReturn("999");
+        when(rs.getString("state")).thenReturn("ACTIVO");
+        when(rs.getBoolean("must_change_password")).thenReturn(true);
+        when(rs.getInt("person_id")).thenReturn(11);
+        when(rs.getString("document_type")).thenReturn("DNI");
+        when(rs.getString("document_value")).thenReturn("12345678");
+        when(rs.getString("name")).thenReturn("Ana");
+        when(rs.getString("father_surname")).thenReturn("Perez");
+        when(rs.getString("mother_surname")).thenReturn("Lopez");
+        when(rs.getString("role_id")).thenReturn("role-uuid-1");
+        when(rs.getString("role_name")).thenReturn("admin");
+
+        TenantUserPort.TenantUserProfileProjection projection = invokeRowMapper(rs);
+
+        assertThat(projection.id()).isEqualTo(1L);
+        assertThat(projection.email()).isEqualTo("ana@x.pe");
+        assertThat(projection.estado()).isEqualTo("ACTIVO");
+        assertThat(projection.mustChangePassword()).isTrue();
+        assertThat(projection.createdAt()).isEqualTo(now);
+        assertThat(projection.updatedAt()).isEqualTo(now.plusHours(1));
+        assertThat(projection.personId()).isEqualTo(11);
+        assertThat(projection.documentType()).isEqualTo("DNI");
+        assertThat(projection.roleId()).isEqualTo("role-uuid-1");
+    }
+
+    @Test
+    void profileRowMapper_handlesNullTimestamps() throws SQLException {
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getTimestamp("created_at")).thenReturn(null);
+        when(rs.getTimestamp("updated_at")).thenReturn(null);
+        when(rs.getLong("id")).thenReturn(1L);
+        when(rs.getString("email")).thenReturn(null);
+        when(rs.getString("phone")).thenReturn(null);
+        when(rs.getString("state")).thenReturn("ACTIVO");
+        when(rs.getBoolean("must_change_password")).thenReturn(false);
+        when(rs.getInt("person_id")).thenReturn(0);
+        when(rs.getString("document_type")).thenReturn(null);
+        when(rs.getString("document_value")).thenReturn(null);
+        when(rs.getString("name")).thenReturn(null);
+        when(rs.getString("father_surname")).thenReturn(null);
+        when(rs.getString("mother_surname")).thenReturn(null);
+        when(rs.getString("role_id")).thenReturn(null);
+        when(rs.getString("role_name")).thenReturn(null);
+
+        TenantUserPort.TenantUserProfileProjection projection = invokeRowMapper(rs);
+
+        assertThat(projection.createdAt()).isNull();
+        assertThat(projection.updatedAt()).isNull();
+    }
+
+    @SuppressWarnings("unchecked")
+    private TenantUserPort.TenantUserProfileProjection invokeRowMapper(ResultSet rs) throws SQLException {
+        var projectionHolder = new java.util.concurrent.atomic.AtomicReference<TenantUserPort.TenantUserProfileProjection>();
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenAnswer(inv -> {
+                    RowMapper<TenantUserPort.TenantUserProfileProjection> mapper = inv.getArgument(1);
+                    projectionHolder.set(mapper.mapRow(rs, 0));
+                    return List.of(projectionHolder.get());
+                });
+        adapter.findAllProfiles(null, null, 0, 10, null);
+        return projectionHolder.get();
+    }
+
+    private TenantUserPort.TenantUserProfileProjection sampleProjection(Long id, String email, String state) {
+        return new TenantUserPort.TenantUserProfileProjection(
+                id, email, "999999999", state, false,
+                LocalDateTime.now(), LocalDateTime.now(),
+                11, "DNI", "12345678", "Ana", "Perez", "Lopez",
+                "role-uuid-1", "admin");
     }
 }

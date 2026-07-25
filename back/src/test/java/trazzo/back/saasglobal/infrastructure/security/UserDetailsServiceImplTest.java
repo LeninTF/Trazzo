@@ -2,6 +2,9 @@ package trazzo.back.saasglobal.infrastructure.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -18,6 +21,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 import trazzo.back.saasglobal.domain.model.iam.User;
 import trazzo.back.shared.security.TenantPermissionPort;
+import trazzo.back.shared.tenancy.TenantContext;
 
 @ExtendWith(MockitoExtension.class)
 class UserDetailsServiceImplTest {
@@ -107,5 +111,82 @@ class UserDetailsServiceImplTest {
         UserDetails details = service.loadUserByUsername("deleted@test.com");
 
         assertThat(details.isEnabled()).isFalse();
+    }
+
+    @Test
+    void loadUserByUsername_normalizesNullEmailToEmptyString() {
+        when(userRepository.findByEmail("")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.loadUserByUsername(null))
+                .isInstanceOf(UsernameNotFoundException.class);
+        verify(userRepository).findByEmail("");
+    }
+
+    @Test
+    void loadUserByUsername_trimsAndLowercasesEmailBeforeLookup() {
+        User user = User.restore(USER_ID.toString(), 1, null, "admin@test.com", null,
+                "pass", List.of("admin_trazzo"), List.of(), false,
+                LocalDateTime.now(), LocalDateTime.now(), null);
+        when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("  Admin@Test.COM  ");
+
+        var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        assertThat(authorities).containsExactlyInAnyOrder("ROLE_admin_trazzo", "ROLE_SAAS_ADMIN");
+    }
+
+    @Test
+    void loadUserByUsername_addsTenantPermissions_whenTenantSchemaIsSet() {
+        TenantContext.set("tenant_acme");
+        try {
+            User user = User.restore(USER_ID.toString(), 1, "t-1", "user@tenant.com", null,
+                    "pass", List.of("empleado"),
+                    List.of("base-perm-1"),
+                    false, LocalDateTime.now(), LocalDateTime.now(), null);
+            when(userRepository.findByEmail("user@tenant.com")).thenReturn(Optional.of(user));
+            when(tenantPermissionPort.findPermissionCodesByMasterUserId(USER_ID))
+                    .thenReturn(List.of("incidents.crear", "incidents.aprobar"));
+
+            UserDetails details = service.loadUserByUsername("user@tenant.com");
+
+            var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+            assertThat(authorities).containsExactlyInAnyOrder(
+                    "ROLE_empleado", "base-perm-1",
+                    "incidents.crear", "incidents.aprobar");
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @Test
+    void loadUserByUsername_skipsTenantPermissions_whenSchemaIsPublic() {
+        TenantContext.set("public");
+        try {
+            User user = User.restore(USER_ID.toString(), 1, "t-1", "user@tenant.com", null,
+                    "pass", List.of("empleado"), List.of(), false, LocalDateTime.now(), LocalDateTime.now(), null);
+            when(userRepository.findByEmail("user@tenant.com")).thenReturn(Optional.of(user));
+
+            UserDetails details = service.loadUserByUsername("user@tenant.com");
+
+            var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+            assertThat(authorities).containsExactly("ROLE_empleado");
+            verify(tenantPermissionPort, never()).findPermissionCodesByMasterUserId(any());
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @Test
+    void loadUserByUsername_skipsTenantPermissions_whenSchemaIsNull() {
+        TenantContext.clear();
+        User user = User.restore(USER_ID.toString(), 1, "t-1", "user@tenant.com", null,
+                "pass", List.of("empleado"), List.of(), false, LocalDateTime.now(), LocalDateTime.now(), null);
+        when(userRepository.findByEmail("user@tenant.com")).thenReturn(Optional.of(user));
+
+        UserDetails details = service.loadUserByUsername("user@tenant.com");
+
+        var authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
+        assertThat(authorities).containsExactly("ROLE_empleado");
+        verify(tenantPermissionPort, never()).findPermissionCodesByMasterUserId(any());
     }
 }

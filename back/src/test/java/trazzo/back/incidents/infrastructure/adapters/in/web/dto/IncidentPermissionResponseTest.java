@@ -25,4 +25,16 @@ class IncidentPermissionResponseTest {
         assertEquals(now, response.createdAt());
         assertEquals(now, response.updatedAt());
     }
+
+    @Test
+    void fromResultWithNullIds_returnsNullStrings() {
+        var now = LocalDateTime.now();
+        var result = new IncidentPermissionResult(null, null,
+                LocalDate.now(), LocalDate.now().plusDays(1), 0, now, now);
+        var response = IncidentPermissionResponse.from(result);
+
+        assertNull(response.id());
+        assertNull(response.incidenciaId());
+        assertEquals(0, response.daysGranted());
+    }
 }

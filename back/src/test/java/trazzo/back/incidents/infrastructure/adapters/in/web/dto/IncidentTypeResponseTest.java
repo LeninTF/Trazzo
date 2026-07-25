@@ -32,4 +32,14 @@ class IncidentTypeResponseTest {
         assertNull(response.descripcion());
         assertFalse(response.activo());
     }
+
+    @Test
+    void fromResultWithNullId_returnsNullIdString() {
+        var now = LocalDateTime.now();
+        var result = new IncidentTypeResult(null, "Permiso", "Desc", false, now, now);
+        var response = IncidentTypeResponse.from(result);
+
+        assertNull(response.id());
+        assertEquals("Permiso", response.nombre());
+    }
 }

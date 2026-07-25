@@ -54,4 +54,31 @@ class IncidentResponseTest {
         assertNull(response.tenantUser());
         assertEquals("reason", response.rejectionReason());
     }
+
+    @Test
+    void fromResultWithNullIds_returnsNullStringsForIdFields() {
+        var now = LocalDateTime.now();
+        var result = new IncidentResult(null, null, null, IncidentState.PENDIENTE,
+                "comment", null, null, null, null, null, now, now);
+
+        var response = IncidentResponse.from(result);
+
+        assertNull(response.id());
+        assertNull(response.tenantUserId());
+        assertNull(response.incidenciaTypeId());
+        assertNull(response.tenantUser());
+        assertTrue(response.evidencias().isEmpty());
+    }
+
+    @Test
+    void fromResultWithNullEvidencias_returnsEmptyListNotException() {
+        var now = LocalDateTime.now();
+        var result = new IncidentResult(1, 1, 1, IncidentState.PENDIENTE,
+                "comment", null, null, null, null, null, now, now);
+
+        var response = IncidentResponse.from(result);
+
+        assertNotNull(response.evidencias());
+        assertTrue(response.evidencias().isEmpty());
+    }
 }

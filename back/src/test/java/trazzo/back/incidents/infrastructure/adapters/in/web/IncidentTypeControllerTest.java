@@ -112,4 +112,57 @@ class IncidentTypeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Permiso"));
     }
+
+    @Test
+    void getByIdWithInvalidId_returns400_badRequest() throws Exception {
+        mockMvc.perform(get("/incidentes/tipos/abc"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void patchWithInvalidId_returns400_badRequest() throws Exception {
+        var request = new trazzo.back.incidents.infrastructure.adapters.in.web.dto.PatchIncidentTypeRequest("Nuevo", null, false);
+        mockMvc.perform(patch("/incidentes/tipos/not-a-number")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listWithActivoFilter_passesItToUseCase() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(useCase.findAll(true, 0, 20)).thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes/tipos")
+                        .param("activo", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].nombre").value("Permiso"));
+    }
+
+    @Test
+    void listUsesDefaultsForPageAndSize() throws Exception {
+        var paginated = new PaginatedResult<>(List.of(sampleResult), 0, 20, 1, 1);
+        when(useCase.findAll(null, 0, 20)).thenReturn(paginated);
+
+        mockMvc.perform(get("/incidentes/tipos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20));
+    }
+
+    @Test
+    void createReturns201WithId_whenUseCaseSucceeds() throws Exception {
+        when(useCase.create(any())).thenReturn(sampleResult);
+
+        var request = new trazzo.back.incidents.infrastructure.adapters.in.web.dto.CreateIncidentTypeRequest("Permiso", "Desc");
+        mockMvc.perform(post("/incidentes/tipos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value("1"))
+                .andExpect(jsonPath("$.descripcion").value("Desc"))
+                .andExpect(jsonPath("$.activo").value(true));
+    }
 }
