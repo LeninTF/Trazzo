@@ -26,8 +26,9 @@ class JsonUtilsTest {
     @Test
     void deserialize_returnsMapForValidJson() {
         var result = JsonUtils.deserialize("{\"key\":\"value\",\"num\":42}");
-        assertThat(result).containsEntry("key", "value");
-        assertThat(result).containsEntry("num", 42);
+        assertThat(result)
+                .containsEntry("key", "value")
+                .containsEntry("num", 42);
     }
 
     @Test

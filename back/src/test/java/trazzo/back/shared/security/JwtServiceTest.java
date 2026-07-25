@@ -114,7 +114,7 @@ class JwtServiceTest {
     void isTokenValid_expiredToken_throwsExpiredJwtException() {
         var shortLived = new JwtService(SECRET, 1);
         String token = shortLived.generateToken(user("user@test.com"));
-        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(50); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
         assertThatThrownBy(() -> shortLived.isTokenValid(token, user("user@test.com")))
                 .isInstanceOf(io.jsonwebtoken.ExpiredJwtException.class);
     }

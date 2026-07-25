@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import trazzo.back.saasglobal.application.dto.command.CreatePlanCommand;
 import trazzo.back.saasglobal.application.dto.command.UpdatePlanCommand;
-import trazzo.back.saasglobal.application.dto.result.PlanResult;
 import trazzo.back.saasglobal.application.port.out.FeatureRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanFeatureRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;

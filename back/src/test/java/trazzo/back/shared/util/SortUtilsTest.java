@@ -4,20 +4,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
 
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SortUtilsTest {
 
-    private static final Function<String, String> IDENTITY = Function.identity();
-    private static final Function<String, String> AUDIT_MAPPER = Map.of(
+    private static final UnaryOperator<String> IDENTITY = f -> f;
+    private static final UnaryOperator<String> AUDIT_MAPPER = f -> Map.of(
             "createdAt", "created_at",
             "ipAddress", "ip_address",
             "entityId", "entity_id"
-    )::get;
-    private static final Function<String, String> FIELD_MAPPER = f -> switch (f) {
+    ).getOrDefault(f, f);
+    private static final UnaryOperator<String> FIELD_MAPPER = f -> switch (f) {
         case "name" -> "name";
         case "createdAt", "created_at" -> "createdAt";
         default -> "createdAt";

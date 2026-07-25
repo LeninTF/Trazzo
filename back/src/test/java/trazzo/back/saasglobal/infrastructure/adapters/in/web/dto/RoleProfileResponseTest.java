@@ -13,7 +13,7 @@ class RoleProfileResponseTest {
     void fromRoleName_createsResponseWithEmptyPermissions() {
         var result = RoleProfileResponse.fromRoleName("admin_trazzo");
 
-        assertThat(result.id()).isEqualTo(0);
+        assertThat(result.id()).isZero();
         assertThat(result.name()).isEqualTo("admin_trazzo");
         assertThat(result.permissions()).isEmpty();
     }
@@ -22,7 +22,7 @@ class RoleProfileResponseTest {
     void fromRoleName_handlesNullName() {
         var result = RoleProfileResponse.fromRoleName(null);
 
-        assertThat(result.id()).isEqualTo(0);
+        assertThat(result.id()).isZero();
         assertThat(result.name()).isNull();
         assertThat(result.permissions()).isEmpty();
     }

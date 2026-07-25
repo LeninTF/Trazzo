@@ -3,7 +3,7 @@ package trazzo.back.shared.util;
 import org.springframework.data.domain.Sort;
 
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public final class SortUtils {
 
@@ -16,11 +16,11 @@ public final class SortUtils {
             "entityId", "entity_id"
     );
 
-    public static Sort parseSort(String sort, Function<String, String> fieldMapper) {
+    public static Sort parseSort(String sort, UnaryOperator<String> fieldMapper) {
         return parseSort(sort, fieldMapper, "createdAt");
     }
 
-    public static Sort parseSort(String sort, Function<String, String> fieldMapper, String defaultField) {
+    public static Sort parseSort(String sort, UnaryOperator<String> fieldMapper, String defaultField) {
         if (sort == null || sort.isBlank()) {
             return Sort.by(Sort.Direction.DESC, defaultField);
         }

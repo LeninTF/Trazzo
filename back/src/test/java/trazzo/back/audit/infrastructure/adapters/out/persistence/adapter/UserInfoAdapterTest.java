@@ -11,7 +11,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -66,9 +65,6 @@ class UserInfoAdapterTest {
     @Test
     @SuppressWarnings("unchecked")
     void findByUserIdsReturnsEmptyOnDataAccessError() {
-        var namedJdbc = org.mockito.Mockito.mock(
-                org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate.class);
-        // Inject the named parameter template by wrapping
         when(jdbcTemplate.queryForObject(anyString(), any(RowMapper.class), any(SqlParameterValue.class)))
                 .thenReturn(null);
         assertThat(adapter.findByUserIds(List.of("00000000-0000-0000-0000-000000000001"))).isNotNull();
