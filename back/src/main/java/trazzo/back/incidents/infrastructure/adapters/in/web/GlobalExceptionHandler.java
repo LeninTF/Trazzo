@@ -82,4 +82,12 @@ public class GlobalExceptionHandler {
         var error = new ErrorResponse(HttpStatus.FORBIDDEN.value(), "Forbidden", "No tienes permiso para esta acción");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(RuntimeException ex) {
+        log.error("Unexpected error: {}", ex.getMessage(), ex);
+        var error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
+                "An unexpected error occurred");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
 }

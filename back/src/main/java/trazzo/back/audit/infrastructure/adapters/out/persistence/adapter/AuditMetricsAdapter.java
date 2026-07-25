@@ -6,6 +6,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import trazzo.back.audit.application.port.out.AuditMetricsPort;
+import trazzo.back.shared.tenancy.TenantContext;
 
 import java.time.LocalDateTime;
 
@@ -38,6 +39,11 @@ public class AuditMetricsAdapter implements AuditMetricsPort {
 
     @Override
     public long countActiveSessions() {
+        if (!TenantContext.isTenantSchema()) {
+            log.debug("SaaS-admin context (schema={}); sesion table is tenant-scoped, returning 0",
+                    TenantContext.get());
+            return 0L;
+        }
         return safeCount("SELECT COUNT(*) FROM sesion WHERE state = TRUE");
     }
 

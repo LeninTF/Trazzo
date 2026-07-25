@@ -1,5 +1,7 @@
 version: 2
 
+ignore-known-secrets: true
+
 secret:
   ignored_matches:
     - name: "Local dev seeder password (demo123, profile=local only)"

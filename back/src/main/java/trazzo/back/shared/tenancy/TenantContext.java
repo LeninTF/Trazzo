@@ -25,4 +25,9 @@ public final class TenantContext {
     public static void clear() {
         CURRENT_SCHEMA.remove();
     }
+
+    public static boolean isTenantSchema() {
+        String schema = CURRENT_SCHEMA.get();
+        return schema != null && !schema.isBlank() && !DEFAULT_SCHEMA.equals(schema);
+    }
 }

@@ -52,9 +52,13 @@ public class TenantDataSeeder implements ApplicationRunner {
             UserRepositoryPort userRepository,
             @Value("${trazzo.seed.tenant.sub-domain}") String subDomain,
             @Value("${trazzo.seed.tenant.demo.email}") String demoEmail,
+            @Value("${trazzo.seed.tenant.demo.password}") String demoPassword,
+            @Value("${trazzo.seed.tenant.usuario.email}") String usuarioEmail,
+            @Value("${trazzo.seed.tenant.usuario.password}") String usuarioPassword
     ) {
         this.tenantRepository = tenantRepository;
         this.schemaProvisioning = schemaProvisioning;
+        this.jdbc = jdbc;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.subDomain = requireNonBlank(subDomain, "trazzo.seed.tenant.sub-domain");
