@@ -198,7 +198,7 @@ function handleTenantUserList(
       (u.email ?? '').toLowerCase().includes(s)
     );
   }
-  if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === Number.parseInt(qp['role_id'], 10));
+  if (qp['role_id']) filtered = filtered.filter(u => u.rol.id === qp['role_id']);
   return ok(paginate(filtered, page, size));
 }
 
@@ -301,7 +301,7 @@ function handleTenantUserRole(
   const id = Number.parseInt(rolMatch[1], 10);
   const user = mockTenantUsers.find(u => u.id === id);
   if (!user) return _error(404, 'Usuario no encontrado');
-  const body = req.body as { role_id?: number };
+  const body = req.body as { role_id?: string };
   const rolesDisponibles = mockTenantUsers.map(u => u.rol);
   const newRole = rolesDisponibles.find(r => r.id === body.role_id);
   return ok({ ...user, rol: newRole ?? user.rol });

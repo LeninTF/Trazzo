@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import type {
   TenantUserProfile, TenantUserListResponse,
   CrearTenantUsuarioRequest, PatchTenantUsuarioRequest, AsignarRolRequest,
-  CambiarPasswordRequest, SoftDeleteResponse,
+  CambiarPasswordRequest, SoftDeleteResponse, PresignedUrlResponse,
   MasterUserProfile, MasterUserListResponse,
   CrearMasterUsuarioRequest, UpdateMasterUsuarioRequest, AssignMasterRoleRequest,
 } from '../types';
@@ -49,6 +49,12 @@ export class UsersService {
 
   changePassword(id: number, body: CambiarPasswordRequest): Observable<void> {
     return this.http.patch<void>(`${this.apiBase}/usuarios/${id}/password`, body);
+  }
+
+  getProfilePresignedUrl(fileName: string, contentType: string): Observable<PresignedUrlResponse> {
+    return this.http.get<PresignedUrlResponse>(`${this.apiBase}/storage/presigned-url-profile`, {
+      params: params({ fileName, contentType }),
+    });
   }
 
   getMe(): Observable<TenantUserProfile> {

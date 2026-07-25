@@ -49,4 +49,23 @@ public class StorageController {
 
         return ResponseEntity.ok(new PresignedUrlResponse(presignedUrl, objectKey));
     }
+
+    @GetMapping("/presigned-url-profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PresignedUrlResponse> getProfilePresignedUrl(
+            @RequestParam String fileName,
+            @RequestParam String contentType,
+            @AuthenticationPrincipal AuthenticatedUser user
+    ) {
+        String tenantId = Optional.ofNullable(user)
+                .flatMap(u -> tenantUserPort.findIdByMasterUserId(u.id()))
+                .map(String::valueOf)
+                .orElse("unknown-tenant");
+
+        String objectKey = "perfiles/" + tenantId + "/" + UUID.randomUUID() + "/" + fileName;
+
+        String presignedUrl = fileStoragePort.generatePresignedPutUrl(objectKey, contentType, Duration.ofMinutes(15));
+
+        return ResponseEntity.ok(new PresignedUrlResponse(presignedUrl, objectKey));
+    }
 }

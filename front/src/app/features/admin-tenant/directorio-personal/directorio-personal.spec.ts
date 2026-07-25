@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { DirectorioPersonal } from './directorio-personal';
 import { ApiService } from '../../../api/services/api.service';
+import { OrgService } from '../../../api/services/org.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
 import { MiddlewareWebSocketService } from '../../../services/middleware-websocket.service';
@@ -49,7 +50,47 @@ describe('DirectorioPersonal', () => {
       create: jasmine.createSpy('create').and.returnValue(of(mockUsersResponse.content[0])),
       patch: jasmine.createSpy('patch').and.returnValue(of(mockUsersResponse.content[0])),
       delete: jasmine.createSpy('delete').and.returnValue(of({ id: 1, status: 'INACTIVO', deleted_at: new Date().toISOString(), deleted_by: 1 })),
+      getProfilePresignedUrl: jasmine.createSpy('getProfilePresignedUrl').and.returnValue(of({ presigned_url: 'https://r2.mock.dev/test', object_key: 'profiles/test/key' })),
     },
+    incidents: {
+      getPresignedUrl: jasmine.createSpy('getPresignedUrl').and.returnValue(of({ presigned_url: 'https://r2.mock.dev/test', object_key: 'profiles/test/key' })),
+      uploadToR2: jasmine.createSpy('uploadToR2').and.returnValue(of({ status: 200 })),
+    },
+  };
+
+  const mockOrgData = {
+    content: [
+      { id: 1, name: 'Sede San Isidro', description: '', state: true, createdAt: '', updatedAt: '' },
+    ],
+    page: 0, size: 200, totalElements: 1, totalPages: 1,
+  };
+
+  const mockAreasData = {
+    content: [
+      { id: 1, branchId: 1, name: 'Direccion Academica', description: null, state: true, createdAt: '', updatedAt: '' },
+    ],
+    page: 0, size: 1000, totalElements: 1, totalPages: 1,
+  };
+
+  const mockDeptosData = {
+    content: [
+      { id: 1, areaId: 1, name: 'Matematicas', description: null, state: true, createdAt: '', updatedAt: '' },
+    ],
+    page: 0, size: 2000, totalElements: 1, totalPages: 1,
+  };
+
+  const mockRolesData = {
+    content: [
+      { id: '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec', name: 'administrador', description: null, createdAt: '', updatedAt: '' },
+    ],
+    page: 0, size: 100, totalElements: 1, totalPages: 1,
+  };
+
+  const mockOrgService = {
+    listBranches: jasmine.createSpy('listBranches').and.returnValue(of(mockOrgData)),
+    listAreas: jasmine.createSpy('listAreas').and.returnValue(of(mockAreasData)),
+    listDepartments: jasmine.createSpy('listDepartments').and.returnValue(of(mockDeptosData)),
+    listRoles: jasmine.createSpy('listRoles').and.returnValue(of(mockRolesData)),
   };
 
   const mockToast = jasmine.createSpyObj('ToastService', ['info', 'success', 'error']);
@@ -74,11 +115,19 @@ describe('DirectorioPersonal', () => {
     mockApi.users.create.calls.reset();
     mockApi.users.patch.calls.reset();
     mockApi.users.delete.calls.reset();
+    mockApi.users.getProfilePresignedUrl.calls.reset();
+    mockApi.incidents.getPresignedUrl.calls.reset();
+    mockApi.incidents.uploadToR2.calls.reset();
+    mockOrgService.listBranches.calls.reset();
+    mockOrgService.listAreas.calls.reset();
+    mockOrgService.listDepartments.calls.reset();
+    mockOrgService.listRoles.calls.reset();
     await TestBed.configureTestingModule({
       imports: [DirectorioPersonal],
       providers: [
         provideHttpClient(),
         { provide: ApiService, useValue: mockApi },
+        { provide: OrgService, useValue: mockOrgService },
         { provide: ToastService, useValue: mockToast },
         { provide: ModalService, useValue: mockModal },
       ],
@@ -196,16 +245,21 @@ describe('DirectorioPersonal', () => {
       expect(component.modalPersonalOpen).toBeTrue();
       expect(component.editandoPersonal).toBeFalse();
       expect(component.personalForm.estado).toBe('ACTIVO');
+      expect(component.fotoFile).toBeNull();
       component.cerrarModalPersonal();
       expect(component.modalPersonalOpen).toBeFalse();
+      expect(component.fotoFile).toBeNull();
     });
 
-    it('should set default sede/area/departamento from available options in add modal', () => {
-      setMockPersonal();
+    it('should set default sede/area/departamento from org data in add modal', async () => {
+      await fixture.whenStable();
       component.abrirModalAgregar();
-      expect(component.sedesDisponibles).toContain(component.personalForm.sede);
-      expect(component.areasDisponibles).toContain(component.personalForm.area);
-      expect(component.departamentosDisponibles).toContain(component.personalForm.departamento);
+      expect(component.orgSedeSeleccionada).toBe(1);
+      expect(component.orgAreaSeleccionada).toBe(1);
+      expect(component.orgDeptoSeleccionado).toBe(1);
+      expect(component.orgRolSeleccionado).toBe('5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec');
+      expect(component.personalForm.tipoDocumento).toBe('DNI');
+      expect(component.personalForm.documento).toBe('');
     });
 
     it('should open and close edit modal', () => {
@@ -241,11 +295,12 @@ describe('DirectorioPersonal', () => {
   });
 
   describe('image handling', () => {
-    it('should handle image file selection', () => {
+    it('should handle image file selection and store file', () => {
       const file = new File([''], 'test.jpg', { type: 'image/jpeg' });
       const event = { target: { files: [file] } } as any;
       component.onFileSelected(event);
       expect(component.imagenPreviewUrl).toBeDefined();
+      expect(component.fotoFile).toBe(file);
     });
 
     it('should reject files over 2MB', () => {
@@ -288,19 +343,31 @@ describe('DirectorioPersonal', () => {
       const mockInput = { click: clickSpy } as any;
       spyOn(document, 'getElementById').and.returnValue(mockInput);
       component.abrirSelectorArchivo();
-      expect(document.getElementById).toHaveBeenCalledWith('fileInput');
+      expect(document.getElementById).toHaveBeenCalledWith('personal-file-input');
       expect(clickSpy).toHaveBeenCalled();
     });
   });
 
   describe('guardarPersonal', () => {
-    it('should create new user', async () => {
+    it('should create new user with document type and value', async () => {
       component.editandoPersonal = false;
       component.personalForm.nombre = 'Nuevo Usuario';
-      component.personalForm.idPersonal = '12345';
+      component.personalForm.documento = '12345678';
+      component.personalForm.tipoDocumento = 'DNI';
       component.personalForm.email = 'nuevo@colegio.edu.pe';
+      component.orgSedeSeleccionada = 1;
+      component.orgAreaSeleccionada = 1;
+      component.orgDeptoSeleccionado = 1;
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
       await component.guardarPersonal();
       expect(mockApi.users.create).toHaveBeenCalled();
+      const createCall = mockApi.users.create.calls.mostRecent().args[0];
+      expect(createCall.document_type).toBe('DNI');
+      expect(createCall.document_value).toBe('12345678');
+      expect(createCall.sede_ids).toEqual([1]);
+      expect(createCall.area_ids).toEqual([1]);
+      expect(createCall.departamento_ids).toEqual([1]);
+      expect(createCall.role_id).toBe('5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec');
       expect(component.modalPersonalOpen).toBeFalse();
     });
 
@@ -308,7 +375,7 @@ describe('DirectorioPersonal', () => {
       component.editandoPersonal = true;
       component.personalForm.id = 1;
       component.personalForm.nombre = 'Editado Nombre';
-      component.personalForm.idPersonal = '12345';
+      component.personalForm.documento = '12345';
       await component.guardarPersonal();
       expect(mockApi.users.patch).toHaveBeenCalled();
       expect(component.modalPersonalOpen).toBeFalse();
@@ -317,7 +384,8 @@ describe('DirectorioPersonal', () => {
     it('should not save with empty name', async () => {
       component.editandoPersonal = false;
       component.personalForm.nombre = '';
-      component.personalForm.idPersonal = '';
+      component.personalForm.documento = '';
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
       await component.guardarPersonal();
       expect(mockApi.users.create).not.toHaveBeenCalled();
       expect(mockToast.info).toHaveBeenCalled();
@@ -327,7 +395,8 @@ describe('DirectorioPersonal', () => {
       mockApi.users.create.and.returnValue(throwError(() => new Error('fail')));
       component.editandoPersonal = false;
       component.personalForm.nombre = 'Test User';
-      component.personalForm.idPersonal = '99999';
+      component.personalForm.documento = '99999';
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
       await component.guardarPersonal();
       expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
       mockApi.users.create.and.returnValue(of(mockUsersResponse.content[0]));
@@ -337,7 +406,7 @@ describe('DirectorioPersonal', () => {
       mockApi.users.patch.and.returnValue(throwError(() => new Error('fail')));
       component.editandoPersonal = true;
       component.personalForm.nombre = 'Test';
-      component.personalForm.idPersonal = '99999';
+      component.personalForm.documento = '99999';
       await component.guardarPersonal();
       expect(mockToast.info).toHaveBeenCalledWith('Error al guardar');
       mockApi.users.patch.and.returnValue(of(mockUsersResponse.content[0]));
@@ -346,10 +415,34 @@ describe('DirectorioPersonal', () => {
     it('should create user with single-word name', async () => {
       component.editandoPersonal = false;
       component.personalForm.nombre = 'SoloNombre';
-      component.personalForm.idPersonal = '11111';
+      component.personalForm.documento = '11111';
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
       await component.guardarPersonal();
       expect(mockApi.users.create).toHaveBeenCalled();
       expect(component.modalPersonalOpen).toBeFalse();
+    });
+
+    it('should upload photo to R2 when file is selected', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'Con Foto';
+      component.personalForm.documento = '12345678';
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
+      component.fotoFile = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
+      await component.guardarPersonal();
+      expect(mockApi.users.getProfilePresignedUrl).toHaveBeenCalledWith('photo.jpg', 'image/jpeg');
+      expect(mockApi.incidents.uploadToR2).toHaveBeenCalled();
+      expect(mockApi.users.create).toHaveBeenCalled();
+      const createCall = mockApi.users.create.calls.mostRecent().args[0];
+      expect(createCall.img_url).toBe('profiles/test/key');
+    });
+
+    it('should show info toast about password on create', async () => {
+      component.editandoPersonal = false;
+      component.personalForm.nombre = 'Test';
+      component.personalForm.documento = '12345678';
+      component.orgRolSeleccionado = '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec';
+      await component.guardarPersonal();
+      expect(mockToast.info).toHaveBeenCalledWith('Nuevo miembro agregado. Se envió la contraseña al correo electrónico.');
     });
   });
 
@@ -513,6 +606,19 @@ describe('DirectorioPersonal', () => {
       expect(freshComponent.enrolAwaitingReference()).toBeFalse();
     });
 
+    it('should have org data empty initially', () => {
+      expect(freshComponent.orgSedes).toEqual([]);
+      expect(freshComponent.orgAreas).toEqual([]);
+      expect(freshComponent.orgDepartamentos).toEqual([]);
+      expect(freshComponent.orgSedeSeleccionada).toBe(0);
+      expect(freshComponent.fotoFile).toBeNull();
+    });
+
+    it('should have tiposDocumento defined', () => {
+      expect(freshComponent.tiposDocumento.length).toBe(4);
+      expect(freshComponent.tiposDocumento[0].value).toBe('DNI');
+    });
+
     afterEach(() => {
       freshFixture.destroy();
     });
@@ -526,6 +632,16 @@ describe('DirectorioPersonal', () => {
       expect(component.metricas.personalTotal).toBe(2);
       expect(component.metricas.activosHoy).toBe(1);
       expect(component.metricas.deLicencia).toBe(1);
+    });
+
+    it('should load org data from OrgService', async () => {
+      await fixture.whenStable();
+      expect(component.orgSedes.length).toBe(1);
+      expect(component.orgSedes[0].nombre).toBe('Sede San Isidro');
+      expect(component.orgAreas.length).toBe(1);
+      expect(component.orgDepartamentos.length).toBe(1);
+      expect(component.orgRoles.length).toBe(1);
+      expect(component.orgRoles[0].nombre).toBe('administrador');
     });
 
     it('should set error on failure', async () => {

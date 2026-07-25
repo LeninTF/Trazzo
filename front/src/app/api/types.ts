@@ -11,7 +11,7 @@ export interface PermissionProfile {
 }
 
 export interface TenantRoleProfile {
-  id: number;
+  id: string;
   name: string;
   descripcion: string | null;
   permissions: PermissionProfile[];
@@ -103,14 +103,14 @@ export interface CrearTenantUsuarioRequest {
   document_value: string;
   name: string;
   father_surname: string;
-  mother_surname: string;
+  mother_surname?: string | null;
   birth_date?: string | null;
   img_url?: string | null;
   email: string;
   emails_adicionales?: string[] | null;
   phone?: string | null;
   phones_adicionales?: string[] | null;
-  role_id: number;
+  role_id: string;
   sede_ids?: number[] | null;
   area_ids?: number[] | null;
   departamento_ids?: number[] | null;
@@ -130,7 +130,7 @@ export interface PatchTenantUsuarioRequest {
   phone?: string | null;
   cargo?: string | null;
   estado?: 'ACTIVO' | 'LICENCIA' | 'INACTIVO';
-  role_id?: number;
+  role_id?: string | null;
   sede_ids?: number[] | null;
   area_ids?: number[] | null;
   departamento_ids?: number[] | null;

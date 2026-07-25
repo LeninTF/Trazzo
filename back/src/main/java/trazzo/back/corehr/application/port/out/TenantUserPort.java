@@ -28,6 +28,8 @@ public interface TenantUserPort {
     void removeRole(Long tenantUserId);
     Optional<String> findRoleIdByTenantUserId(Long tenantUserId);
 
+    void replaceOrgDepartments(Long tenantUserId, List<Long> departamentoIds);
+
     Integer savePerson(String documentType, String documentValue, String name, String fatherSurname, String motherSurname);
     void updatePerson(Integer personId, String name, String fatherSurname, String motherSurname);
     Optional<Integer> findPersonIdByDocument(String documentType, String documentValue);

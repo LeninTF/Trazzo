@@ -263,10 +263,23 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     }
 
     @Override
+    public void replaceOrgDepartments(Long tenantUserId, List<Long> departamentoIds) {
+        jdbc.update("DELETE FROM tenant_user_department WHERE tenant_user_id = ?", tenantUserId);
+        if (departamentoIds != null) {
+            for (Long deptId : departamentoIds) {
+                jdbc.update("""
+                        INSERT INTO tenant_user_department (tenant_user_id, department_id, start_date, created_at, updated_at)
+                        VALUES (?, ?, CURRENT_DATE, NOW(), NOW())
+                        """, tenantUserId, deptId);
+            }
+        }
+    }
+
+    @Override
     public Integer savePerson(String documentType, String documentValue, String name, String fatherSurname, String motherSurname) {
         jdbc.update("""
                 INSERT INTO persons (document_type, document_value, name, father_surname, mother_surname)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (?::document_type_enum, ?, ?, ?, ?)
                 """, documentType, documentValue, name, fatherSurname, motherSurname);
         return jdbc.queryForObject("SELECT LASTVAL()", Integer.class);
     }
@@ -281,7 +294,7 @@ public class TenantUserJdbcAdapter implements TenantUserPort {
     @Override
     public Optional<Integer> findPersonIdByDocument(String documentType, String documentValue) {
         var results = jdbc.query("""
-                SELECT id FROM persons WHERE document_type = ? AND document_value = ?
+                SELECT id FROM persons WHERE document_type = ?::document_type_enum AND document_value = ?
                 """, (rs, rowNum) -> rs.getInt("id"), documentType, documentValue);
         return results.stream().findFirst();
     }

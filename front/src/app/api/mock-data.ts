@@ -119,11 +119,11 @@ const todosPermisos: PermissionProfile[] = [
 // ==========================================
 
 const tenantRoles: TenantRoleProfile[] = [
-  { id: 1, name: 'Super Administrador', descripcion: 'Acceso total al sistema', permissions: todosPermisos.filter(p => p.context === 'TENANT') },
-  { id: 2, name: 'Director', descripcion: 'Visibilidad total del tenant', permissions: todosPermisos.filter(p => p.context === 'TENANT' && ![28].includes(p.id)) },
-  { id: 3, name: 'Administrador', descripcion: 'Gestión administrativa general', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 29].includes(p.id)) },
-  { id: 4, name: 'Supervisor', descripcion: 'Supervisión de área', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [1, 7, 8, 10, 17, 19, 29].includes(p.id)) },
-  { id: 5, name: 'Trabajador', descripcion: 'Acceso básico del empleado', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [7, 10, 19].includes(p.id)) },
+  { id: '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec', name: 'Super Administrador', descripcion: 'Acceso total al sistema', permissions: todosPermisos.filter(p => p.context === 'TENANT') },
+  { id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Director', descripcion: 'Visibilidad total del tenant', permissions: todosPermisos.filter(p => p.context === 'TENANT' && ![28].includes(p.id)) },
+  { id: '5c2aef7a-2ac5-41dc-b921-5c9f6bfc9dec', name: 'Administrador', descripcion: 'Gestión administrativa general', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 29].includes(p.id)) },
+  { id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', name: 'Supervisor', descripcion: 'Supervisión de área', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [1, 7, 8, 10, 17, 19, 29].includes(p.id)) },
+  { id: 'c3d4e5f6-a7b8-9012-cdef-123456789012', name: 'Trabajador', descripcion: 'Acceso básico del empleado', permissions: todosPermisos.filter(p => p.context === 'TENANT' && [7, 10, 19].includes(p.id)) },
 ];
 
 const masterRoles: MasterRoleProfile[] = [

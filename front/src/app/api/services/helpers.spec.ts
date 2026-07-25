@@ -74,7 +74,7 @@ describe('helpers', () => {
         img_url: 'https://example.com/foto.jpg',
       },
       MetodoRecuperacion: [],
-      rol: { id: 1, name: 'Docente', descripcion: null, permissions: [] },
+      rol: { id: '1', name: 'Docente', descripcion: null, permissions: [] },
       sedes: [{ id: 1, nombre: 'Central' }],
       areas: [{ id: 1, nombre: 'Academica' }],
       departamentos: [{ id: 1, nombre: 'Academic' }],

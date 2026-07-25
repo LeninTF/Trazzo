@@ -33,7 +33,7 @@ describe('UsersService', () => {
     estado: 'ACTIVO', must_change_password: false,
     created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
     persona: { id: 1, name: 'Test', father_surname: 'User', mother_surname: '', document_type: 'DNI', document_value: '12345678', birth_date: null, img_url: null },
-    MetodoRecuperacion: [], rol: { id: 1, name: 'Admin', descripcion: null, permissions: [] }, sedes: [], areas: [], departamentos: [],
+    MetodoRecuperacion: [], rol: { id: '1', name: 'Admin', descripcion: null, permissions: [] }, sedes: [], areas: [], departamentos: [],
   };
 
   describe('tenant users', () => {

@@ -42,9 +42,10 @@ public class TenantUserController {
 
     @PostMapping
     public ResponseEntity<TenantUserProfileResult> create(@Valid @RequestBody CreateTenantUserRequest request) {
+        var motherSurname = request.motherSurname() != null ? request.motherSurname() : "";
         var command = new CreateTenantUserCommand(
                 request.documentType(), request.documentValue(),
-                request.name(), request.fatherSurname(), request.motherSurname(),
+                request.name(), request.fatherSurname(), motherSurname,
                 request.birthDate(), request.imgUrl(),
                 request.email(), request.phone(),
                 request.roleId(),
