@@ -26,7 +26,7 @@ class AuditLogDetailResultTest {
         assertEquals(Action.UPDATE, result.action());
         assertEquals("user-1", result.userId());
         assertEquals("/api/users/42", result.endpoint());
-        assertEquals("192.168.1.1", result.ipAdress());
+        assertEquals("192.168.1.1", result.ipAddress());
         assertEquals("curl/7.68", result.userAgent());
         assertEquals(previousValue, result.previousValue());
         assertEquals(newValue, result.newValue());

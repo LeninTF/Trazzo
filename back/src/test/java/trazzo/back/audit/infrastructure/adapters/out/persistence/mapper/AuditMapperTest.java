@@ -27,7 +27,7 @@ class AuditMapperTest {
         assertEquals(Action.CREATE, entity.getAction());
         assertEquals("a1b2c3d4-e5f6-7890-abcd-ef1234567890", entity.getUserId().toString());
         assertEquals("/api/users", entity.getEndpoint());
-        assertEquals("192.168.1.1", entity.getIpAdress());
+        assertEquals("192.168.1.1", entity.getIpAddress());
         assertEquals("Mozilla/5.0", entity.getUserAgent());
         assertEquals(now, entity.getCreatedAt());
         assertNotNull(entity.getOldValue());
@@ -44,7 +44,7 @@ class AuditMapperTest {
         entity.setAction(Action.UPDATE);
         entity.setUserId(UUID.fromString("b2c3d4e5-f6a7-8901-bcde-f12345678901"));
         entity.setEndpoint("/api/roles");
-        entity.setIpAdress("10.0.0.1");
+        entity.setIpAddress("10.0.0.1");
         entity.setUserAgent("curl/7.68");
         entity.setOldValue("{\"key\":\"old\"}");
         entity.setNewValue("{\"key\":\"new\"}");
@@ -57,7 +57,7 @@ class AuditMapperTest {
         assertEquals(Action.UPDATE, domain.getAction());
         assertEquals("b2c3d4e5-f6a7-8901-bcde-f12345678901", domain.getUserId());
         assertEquals("/api/roles", domain.getEndpoint());
-        assertEquals("10.0.0.1", domain.getIpAdress());
+        assertEquals("10.0.0.1", domain.getIpAddress());
         assertEquals("curl/7.68", domain.getUserAgent());
         assertEquals(Map.of("key", "old"), domain.getPreviousValue());
         assertEquals(Map.of("key", "new"), domain.getNewValue());
@@ -78,7 +78,7 @@ class AuditMapperTest {
         assertEquals(original.getEntityId(), restored.getEntityId());
         assertEquals(original.getAction(), restored.getAction());
         assertEquals(original.getEndpoint(), restored.getEndpoint());
-        assertEquals(original.getIpAdress(), restored.getIpAdress());
+        assertEquals(original.getIpAddress(), restored.getIpAddress());
         assertEquals(original.getCreatedAt(), restored.getCreatedAt());
     }
 

@@ -84,7 +84,13 @@
             "main": "src/test.ts",
             "karmaConfig": "karma.conf.js",
             "tsConfig": "tsconfig.spec.json",
-            "codeCoverage": true
+            "codeCoverage": true,
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "public"
+              }
+            ]
           }
         }
       }
