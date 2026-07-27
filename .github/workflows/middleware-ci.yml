@@ -38,7 +38,7 @@ jobs:
           distribution: 'temurin'
 
       - name: Configurar .NET 10
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.x'
 
@@ -185,7 +185,7 @@ jobs:
 
       - name: Configurar .NET 10
         if: github.event_name == 'push'
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.x'
 
