@@ -31,10 +31,11 @@ class App:
 
         liveness = LivenessService()
         anti_spoof = AntiSpoofingService.instance()
+        log.info("anti-spoof CNN: %s", "ACTIVO" if anti_spoof.enabled else "DESHABILITADO (fail-open)")
         capture = CaptureService(self.camera, self.engine, liveness, anti_spoof)
         enrollment = EnrollmentService(capture, self.repo)
         recognition = RecognitionService(capture, self.repo)
-        self.router = MessageRouter(self.camera, enrollment, recognition)
+        self.router = MessageRouter(self.camera, enrollment, recognition, anti_spoof=anti_spoof)
 
         self._client_sem = asyncio.Semaphore(SETTINGS.max_concurrent_clients)
         self._active_clients = 0

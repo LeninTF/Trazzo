@@ -38,6 +38,7 @@ class Settings:
 
     liveness_min_score: float
     anti_spoof_min_real: float
+    anti_spoof_required: bool
 
     db_path: str
     max_gallery_per_tenant: int
@@ -71,6 +72,13 @@ def _float(key: str, default: float, minimum: float | None = None, maximum: floa
 
 def _str(key: str, default: str) -> str:
     return os.getenv(key, default)
+
+
+def _bool(key: str, default: bool) -> bool:
+    raw = os.getenv(key)
+    if raw is None:
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
 
 
 def _resolve_safe_path(user_path: str, allowed_root: str) -> str:
@@ -114,6 +122,9 @@ def _load() -> Settings:
         capture_min_valid_frames=_int("CAPTURE_MIN_VALID_FRAMES", 10, 1, 30),
         liveness_min_score=_float("LIVENESS_MIN_SCORE", 0.40, 0.0, 1.0),
         anti_spoof_min_real=_float("ANTI_SPOOF_MIN_REAL", 0.85, 0.0, 1.0),
+        # Si es True y los modelos del CNN no están cargados, la captura se rechaza
+        # (fail-closed) en vez de degradar abierto. Recomendado en producción.
+        anti_spoof_required=_bool("ANTI_SPOOF_REQUIRED", False),
         db_path=os.path.abspath(db_path),
         max_gallery_per_tenant=_int("MAX_GALLERY_PER_TENANT", 5000, 1, 1_000_000),
     )

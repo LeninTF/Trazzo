@@ -90,7 +90,15 @@ class AntiSpoofingService:
 
         self.enabled = len(self._sessions) > 0
         if not self.enabled:
-            log.warning("AntiSpoofingService DESHABILITADO — corre scripts/download_anti_spoof.py")
+            if SETTINGS.anti_spoof_required:
+                log.critical(
+                    "ANTI-SPOOF CNN NO CARGADO y ANTI_SPOOF_REQUIRED=1 -> toda captura sera "
+                    "rechazada. Corre scripts/download_anti_spoof.py.")
+            else:
+                log.warning(
+                    "AntiSpoofingService DESHABILITADO (fail-open) — el CNN no protege contra "
+                    "fotos/pantallas. Corre scripts/download_anti_spoof.py o setea "
+                    "ANTI_SPOOF_REQUIRED=1 para bloquear.")
 
     @classmethod
     def instance(cls) -> "AntiSpoofingService":
@@ -123,10 +131,11 @@ class AntiSpoofingService:
         Ensemble por MIN: ambos modelos deben coincidir. Si uno dice "fake",
         el score cae al minimo — es lo correcto para seguridad (falsos positivos
         pesan mas que falsos negativos).
-        Fail-open si no hay modelos (con warning ya loggeado).
+        Sin modelos: fail-open (1.0) por defecto, o fail-closed (0.0) si
+        ANTI_SPOOF_REQUIRED=1 — así ninguna captura pasa sin protección real.
         """
         if not self.enabled:
-            return 1.0
+            return 0.0 if SETTINGS.anti_spoof_required else 1.0
 
         crop = self._crop(frame, face)
         if crop.size == 0:

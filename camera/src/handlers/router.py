@@ -18,10 +18,11 @@ _RESULT_TYPES = {
 
 
 class MessageRouter:
-    def __init__(self, camera, enrollment, recognition) -> None:
+    def __init__(self, camera, enrollment, recognition, anti_spoof=None) -> None:
         self.camera = camera
         self.enrollment = enrollment
         self.recognition = recognition
+        self.anti_spoof = anti_spoof
 
     async def dispatch(self, raw: str) -> dict:
         try:
@@ -54,7 +55,10 @@ class MessageRouter:
         tenant = validate_tenant_id(msg.get("tenantId", "default"))
 
         if msg_type == MsgType.STATUS:
-            return {"type": MsgType.STATUS_CHANGED, "connected": self.camera.is_open()}
+            resp = {"type": MsgType.STATUS_CHANGED, "connected": self.camera.is_open()}
+            if self.anti_spoof is not None:
+                resp["antiSpoofEnabled"] = bool(getattr(self.anti_spoof, "enabled", False))
+            return resp
 
         if msg_type == MsgType.ENROLL_START:
             person = validate_person_id(msg.get("personId"))

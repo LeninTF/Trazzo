@@ -14,6 +14,7 @@ if SRC not in sys.path:
 
 _SETTINGS_FIELDS_TO_SNAPSHOT = (
     "db_path",
+    "models_dir",
     "enrollment_samples",
     "max_gallery_per_tenant",
     "capture_max_seconds",

@@ -35,7 +35,7 @@ class CaptureService:
         session = ActiveLivenessSession(self.camera, self.engine, self.anti_spoof, on_prompt)
         try:
             embedding, meta = await session.run_passive()
-            return self._to_result(embedding, meta, frames=meta.get("frames", 1))
+            return self._to_result(embedding, meta, frames=int(meta.get("frames", 1)))
         finally:
             gc.collect()
 
@@ -49,11 +49,35 @@ class CaptureService:
 
     @staticmethod
     def _to_result(embedding, meta: dict, frames: int) -> CaptureResult:
+        """Construye el CaptureResult con un score de liveness REAL derivado del
+        challenge, no un valor fijo.
+
+        - passive (verify/identify): el score lo domina la confianza del CNN
+          anti-spoof (probabilidad de "real", `cnn_min`), respaldada por el
+          micro-movimiento medido (`motion`).
+        - full (enrollment): el score es la similitud del rostro entre los dos
+          frontales del reto (`match_between_frontals`); ambos frontales ya
+          pasaron el CNN durante el reto.
+        """
+        mode = meta.get("mode", "passive")
+
+        if mode == "passive":
+            cnn = float(meta.get("cnn_min", 1.0))
+            motion = float(meta.get("motion", 0.0))
+            score = round(max(0.0, min(1.0, cnn)), 4)
+            signals = LivenessSignals(0, 0, 0, 1.0, motion, 0)
+            reason = f"passive liveness ok (cnn={cnn:.2f}, motion={motion:.2f})"
+        else:
+            sim = float(meta.get("match_between_frontals", 1.0))
+            score = round(max(0.0, min(1.0, sim)), 4)
+            signals = LivenessSignals(0, 0, 0, sim, 0, 0)
+            reason = f"challenge full ok (match={sim:.2f})"
+
         liveness = LivenessResult(
             is_live=True,
-            score=1.0,
-            signals=LivenessSignals(0, 0, 0, meta.get("match_between_frontals", 1.0), 0, 0),
-            reason=f"challenge {meta['mode']} completado",
+            score=score,
+            signals=signals,
+            reason=reason,
         )
         return CaptureResult(
             embedding=embedding,
