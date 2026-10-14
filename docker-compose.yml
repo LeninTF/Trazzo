@@ -10,17 +10,42 @@ services:
       APP_DB_NAME: ${APP_DB_NAME}
       APP_DB_USER: ${APP_DB_USER}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
     volumes:
       - trazzo-postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - trazzo-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${APP_DB_USER}\" -d \"$${APP_DB_NAME}\""]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  # One-shot: reaplica el init (rol de la app, BD, grants, timezone UTC) por TCP en cada
+  # `up`. docker-entrypoint-initdb.d solo corre con el volumen vacio, asi que sin esto un
+  # volumen existente nunca recibe los cambios del script.
+  trazzo-db-bootstrap:
+    image: postgres:15-alpine
+    container_name: trazzo-db-bootstrap
+    restart: "no"
+    environment:
+      PGHOST: trazzo-db
+      PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      APP_DB_NAME: ${APP_DB_NAME}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - ./docker/postgres/init:/init:ro
+    command: ["sh", "/init/01-init-master-db.sh"]
+    networks:
+      - trazzo-network
+    depends_on:
+      trazzo-db:
+        condition: service_healthy
 
   trazzo-db-ssh:
     image: lscr.io/linuxserver/openssh-server:latest
@@ -56,16 +81,16 @@ services:
       DB_URL: jdbc:postgresql://trazzo-db:5432/${APP_DB_NAME}
       DB_USER: ${APP_DB_USER}
       DB_PASSWORD: ${APP_DB_PASSWORD}
-      PROVISIONING_ADMIN_URL: jdbc:postgresql://trazzo-db:5432/${POSTGRES_DB}
-      PROVISIONING_ADMIN_USER: ${POSTGRES_USER}
-      PROVISIONING_ADMIN_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
-      PROVISIONING_DB_HOST: trazzo-db
-      PROVISIONING_DB_PORT: 5432
+      TZ: UTC
+    # Margen sobre spring.lifecycle.timeout-per-shutdown-phase (30s) antes del SIGKILL.
+    stop_grace_period: 40s
     networks:
       - trazzo-network
     depends_on:
       trazzo-db:
         condition: service_healthy
+      trazzo-db-bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
       interval: 30s
