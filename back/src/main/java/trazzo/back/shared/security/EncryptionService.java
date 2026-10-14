@@ -9,9 +9,13 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Service;
 
+// Only created when a key is configured; an empty app.encryption.key leaves the bean out
+// instead of failing at base64-decode time with an opaque error.
 @Service
+@ConditionalOnExpression("'${app.encryption.key:}'.length() > 0")
 public class EncryptionService {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
