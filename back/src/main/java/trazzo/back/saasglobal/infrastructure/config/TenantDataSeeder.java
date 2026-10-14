@@ -190,18 +190,9 @@ public class TenantDataSeeder implements ApplicationRunner {
         }
     }
 
-    /**
-     * Ensures the 'usuario' role exists in the tenant schema and returns its ID.
-     * TenantSchemaMigrator (@Order(2)) will later run V3__seed_default_roles_permissions.sql
-     * which also seeds this role idempotently (WHERE NOT EXISTS).
-     */
+    /** Ensures the 'usuario' role exists in the tenant schema and returns its ID. */
     private String ensureUsuarioRoleExists() {
-        return jdbc.queryForObject("""
-                INSERT INTO role (id, name, description)
-                SELECT gen_random_uuid(), 'usuario', 'El Usuario tiene acceso básico a incidencias, historial de asistencia y perfil.'
-                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'usuario')
-                RETURNING id
-                """, String.class);
+        return ensureRole("usuario", "El Usuario tiene acceso básico a incidencias, historial de asistencia y perfil.");
     }
 
     private Integer ensureDemoPlanExists() {
@@ -217,18 +208,25 @@ public class TenantDataSeeder implements ApplicationRunner {
                 """, Integer.class, DEMO_PLAN_NAME);
     }
 
-    /**
-     * Ensures the 'administrador' role exists in the tenant schema and returns its ID.
-     * TenantSchemaMigrator (@Order(2)) will later run V3__seed_default_roles_permissions.sql
-     * which also seeds this role idempotently (WHERE NOT EXISTS).
-     */
+    /** Ensures the 'administrador' role exists in the tenant schema and returns its ID. */
     private String ensureAdminRoleExists() {
+        return ensureRole("administrador", "El Administrador tiene acceso total a la configuración y seguridad del sistema");
+    }
+
+    /**
+     * Provisioning already applies V3_1__seed_default_roles_permissions.sql, so the role normally
+     * exists by now; an INSERT ... WHERE NOT EXISTS ... RETURNING would return no row in that case.
+     */
+    private String ensureRole(String name, String description) {
+        List<String> existing = jdbc.queryForList("SELECT id::text FROM role WHERE name = ?", String.class, name);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
         return jdbc.queryForObject("""
                 INSERT INTO role (id, name, description)
-                SELECT gen_random_uuid(), 'administrador', 'El Administrador tiene acceso total a la configuración y seguridad del sistema'
-                WHERE NOT EXISTS (SELECT 1 FROM role WHERE name = 'administrador')
+                VALUES (gen_random_uuid(), ?, ?)
                 RETURNING id
-                """, String.class);
+                """, String.class, name, description);
     }
 
     private static String requireNonBlank(String value, String propertyName) {

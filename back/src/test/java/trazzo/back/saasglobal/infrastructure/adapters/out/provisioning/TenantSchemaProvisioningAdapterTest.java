@@ -26,6 +26,7 @@ class TenantSchemaProvisioningAdapterTest {
     @Mock DataSource rawDataSource;
     @Mock Connection connection;
     @Mock Statement statement;
+    @Mock TenantFlywayMigrator flywayMigrator;
 
     private TenantSchemaProvisioningAdapter adapter;
 
@@ -36,7 +37,7 @@ class TenantSchemaProvisioningAdapterTest {
         // statement until getUpdateCount() reports -1 (JDBC's "no more results" sentinel); an
         // unstubbed mock defaults to 0, which never satisfies that check and spins forever.
         when(statement.getUpdateCount()).thenReturn(-1);
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
     }
 
     @Test
@@ -68,7 +69,7 @@ class TenantSchemaProvisioningAdapterTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.execute("CREATE SCHEMA \"tenant_acme\""))
                 .thenThrow(new SQLException("schema \"tenant_acme\" already exists", "42P06"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
@@ -84,7 +85,7 @@ class TenantSchemaProvisioningAdapterTest {
         when(connection.createStatement()).thenReturn(statement);
         when(statement.execute("SET search_path TO \"tenant_acme\", public"))
                 .thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
@@ -94,9 +95,31 @@ class TenantSchemaProvisioningAdapterTest {
     }
 
     @Test
+    void provisionExisting_runsFlywayOnTheNewSchemaAfterTheBaselineScript() throws SQLException {
+        wireHappyPathConnection();
+
+        adapter.provisionExisting(TenantSettings.of("t-1", "tenant_acme"));
+
+        var order = org.mockito.Mockito.inOrder(statement, flywayMigrator);
+        order.verify(statement).execute("SET search_path TO \"tenant_acme\", public");
+        order.verify(flywayMigrator).migrate("tenant_acme");
+    }
+
+    @Test
+    void provisionExisting_dropsSchemaWhenFlywayMigrationFails() throws SQLException {
+        wireHappyPathConnection();
+        when(flywayMigrator.migrate("tenant_acme")).thenThrow(new IllegalStateException("migration failed"));
+        var settings = TenantSettings.of("t-1", "tenant_acme");
+
+        assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
+
+        verify(statement).execute("DROP SCHEMA IF EXISTS \"tenant_acme\" CASCADE");
+    }
+
+    @Test
     void provisionExisting_wrapsSqlExceptionAsProvisioningException() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
         var settings = TenantSettings.of("t-1", "tenant_acme");
 
         assertThrows(TenantProvisioningException.class, () -> adapter.provisionExisting(settings));
@@ -114,14 +137,14 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void deprovision_swallowsFailuresBestEffort() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         assertDoesNotThrow(() -> adapter.deprovision("tenant_acme"));
     }
 
     @Test
     void deprovision_rejectsUnsafeIdentifierWithoutTouchingDataSource() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         adapter.deprovision("tenant_acme\"; DROP SCHEMA public CASCADE; --");
 
@@ -130,7 +153,7 @@ class TenantSchemaProvisioningAdapterTest {
 
     @Test
     void provisionExisting_rejectsUnsafeSchemaNameWithoutTouchingDataSource() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
         var maliciousSettings = TenantSettings.of("t-1", "tenant_acme; DROP TABLE users");
 
         assertThrows(TenantProvisioningException.class,
@@ -141,7 +164,7 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void provisionNew_failsWhenCreateSchemaThrows() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.provisionNew("t-1", "Acme"));
@@ -151,7 +174,7 @@ class TenantSchemaProvisioningAdapterTest {
     void recreateSchema_dropsSchema() throws SQLException {
         when(rawDataSource.getConnection()).thenReturn(connection);
         when(connection.createStatement()).thenReturn(statement);
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         adapter.recreateSchema("tenant_acme");
 
@@ -161,7 +184,7 @@ class TenantSchemaProvisioningAdapterTest {
     @Test
     void recreateSchema_throwsOnSqlException() throws SQLException {
         when(rawDataSource.getConnection()).thenThrow(new SQLException("boom"));
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.recreateSchema("tenant_acme"));
@@ -169,7 +192,7 @@ class TenantSchemaProvisioningAdapterTest {
 
     @Test
     void recreateSchema_rejectsUnsafeIdentifier() {
-        adapter = new TenantSchemaProvisioningAdapter(rawDataSource);
+        adapter = new TenantSchemaProvisioningAdapter(rawDataSource, flywayMigrator);
 
         assertThrows(TenantProvisioningException.class,
                 () -> adapter.recreateSchema("tenant_acme; DROP TABLE users"));
