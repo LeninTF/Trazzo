@@ -30,6 +30,12 @@ RUN java -Djarmode=tools -jar /build/target/app.jar extract --layers --destinati
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
+# curl lo usa el healthcheck de compose; se instala explicitamente porque la imagen
+# base no garantiza que lo traiga.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # 6. Crear y usar un usuario sin privilegios (Seguridad)
 RUN groupadd -r trazzo && useradd -r -g trazzo trazzo
 
@@ -46,4 +52,4 @@ EXPOSE 8080
 
 # 8. finalName=app fijado en pom.xml: el nombre no depende de project.version,
 # así un bump de versión no puede romper este ENTRYPOINT silenciosamente.
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-Duser.timezone=UTC", "-jar", "app.jar"]
