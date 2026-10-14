@@ -4,9 +4,9 @@
 -- gestion-roles.ts) already assumed this fixed set of 35 module.accion permissions
 -- and 5 predefined roles existed; it was never actually persisted anywhere.
 --
--- TenantSchemaMigrator re-runs every script in db/tenant/migration/ on every app
--- startup for every already-provisioned tenant (no per-tenant migration-history
--- tracking), so every statement here must be safe to execute repeatedly.
+-- Applied once per tenant schema by TenantFlywayMigrator (history table
+-- flyway_tenant_history). Statements are still written to be safe to re-run, because
+-- schemas that predate the history table are baselined and then receive this script.
 -- ==============================================================================
 
 INSERT INTO permissions (id, name, description)

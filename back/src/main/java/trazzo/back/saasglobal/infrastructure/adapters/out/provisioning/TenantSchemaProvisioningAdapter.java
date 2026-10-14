@@ -28,9 +28,14 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
     private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
 
     private final DataSource rawDataSource;
+    private final TenantFlywayMigrator flywayMigrator;
 
-    public TenantSchemaProvisioningAdapter(@Qualifier("rawDataSource") DataSource rawDataSource) {
+    public TenantSchemaProvisioningAdapter(
+            @Qualifier("rawDataSource") DataSource rawDataSource,
+            TenantFlywayMigrator flywayMigrator
+    ) {
         this.rawDataSource = rawDataSource;
+        this.flywayMigrator = flywayMigrator;
     }
 
     @Override
@@ -68,14 +73,19 @@ public class TenantSchemaProvisioningAdapter implements TenantSchemaProvisioning
     private void provisionSchema(String schemaName) {
         validateIdentifier(schemaName);
         createSchema(schemaName);
-        try (Connection conn = rawDataSource.getConnection()) {
-            try (Statement stmt = conn.createStatement()) {
-                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
-                // since PG13, always implicitly searched first) but kept for defense in depth
-                // and to match TenantAwareDataSource's runtime search_path exactly.
-                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
+        try {
+            try (Connection conn = rawDataSource.getConnection()) {
+                try (Statement stmt = conn.createStatement()) {
+                    // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
+                    // since PG13, always implicitly searched first) but kept for defense in depth
+                    // and to match TenantAwareDataSource's runtime search_path exactly.
+                    stmt.execute("SET search_path TO \"" + schemaName + "\", public");
+                }
+                ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
             }
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource(SCHEMA_SCRIPT));
+            // V1 above is the baseline; db/tenant/migration/V2+ are applied (and tracked) by Flyway
+            // so a brand-new tenant starts with the same schema as one migrated at startup.
+            flywayMigrator.migrate(schemaName);
         } catch (Exception e) {
             // The schema was created by us (createSchema() above already succeeded), so a
             // failure past this point must not leave it behind half-populated — that would
