@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +36,8 @@ import trazzo.back.saasglobal.application.port.out.PlanRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.SubscriptionRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.TenantRepositoryPort;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
+import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalRequest;
+import trazzo.back.saasglobal.domain.exception.MercadoPagoConfigurationException;
 import trazzo.back.saasglobal.domain.exception.TenantValidationException;
 import trazzo.back.saasglobal.domain.model.iam.Person;
 import trazzo.back.saasglobal.domain.model.iam.User;
@@ -75,7 +78,8 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_happyPath_createsTenantAdminAndPreapproval() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(true);
 
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
@@ -111,7 +115,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_reusesExistingHoldingByTaxId() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
 
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         Holding existing = Holding.restore(5, "20123456789", "Acme SAC", HoldingType.PRIVADO, true,
@@ -140,7 +144,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_throwsWhenPlanMissing() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         when(planRepository.findById(2)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class, () -> service.checkout(command()));
@@ -148,7 +152,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_throwsWhenSubDomainSuffixesExhausted() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
         when(holdingRepository.save(any())).thenAnswer(inv -> {
@@ -164,7 +168,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_throwsWhenPlanInactive() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         Plan inactive = Plan.restore(2, "Plan Demo", new BigDecimal("29.99"), null, "SOLES", "MONTHLY",
                 false, LocalDateTime.now(), null, null);
         when(planRepository.findById(2)).thenReturn(Optional.of(inactive));
@@ -174,7 +178,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_usesAlternateAdminWhenAnotherAdminTrue() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         var cmd = new ShopCheckoutCommand(
                 2, "Juan", "Perez", "Lopez", "DNI", "12345678", "juan@acme.pe", "999999999",
                 "20123456789", "Acme SAC", "Acme Sociedad Anonima Cerrada", "Av. Siempre Viva 123",
@@ -230,7 +234,7 @@ class ShopCheckoutServiceTest {
 
     @Test
     void checkout_purgesTenantWhenPreapprovalCreationFails() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         wireTenantCreatedUpToAdminUser();
         when(mercadoPagoSubscriptionPort.createPreapproval(any()))
                 .thenThrow(new RuntimeException("Mercado Pago rejected the request"));
@@ -242,8 +246,44 @@ class ShopCheckoutServiceTest {
     }
 
     @Test
+    void checkout_usesProductionInitPointAndBackUrlWhenSandboxDisabled() {
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(false);
+        wireTenantCreatedUpToAdminUser();
+        when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(
+                Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now())));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenReturn(new PreapprovalCreated("preapproval-1", "pending", "https://mp/init", "https://mp/sandbox-init"));
+
+        ShopCheckoutResult result = service.checkout(command());
+
+        assertEquals("https://mp/init", result.initPoint());
+        ArgumentCaptor<PreapprovalRequest> request = ArgumentCaptor.forClass(PreapprovalRequest.class);
+        verify(mercadoPagoSubscriptionPort).createPreapproval(request.capture());
+        assertEquals("https://app.example.com/shop/gracias", request.getValue().backUrl());
+    }
+
+    @Test
+    void checkout_purgesTenantAndFailsWithConfigurationErrorWhenSandboxUrlIsMissing() {
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(true);
+        wireTenantCreatedUpToAdminUser();
+        when(subscriptionRepository.findActiveByTenantId("tenant-1")).thenReturn(Optional.of(
+                Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now())));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenReturn(new PreapprovalCreated("preapproval-1", "pending", "https://mp/init", null));
+
+        assertThrows(MercadoPagoConfigurationException.class, () -> service.checkout(command()));
+
+        verify(tenantPurgeService).purge("tenant-1");
+        verify(emailService, never()).send(anyString(), anyString(), anyString());
+    }
+
+    @Test
     void checkout_purgesTenantWhenAdminUserCreationFails() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         when(planRepository.findById(2)).thenReturn(Optional.of(plan()));
         when(holdingRepository.findByTaxId("20123456789")).thenReturn(Optional.empty());
         when(holdingRepository.save(any())).thenAnswer(inv -> {

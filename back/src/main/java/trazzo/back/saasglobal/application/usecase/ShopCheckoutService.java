@@ -92,10 +92,14 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                     plan.getBillingPeriod(),
                     cmd.email(),
                     tenantResult.id(),
-                    appConfig.frontendUrl() + "/shop/gracias",
+                    appConfig.mercadoPagoBackUrl() + "/shop/gracias",
                     "Suscripción Trazzo - " + plan.getName()));
 
             linkPreapprovalToSubscription(tenantResult.id(), preapproval.id());
+
+            // Resolved before the email: it throws if Mercado Pago did not return the URL this
+            // deployment needs, and the checkout must then roll back without having emailed anyone.
+            String redirectUrl = preapproval.checkoutUrl(appConfig.mercadoPagoUseSandbox());
 
             // Sent only once the preapproval exists — sending "your account is ready" before
             // this point would be misleading if the checkout then fails and gets rolled back.
@@ -103,8 +107,6 @@ public class ShopCheckoutService implements ShopCheckoutUseCase {
                     "Tu cuenta de administrador fue creada. Contraseña temporal: " + admin.rawPassword()
                             + "<br>Deberás cambiarla al iniciar sesión.");
 
-            String redirectUrl = preapproval.sandboxInitPoint() != null
-                    ? preapproval.sandboxInitPoint() : preapproval.initPoint();
             return new ShopCheckoutResult(tenantResult.id(), subDomain, redirectUrl);
         } catch (RuntimeException e) {
             tenantPurgeService.purge(tenantResult.id());

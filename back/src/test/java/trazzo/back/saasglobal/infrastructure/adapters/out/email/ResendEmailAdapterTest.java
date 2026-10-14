@@ -58,6 +58,27 @@ class ResendEmailAdapterTest {
 
 
     @Test
+    void from_isBoundFromResendFromEmailProperty() {
+        RestClient.Builder builder = mock(RestClient.Builder.class, org.mockito.Answers.RETURNS_SELF);
+        RestClient restClient = mock(RestClient.class);
+        RestClient.RequestBodyUriSpec bodyUriSpec = mock(RestClient.RequestBodyUriSpec.class, org.mockito.Answers.RETURNS_SELF);
+        RestClient.ResponseSpec responseSpec = mock(RestClient.ResponseSpec.class);
+        when(builder.build()).thenReturn(restClient);
+        when(restClient.post()).thenReturn(bodyUriSpec);
+        when(bodyUriSpec.retrieve()).thenReturn(responseSpec);
+
+        new org.springframework.boot.test.context.runner.ApplicationContextRunner()
+                .withBean(RestClient.Builder.class, () -> builder)
+                .withUserConfiguration(ResendEmailAdapter.class)
+                .withPropertyValues("resend.api-key=re_test_key", "resend.from-email=ventas@example.com")
+                .run(ctx -> ctx.getBean(ResendEmailAdapter.class).send("to@example.com", "subject", "body"));
+
+        var body = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(bodyUriSpec).body(body.capture());
+        org.assertj.core.api.Assertions.assertThat(body.getValue().toString()).contains("from=ventas@example.com");
+    }
+
+    @Test
     void send_swallowsExceptionWhenHttpCallFails() {
         RestClient.Builder builder = mock(RestClient.Builder.class, org.mockito.Answers.RETURNS_SELF);
         RestClient restClient = mock(RestClient.class);

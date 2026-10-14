@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import trazzo.back.saasglobal.domain.exception.InvalidSubscriptionTransitionException;
 import trazzo.back.saasglobal.domain.exception.InvalidTenantTransitionException;
+import trazzo.back.saasglobal.domain.exception.MercadoPagoConfigurationException;
 import trazzo.back.saasglobal.domain.exception.RequestRateLimitException;
 import trazzo.back.saasglobal.domain.exception.RoleInUseException;
 import trazzo.back.saasglobal.domain.exception.TenantAlreadyActivatedException;
@@ -96,6 +97,16 @@ public class SaasGlobalExceptionHandler {
         log.warn("Request rate limit: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .body(new ErrorResponse(HttpStatus.TOO_MANY_REQUESTS.value(), "Too Many Requests", ex.getMessage()));
+    }
+
+    // Deployment misconfiguration, not a client error: the caller can retry once ops fixes it.
+    // The message names the missing Mercado Pago URL, never a credential.
+    @ExceptionHandler(MercadoPagoConfigurationException.class)
+    public ResponseEntity<ErrorResponse> handleMercadoPagoConfiguration(MercadoPagoConfigurationException ex) {
+        log.error("Mercado Pago configuration error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse(HttpStatus.SERVICE_UNAVAILABLE.value(), "Service Unavailable",
+                        "El servicio de pagos no está disponible temporalmente"));
     }
 
     @ExceptionHandler(RoleInUseException.class)

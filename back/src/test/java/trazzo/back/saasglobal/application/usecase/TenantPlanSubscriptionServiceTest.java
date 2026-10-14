@@ -11,7 +11,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import trazzo.back.saasglobal.application.port.out.MercadoPagoSubscriptionPort.PreapprovalRequest;
+import trazzo.back.saasglobal.domain.exception.MercadoPagoConfigurationException;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -55,7 +58,8 @@ class TenantPlanSubscriptionServiceTest {
 
     @Test
     void subscribe_cancelsCurrentSubscriptionAndCreatesNewOne() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(true);
         when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
         when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
         Subscription current = Subscription.createTrial("tenant-1", 2, BigDecimal.ZERO, LocalDate.now());
@@ -73,6 +77,51 @@ class TenantPlanSubscriptionServiceTest {
         verify(subscriptionRepository, org.mockito.Mockito.atLeastOnce()).save(any());
     }
 
+    @Test
+    void subscribe_usesProductionInitPointAndBackUrlWhenSandboxDisabled() {
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(false);
+        when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
+        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenReturn(new PreapprovalCreated("preapproval-2", "pending", "https://mp/init", "https://mp/sandbox-init"));
+
+        SubscribeToPlanResult result = service.subscribe(new SubscribeToPlanCommand("tenant-1", "admin@acme.pe", 3));
+
+        assertEquals("https://mp/init", result.initPoint());
+        ArgumentCaptor<PreapprovalRequest> request = ArgumentCaptor.forClass(PreapprovalRequest.class);
+        verify(mercadoPagoSubscriptionPort).createPreapproval(request.capture());
+        assertEquals("https://app.example.com/org/billing", request.getValue().backUrl());
+    }
+
+    @Test
+    void subscribe_failsWithConfigurationErrorWhenSandboxUrlIsMissing() {
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(true);
+        when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
+        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenReturn(new PreapprovalCreated("preapproval-2", "pending", "https://mp/init", null));
+
+        assertThrows(MercadoPagoConfigurationException.class,
+                () -> service.subscribe(new SubscribeToPlanCommand("tenant-1", "admin@acme.pe", 3)));
+    }
+
+    @Test
+    void subscribe_failsWithConfigurationErrorWhenProductionUrlIsMissing() {
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
+        when(appConfig.mercadoPagoUseSandbox()).thenReturn(false);
+        when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
+        when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
+        when(subscriptionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mercadoPagoSubscriptionPort.createPreapproval(any()))
+                .thenReturn(new PreapprovalCreated("preapproval-2", "pending", null, "https://mp/sandbox-init"));
+
+        assertThrows(MercadoPagoConfigurationException.class,
+                () -> service.subscribe(new SubscribeToPlanCommand("tenant-1", "admin@acme.pe", 3)));
+    }
     @Test
     void subscribe_throwsWhenPlanNotFound() {
         when(planRepository.findById(99)).thenReturn(Optional.empty());
@@ -102,7 +151,7 @@ class TenantPlanSubscriptionServiceTest {
 
     @Test
     void subscribe_doesNotCancelWhenNoCurrentSubscription() {
-        when(appConfig.frontendUrl()).thenReturn("http://localhost:4200");
+        when(appConfig.mercadoPagoBackUrl()).thenReturn("https://app.example.com");
         when(planRepository.findById(3)).thenReturn(Optional.of(plan()));
         when(tenantRepository.findById("tenant-1")).thenReturn(Optional.of(tenant()));
         when(subscriptionRepository.findActiveByTenantIdForUpdate("tenant-1")).thenReturn(Optional.empty());
