@@ -1,6 +1,7 @@
 -- Idempotent migration: enforce NOT NULL and UNIQUE constraints on monthly_closures
 -- tables that may have been created without them in early tenant provisions.
--- V4 re-applies these same guards; both scripts are safe to re-run.
+-- The information_schema guards are scoped to current_schema(): without it they would also match
+-- the same table or constraint in every other tenant schema and skip the change here.
 
 -- 1. Backfill created_by_user_id with a sentinel UUID where NULL, then enforce NOT NULL
 UPDATE monthly_closures SET created_by_user_id = '00000000-0000-0000-0000-000000000000'
@@ -10,7 +11,8 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'monthly_closures' AND column_name = 'created_by_user_id' AND is_nullable = 'YES'
+        WHERE table_schema = current_schema()
+          AND table_name = 'monthly_closures' AND column_name = 'created_by_user_id' AND is_nullable = 'YES'
     ) THEN
         ALTER TABLE monthly_closures ALTER COLUMN created_by_user_id SET NOT NULL;
     END IF;
@@ -25,7 +27,8 @@ DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.table_constraints
-        WHERE constraint_name = 'uq_monthly_closures_period'
+        WHERE table_schema = current_schema()
+          AND constraint_name = 'uq_monthly_closures_period'
           AND table_name = 'monthly_closures'
     ) THEN
         ALTER TABLE monthly_closures

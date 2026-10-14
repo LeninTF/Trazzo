@@ -122,6 +122,42 @@ class TenantDataSeederTest {
         assertEquals(3, tenantCaptor.getValue().getPlanId());
     }
 
+    @Test
+    void run_reusesRolesAlreadySeededByTheTenantMigrationsInsteadOfInsertingThem() {
+        when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.empty());
+        when(jdbc.queryForList("SELECT id FROM plans WHERE name = ?", Integer.class, "Plan Demo"))
+                .thenReturn(List.of(7));
+        when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mockTenantUserCreation();
+        when(jdbc.queryForList("SELECT id::text FROM role WHERE name = ?", String.class, "administrador"))
+                .thenReturn(List.of("seeded-admin-role"));
+        when(jdbc.queryForList("SELECT id::text FROM role WHERE name = ?", String.class, "usuario"))
+                .thenReturn(List.of("seeded-usuario-role"));
+
+        seeder.run(mock(ApplicationArguments.class));
+
+        verify(jdbc, never()).queryForObject(contains("INSERT INTO role"), eq(String.class), any(), any());
+        verify(jdbc).update(contains("INSERT INTO tenant_user_role"), eq(1L), eq("seeded-admin-role"));
+        verify(jdbc).update(contains("INSERT INTO tenant_user_role"), eq(1L), eq("seeded-usuario-role"));
+    }
+
+    @Test
+    void run_createsTheRolesWhenTheTenantMigrationsDidNotSeedThem() {
+        when(tenantRepository.findBySubDomain("demo")).thenReturn(Optional.empty());
+        when(jdbc.queryForList("SELECT id FROM plans WHERE name = ?", Integer.class, "Plan Demo"))
+                .thenReturn(List.of(7));
+        when(tenantRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mockTenantUserCreation();
+        when(jdbc.queryForList(contains("FROM role WHERE name"), eq(String.class), anyString()))
+                .thenReturn(List.of());
+        when(jdbc.queryForObject(contains("INSERT INTO role"), eq(String.class), eq("administrador"), anyString()))
+                .thenReturn("new-admin-role");
+
+        seeder.run(mock(ApplicationArguments.class));
+
+        verify(jdbc).update(contains("INSERT INTO tenant_user_role"), eq(1L), eq("new-admin-role"));
+    }
+
     private void mockTenantUserCreation() {
         when(userRepository.findByEmail("demo@trazzo.pe")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("demo123")).thenReturn("encoded");

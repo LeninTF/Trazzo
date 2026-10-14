@@ -1,29 +1,25 @@
 package trazzo.back.saasglobal.infrastructure.adapters.out.provisioning;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
-import javax.sql.DataSource;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Component;
 
 /**
- * On startup, applies any pending {@code db/tenant/migration/*.sql} scripts to every
- * activated tenant's schema, using the app's single physical database (schema-based
- * multi-tenancy) rather than a separate connection per tenant.
+ * On startup, applies any pending {@code db/tenant/migration/V*.sql} script to every
+ * activated tenant's schema through {@link TenantFlywayMigrator}, using the app's single
+ * physical database (schema-based multi-tenancy).
+ *
+ * A tenant whose migration fails is handled according to
+ * {@code trazzo.tenant-migrations.fail-on-error}: {@code false} (default) logs the error with
+ * its stack trace and carries on with the remaining tenants, {@code true} (local and tests)
+ * aborts the startup. Either way {@link TenantMigrationsHealthIndicator} reports the failures.
  *
  * Ordered after TenantDataSeeder (@Order(1)): without an explicit order, Spring's
  * ApplicationRunner/CommandLineRunner execution order is not guaranteed, so this could
@@ -35,25 +31,24 @@ import org.springframework.stereotype.Component;
 @Order(2)
 public class TenantSchemaMigrator implements ApplicationRunner {
 
-    private static final String MIGRATION_PATH = "db/tenant/migration/";
-    private static final Pattern VALID_SCHEMA = Pattern.compile("^[a-z0-9_]+$");
-
     private final JdbcTemplate jdbc;
-    private final DataSource rawDataSource;
-    private final ResourcePatternResolver resourceResolver;
+    private final TenantFlywayMigrator flywayMigrator;
+    private final boolean failOnError;
+    private final AtomicInteger failedTenants = new AtomicInteger();
 
     public TenantSchemaMigrator(
             JdbcTemplate jdbc,
-            @Qualifier("rawDataSource") DataSource rawDataSource,
-            ResourcePatternResolver resourceResolver
+            TenantFlywayMigrator flywayMigrator,
+            @Value("${trazzo.tenant-migrations.fail-on-error:false}") boolean failOnError
     ) {
         this.jdbc = jdbc;
-        this.rawDataSource = rawDataSource;
-        this.resourceResolver = resourceResolver;
+        this.flywayMigrator = flywayMigrator;
+        this.failOnError = failOnError;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        failedTenants.set(0);
         List<Map<String, Object>> tenants = jdbc.queryForList("""
                 SELECT t.id, ts.schema_name
                 FROM tenants t
@@ -70,45 +65,21 @@ public class TenantSchemaMigrator implements ApplicationRunner {
             String tenantId = row.get("id") != null ? row.get("id").toString() : "unknown";
             String schemaName = (String) row.get("schema_name");
             try {
-                migrateTenant(tenantId, schemaName);
+                int applied = flywayMigrator.migrate(schemaName);
+                log.info("Migrated tenant {} (schema {}): {} migration(s) applied", tenantId, schemaName, applied);
             } catch (Exception e) {
-                log.error("Failed to migrate tenant {} (schema {}): {}", tenantId, schemaName, e.getMessage());
+                failedTenants.incrementAndGet();
+                if (failOnError) {
+                    throw new TenantProvisioningException(
+                            "Failed to migrate tenant " + tenantId + " (schema " + schemaName + ")", e);
+                }
+                log.error("Failed to migrate tenant {} (schema {})", tenantId, schemaName, e);
             }
         }
     }
 
-    // Schema is validated against VALID_SCHEMA immediately below before being concatenated;
-    // SET search_path cannot use a JDBC bind parameter for the identifier.
-    @SuppressWarnings("java:S2077")
-    private void migrateTenant(String tenantId, String schemaName) {
-        if (schemaName == null || !VALID_SCHEMA.matcher(schemaName).matches()) {
-            throw new TenantProvisioningException("Invalid schema name for tenant " + tenantId + ": " + schemaName, null);
-        }
-        try (Connection conn = rawDataSource.getConnection()) {
-            try (Statement stmt = conn.createStatement()) {
-                // public is functionally redundant for gen_random_uuid() (pg_catalog-builtin
-                // since PG13, always implicitly searched first) but kept for defense in depth
-                // and to match TenantAwareDataSource's runtime search_path exactly.
-                stmt.execute("SET search_path TO \"" + schemaName + "\", public");
-            }
-            Resource[] resources = resourceResolver.getResources("classpath:" + MIGRATION_PATH + "*.sql");
-            // Each script runs independently: this migrator has no per-tenant applied-migration
-            // tracking (every script re-runs on every startup), so one broken/non-idempotent
-            // script must not prevent unrelated later scripts from ever being applied.
-            List.of(resources).stream()
-                    .sorted(Comparator.comparing(Resource::getFilename))
-                    .forEach(script -> {
-                        try {
-                            ScriptUtils.executeSqlScript(conn, script);
-                            log.info("Executed {} on tenant {} (schema {})", script.getFilename(), tenantId, schemaName);
-                        } catch (Exception e) {
-                            log.error("Failed to execute {} on tenant {} (schema {}): {}",
-                                    script.getFilename(), tenantId, schemaName, e.getMessage());
-                        }
-                    });
-            log.info("Migrated tenant {} (schema {})", tenantId, schemaName);
-        } catch (SQLException | IOException e) {
-            throw new TenantProvisioningException("Failed to migrate tenant schema: " + schemaName, e);
-        }
+    /** Tenants whose migration failed during the last run. */
+    public int failedTenants() {
+        return failedTenants.get();
     }
 }
