@@ -56,14 +56,13 @@ public class TenantPlanSubscriptionService implements SubscribeToPlanUseCase {
                 plan.getBillingPeriod(),
                 cmd.payerEmail(),
                 tenant.getId(),
-                appConfig.frontendUrl() + "/org/billing",
+                appConfig.mercadoPagoBackUrl() + "/org/billing",
                 "Suscripción Trazzo - " + plan.getName()));
 
         subscription.linkMercadoPago(preapproval.id());
         subscriptionRepository.save(subscription);
 
-        String redirectUrl = preapproval.sandboxInitPoint() != null
-                ? preapproval.sandboxInitPoint() : preapproval.initPoint();
+        String redirectUrl = preapproval.checkoutUrl(appConfig.mercadoPagoUseSandbox());
         return new SubscribeToPlanResult(subscription.getId(), redirectUrl);
     }
 

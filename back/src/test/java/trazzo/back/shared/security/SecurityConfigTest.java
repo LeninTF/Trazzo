@@ -59,8 +59,10 @@ class SecurityConfigTest {
         }
 
         @Test
-        void actuatorHealth_isAccessibleWithoutToken() throws Exception {
-            mockMvc.perform(get("/actuator/health"))
+        void mercadoPagoWebhook_isAccessibleWithoutToken() throws Exception {
+            // /actuator/health used to be asserted here; it is now served only on the management
+            // port (see ActuatorEndpoints). The webhook is the remaining unauthenticated receiver.
+            mockMvc.perform(post("/webhooks/mercadopago"))
                     .andExpect(result ->
                             assertThat(result.getResponse().getStatus()).isNotEqualTo(401));
         }
@@ -76,15 +78,25 @@ class SecurityConfigTest {
         @MockitoBean UserDetailsService userDetailsService;
 
         @Test
+        void actuatorHealth_onMainPort_requiresAuthentication() throws Exception {
+            // Health is served only on the management port (8081); on the main port the path
+            // is no longer permitted without a token.
+            mockMvc.perform(get("/actuator/health"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
         void actuatorInfo_withoutAuth_returns401() throws Exception {
             mockMvc.perform(get("/actuator/info"))
                     .andExpect(status().isUnauthorized());
         }
 
         @Test
-        void actuatorInfo_withNonAdminAuth_returns403() throws Exception {
+        void actuatorInfo_withNonAdminAuth_isNotAdminGatedOnMainPort() throws Exception {
+            // Actuator lives on the management port; the main-port chain only requires authentication.
             mockMvc.perform(get("/actuator/info").with(user("tenant-user")))
-                    .andExpect(status().isForbidden());
+                    .andExpect(result ->
+                            assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
         }
 
         @Test
@@ -92,6 +104,43 @@ class SecurityConfigTest {
             mockMvc.perform(get("/actuator/info").with(user("admin@trazzo.pe").roles("SAAS_ADMIN")))
                     .andExpect(result ->
                             assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
+        }
+    }
+
+    @Nested
+    @SpringBootTest(classes = TestApplication.class, properties = "management.server.port=8081")
+    @AutoConfigureMockMvc
+    class ManagementPort {
+
+        @Autowired MockMvc mockMvc;
+        @MockitoBean TokenValidator tokenValidator;
+        @MockitoBean UserDetailsService userDetailsService;
+
+        @Test
+        void health_onManagementPort_isAccessibleWithoutToken() throws Exception {
+            // The healthchecks in docker-compose carry no token; 404 only because this minimal
+            // context registers no actuator endpoint.
+            mockMvc.perform(get("/actuator/health").with(request -> {
+                        request.setLocalPort(8081);
+                        return request;
+                    }))
+                    .andExpect(result ->
+                            assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
+        }
+
+        @Test
+        void otherActuatorPaths_onManagementPort_stillRequireAuthentication() throws Exception {
+            mockMvc.perform(get("/actuator/info").with(request -> {
+                        request.setLocalPort(8081);
+                        return request;
+                    }))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void health_onMainPort_stillRequiresAuthentication() throws Exception {
+            mockMvc.perform(get("/actuator/health"))
+                    .andExpect(status().isUnauthorized());
         }
     }
 
