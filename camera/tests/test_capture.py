@@ -110,3 +110,59 @@ async def test_anti_spoof_rechaza_durante_frontal(cam_that_returns_frames, mock_
     with pytest.raises(BiometricError) as exc:
         await service.capture()
     assert exc.value.code == ErrorCode.SPOOF_DETECTED
+
+
+async def test_captura_pasiva_rechaza_ataque_intermitente(cam_that_returns_frames, mock_liveness):
+    """Un ataque que alterna frames 'reales' y 'falsos' nunca completa la racha de rechazos;
+    la fusión temporal (mediana) debe rechazarlo igual."""
+    anti_spoof = MagicMock()
+    anti_spoof.score.side_effect = [0.95, 0.1, 0.1] * 20
+    engine = _engine_sequence([[_face()]])
+    service = CaptureService(cam_that_returns_frames, engine, mock_liveness, anti_spoof)
+
+    with pytest.raises(BiometricError) as exc:
+        await service.capture_passive()
+    assert exc.value.code == ErrorCode.SPOOF_DETECTED
+    assert "fusionado" in str(exc.value)
+
+
+async def test_captura_pasiva_rechaza_si_cambia_la_persona(cam_that_returns_frames, mock_liveness, mock_anti_spoof):
+    """Si otra persona entra durante la ventana de captura, no se promedian dos rostros."""
+    rng = np.random.default_rng(5)
+    a = rng.standard_normal(512).astype(np.float32)
+    a /= np.linalg.norm(a)
+    b = rng.standard_normal(512).astype(np.float32)
+    b /= np.linalg.norm(b)
+
+    # mitad de los frames es una persona, la otra mitad es otra
+    engine = _engine_sequence(
+        [[_face(embedding=a)]] * 4 + [[_face(embedding=b)]] * 4
+    )
+    service = CaptureService(cam_that_returns_frames, engine, mock_liveness, mock_anti_spoof)
+
+    with pytest.raises(BiometricError) as exc:
+        await service.capture_passive()
+    assert exc.value.code == ErrorCode.IDENTITY_INCONSISTENT
+
+
+async def test_capturas_concurrentes_se_serializan(mock_liveness, mock_anti_spoof, monkeypatch):
+    """La cámara es un recurso único: dos capturas no deben correr a la vez."""
+    import asyncio
+    service = CaptureService(MagicMock(), MagicMock(), mock_liveness, mock_anti_spoof)
+
+    activas = {"n": 0, "max": 0}
+
+    async def fake_run_passive(_self):
+        activas["n"] += 1
+        activas["max"] = max(activas["max"], activas["n"])
+        await asyncio.sleep(0.05)
+        activas["n"] -= 1
+        e = np.ones(512, np.float32) / np.sqrt(512)
+        return e, {"mode": "passive", "frames": 8, "motion": 1.0, "cnn_min": 0.9}
+
+    from services import challenge_service
+    monkeypatch.setattr(challenge_service.ActiveLivenessSession, "run_passive", fake_run_passive)
+
+    await asyncio.gather(service.capture_passive(), service.capture_passive(), service.capture_passive())
+
+    assert activas["max"] == 1

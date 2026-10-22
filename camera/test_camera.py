@@ -14,21 +14,26 @@ from config import SETTINGS
 from infrastructure.camera import CameraCapture
 from infrastructure.face_engine import FaceEngine
 from infrastructure.db import FaceRepository
-from services.liveness_service import LivenessService, _lap_var, _crop
+from infrastructure.process_qos import disable_execution_speed_throttling
+from services.liveness_service import LivenessService
 from services.anti_spoof_service import AntiSpoofingService
 from services.capture_service import CaptureService
 from services.enrollment_service import EnrollmentService
 from services.recognition_service import RecognitionService
+from services import face_quality
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 TENANT = "test"
 
-DETECT_EVERY_S = 0.20
-LIVENESS_EVERY_S = 0.50
-DISPLAY_FPS = 20
+# Presupuesto de CPU del preview (el reconocimiento completo solo corre al pulsar un botón)
+PREVIEW_DETECT_FPS = 5        # detecciones por segundo con rostro presente
+PREVIEW_IDLE_S = 0.5          # espera entre detecciones cuando no hay nadie
+PREVIEW_SPOOF_EVERY_S = 0.33  # anti-spoof del indicador REAL/FALSO (~3 Hz, ~2 ms por lectura)
+PREVIEW_SPOOF_WINDOW = 5      # el indicador usa la mediana de las últimas lecturas
+PREVIEW_SPOOF_MIN_SAMPLES = 3
+DISPLAY_FPS = 15
 MIN_FRAME_INTERVAL = 1.0 / DISPLAY_FPS
-RECENT_MAX = 5
 
 # tamano fijo del area de la camara + panel abajo
 CAM_W, CAM_H = 640, 480
@@ -63,6 +68,7 @@ if detected != SETTINGS.camera_index:
     # forzar recarga del SETTINGS
     object.__setattr__(SETTINGS, "camera_index", detected)
 
+disable_execution_speed_throttling()
 engine = FaceEngine.instance()
 cam = CameraCapture()
 repo = FaceRepository()
@@ -88,6 +94,9 @@ _MENSAJES = {
     "NO_ENROLLED_FACES": "no hay nadie registrado todavia",
     "NO_MATCH": "no se encontro coincidencia",
     "GALLERY_FULL": "la galeria esta llena",
+    "FACE_ALREADY_ENROLLED": "este rostro ya esta registrado con otro ID",
+    "FACE_LOW_QUALITY": "la imagen no tiene calidad suficiente",
+    "IDENTITY_INCONSISTENT": "se detectaron personas distintas durante la captura",
     "MISSING_FIELD": "falta un campo obligatorio",
 }
 
@@ -95,6 +104,8 @@ _MENSAJES = {
 def _traducir(msg):
     for code, es in _MENSAJES.items():
         if code in msg:
+            if face_quality.POOR_LIGHTING_HINT in msg:
+                return f"{es} ({face_quality.POOR_LIGHTING_HINT})"
             return es
     return msg
 
@@ -135,24 +146,33 @@ class UI:
 
 ui = UI()
 
-# 4 botones repartidos a lo ancho, en el area del panel (y = CAM_H + margen)
+# botones repartidos a lo ancho, en el area del panel (y = CAM_H + margen)
 _BTN_TOP = CAM_H + 10
 _BTN_BOT = CAM_H + BTN_H - 10
-_BTN_W = (WIN_W - 50) // 4  # 50 = 5 gaps de 10px
 _BTN_LABELS = [
     ("REGISTRAR (E)",   (0, 160, 0),   "enroll"),
     ("VERIFICAR (V)",   (0, 120, 200), "verify"),
     ("IDENTIFICAR (I)", (200, 100, 0), "identify"),
     ("ELIMINAR (D)",    (0, 0, 180),   "delete"),
+    ("CERRAR (Q)",      (70, 70, 70),  "quit"),
 ]
+_BTN_GAP = 8
+_BTN_W = (WIN_W - _BTN_GAP * (len(_BTN_LABELS) + 1)) // len(_BTN_LABELS)
 BUTTONS = []
 for i, (label, color, action) in enumerate(_BTN_LABELS):
-    x1 = 10 + i * (_BTN_W + 10)
+    x1 = _BTN_GAP + i * (_BTN_W + _BTN_GAP)
     x2 = x1 + _BTN_W
     BUTTONS.append((label, (x1, _BTN_TOP, x2, _BTN_BOT), color, action))
 
+# se activa con el botón CERRAR, la tecla Q o la X de la ventana
+_quit_requested = threading.Event()
+
 
 def start_action(action):
+    if action == "quit":
+        # permitido aun durante una captura: el finally libera cámara y base de datos
+        _quit_requested.set()
+        return
     if ui.busy:
         return
     if action == "identify":
@@ -216,10 +236,10 @@ def draw_panel(canvas):
         cv2.rectangle(canvas, (x1, y1), (x2, y2), color, -1)
         cv2.rectangle(canvas, (x1, y1), (x2, y2), (255, 255, 255), 1)
         # centrado del texto
-        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
         tx = x1 + ((x2 - x1) - tw) // 2
         ty = y1 + ((y2 - y1) + th) // 2
-        cv2.putText(canvas, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        cv2.putText(canvas, label, (tx, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
     y_status = CAM_H + BTN_H
     cv2.putText(canvas, ui.banner, (10, y_status + 25),
@@ -236,15 +256,79 @@ def blit_frame(canvas, frame):
     canvas[:CAM_H, :CAM_W] = frame
 
 
-recent_frames = deque(maxlen=RECENT_MAX)
-recent_faces = deque(maxlen=RECENT_MAX)
-last_detect = 0.0
-last_live_eval = 0.0
-last_spoof_eval = 0.0
-cached_face = None
-cached_liveness = None
-cached_spoof = None
+def fit_to_view(frame):
+    """Escala el frame (que puede ser 1080p o más) al área de preview SIN deformarlo
+    (letterbox). Devuelve la vista y la transformación para ubicar coordenadas del
+    frame original (bbox) sobre la vista."""
+    h, w = frame.shape[:2]
+    scale = min(CAM_W / w, CAM_H / h)
+    new_w, new_h = max(1, int(w * scale)), max(1, int(h * scale))
+    off_x, off_y = (CAM_W - new_w) // 2, (CAM_H - new_h) // 2
+    view = np.zeros((CAM_H, CAM_W, 3), np.uint8)
+    # INTER_LINEAR: suficiente para un preview y mucho más barato que INTER_AREA sobre 1080p
+    view[off_y:off_y + new_h, off_x:off_x + new_w] = cv2.resize(
+        frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    return view, scale, off_x, off_y
+
+
 next_frame_at = 0.0
+
+# Análisis en vivo en un HILO APARTE. Detección facial, CNN anti-spoof y heurísticas son
+# pesadas en CPU: si corren en el hilo de la ventana, cv2.waitKey casi no se ejecuta, la
+# ventana deja de atender clics/teclas y parece colgada.
+_analysis_lock = threading.Lock()
+_stop_analysis = threading.Event()
+_latest_frame = None
+cached_face = None
+cached_spoof = None
+cached_lighting = None
+
+
+def _analysis_worker():
+    """Preview con presupuesto de CPU acotado (estándar para equipos compartidos):
+    - solo DETECCIÓN (sin embedding de reconocimiento) a PREVIEW_DETECT_FPS;
+    - anti-spoof a 1 Hz, solo si hay rostro;
+    - sin rostro, reposo más largo (idle backoff).
+    El pipeline completo (reconocimiento + liveness) corre únicamente al pulsar un botón.
+    """
+    global cached_face, cached_spoof, cached_lighting
+    last_spoof = 0.0
+    # Un frame aislado (parpadeo, desenfoque, reflejo) no debe pintar FALSO: estándar PAD en
+    # video es fusionar varias lecturas. Se usa la mediana, robusta ante valores extremos.
+    spoof_window = deque(maxlen=PREVIEW_SPOOF_WINDOW)
+    while not _stop_analysis.is_set():
+        if ui.busy:
+            # durante una captura, la cámara y el motor los usa la operación en curso
+            time.sleep(0.2)
+            continue
+
+        with _analysis_lock:
+            frame = _latest_frame
+        if frame is None:
+            time.sleep(0.1)
+            continue
+
+        face = None
+        try:
+            faces = engine.detect_only(frame)
+            face = faces[0] if faces else None
+            now = time.monotonic()
+            if face is None:
+                spoof_window.clear()
+            elif now - last_spoof >= PREVIEW_SPOOF_EVERY_S:
+                spoof_window.append(anti_spoof.score(frame, face))
+                last_spoof = now
+            spoof = (float(np.median(spoof_window))
+                     if len(spoof_window) >= PREVIEW_SPOOF_MIN_SAMPLES else None)
+            light = face_quality.lighting(frame, face) if face is not None else None
+            with _analysis_lock:
+                cached_face = face
+                cached_spoof = spoof
+                cached_lighting = light
+        except Exception as e:  # el preview nunca debe tumbar la ventana
+            logging.warning("analisis en vivo fallo: %s", e)
+
+        time.sleep(1.0 / PREVIEW_DETECT_FPS if face is not None else PREVIEW_IDLE_S)
 
 canvas = np.zeros((WIN_H, WIN_W, 3), np.uint8)
 busy_placeholder = np.full((CAM_H, CAM_W, 3), 40, np.uint8)
@@ -253,8 +337,13 @@ cv2.putText(busy_placeholder, "PROCESANDO CAPTURA...", (100, CAM_H // 2),
 cv2.putText(busy_placeholder, "no te muevas por favor", (150, CAM_H // 2 + 40),
             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (180, 180, 180), 1)
 
+threading.Thread(target=_analysis_worker, daemon=True).start()
+
 try:
-    while True:
+    while not _quit_requested.is_set():
+        # la X de la ventana también cierra la aplicación
+        if cv2.getWindowProperty("Trazzo Camera Test", cv2.WND_PROP_VISIBLE) < 1:
+            break
         now = time.monotonic()
 
         if ui.busy:
@@ -290,56 +379,48 @@ try:
             print("cerrando (la camara se desconecto o no responde)")
             break
 
-        if now - last_detect >= DETECT_EVERY_S:
-            faces = engine.detect(frame)
-            last_detect = now
-            if faces:
-                cached_face = faces[0]
-                recent_frames.append(frame)
-                recent_faces.append(cached_face)
+        # el hilo de análisis toma este frame; aquí solo se dibuja lo último que calculó
+        with _analysis_lock:
+            _latest_frame = frame
+            face_view, spoof_view, light_view = cached_face, cached_spoof, cached_lighting
+
+        view, scale, off_x, off_y = fit_to_view(frame)
+        frame_h, frame_w = frame.shape[:2]
+        cv2.putText(view, f"{frame_w}x{frame_h}", (CAM_W - 110, CAM_H - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+
+        if face_view is not None:
+            # el bbox está en coordenadas del frame original: llevarlo a la vista escalada
+            x1, y1, x2, y2 = face_view.bbox
+            p1 = (int(x1 * scale + off_x), int(y1 * scale + off_y))
+            p2 = (int(x2 * scale + off_x), int(y2 * scale + off_y))
+            cv2.rectangle(view, p1, p2, (0, 255, 0), 2)
+            cv2.putText(view, f"deteccion={face_view.detection_score:.2f} tamano={face_view.size}",
+                        (p1[0], max(20, p1[1] - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+        # indicador del CNN (mediana de varias lecturas); el liveness completo corre al capturar
+        if spoof_view is not None:
+            final = spoof_view >= SETTINGS.anti_spoof_min_real
+            poor_light = light_view is not None and light_view.poor
+            if final:
+                color, verdict = (0, 255, 0), "REAL"
+            elif poor_light:
+                # con luz pobre el CNN no es concluyente: se pide corregir la luz, no se acusa
+                color, verdict = (0, 220, 255), "POCA LUZ"
             else:
-                cached_face = None
-
-        if cached_face is not None and now - last_spoof_eval >= LIVENESS_EVERY_S:
-            cached_spoof = anti_spoof.score(frame, cached_face)
-            last_spoof_eval = now
-
-        if len(recent_faces) >= 3 and now - last_live_eval >= LIVENESS_EVERY_S:
-            cached_liveness = liveness.evaluate(list(recent_frames), list(recent_faces))
-            last_live_eval = now
-
-        view = frame if frame.shape[:2] == (CAM_H, CAM_W) else cv2.resize(frame, (CAM_W, CAM_H))
-        view = view.copy()
-
-        if cached_face is not None:
-            b = cached_face.bbox.astype(int)
-            cv2.rectangle(view, (b[0], b[1]), (b[2], b[3]), (0, 255, 0), 2)
-            cv2.putText(view, f"deteccion={cached_face.detection_score:.2f} tamano={cached_face.size}",
-                        (b[0], max(20, b[1] - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-
-        # veredicto combinado: el CNN manda; las heuristicas son secundarias
-        if cached_spoof is not None:
-            from config import SETTINGS as _S
-            cnn_real = cached_spoof >= _S.anti_spoof_min_real
-            heur_real = cached_liveness.is_live if cached_liveness else True
-            final = cnn_real and heur_real
-            color = (0, 255, 0) if final else (0, 0, 255)
-            verdict = "REAL" if final else "FALSO"
-            cv2.putText(view, f"{verdict}  IA={cached_spoof:.2f}",
+                color, verdict = (0, 0, 255), "POSIBLE FALSO"
+            cv2.putText(view, f"{verdict}  IA={spoof_view:.2f}",
                         (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-            if cached_liveness is not None:
-                r = cached_liveness
-                cv2.putText(view,
-                            f"heur={r.score:.2f} tex={r.signals.texture_score:.0f} "
-                            f"fft={r.signals.fft_score:.2f} piel={r.signals.skin_score:.2f}",
-                            (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
-                cv2.putText(view,
-                            f"motion={r.signals.motion_variance:.2f} "
-                            f"lm_indep={r.signals.landmark_independence:.2f}",
-                            (10, 78), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
-                if r.reason:
-                    cv2.putText(view, r.reason[:50], (10, 100),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 100, 255), 1)
+            if poor_light and not final:
+                cv2.putText(view, "ilumina tu rostro de frente", (10, 55),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 255), 1)
+        elif face_view is not None:
+            cv2.putText(view, "VERIFICANDO...", (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 220, 255), 2)
+        if light_view is not None:
+            cv2.putText(view, f"luz={light_view.brightness:.0f} color={light_view.saturation:.0f} "
+                              f"contraste={light_view.contrast:.0f}",
+                        (10, CAM_H - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
 
         blit_frame(canvas, view)
         draw_panel(canvas)
@@ -370,6 +451,7 @@ try:
         elif key == ord("d"): start_action("delete")
 
 finally:
+    _stop_analysis.set()
     cam.release()
     repo.close()
     cv2.destroyAllWindows()

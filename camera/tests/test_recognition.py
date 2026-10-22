@@ -96,3 +96,30 @@ class TestIdentify:
         with pytest.raises(BiometricError) as exc:
             await service.identify("trazzo")
         assert exc.value.code == ErrorCode.NO_MATCH
+
+
+class TestIdentifyMargen:
+    async def test_rechaza_si_dos_personas_puntuan_casi_igual(self, override_setting):
+        override_setting("recognition_threshold", 0.5)
+        override_setting("recognition_margin", 0.05)
+
+        rng = np.random.default_rng(3)
+        probe = _norm(rng.standard_normal(512).astype(np.float32))
+        noise = _norm(rng.standard_normal(512).astype(np.float32))
+        # dos candidatos con similitud ~0.8 y ~0.79 contra el probe
+        juan = _norm(0.80 * probe + 0.6 * noise)
+        pedro = _norm(0.79 * probe + 0.61 * noise)
+
+        service = _make_service(probe, gallery=[("juan", juan), ("pedro", pedro)])
+        with pytest.raises(BiometricError) as exc:
+            await service.identify("trazzo")
+        assert exc.value.code == ErrorCode.NO_MATCH
+
+    async def test_ignora_template_con_dimension_incompatible(self):
+        emb = _norm(np.random.default_rng(0).standard_normal(512).astype(np.float32))
+        corrupto = np.ones(128, np.float32)
+        service = _make_service(emb, gallery=[("roto", corrupto), ("juan", emb)])
+
+        match, _ = await service.identify("trazzo")
+
+        assert match.person_id == "juan"

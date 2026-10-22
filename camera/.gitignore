@@ -4,6 +4,13 @@ __pycache__/
 *.pyo
 models/buffalo_sc/
 models/anti_spoofing/
+# InsightFace descarga los packs en <MODELS_DIR>/models/<pack>. Packs grandes (buffalo_l
+# ~280 MB) no deben versionarse: se descargan con scripts/download_models.py.
+models/models/buffalo_l/
+models/models/buffalo_l.zip
+models/models/trazzo_r50/
+models/models/antelopev2/
+models/models/antelopev2.zip
 *.db
 *.db-wal
 *.db-shm
@@ -15,3 +22,5 @@ frame_test.jpg
 htmlcov/
 coverage.xml
 .coverage
+# datasets y resultados de calibracion (scripts/calibrate_recognition.py)
+eval/

@@ -12,6 +12,7 @@ from domain.errors import ErrorCode
 from infrastructure.camera import CameraCapture
 from infrastructure.face_engine import FaceEngine
 from infrastructure.db import FaceRepository
+from infrastructure.process_qos import disable_execution_speed_throttling
 from services.liveness_service import LivenessService
 from services.anti_spoof_service import AntiSpoofingService
 from services.capture_service import CaptureService
@@ -88,6 +89,8 @@ def _safe_peer(ws) -> str:
 
 
 async def main() -> None:
+    # antes de cargar modelos: Windows no debe degradar el servicio a núcleos de eficiencia
+    disable_execution_speed_throttling()
     app = App()
     loop = asyncio.get_running_loop()
     stop = loop.create_future()

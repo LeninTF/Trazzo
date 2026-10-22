@@ -21,16 +21,28 @@ class Settings:
 
     camera_index: int
     camera_backend: str
+    camera_width: int
+    camera_height: int
+    opencv_threads: int
     camera_warmup_frames: int
     camera_open_timeout_s: float
     camera_read_timeout_s: float
 
     models_dir: str
     model_pack: str
+    ort_intra_threads: int
 
     detection_threshold: float
     recognition_threshold: float
+    recognition_margin: float
     min_face_size: int
+
+    quality_min_detection_score: float
+    quality_max_yaw: float
+    quality_min_pitch: float
+    quality_max_pitch: float
+    quality_min_sharpness: float
+    identity_min_similarity: float
 
     enrollment_samples: int
     capture_max_seconds: float
@@ -109,19 +121,51 @@ def _load() -> Settings:
         rate_limit_capture_s=_float("RATE_LIMIT_CAPTURE_S", 1.0, 0.0, 60.0),
         camera_index=_int("CAMERA_INDEX", 1, 0, 10),
         camera_backend=_str("CAMERA_BACKEND", "dshow"),
+        # 0 = usar la máxima resolución que soporte la cámara (recomendado para precisión).
+        # Fijar ambos solo si se necesita forzar una resolución concreta.
+        camera_width=_int("CAMERA_WIDTH", 0, 0, 7680),
+        camera_height=_int("CAMERA_HEIGHT", 0, 0, 4320),
+        # hilos de OpenCV; con más de 1-2 compiten con ONNX Runtime y frenan la inferencia
+        opencv_threads=_int("OPENCV_THREADS", 1, 1, 64),
         camera_warmup_frames=_int("CAMERA_WARMUP_FRAMES", 15, 0, 200),
         camera_open_timeout_s=_float("CAMERA_OPEN_TIMEOUT_S", 3.0, 0.5, 30.0),
         camera_read_timeout_s=_float("CAMERA_READ_TIMEOUT_S", 2.0, 0.5, 10.0),
         models_dir=os.path.abspath(models_dir),
-        model_pack=_str("MODEL_PACK", "buffalo_sc"),
+        # trazzo_r50 = detector SCRFD liviano + ArcFace ResNet-50 (scripts/download_models.py).
+        # Si no está instalado, face_engine usa buffalo_sc (incluido en el repo) y lo registra.
+        model_pack=_str("MODEL_PACK", "trazzo_r50"),
+        # hilos por operación de ONNX Runtime (ver infrastructure/face_engine._session_options).
+        # 2 hilos: ~120 ms por reconocimiento usando ~2 núcleos; más hilos casi no bajan latencia.
+        ort_intra_threads=_int("ORT_INTRA_THREADS", 2, 1, 64),
         detection_threshold=_float("DETECTION_THRESHOLD", 0.5, 0.1, 0.99),
-        recognition_threshold=_float("RECOGNITION_THRESHOLD", 0.55, 0.1, 0.99),
+        # Calibrado con LFW para trazzo_r50 (scripts/calibrate_recognition.py, 2026-09-16):
+        # 656k pares de personas distintas, maximo 0.346 -> 0.40 deja margen y no produjo ningun
+        # falso match; rechaza 1.5% de fotos sueltas de la misma persona (en vivo se promedian
+        # varios frames). El 0.55 anterior rechazaba el 10%. Recalibrar si cambia MODEL_PACK.
+        recognition_threshold=_float("RECOGNITION_THRESHOLD", 0.40, 0.1, 0.99),
+        # Diferencia mínima entre el mejor y el segundo mejor candidato en identificación 1:N.
+        # Evita elegir a la persona equivocada cuando dos enroladas puntúan casi igual.
+        recognition_margin=_float("RECOGNITION_MARGIN", 0.05, 0.0, 1.0),
         min_face_size=_int("MIN_FACE_SIZE", 80, 20, 1000),
+        # Calidad mínima de cada frame usado para enrolar/reconocer (ver services/face_quality.py)
+        quality_min_detection_score=_float("QUALITY_MIN_DETECTION_SCORE", 0.6, 0.0, 1.0),
+        quality_max_yaw=_float("QUALITY_MAX_YAW", 0.15, 0.01, 1.0),
+        quality_min_pitch=_float("QUALITY_MIN_PITCH", 0.25, 0.0, 1.0),
+        quality_max_pitch=_float("QUALITY_MAX_PITCH", 0.80, 0.0, 1.5),
+        # Calibrado con la cámara real a 1080p: frames normales dieron nitidez mínima 35-78
+        # (mediana 60-124) y frames desenfocados (gauss sigma=3) un máximo de 14-30.
+        quality_min_sharpness=_float("QUALITY_MIN_SHARPNESS", 30.0, 0.0, 10000.0),
+        # Similitud mínima entre frames/muestras de UNA captura para considerarlos la misma
+        # persona. Medido con buffalo_sc: misma persona frame a frame min 0.61-0.85; personas
+        # distintas quedan típicamente < 0.3.
+        identity_min_similarity=_float("IDENTITY_MIN_SIMILARITY", 0.5, 0.0, 1.0),
         enrollment_samples=_int("ENROLLMENT_SAMPLES", 1, 1, 10),
         capture_max_seconds=_float("CAPTURE_MAX_SECONDS", 8.0, 1.0, 60.0),
         capture_min_valid_frames=_int("CAPTURE_MIN_VALID_FRAMES", 10, 1, 30),
         liveness_min_score=_float("LIVENESS_MIN_SCORE", 0.40, 0.0, 1.0),
-        anti_spoof_min_real=_float("ANTI_SPOOF_MIN_REAL", 0.85, 0.0, 1.0),
+        # Umbral sobre el promedio de los dos modelos anti-spoof, por frame. Con una persona real
+        # (RGB corregido) el p10 medido fue 0.60; fotos/pantallas quedan cerca de 0.
+        anti_spoof_min_real=_float("ANTI_SPOOF_MIN_REAL", 0.6, 0.0, 1.0),
         # Si es True y los modelos del CNN no están cargados, la captura se rechaza
         # (fail-closed) en vez de degradar abierto. Recomendado en producción.
         anti_spoof_required=_bool("ANTI_SPOOF_REQUIRED", False),

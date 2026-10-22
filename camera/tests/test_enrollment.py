@@ -59,3 +59,80 @@ def test_delete_delega_al_repo():
     service = EnrollmentService(capture, repo)
     assert service.delete("juan", "trazzo") == 1
     repo.delete_person.assert_called_once_with("juan", "trazzo")
+
+
+def _emb(seed):
+    e = np.random.default_rng(seed).standard_normal(512).astype(np.float32)
+    return e / np.linalg.norm(e)
+
+
+def _capture_returning(*embeddings):
+    capture = MagicMock()
+    results = iter([
+        CaptureResult(
+            embedding=e,
+            liveness=LivenessResult(True, 0.9, LivenessSignals(0, 0, 0, 0)),
+            frame_count=5,
+            face_size=200,
+        )
+        for e in embeddings
+    ])
+    capture.capture = AsyncMock(side_effect=lambda *_a, **_kw: next(results))
+    return capture
+
+
+async def test_enroll_rechaza_rostro_ya_registrado_como_otra_persona(override_setting):
+    from domain.errors import BiometricError, ErrorCode
+    override_setting("enrollment_samples", 1)
+    face = _emb(7)
+
+    repo = MagicMock()
+    repo.iter_gallery = MagicMock(return_value=iter([("pedro", face)]))
+    service = EnrollmentService(_capture_returning(face), repo)
+
+    with pytest.raises(BiometricError) as exc:
+        await service.enroll("juan", "trazzo")
+
+    assert exc.value.code == ErrorCode.FACE_ALREADY_ENROLLED
+    assert "pedro" in exc.value.message
+    repo.replace_person.assert_not_called()
+
+
+async def test_enroll_permite_reenrolar_a_la_misma_persona(override_setting):
+    override_setting("enrollment_samples", 1)
+    face = _emb(7)
+
+    repo = MagicMock()
+    repo.iter_gallery = MagicMock(return_value=iter([("juan", face)]))
+    service = EnrollmentService(_capture_returning(face), repo)
+
+    result = await service.enroll("juan", "trazzo")
+
+    assert result["personId"] == "juan"
+    repo.replace_person.assert_called_once()
+
+
+async def test_enroll_permite_rostro_distinto_a_los_registrados(override_setting):
+    override_setting("enrollment_samples", 1)
+
+    repo = MagicMock()
+    repo.iter_gallery = MagicMock(return_value=iter([("pedro", _emb(1)), ("maria", _emb(2))]))
+    service = EnrollmentService(_capture_returning(_emb(3)), repo)
+
+    await service.enroll("juan", "trazzo")
+
+    repo.replace_person.assert_called_once()
+
+
+async def test_enroll_rechaza_muestras_de_personas_distintas(override_setting):
+    from domain.errors import BiometricError, ErrorCode
+    override_setting("enrollment_samples", 2)
+
+    repo = MagicMock()
+    service = EnrollmentService(_capture_returning(_emb(1), _emb(2)), repo)
+
+    with pytest.raises(BiometricError) as exc:
+        await service.enroll("juan", "trazzo")
+
+    assert exc.value.code == ErrorCode.IDENTITY_INCONSISTENT
+    repo.replace_person.assert_not_called()

@@ -37,6 +37,46 @@ class TestHelpers:
         assert out.shape == (128, 128, 3)
 
 
+class TestPreprocesamiento:
+    """No requieren modelos: el servicio se construye sin cargar sesiones."""
+
+    @staticmethod
+    def _service():
+        return AntiSpoofingService.__new__(AntiSpoofingService)
+
+    @staticmethod
+    def _face(bbox):
+        from domain.models import DetectedFace
+        return DetectedFace(
+            bbox=np.array(bbox, np.float32), keypoints=np.zeros((5, 2), np.float32),
+            embedding=np.zeros(0, np.float32), detection_score=0.99,
+        )
+
+    def test_convierte_bgr_a_rgb(self):
+        crop = np.zeros((128, 128, 3), np.uint8)
+        crop[:, :, 0] = 255  # azul puro en BGR
+        inp = self._service()._preprocess(crop)
+        assert inp.shape == (1, 3, 128, 128)
+        assert inp[0, 0].max() == 0.0     # canal R vacío
+        assert inp[0, 2].min() == 1.0     # canal B lleno
+
+    def test_crop_es_cuadrado_y_escalado(self):
+        frame = np.full((1080, 1920, 3), 100, np.uint8)
+        crop = self._service()._crop(frame, self._face([800, 400, 1000, 640]))
+        assert crop.shape[:2] == (360, 360)  # 1.5 x lado mayor (240)
+
+    def test_crop_en_borde_rellena_y_mantiene_centro(self):
+        frame = np.full((480, 640, 3), 100, np.uint8)
+        crop = self._service()._crop(frame, self._face([0, 0, 100, 100]))
+        assert crop.shape[:2] == (150, 150)
+        assert crop[0, 0].tolist() == [0, 0, 0]          # relleno fuera del frame
+        assert crop[-1, -1].tolist() == [100, 100, 100]  # contenido real
+
+    def test_crop_fuera_del_frame_vacio(self):
+        frame = np.zeros((480, 640, 3), np.uint8)
+        assert self._service()._crop(frame, self._face([1000, 1000, 1200, 1200])).size == 0
+
+
 class TestPathTraversalDefense:
     def test_path_traversal_rechazado(self, tmp_path):
         with pytest.raises(ValueError):

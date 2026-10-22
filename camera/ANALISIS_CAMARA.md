@@ -139,3 +139,58 @@ Con los arreglos de esta pasada, el motor biométrico queda **funcional de punta
 **Validación:** `pytest` → **109 passed, 0 skipped** (antes 107 passed + 2 skipped por modelos ausentes). Inferencia real del CNN confirmada fuera de los tests.
 
 > Nota: los `.onnx` de anti-spoof están **gitignored**; en cada máquina nueva se corre `scripts/download_anti_spoof.py` una vez.
+
+---
+
+## 10. Precisión, calidad de imagen y consumo de CPU (2026-09-15)
+
+| Cambio | Archivo(s) | Efecto |
+|---|---|---|
+| **Captura serializada** | `services/capture_service.py` | Un `asyncio.Lock` impide que dos capturas simultáneas mezclen frames de personas distintas. |
+| **Margen 1:N** | `services/recognition_service.py`, `RECOGNITION_MARGIN` | Si el 1.º y 2.º candidato están a menos de 0.05 → `NO_MATCH` (no se adivina). |
+| **Rostro duplicado al enrolar** | `services/enrollment_service.py` | `FACE_ALREADY_ENROLLED` si el rostro ya está registrado con otro ID. |
+| **Consistencia de identidad** | `services/challenge_service.py`, `enrollment_service.py` | Similitud mínima entre todos los pares de frames/muestras → `IDENTITY_INCONSISTENT`. |
+| **Control de calidad por frame** | `services/face_quality.py` | Rechaza rostro pequeño, cortado, de perfil, borroso o con detección dudosa (`FACE_LOW_QUALITY` con instrucción). |
+| **Resolución máxima de la cámara** | `infrastructure/camera.py` | MJPG + prueba de resoluciones (hasta 4K) validando el frame real; en este equipo 1920×1080 @ 30 fps. Fallback de índice de cámara. |
+| **Modelo ResNet-50** | `scripts/download_models.py`, `MODEL_PACK=trazzo_r50` | Detector liviano + ArcFace R50 (mucho más discriminativo que MobileFaceNet). Si no está instalado, se usa `buffalo_sc` con log CRITICAL. |
+| **Plantillas etiquetadas por modelo** | `infrastructure/db.py` | Columna `model` con migración; nunca se comparan embeddings de modelos distintos. |
+| **Hilos acotados de verdad** | `infrastructure/face_engine.py` | InsightFace ignoraba `sess_options`; ahora cada sesión ONNX se recrea con 2 hilos y sin spinning. OpenCV a 1 hilo. |
+| **Sin EcoQoS en Windows** | `infrastructure/process_qos.py` | `SetProcessInformation(ProcessPowerThrottling)` evita que Windows mande el proceso a núcleos E (latencia pasaba de 118 ms a 2.2 s aleatoriamente). |
+| **Preview eficiente** | `test_camera.py` | Análisis en hilo aparte: solo detección a 5 fps, anti-spoof 1 Hz, reposo sin rostro, 15 fps de dibujo. |
+
+**Medido (i7-14650HX, 24 hilos):**
+
+| Operación | Latencia | CPU |
+|---|---|---|
+| Reconocimiento completo (`trazzo_r50`, 1080p) | ~118 ms estable (4 corridas) | ~2 núcleos durante la operación |
+| Solo detección | ~12 ms | ~1.7 núcleos |
+| Ventana de prueba en reposo | — | ~0.3 núcleos (~1 % del total); antes llegaba a ~20 núcleos |
+
+**Validación:** `pytest` → **136 passed**.
+
+> **Importante:** las plantillas enroladas con `buffalo_sc` no se comparan con `trazzo_r50`. Hay que **volver a enrolar** a las personas (el sistema lo indica en el mensaje de error).
+> En cada máquina nueva: `.venv\Scripts\python scripts\download_models.py` (una vez).
+---
+
+## 11. Anti-spoof y calibración del reconocimiento (2026-09-16)
+
+| Cambio | Archivo(s) | Efecto |
+|---|---|---|
+| **Anti-spoof en RGB** | `services/anti_spoof_service.py` | OpenCV entrega BGR y los modelos esperan RGB: sin convertir, un rostro real puntuaba 0.16 de "real"; convertido, 0.79. Recorte cuadrado como en el repo de origen. |
+| **Ensemble por promedio, umbral 0.6** | `anti_spoof_service.py`, `ANTI_SPOOF_MIN_REAL` | El mínimo de los dos modelos rechazaba a personas reales; el promedio con umbral 0.6 acepta el 90 % de frames reales con buena luz. |
+| **Fusión temporal** | `services/challenge_service.py` | La mediana de todos los frames evaluados debe superar el umbral: un ataque que alterna frames aceptados/rechazados ya no pasa. |
+| **Aviso de poca luz** | `services/face_quality.py`, `test_camera.py` | Con imagen gris/oscura el CNN no es concluyente: se muestra "POCA LUZ" en vez de "FALSO" y el error lo indica. |
+| **Umbral de reconocimiento 0.55 → 0.40** | `config.py` | Calibrado con LFW (`scripts/calibrate_recognition.py`, abajo). |
+| **Herramientas de evaluación** | `scripts/calibrate_recognition.py`, `scripts/evaluate_anti_spoof.py` | Calibración con LFW (ISO 19795-1) y prueba de ataques frente a la cámara (ISO 30107-3). Resultados en `eval/` (no versionado). |
+
+**Calibración `trazzo_r50` con LFW** (1147 rostros de 450 personas que pasan el control de calidad; 1005 pares misma persona, 656 226 pares personas distintas):
+
+| Umbral | Falsos match (distintas) | Rechazos (misma persona, 1 foto) | 1:N galería 225: acierto / confusión / desconocido aceptado |
+|---|---|---|---|
+| 0.32 | 9e-6 | 0.4 % | 99.4 % / 0 % / 0.18 % |
+| **0.40** | **0 de 656 226** | **1.5 %** | ~98 % / 0 % / 0 % |
+| 0.55 (antes) | 0 | 10.1 % | 88.9 % / 0 % / 0 % |
+
+El máximo puntaje entre personas distintas fue 0.346; 0.40 deja margen. En ningún umbral se identificó a una persona registrada como otra. Recalibrar si cambia `MODEL_PACK`.
+
+**Pendiente:** correr `scripts/evaluate_anti_spoof.py` con foto en celular / impresa para confirmar el umbral 0.6 del anti-spoof con ataques reales. La cámara IR del equipo no entrega imagen por OpenCV (requiere API de Windows).

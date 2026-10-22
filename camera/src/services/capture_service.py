@@ -1,4 +1,5 @@
 import gc
+import asyncio
 import logging
 from typing import Callable
 
@@ -22,22 +23,30 @@ class CaptureService:
         self.engine = engine
         self.liveness = liveness   # conservado para compatibilidad
         self.anti_spoof = anti_spoof
+        # Serializa TODAS las capturas. La cámara y el engine son un ÚNICO recurso
+        # compartido entre clientes/sesiones; sin este lock, dos capturas concurrentes
+        # (dos conexiones, o un reintento del frontend) intercalan frames de personas
+        # distintas y mezclan embeddings -> se enrola/identifica con la persona
+        # EQUIVOCADA. Con el lock, solo una sesión biométrica corre a la vez.
+        self._capture_lock = asyncio.Lock()
 
     async def capture_full(self, on_prompt: Callable[[ChallengePrompt], None] | None = None) -> CaptureResult:
-        session = ActiveLivenessSession(self.camera, self.engine, self.anti_spoof, on_prompt)
-        try:
-            embedding, meta = await session.run_full()
-            return self._to_result(embedding, meta, frames=2)
-        finally:
-            gc.collect()
+        async with self._capture_lock:
+            session = ActiveLivenessSession(self.camera, self.engine, self.anti_spoof, on_prompt)
+            try:
+                embedding, meta = await session.run_full()
+                return self._to_result(embedding, meta, frames=2)
+            finally:
+                gc.collect()
 
     async def capture_passive(self, on_prompt: Callable[[ChallengePrompt], None] | None = None) -> CaptureResult:
-        session = ActiveLivenessSession(self.camera, self.engine, self.anti_spoof, on_prompt)
-        try:
-            embedding, meta = await session.run_passive()
-            return self._to_result(embedding, meta, frames=int(meta.get("frames", 1)))
-        finally:
-            gc.collect()
+        async with self._capture_lock:
+            session = ActiveLivenessSession(self.camera, self.engine, self.anti_spoof, on_prompt)
+            try:
+                embedding, meta = await session.run_passive()
+                return self._to_result(embedding, meta, frames=int(meta.get("frames", 1)))
+            finally:
+                gc.collect()
 
     # alias por compatibilidad hacia atras
     async def capture_quick(self, on_prompt: Callable[[ChallengePrompt], None] | None = None) -> CaptureResult:
@@ -53,7 +62,7 @@ class CaptureService:
         challenge, no un valor fijo.
 
         - passive (verify/identify): el score lo domina la confianza del CNN
-          anti-spoof (probabilidad de "real", `cnn_min`), respaldada por el
+          anti-spoof (probabilidad de "real", mediana `cnn_median`), respaldada por el
           micro-movimiento medido (`motion`).
         - full (enrollment): el score es la similitud del rostro entre los dos
           frontales del reto (`match_between_frontals`); ambos frontales ya
@@ -62,7 +71,9 @@ class CaptureService:
         mode = meta.get("mode", "passive")
 
         if mode == "passive":
-            cnn = float(meta.get("cnn_min", 1.0))
+            # la mediana es el valor con el que se decidió (fusión temporal); el mínimo de un
+            # frame suelto no representa la captura
+            cnn = float(meta.get("cnn_median", meta.get("cnn_min", 1.0)))
             motion = float(meta.get("motion", 0.0))
             score = round(max(0.0, min(1.0, cnn)), 4)
             signals = LivenessSignals(0, 0, 0, 1.0, motion, 0)

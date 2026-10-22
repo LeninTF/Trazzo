@@ -4,7 +4,7 @@ Ensemble de:
   1. print-replay 3-clases (real / foto impresa / pantalla)
   2. binario 2-clases (real / fake)
 
-Ambos con crop escalado a 1.5x, letterbox a 128x128, sin conversion de color.
+Ambos con crop cuadrado escalado a 1.5x, 128x128, en RGB (entrenados así).
 Convencion del repo hairymax/Face-AntiSpoofing: REAL = clase 0.
 """
 import logging
@@ -78,6 +78,8 @@ class AntiSpoofingService:
 
             so = ort.SessionOptions()
             so.intra_op_num_threads = 1
+            so.inter_op_num_threads = 1
+            so.add_session_config_entry("session.intra_op.allow_spinning", "0")
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
             try:
                 sess = ort.InferenceSession(path, sess_options=so, providers=["CPUExecutionProvider"])
@@ -109,28 +111,43 @@ class AntiSpoofingService:
         return cls._instance
 
     def _crop(self, frame: np.ndarray, face) -> np.ndarray:
+        """Recorte CUADRADO de 1.5x el rostro, relleno en negro si sale del frame.
+
+        Replica `increased_crop` del repo de referencia: los modelos se entrenaron con el
+        rostro centrado en un cuadrado; recortar pegado al borde lo descentra y baja el score.
+        """
         h, w = frame.shape[:2]
-        x1, y1, x2, y2 = face.bbox
-        cx = (x1 + x2) / 2
-        cy = (y1 + y2) / 2
-        half = max(x2 - x1, y2 - y1) * _BBOX_SCALE / 2
-        nx1 = max(0, int(cx - half))
-        ny1 = max(0, int(cy - half))
-        nx2 = min(w, int(cx + half))
-        ny2 = min(h, int(cy + half))
-        return frame[ny1:ny2, nx1:nx2]
+        x1, y1, x2, y2 = (float(v) for v in face.bbox)
+        side = int(max(x2 - x1, y2 - y1) * _BBOX_SCALE)
+        if side <= 0:
+            return frame[0:0, 0:0]
+        left = int((x1 + x2) / 2 - side / 2)
+        top = int((y1 + y2) / 2 - side / 2)
+        cx1, cy1 = max(0, left), max(0, top)
+        cx2, cy2 = min(w, left + side), min(h, top + side)
+        if cx2 <= cx1 or cy2 <= cy1:
+            return frame[0:0, 0:0]
+        return cv2.copyMakeBorder(
+            frame[cy1:cy2, cx1:cx2],
+            cy1 - top, (top + side) - cy2, cx1 - left, (left + side) - cx2,
+            cv2.BORDER_CONSTANT, value=(0, 0, 0),
+        )
 
     def _preprocess(self, crop: np.ndarray) -> np.ndarray:
-        img = _letterbox(crop, _INPUT_SIZE)
+        # OpenCV entrega BGR; los modelos se entrenaron con RGB. Sin esta conversión un rostro
+        # real se clasificaba como "foto impresa" (medido: real 0.16 en BGR vs 0.79 en RGB).
+        img = cv2.cvtColor(_letterbox(crop, _INPUT_SIZE), cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))
         return np.expand_dims(img, axis=0)
 
     def score(self, frame: np.ndarray, face) -> float:
-        """Probabilidad [0..1] de que la imagen sea real.
-        Ensemble por MIN: ambos modelos deben coincidir. Si uno dice "fake",
-        el score cae al minimo — es lo correcto para seguridad (falsos positivos
-        pesan mas que falsos negativos).
+        """Probabilidad [0..1] de que la imagen (frame BGR) sea real.
+
+        Ensemble por PROMEDIO (soft voting) de los dos modelos. El mínimo quedaba dominado por
+        el modelo binario, más débil: con una persona real su mediana era 0.69 y rechazaba
+        frames legítimos. Un solo frame no decide: las capturas descartan frames sueltos y
+        solo abortan tras una racha de rechazos, y el liveness activo/pasivo es otra barrera.
         Sin modelos: fail-open (1.0) por defecto, o fail-closed (0.0) si
         ANTI_SPOOF_REQUIRED=1 — así ninguna captura pasa sin protección real.
         """
@@ -148,4 +165,4 @@ class AntiSpoofingService:
             probs = _softmax(out)
             real_probs.append(float(probs[_REAL_CLASS_IDX]))
 
-        return float(np.min(real_probs))
+        return float(np.mean(real_probs))

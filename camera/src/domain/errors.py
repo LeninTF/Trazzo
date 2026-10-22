@@ -25,6 +25,10 @@ class ErrorCode(str, Enum):
     PERSON_NOT_ENROLLED = "PERSON_NOT_ENROLLED"
     NO_MATCH = "NO_MATCH"
     GALLERY_FULL = "GALLERY_FULL"
+    # el rostro capturado ya pertenece a OTRA persona enrolada
+    FACE_ALREADY_ENROLLED = "FACE_ALREADY_ENROLLED"
+    # los frames/muestras de una misma captura no son de la misma persona
+    IDENTITY_INCONSISTENT = "IDENTITY_INCONSISTENT"
 
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
