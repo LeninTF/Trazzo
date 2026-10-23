@@ -132,11 +132,18 @@
           <dd><code>{{ publicKeyFingerprint() ?? 'no disponible' }}</code></dd>
         </dl>
 
-        <p class="text-muted mb-1">En el equipo del lector, como administrador:</p>
-        <pre class="dispositivos-command">{{ configureCommand() }}</pre>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="copiar(configureCommand())">
-          <i class="bi bi-clipboard"></i> Copiar comando
-        </button>
+        @if (configureCommand()) {
+          <p class="text-muted mb-1">En el equipo del lector, como administrador:</p>
+          <pre class="dispositivos-command">{{ configureCommand() }}</pre>
+          <button type="button" class="btn btn-sm btn-outline-secondary" (click)="copiar(configureCommand())">
+            <i class="bi bi-clipboard"></i> Copiar comando
+          </button>
+        } @else {
+          <p class="dispositivos-token__warning">
+            El código del lector tiene caracteres que no se pueden usar en un comando: configúralo a mano con
+            Configure-Agent.ps1 usando los valores de arriba.
+          </p>
+        }
 
         <div class="dispositivos-token__footer">
           <button type="button" class="btn btn-primary" (click)="cerrarToken()">Ya lo guardé, cerrar</button>

@@ -9,6 +9,17 @@ import { ToastService } from '../../../services/toast.service';
 import { publicKeySha256 } from '../../../shared/security/public-key-fingerprint';
 import type { AgentTokenResponse, DeviceProfile } from '../../../api/types';
 
+// El administrador ejecuta el comando como administrador en el lector: solo entran valores con caracteres sin
+// significado en PowerShell, y entre comillas simples (no expanden $(...)). Si alguno no cumple, no hay comando.
+const SAFE_DEVICE_CODE = /^[A-Za-z0-9._-]{1,100}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SAFE_URL = /^https?:\/\/[A-Za-z0-9.:/_-]+$/;
+const SHA256_HEX = /^[0-9a-f]{64}$/;
+
+function psLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
 interface SedeOption {
   id: number;
   nombre: string;
@@ -53,14 +64,18 @@ export class Dispositivos implements OnInit {
   /** El token se pide aparte (Read-Host seguro) para que no quede en el historial de la consola. */
   readonly configureCommand = computed(() => {
     const issued = this.issuedToken();
-    if (!issued) return '';
+    const backendUrl = this.backendUrl();
+    if (!issued || !SAFE_DEVICE_CODE.test(issued.device_code) || !UUID_PATTERN.test(issued.tenant_id)
+        || !SAFE_URL.test(backendUrl)) {
+      return '';
+    }
     const pin = this.publicKeyFingerprint();
     return [
       '.\\Configure-Agent.ps1',
-      `-TenantId "${issued.tenant_id}"`,
-      `-DeviceCode "${issued.device_code}"`,
-      `-BackendBaseUrl "${this.backendUrl()}"`,
-      ...(pin ? [`-PinnedPublicKeySha256 "${pin}"`] : []),
+      `-TenantId ${psLiteral(issued.tenant_id)}`,
+      `-DeviceCode ${psLiteral(issued.device_code)}`,
+      `-BackendBaseUrl ${psLiteral(backendUrl)}`,
+      ...(pin && SHA256_HEX.test(pin) ? [`-PinnedPublicKeySha256 ${psLiteral(pin)}`] : []),
       '-AgentTokenSecure (Read-Host "AgentToken" -AsSecureString)',
     ].join(' ');
   });

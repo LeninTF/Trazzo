@@ -838,6 +838,10 @@ function handleCorehrDeviceListCreate(
   }
   if (u === '/corehr/devices' && method === 'POST') {
     const body = req.body as { code: string; branch_id: number; name?: string };
+    // Igual que el @Pattern de CreateDeviceRequest en el backend.
+    if (!/^[A-Za-z0-9._-]{1,100}$/.test(body.code ?? '')) {
+      return _error(400, 'code: solo letras, digitos, punto, guion y guion bajo (max. 100)');
+    }
     const branch = ['', 'San Isidro', 'Miraflores', 'Surco'][body.branch_id] ?? '';
     return created({
       id: mockDevices.length + 1,

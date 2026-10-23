@@ -148,12 +148,26 @@ describe('Dispositivos', () => {
 
     const command = component.configureCommand();
     expect(component.publicKeyFingerprint()).toBe(PUBLIC_KEY_SHA256);
-    expect(command).toContain('-TenantId "' + issued.tenant_id + '"');
-    expect(command).toContain('-DeviceCode "ZK-001"');
-    expect(command).toContain('-BackendBaseUrl "https://trazzo.test/api/v1"');
-    expect(command).toContain('-PinnedPublicKeySha256 "' + PUBLIC_KEY_SHA256 + '"');
+    // Comillas simples: PowerShell no expande $(...) dentro de ellas.
+    expect(command).toContain(`-TenantId '${issued.tenant_id}'`);
+    expect(command).toContain(`-DeviceCode 'ZK-001'`);
+    expect(command).toContain(`-BackendBaseUrl 'https://trazzo.test/api/v1'`);
+    expect(command).toContain(`-PinnedPublicKeySha256 '${PUBLIC_KEY_SHA256}'`);
     expect(command).not.toContain(issued.token);
     expect(text()).toContain(PUBLIC_KEY_SHA256);
+  });
+
+  // El administrador ejecuta el comando como administrador en el lector: un código con $(...) o comillas
+  // no debe llegar a él.
+  it('no genera el comando si el código del lector o el tenant traen caracteres no permitidos', async () => {
+    await render();
+    mockCorehr.issueAgentToken.and.returnValue(of({ ...issued, device_code: `ZK"; $(Remove-Item C:\\ -Recurse) #` }));
+
+    component.emitirToken(component.devices()[0]);
+    fixture.detectChanges();
+
+    expect(component.configureCommand()).toBe('');
+    expect(text()).toContain('configúralo a mano');
   });
 
   it('revoca el token del agente de un dispositivo', async () => {

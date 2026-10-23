@@ -158,6 +158,18 @@ class DeviceControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // El código viaja a URLs del agente y al comando de Configure-Agent.ps1 que el panel genera.
+    @Test
+    void create_shouldReturn400WhenCodeHasCharactersOutsideTheAllowlist() throws Exception {
+        mockMvc.perform(post("/corehr/devices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code": "ZK\\"; $(Remove-Item C:\\\\ -Recurse) #", "branch_id": 10}
+                                """))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(deviceUseCase);
+    }
+
     @Test
     void create_shouldReturn400WhenBranchIdIsMissing() throws Exception {
         mockMvc.perform(post("/corehr/devices")

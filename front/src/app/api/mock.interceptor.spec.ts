@@ -670,6 +670,16 @@ describe('mockInterceptor', () => {
     });
   });
 
+  it('should reject a device code with characters outside the backend allowlist', (done) => {
+    const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/corehr/devices', { code: 'ZK"; $(x)', branch_id: 1 });
+    mockInterceptor(req, next).subscribe({
+      error: (err) => {
+        expect(err.status).toBe(400);
+        done();
+      },
+    });
+  });
+
   it('should mock POST /corehr/devices/{id}/agent-token with a one-time device token', (done) => {
     const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/corehr/devices/1/agent-token', null);
     mockInterceptor(req, next).subscribe(res => {
