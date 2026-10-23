@@ -8,7 +8,7 @@ Se aplican con Flyway a cada schema de tenant (`TenantFlywayMigrator`), al arran
 
 - **Inmutables tras el merge.** Flyway guarda el checksum de cada script y rechaza arrancar si cambia
   uno ya aplicado. Para corregir algo, crea una migracion nueva; no edites una existente.
-- **Siguiente version libre: `V6`.** Hoy existen `V2`, `V3`, `V3_1`, `V4` y `V5`. No repitas un numero de
+- **Siguiente version libre: `V7`.** Hoy existen `V2`, `V3`, `V3_1`, `V4`, `V5` y `V6`. No repitas un numero de
   version (Flyway falla con dos `V3`): para intercalar una migracion usa un numero con punto, como `V3_1`.
 - Nombre: `V<version>__<descripcion_en_snake_case>.sql`.
 - Los scripts corren con `search_path` apuntando al schema del tenant: usa nombres sin calificar
