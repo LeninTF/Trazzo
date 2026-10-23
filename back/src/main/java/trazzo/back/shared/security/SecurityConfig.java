@@ -1,6 +1,7 @@
 package trazzo.back.shared.security;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +23,6 @@ import org.springframework.security.web.header.writers.frameoptions.XFrameOption
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import javax.sql.DataSource;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -66,10 +66,18 @@ public class SecurityConfig {
         return registration;
     }
 
+    // Sin @ConditionalOnBean(DataSource): en una @Configuration de usuario se evalúa antes de que exista el
+    // DataSource y el guard no llegaba a crearse (AUD-15).
     @Bean
-    @ConditionalOnBean(DataSource.class)
-    TenantContextGuard tenantContextGuard(DataSource dataSource) {
+    TenantContextGuard tenantContextGuard(ObjectProvider<DataSource> dataSource) {
         return new TenantContextGuard(dataSource);
+    }
+
+    @Bean
+    FilterRegistrationBean<TenantContextGuard> tenantContextGuardRegistration(TenantContextGuard tenantContextGuard) {
+        FilterRegistrationBean<TenantContextGuard> registration = new FilterRegistrationBean<>(tenantContextGuard);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -85,7 +93,7 @@ public class SecurityConfig {
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
             DeviceTokenAuthFilter deviceTokenAuthFilter,
-            @org.springframework.lang.Nullable TenantContextGuard tenantContextGuard,
+            TenantContextGuard tenantContextGuard,
             @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
             @Value("${spring.h2.console.path:/h2-console}") String h2ConsolePath,
             @Value("${management.server.port:-1}") int managementPort
@@ -127,11 +135,8 @@ public class SecurityConfig {
             // dispositivo (trzd_) no es un JWT y se resuelve antes. No se ancla en JwtAuthFilter.class: en la app
             // los filtros llegan como proxies CGLIB y Spring Security no encontraría su orden.
             .addFilterBefore(deviceTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-
-        if (tenantContextGuard != null) {
-            http.addFilterAfter(tenantContextGuard, UsernamePasswordAuthenticationFilter.class);
-        }
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(tenantContextGuard, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

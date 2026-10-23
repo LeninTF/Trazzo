@@ -10,7 +10,11 @@ import java.sql.SQLException;
 import java.util.Set;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 import trazzo.back.shared.tenancy.TenantContext;
 
@@ -24,6 +28,7 @@ import trazzo.back.shared.tenancy.TenantContext;
  * is skipped, since tenant schema routing is not relevant there.
  *
  * Must run AFTER JwtAuthFilter (which sets TenantContext) and BEFORE controllers.
+ * Unauthenticated requests pass through so the security chain answers 401, not 403.
  */
 @Slf4j
 public class TenantContextGuard extends OncePerRequestFilter {
@@ -43,10 +48,10 @@ public class TenantContextGuard extends OncePerRequestFilter {
     );
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final DataSource dataSource;
-    private Boolean isPostgreSQL;
+    private final ObjectProvider<DataSource> dataSource;
+    private volatile Boolean isPostgreSQL;
 
-    public TenantContextGuard(DataSource dataSource) {
+    public TenantContextGuard(ObjectProvider<DataSource> dataSource) {
         this.dataSource = dataSource;
     }
 
@@ -54,14 +59,9 @@ public class TenantContextGuard extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String path = request.getServletPath();
+        String path = RequestPaths.of(request);
 
-        if (isNonTenantPath(path)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (!isPostgreSQL()) {
+        if (isNonTenantPath(path) || !isAuthenticated() || !isPostgreSQL()) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -85,16 +85,27 @@ public class TenantContextGuard extends OncePerRequestFilter {
         return NON_TENANT_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
+    private static boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
+    }
+
     private boolean isPostgreSQL() {
         if (isPostgreSQL != null) {
             return isPostgreSQL;
         }
-        try (var conn = dataSource.getConnection()) {
-            isPostgreSQL = "PostgreSQL".equals(
-                    conn.getMetaData().getDatabaseProductName());
-        } catch (SQLException e) {
-            log.warn("Could not determine database product name, assuming non-PostgreSQL", e);
+        DataSource source = dataSource.getIfAvailable();
+        if (source == null) {
             isPostgreSQL = false;
+            return false;
+        }
+        try (var conn = source.getConnection()) {
+            isPostgreSQL = "PostgreSQL".equals(conn.getMetaData().getDatabaseProductName());
+        } catch (SQLException e) {
+            // Sin recordarlo: un fallo puntual de la base dejaría el guard apagado hasta reiniciar.
+            log.warn("Could not determine database product name, skipping the guard for this request", e);
+            return false;
         }
         return isPostgreSQL;
     }

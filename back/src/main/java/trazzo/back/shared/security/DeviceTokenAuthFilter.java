@@ -55,17 +55,17 @@ public class DeviceTokenAuthFilter extends OncePerRequestFilter {
             agent = tokens.findActive(header.substring(BEARER.length()));
         } catch (DataAccessException e) {
             log.warn("No se pudo validar un token de dispositivo [{}] — path={}",
-                    e.getClass().getSimpleName(), pathOf(request));
+                    e.getClass().getSimpleName(), RequestPaths.of(request));
             reject(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             return;
         }
         if (agent.isEmpty()) {
-            log.warn("Token de dispositivo desconocido o revocado — path={}", pathOf(request));
+            log.warn("Token de dispositivo desconocido o revocado — path={}", RequestPaths.of(request));
             reject(response, HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-        if (!AGENT_ENDPOINTS.contains(request.getMethod() + " " + pathOf(request))) {
-            log.warn("Token de dispositivo fuera de los endpoints del agente — {} {}", request.getMethod(), pathOf(request));
+        if (!AGENT_ENDPOINTS.contains(request.getMethod() + " " + RequestPaths.of(request))) {
+            log.warn("Token de dispositivo fuera de los endpoints del agente — {} {}", request.getMethod(), RequestPaths.of(request));
             reject(response, HttpServletResponse.SC_FORBIDDEN);
             return;
         }
@@ -78,13 +78,6 @@ public class DeviceTokenAuthFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
-    }
-
-    // Igual que los RequestMatcher de Spring Security: servletPath + pathInfo (con el DispatcherServlet en "/"
-    // la ruta llega en el primero; mapeado como "/*" o en MockMvc, en el segundo).
-    private static String pathOf(HttpServletRequest request) {
-        String pathInfo = request.getPathInfo();
-        return pathInfo == null ? request.getServletPath() : request.getServletPath() + pathInfo;
     }
 
     private static void reject(HttpServletResponse response, int status) {

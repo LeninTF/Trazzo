@@ -1,27 +1,85 @@
 package trazzo.back.shared.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
 import java.util.Base64;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class SecurityConfigExtraTest {
 
     @Test
     void filterChainIsBuilt_whenSecurityConfigIsLoaded() {
+        runner().run(context -> assertThat(context).hasSingleBean(SecurityFilterChain.class));
+    }
+
+    // AUD-15: con @ConditionalOnBean(DataSource) en una @Configuration de usuario el guard nunca se creaba.
+    @Test
+    void theTenantGuardRunsInsideTheSecurityChainAfterTheJwtFilterEvenWithoutADataSource() {
         runner().run(context -> {
-            assertThat(context).hasSingleBean(SecurityFilterChain.class);
-            assertThat(context).doesNotHaveBean(TenantContextGuard.class);
+            var filters = context.getBean(SecurityFilterChain.class).getFilters();
+            assertThat(indexOf(filters, TenantContextGuard.class)).isGreaterThan(indexOf(filters, JwtAuthFilter.class));
+
+            FilterRegistrationBean<?> registration =
+                    context.getBean("tenantContextGuardRegistration", FilterRegistrationBean.class);
+            assertThat(registration.isEnabled()).isFalse();
         });
+    }
+
+    @Test
+    void onPostgreSqlASaasAdminIsKeptOutOfTenantRoutesAndAnonymousCallersStillGet401() {
+        runner().withBean(DataSource.class, SecurityConfigExtraTest::postgreSqlDataSource)
+                .withPropertyValues("spring.data.jpa.repositories.enabled=false")
+                .run(context -> {
+                    MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+                    var saasAdmin = UsernamePasswordAuthenticationToken.authenticated(
+                            "admin@trazzo.pe", null, AuthorityUtils.createAuthorityList("ROLE_SAAS_ADMIN"));
+
+                    mockMvc.perform(get("/corehr/devices").with(authentication(saasAdmin)))
+                            .andExpect(status().isForbidden())
+                            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                            .andExpect(jsonPath("$.message").value("Acceso denegado: se requiere contexto de tenant"));
+                    mockMvc.perform(get("/corehr/devices")).andExpect(status().isUnauthorized());
+                });
+    }
+
+    private static DataSource postgreSqlDataSource() {
+        try {
+            DataSource dataSource = mock(DataSource.class);
+            Connection connection = mock(Connection.class);
+            DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+            when(dataSource.getConnection()).thenReturn(connection);
+            when(connection.getMetaData()).thenReturn(metaData);
+            when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+            return dataSource;
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test
