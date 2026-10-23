@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import trazzo.back.corehr.domain.model.AttendanceState;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.AttendanceListResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.AttendanceResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.PatchAttendanceRequest;
+import trazzo.back.shared.security.TenantAuthorization;
 
 import java.time.LocalDate;
 
@@ -19,7 +21,10 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class AttendanceController {
 
+    private static final String SELF = "SELF";
+
     private final AttendanceUseCase attendanceUseCase;
+    private final TenantAuthorization authz;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -36,16 +41,25 @@ public class AttendanceController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort
     ) {
-        var result = attendanceUseCase.findAll(scope, branchId, areaId, departamentoId,
-                dateFrom, dateTo, state, tenantUserId, page, size, sort);
-        return ResponseEntity.ok(AttendanceListResponse.from(result, scope));
+        // Sin VER_ASISTENCIA_TODOS solo se lista la asistencia propia, se pida lo que se pida (AUD-08).
+        boolean onlyOwn = SELF.equals(scope) || !authz.canViewAllAttendance();
+        String appliedScope = onlyOwn ? SELF : scope;
+        Long userFilter = onlyOwn ? currentTenantUserId() : tenantUserId;
+        var result = attendanceUseCase.findAll(appliedScope, branchId, areaId, departamentoId,
+                dateFrom, dateTo, state, userFilter, page, size, sort);
+        return ResponseEntity.ok(AttendanceListResponse.from(result, appliedScope));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AttendanceResponse> getById(@PathVariable String id) {
         return attendanceUseCase.findById(id)
-                .map(result -> ResponseEntity.ok(AttendanceResponse.from(result)))
+                .map(result -> {
+                    if (!authz.canViewAllAttendance() && !authz.isSelf(result.tenantUserId())) {
+                        throw new AccessDeniedException("La asistencia pertenece a otro usuario");
+                    }
+                    return ResponseEntity.ok(AttendanceResponse.from(result));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -59,5 +73,10 @@ public class AttendanceController {
                 request.state(), request.minutesLate());
         var result = attendanceUseCase.correct(id, command);
         return ResponseEntity.ok(AttendanceResponse.from(result));
+    }
+
+    private Long currentTenantUserId() {
+        return authz.currentTenantUserId()
+                .orElseThrow(() -> new AccessDeniedException("No hay usuario de tenant para el usuario autenticado"));
     }
 }

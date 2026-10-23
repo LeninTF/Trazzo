@@ -15,6 +15,8 @@ import trazzo.back.corehr.application.dto.result.ShiftResult.ScheduleSummary;
 import trazzo.back.corehr.application.port.in.AttendanceUseCase;
 import trazzo.back.corehr.domain.exception.InvalidAttendanceException;
 import trazzo.back.corehr.domain.model.AttendanceState;
+import trazzo.back.shared.security.TenantSecuritySlice;
+import trazzo.back.shared.security.TenantUserIdResolver;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,12 +24,18 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static trazzo.back.shared.security.TenantSecurityContexts.MASTER_USER_ID;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsPlainUser;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsTenantUserWith;
 
 @WebMvcTest(AttendanceController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@TenantSecuritySlice
 class AttendanceControllerTest {
 
     @Autowired
@@ -39,11 +47,79 @@ class AttendanceControllerTest {
     private static final LocalDateTime NOW = LocalDateTime.now();
     private static final LocalDate TODAY = LocalDate.now();
 
+    @Autowired
+    TenantUserIdResolver tenantUserIdResolver;
+
     private static AttendanceResult aResult() {
         var user = new TenantUserBasicInfo("u1", "Juan", "Perez");
         var schedule = new ScheduleSummary(1L, "Morning");
         return new AttendanceResult("att-1", 10L, user, 1L, schedule, 5L,
                 "DVC-001", NOW, null, TODAY, 0, AttendanceState.PUNTUAL, NOW, NOW);
+    }
+
+    private static AttendanceResult anAttendanceOf(long tenantUserId) {
+        var user = new TenantUserBasicInfo(String.valueOf(tenantUserId), "Juan", "Perez");
+        return new AttendanceResult("att-" + tenantUserId, tenantUserId, user, 1L, new ScheduleSummary(1L, "Morning"),
+                5L, "DVC-001", NOW, null, TODAY, 0, AttendanceState.PUNTUAL, NOW, NOW);
+    }
+
+    @Test
+    void list_aPlainUserOnlySeesTheirOwnAttendanceWhateverTheyAskFor() throws Exception {
+        actingAsPlainUser();
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(42L));
+        when(attendanceUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(new PaginatedResult<>(List.of(anAttendanceOf(42L)), 0, 20, 1, 1));
+
+        mockMvc.perform(get("/corehr/attendance").param("tenant_user_id", "7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+        verify(attendanceUseCase).findAll(eq("SELF"), any(), any(), any(), any(), any(), any(), eq(42L), anyInt(), anyInt(), any());
+    }
+
+    @Test
+    void list_aUserWithoutATenantProfileGetsNoAttendance() throws Exception {
+        actingAsPlainUser();
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/corehr/attendance")).andExpect(status().isForbidden());
+        verifyNoInteractions(attendanceUseCase);
+    }
+
+    @Test
+    void list_attendanceSupervisorsSeeEveryoneUnlessTheyAskForTheirOwn() throws Exception {
+        actingAsTenantUserWith("control-asistencia.corregir-marcaciones");
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(42L));
+        when(attendanceUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(new PaginatedResult<>(List.of(), 0, 20, 0, 0));
+
+        mockMvc.perform(get("/corehr/attendance"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeAplicado").isEmpty());
+        verify(attendanceUseCase).findAll(isNull(), any(), any(), any(), any(), any(), any(), isNull(), anyInt(), anyInt(), any());
+
+        mockMvc.perform(get("/corehr/attendance").param("scope", "SELF"))
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+        verify(attendanceUseCase).findAll(eq("SELF"), any(), any(), any(), any(), any(), any(), eq(42L), anyInt(), anyInt(), any());
+    }
+
+    @Test
+    void getById_aPlainUserCannotSeeSomeoneElsesAttendance() throws Exception {
+        actingAsPlainUser();
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(42L));
+        when(attendanceUseCase.findById("att-7")).thenReturn(Optional.of(anAttendanceOf(7L)));
+
+        mockMvc.perform(get("/corehr/attendance/att-7")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getById_aPlainUserSeesTheirOwnAttendance() throws Exception {
+        actingAsPlainUser();
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(42L));
+        when(attendanceUseCase.findById("att-42")).thenReturn(Optional.of(anAttendanceOf(42L)));
+
+        mockMvc.perform(get("/corehr/attendance/att-42"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tenant_user_id").value(42));
     }
 
     @Test

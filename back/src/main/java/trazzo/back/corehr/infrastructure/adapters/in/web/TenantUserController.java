@@ -106,8 +106,9 @@ public class TenantUserController {
         return ResponseEntity.ok(tenantUserUseCase.assignRole(id, request.roleId()));
     }
 
+    // Solo la propia: el caso de uso valida la contraseña actual y para otra cuenta serviría para adivinarla.
     @PatchMapping("/{id}/password")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@authz.isSelf(#id)")
     public ResponseEntity<Void> changePassword(
             @PathVariable Long id,
             @Valid @RequestBody ChangePasswordRequest request

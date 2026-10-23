@@ -15,6 +15,8 @@ import trazzo.back.corehr.application.dto.result.SoftDeleteResult;
 import trazzo.back.corehr.application.dto.result.TenantUserProfileResult;
 import trazzo.back.corehr.application.port.in.TenantUserUseCase;
 import trazzo.back.shared.security.AuthenticatedUser;
+import trazzo.back.shared.security.TenantSecuritySlice;
+import trazzo.back.shared.security.TenantUserIdResolver;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,9 +27,14 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static trazzo.back.shared.security.TenantSecurityContexts.MASTER_USER_ID;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsPlainUser;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsTenantAdmin;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsTenantUserWith;
 
 @WebMvcTest(TenantUserController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@TenantSecuritySlice
 class TenantUserControllerTest {
 
     @Autowired
@@ -35,6 +42,14 @@ class TenantUserControllerTest {
 
     @MockitoBean
     TenantUserUseCase tenantUserUseCase;
+
+    @Autowired
+    TenantUserIdResolver tenantUserIdResolver;
+
+    // Cuerpo del contrato (openapi CambiarPasswordRequest), el mismo que envía el perfil del front.
+    private static final String CHANGE_PASSWORD_JSON = """
+            {"current_password": "oldPass", "new_password": "newPass"}
+            """;
 
     private static final LocalDateTime NOW = LocalDateTime.of(2025, 6, 15, 10, 30);
 
@@ -304,17 +319,40 @@ class TenantUserControllerTest {
 
     @Test
     void changePassword_shouldReturn204() throws Exception {
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(1L));
         doNothing().when(tenantUserUseCase).changePassword(1L, "oldPass", "newPass");
 
         mockMvc.perform(patch("/usuarios/1/password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "currentPassword": "oldPass",
-                                  "newPassword": "newPass"
-                                }
-                                """))
+                        .content(CHANGE_PASSWORD_JSON))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void changePassword_aUserChangesTheirOwnPassword() throws Exception {
+        actingAsPlainUser();
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(5L));
+
+        mockMvc.perform(patch("/usuarios/5/password").contentType(MediaType.APPLICATION_JSON).content(CHANGE_PASSWORD_JSON))
+                .andExpect(status().isNoContent());
+        verify(tenantUserUseCase).changePassword(5L, "oldPass", "newPass");
+    }
+
+    // El caso de uso valida la contraseña actual: para otra cuenta solo serviría para adivinarla.
+    @Test
+    void changePassword_nobodyChangesSomeoneElsesPassword() throws Exception {
+        when(tenantUserIdResolver.resolve(MASTER_USER_ID)).thenReturn(Optional.of(5L));
+
+        actingAsPlainUser();
+        mockMvc.perform(patch("/usuarios/6/password").contentType(MediaType.APPLICATION_JSON).content(CHANGE_PASSWORD_JSON))
+                .andExpect(status().isForbidden());
+        actingAsTenantUserWith("gestion-trabajadores.editar");
+        mockMvc.perform(patch("/usuarios/6/password").contentType(MediaType.APPLICATION_JSON).content(CHANGE_PASSWORD_JSON))
+                .andExpect(status().isForbidden());
+        actingAsTenantAdmin();
+        mockMvc.perform(patch("/usuarios/6/password").contentType(MediaType.APPLICATION_JSON).content(CHANGE_PASSWORD_JSON))
+                .andExpect(status().isForbidden());
+        verify(tenantUserUseCase, never()).changePassword(any(), any(), any());
     }
 
     // ──────────────────────────────────────────────────────────

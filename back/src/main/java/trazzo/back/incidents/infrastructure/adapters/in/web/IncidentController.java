@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import trazzo.back.incidents.application.dto.command.CreateIncidentCommand;
 import trazzo.back.incidents.application.dto.command.IncidentStateChangeCommand;
 import trazzo.back.incidents.application.dto.command.PatchIncidentCommand;
+import trazzo.back.incidents.application.dto.result.IncidentResult;
 import trazzo.back.incidents.application.port.in.EvidenceUseCase;
 import trazzo.back.incidents.application.port.in.IncidentUseCase;
 import trazzo.back.incidents.application.port.in.NotificationUseCase;
@@ -21,20 +22,26 @@ import trazzo.back.incidents.infrastructure.adapters.in.web.dto.*;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.shared.application.port.out.FileStoragePort;
 import trazzo.back.shared.security.AuthenticatedUser;
+import trazzo.back.shared.security.TenantAuthorization;
 
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.util.Objects;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/incidentes")
 @RequiredArgsConstructor
 public class IncidentController {
 
+    private static final String SELF = "SELF";
+
     private final IncidentUseCase incidentUseCase;
     private final EvidenceUseCase evidenceUseCase;
     private final NotificationUseCase notificationUseCase;
     private final FileStoragePort fileStoragePort;
     private final TenantUserPort tenantUserPort;
+    private final TenantAuthorization authz;
 
     @GetMapping
     @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
@@ -53,16 +60,12 @@ public class IncidentController {
             @RequestParam(required = false) String sort,
             @AuthenticationPrincipal AuthenticatedUser user
     ) {
-        Integer tenantUserId = null;
-        if ("SELF".equals(scope) && user != null) {
-            tenantUserId = tenantUserPort.findIdByMasterUserId(user.id())
-                    .map(Long::intValue)
-                    .orElseThrow(() -> new AccessDeniedException(
-                            "No se encontró usuario de tenant para el usuario autenticado"));
-        }
-        var result = incidentUseCase.findAll(tenantUserId, scope, toInt(sedeId), toInt(areaId), toInt(departamentoId),
-                state, toInt(tipoId), desde, hasta, search, page, size, sort);
-        return ResponseEntity.ok(IncidentListResponse.from(result, scope));
+        // Quien no aprueba solo ve sus incidencias, envíe o no scope=SELF (AUD-08).
+        String appliedScope = authz.approver() ? scope : SELF;
+        Integer tenantUserId = SELF.equals(appliedScope) ? currentTenantUserId(user) : null;
+        var result = incidentUseCase.findAll(tenantUserId, appliedScope, toInt(sedeId), toInt(areaId),
+                toInt(departamentoId), state, toInt(tipoId), desde, hasta, search, page, size, sort);
+        return ResponseEntity.ok(IncidentListResponse.from(result, appliedScope));
     }
 
     @PostMapping
@@ -83,9 +86,12 @@ public class IncidentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
-    public ResponseEntity<IncidentResponse> getById(@PathVariable String id) {
+    public ResponseEntity<IncidentResponse> getById(@PathVariable String id, @AuthenticationPrincipal AuthenticatedUser user) {
         return incidentUseCase.findById(toInt(id))
-                .map(result -> ResponseEntity.ok(IncidentResponse.from(result)))
+                .map(result -> {
+                    requireAccess(result, user);
+                    return ResponseEntity.ok(IncidentResponse.from(result));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -93,8 +99,10 @@ public class IncidentController {
     @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<IncidentResponse> patch(
             @PathVariable String id,
-            @Valid @RequestBody PatchIncidentRequest request
+            @Valid @RequestBody PatchIncidentRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
+        requireAccess(toInt(id), user);
         var command = new PatchIncidentCommand(request.comment());
         var result = incidentUseCase.patch(toInt(id), command);
         return ResponseEntity.ok(IncidentResponse.from(result));
@@ -115,8 +123,10 @@ public class IncidentController {
     @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<IncidentEvidenceResponse> createEvidence(
             @PathVariable String id,
-            @Valid @RequestBody CreateEvidenceRequest request
+            @Valid @RequestBody CreateEvidenceRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
+        requireAccess(toInt(id), user);
         var command = new trazzo.back.incidents.application.dto.command.CreateEvidenceCommand(
                 request.fileName(), request.fileKey(), request.mimeType(), request.fileSize());
         var result = evidenceUseCase.create(toInt(id), command);
@@ -125,7 +135,9 @@ public class IncidentController {
 
     @GetMapping("/{id}/evidencias")
     @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
-    public ResponseEntity<java.util.List<IncidentEvidenceResponse>> listEvidences(@PathVariable String id) {
+    public ResponseEntity<java.util.List<IncidentEvidenceResponse>> listEvidences(
+            @PathVariable String id, @AuthenticationPrincipal AuthenticatedUser user) {
+        requireAccess(toInt(id), user);
         var results = evidenceUseCase.findAllByIncidentId(toInt(id));
         var response = results.stream().map(IncidentEvidenceResponse::from).toList();
         return ResponseEntity.ok(response);
@@ -135,8 +147,10 @@ public class IncidentController {
     @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
     public ResponseEntity<InputStreamResource> downloadEvidence(
             @PathVariable String id,
-            @PathVariable String evidenceId
+            @PathVariable String evidenceId,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
+        requireAccess(toInt(id), user);
         var result = evidenceUseCase.findEvidence(toInt(id), toInt(evidenceId));
         InputStream stream = fileStoragePort.downloadFile(result.fileKey());
         HttpHeaders headers = new HttpHeaders();
@@ -150,7 +164,9 @@ public class IncidentController {
 
     @DeleteMapping("/{id}/evidencias/{evidenceId}")
     @PreAuthorize("@authz.any('incidencias.crear')")
-    public ResponseEntity<Void> deleteEvidence(@PathVariable String id, @PathVariable String evidenceId) {
+    public ResponseEntity<Void> deleteEvidence(@PathVariable String id, @PathVariable String evidenceId,
+                                               @AuthenticationPrincipal AuthenticatedUser user) {
+        requireAccess(toInt(id), user);
         evidenceUseCase.delete(toInt(id), toInt(evidenceId));
         return ResponseEntity.noContent().build();
     }
@@ -168,6 +184,27 @@ public class IncidentController {
     public ResponseEntity<Void> justify(@PathVariable String id) {
         notificationUseCase.justifyAttendance(toInt(id));
         return ResponseEntity.accepted().build();
+    }
+
+    private Integer currentTenantUserId(AuthenticatedUser user) {
+        return Optional.ofNullable(user)
+                .flatMap(u -> tenantUserPort.findIdByMasterUserId(u.id()))
+                .map(Long::intValue)
+                .orElseThrow(() -> new AccessDeniedException(
+                        "No se encontró usuario de tenant para el usuario autenticado"));
+    }
+
+    /** Quien no aprueba solo accede a sus propias incidencias (AUD-08). */
+    private void requireAccess(IncidentResult incident, AuthenticatedUser user) {
+        if (!authz.approver() && !Objects.equals(incident.tenantUserId(), currentTenantUserId(user))) {
+            throw new AccessDeniedException("La incidencia pertenece a otro usuario");
+        }
+    }
+
+    private void requireAccess(Integer incidentId, AuthenticatedUser user) {
+        if (!authz.approver()) {
+            incidentUseCase.findById(incidentId).ifPresent(incident -> requireAccess(incident, user));
+        }
     }
 
     private static Integer toInt(String value) {

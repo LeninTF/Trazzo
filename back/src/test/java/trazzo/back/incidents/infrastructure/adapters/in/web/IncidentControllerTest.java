@@ -4,6 +4,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static trazzo.back.shared.security.TenantSecurityContexts.MASTER_USER_ID;
+import static trazzo.back.shared.security.TenantSecurityContexts.actingAsTenantUserWith;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -90,6 +92,73 @@ class IncidentControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    private static IncidentResult anIncidentOf(int tenantUserId) {
+        var now = LocalDateTime.now();
+        return new IncidentResult(1, tenantUserId, 1, IncidentState.PENDIENTE, "comment", null, null, null, List.of(),
+                null, now, now);
+    }
+
+    // Rol "usuario": ve y crea sus incidencias, no aprueba.
+    private void actingAsRequesterWithTenantUser(long tenantUserId) {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear");
+        when(tenantUserPort.findIdByMasterUserId(MASTER_USER_ID)).thenReturn(Optional.of(tenantUserId));
+    }
+
+    @Test
+    void list_aRequesterOnlySeesTheirOwnIncidentsEvenWithoutScope() throws Exception {
+        actingAsRequesterWithTenantUser(42L);
+        when(incidentUseCase.findAll(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), anyInt(), any()))
+                .thenReturn(new PaginatedResult<>(List.of(), 0, 10, 0, 0));
+
+        mockMvc.perform(get("/incidentes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeAplicado").value("SELF"));
+        verify(incidentUseCase).findAll(eq(42), eq("SELF"), any(), any(), any(), any(), any(), any(), any(), any(),
+                anyInt(), anyInt(), any());
+    }
+
+    @Test
+    void getById_aRequesterCannotSeeSomeoneElsesIncident() throws Exception {
+        actingAsRequesterWithTenantUser(42L);
+        when(incidentUseCase.findById(1)).thenReturn(Optional.of(anIncidentOf(7)));
+
+        mockMvc.perform(get("/incidentes/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getById_aRequesterSeesTheirOwnIncident() throws Exception {
+        actingAsRequesterWithTenantUser(42L);
+        when(incidentUseCase.findById(1)).thenReturn(Optional.of(anIncidentOf(42)));
+
+        mockMvc.perform(get("/incidentes/1")).andExpect(status().isOk());
+    }
+
+    @Test
+    void getById_anApproverSeesAnyIncident() throws Exception {
+        when(incidentUseCase.findById(1)).thenReturn(Optional.of(anIncidentOf(7)));
+
+        mockMvc.perform(get("/incidentes/1")).andExpect(status().isOk());
+    }
+
+    @Test
+    void aRequesterCannotTouchSomeoneElsesIncidentNorItsEvidences() throws Exception {
+        actingAsRequesterWithTenantUser(42L);
+        when(incidentUseCase.findById(1)).thenReturn(Optional.of(anIncidentOf(7)));
+
+        mockMvc.perform(patch("/incidentes/1").contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new PatchIncidentRequest("otro comentario"))).with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/incidentes/1/evidencias")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/incidentes/1/evidencias/1/descarga")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/incidentes/1/evidencias").contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new CreateEvidenceRequest("doc.pdf", "file-key", "application/pdf", 100)))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/incidentes/1/evidencias/1").with(csrf())).andExpect(status().isForbidden());
+        verify(incidentUseCase, never()).patch(any(), any());
+        verifyNoInteractions(evidenceUseCase, fileStoragePort);
     }
 
     @Test
