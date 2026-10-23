@@ -44,6 +44,17 @@ components:
         - `tenant_id`: UUID del tenant (null para usuarios Trazzo)
         - `context`: `MASTER` | `TENANT`
         - `must_change_password`: boolean
+    deviceToken:
+      type: http
+      scheme: bearer
+      description: |
+        Credencial de máquina del agente biométrico de un lector: `trzd_` + 43 caracteres Base64url,
+        emitida con `POST /corehr/devices/{id}/agent-token` (el backend solo guarda su SHA-256).
+        Fija el tenant del token (no hace falta `X-Tenant-ID`) y solo abre `POST /asistencia/marcar`,
+        `POST /asistencia/sync`, `GET /corehr/biometria/enroll/pendiente`,
+        `POST /corehr/biometria/enroll/completar` y `GET /security/public-key`; cualquier otra ruta → 403.
+        Desconocido, revocado o de un tenant suspendido o borrado → 401. El `device_code` de la petición
+        tiene que ser el del token (403 si no).
     tenantHeader:
       type: apiKey
       in: header
@@ -1402,6 +1413,50 @@ components:
           format: uuid
           description: Identificador del lote para trazabilidad en logs y auditoria.
           example: "a1b2c3d4-0000-0000-0000-000000000001"
+        items:
+          type: array
+          description: Resultado de cada evento del lote, en el mismo orden.
+          items:
+            $ref: "#/components/schemas/MarcacionSyncItem"
+
+    MarcacionSyncItem:
+      type: object
+      properties:
+        offline_event_id:
+          type: integer
+          nullable: true
+          example: 1001
+        status:
+          type: string
+          enum: [accepted, skipped, failed]
+          description: |
+            `accepted`: registrado ahora · `skipped`: ya estaba registrado (reenvío de la cola) ·
+            `failed`: rechazado; `message` dice por qué (huella no reconocida, ya marcó entrada y salida…).
+            Un error interno se informa como "Error interno al registrar el evento" (el detalle queda en el log).
+        message:
+          type: string
+          nullable: true
+          example: "Huella no reconocida"
+
+    AgentTokenResponse:
+      type: object
+      description: |
+        Credencial del agente del lector. El `token` solo viaja en esta respuesta (`Cache-Control: no-store`):
+        no se puede volver a consultar. `tenant_id`, `device_code` y `token` son lo que pide Configure-Agent.ps1.
+      properties:
+        token:
+          type: string
+          pattern: "^trzd_[A-Za-z0-9_-]{43}$"
+          example: "trzd_q0Wc9w0m2rY7oQ1u5wJ3m8bQn4xG6fHk2pLsTzVaXcE"
+        tenant_id:
+          type: string
+          format: uuid
+        device_code:
+          type: string
+          example: "ZK-C2PRO-00123"
+        created_at:
+          type: string
+          format: date-time
 
     PublicKeyResponse:
       type: object
@@ -2448,6 +2503,8 @@ components:
       properties:
         code:
           type: string
+          pattern: "^[A-Za-z0-9._-]{1,100}$"
+          description: Solo letras, dígitos, punto, guion y guion bajo (máx. 100).
           example: "ZK-C2PRO-00123"
         name:
           type: string
@@ -4270,10 +4327,18 @@ paths:
 
         Si el dispositivo tiene `state = false`, la marcación es rechazada y se envía
         notificación WebSocket + email (Resend) al trabajador y al admin con `MANAGE_DEVICES`.
+
+        `captured_at_utc` es el instante en UTC; la fecha, el ingreso y la tolerancia se evalúan en la zona
+        del negocio (`APP_TIMEZONE`, por defecto `America/Lima`), y `check_in`/`check_out` se devuelven en
+        esa hora local. Reenviar la misma captura (mismo instante) devuelve la asistencia sin convertirla en salida.
+      security:
+        - deviceToken: []
+        - bearerAuth: []
       parameters:
         - name: X-Tenant-ID
           in: header
-          required: true
+          required: false
+          description: Ignorado; el tenant sale del token.
           schema:
             type: string
             format: uuid
@@ -4290,8 +4355,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttendanceProfile"
+        "400":
+          description: Huella no reconocida, payload que no se puede descifrar o dispositivo inexistente/inactivo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Token de dispositivo desconocido o revocado.
         "403":
-          description: Conflicto de incongruencia de Tenant.
+          description: El `device_code` no es el del token del agente.
 
   /asistencia/sync:
     post:
@@ -4303,10 +4376,19 @@ paths:
         del middleware mientras la sede estuvo sin conectividad con el backend.
         Cada elemento del lote se procesa con la misma logica de identificacion
         biometrica usada en POST /asistencia/marcar.
+
+        El agente envía un evento por lote y lo da por enviado ante cualquier 2xx: si el lote trae eventos y
+        ninguno se registró ni estaba ya registrado, la respuesta es 422 (el agente lo reintenta y, al agotar
+        los intentos, lo marca como fallido). Un evento ya procesado (`offline_event_id` + `device_code`) es
+        `skipped`.
+      security:
+        - deviceToken: []
+        - bearerAuth: []
       parameters:
         - name: X-Tenant-ID
           in: header
-          required: true
+          required: false
+          description: Ignorado; el tenant sale del token.
           schema:
             type: string
             format: uuid
@@ -4318,7 +4400,15 @@ paths:
               $ref: "#/components/schemas/BiometricIdentifySyncRequest"
       responses:
         "202":
-          description: Lote aceptado para procesamiento asíncrono en segundo plano.
+          description: Al menos un evento se registró o ya estaba registrado; `items` detalla cada uno.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarcacionSyncResponse"
+        "403":
+          description: Algún `device_code` del lote no es el del token del agente.
+        "422":
+          description: Ningún evento del lote se registró ni estaba ya registrado; `items` dice por qué.
           content:
             application/json:
               schema:
@@ -6021,6 +6111,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /corehr/devices/{id}/agent-token:
+    parameters:
+      - $ref: '#/components/parameters/DeviceId'
+    post:
+      tags:
+        - CoreHR · Devices
+      summary: Emitir el token del agente del lector
+      operationId: issueDeviceAgentToken
+      description: |
+        Genera la credencial de máquina del agente (`trzd_` + 32 bytes aleatorios en Base64url) y revoca la
+        anterior del dispositivo. El valor solo se devuelve en esta respuesta. Borrar el dispositivo revoca sus tokens.
+
+        **Permiso requerido:** `configuracion-tenant.gestionar-metodos`.
+      responses:
+        "201":
+          description: Token emitido.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTokenResponse'
+        "400":
+          description: Dispositivo no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin el permiso `configuracion-tenant.gestionar-metodos`.
+    delete:
+      tags:
+        - CoreHR · Devices
+      summary: Revocar el token del agente del lector
+      operationId: revokeDeviceAgentToken
+      description: |
+        El agente deja de poder marcar hasta que se emita otro token.
+
+        **Permiso requerido:** `configuracion-tenant.gestionar-metodos`.
+      responses:
+        "204":
+          description: Token revocado.
+        "400":
+          description: Dispositivo no encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: Sin el permiso `configuracion-tenant.gestionar-metodos`.
+
   # ────────────────────────────────────────────────────────────────────
   # BIOMETRIA (Huellas digitales)
   # ────────────────────────────────────────────────────────────────────
@@ -6155,10 +6299,11 @@ paths:
         4. Si existe una sesion vigente, el middleware captura la siguiente huella
            en modo enrolamiento y llama a `POST /corehr/biometria/enroll/completar`.
 
-        **Permisos requeridos:** `MANAGE_BIOMETRICS`
-        **Actualizacion de seguridad del flujo HTTP:** para despliegues con middleware
-        autenticado, este endpoint debe exigir JWT valido del middleware ademas del
-        `enroll_token` de un solo uso.
+        Las sesiones viven en la tabla `enroll_session` del tenant: sobreviven a un reinicio y se consumen
+        una sola vez.
+      security:
+        - deviceToken: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: device_code
@@ -6175,10 +6320,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PendingEnrollSessionResponse'
-        "204":
+        "404":
           description: No existe sesion pendiente para ese dispositivo.
         "403":
-          description: Sin permiso `MANAGE_BIOMETRICS`.
+          description: El `device_code` no es el del token del agente.
           content:
             application/json:
               schema:
@@ -6205,8 +6350,12 @@ paths:
         **Si ya existe un registro biométrico para el mismo `tenant_user_id` y `finger_index`:**
         Se marca el anterior como `activo = false` y se crea el nuevo (historial inmutable).
 
-        **Permisos requeridos:** MANAGE_BIOMETRICS.
-        El endpoint requiere JWT del middleware y además valida el enroll_token.
+        El backend descifra el payload, comprueba que sea un template SourceAFIS y lo vuelve a cifrar con la
+        clave de almacenamiento (`APP_BIOMETRIC_STORAGE_KEY`, por defecto `APP_ENCRYPTION_KEY`) antes de
+        guardarlo: la huella enrolada no depende de la clave RSA de transporte.
+      security:
+        - deviceToken: []
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -6223,17 +6372,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserBiometriaProfile'
         "400":
-          description: "`enroll_token` expirado o inválido."
+          description: |
+            `enroll_token` expirado o inválido; `finger_index` o `device_code` distintos de los de la sesión;
+            payload que no se puede descifrar o que no es un template SourceAFIS. Ninguno toca la huella vigente.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        "409":
-          description: "`finger_index` o `device_code` no coinciden con la sesión registrada."
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+        "403":
+          description: El `device_code` no es el del token del agente.
 
   /corehr/biometria/{id}:
     parameters:

@@ -90,4 +90,4 @@ $token = Read-Host "Queue:AgentToken" -AsSecureString
   -AllowedOrigins "https://app.trazzo.pe"
 ```
 
-El script guarda el JWT cifrado en `Queue:AgentTokenProtected` usando DPAPI `LocalMachine`; no deja el token en claro en `Queue:AgentToken`.
+El script guarda el token del dispositivo (`trzd_…`, pantalla «Dispositivos» del panel) cifrado en `Queue:AgentTokenProtected` usando DPAPI `LocalMachine`; no deja el token en claro en `Queue:AgentToken`.

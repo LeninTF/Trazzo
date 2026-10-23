@@ -25,8 +25,8 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Cifrado híbrido | AES-256-GCM + RSA-2048-OAEP (validación de KeySize ≥ 2048), clave pública desde el backend |
 | Caché de clave RSA | `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\public_key.cache` cifrado con DPAPI de la cuenta del servicio + marcador de integridad |
 | Cola offline | SQLite (WAL + connection pooling) en `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\events.db` |
-| Marcación síncrona | `POST /asistencia/marcar` con `X-Tenant-ID` y `Authorization: Bearer` |
-| Reenvío offline al backend | `POST /asistencia/sync` con `X-Tenant-ID` y `Authorization: Bearer` |
+| Marcación síncrona | `POST /asistencia/marcar` con `Authorization: Bearer <token del dispositivo>` (el tenant sale del token) |
+| Reenvío offline al backend | `POST /asistencia/sync` con el token del dispositivo; un 422 (nada registrado) se reintenta |
 | Backoff exponencial | Reintento con jitter, hasta 5 minutos entre intentos |
 | Operaciones repetidas | Captura, identificación y enrolamiento pueden repetirse al terminar la operación anterior |
 | CORS WebSocket | Restricción por origen (`Agent:AllowedOrigins`) |
@@ -283,8 +283,8 @@ Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger 
 | `Backend:Endpoints:StartEnrollment` | Ruta `POST /corehr/biometria/enroll/iniciar` para inicio admin/frontend del enrolamiento; no la invoca el agente |
 | `Backend:Endpoints:PendingEnrollment` | Ruta `GET /corehr/biometria/enroll/pendiente` para polling CoreHR |
 | `Backend:Endpoints:CompleteEnrollment` | Ruta `POST /corehr/biometria/enroll/completar` para completar enrolamiento |
-| `Queue:AgentTokenProtected` | Token JWT del agente cifrado con DPAPI LocalMachine por `Configure-Agent.ps1` |
-| `Queue:AgentToken` | Token JWT legacy en claro. Evitar en producción; se mantiene por compatibilidad |
+| `Queue:AgentTokenProtected` | Token del dispositivo (`trzd_…`, pantalla «Dispositivos» del panel) cifrado con DPAPI LocalMachine por `Configure-Agent.ps1` |
+| `Queue:AgentToken` | Token del dispositivo en claro. Evitar en producción; se mantiene por compatibilidad |
 | `AutoUpdate:Enabled` | `true` para habilitar actualizaciones automáticas |
 | `AutoUpdate:ManifestUrl` | URL HTTPS del manifiesto JSON de versiones |
 | `AutoUpdate:PublisherCommonName` | CN esperado en el certificado Authenticode del MSI. Default: `Trazzo`. Debe coincidir con el sujeto del certificado usado para firmar |
@@ -294,7 +294,7 @@ Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger 
 
 `Security:BackendPublicKeyUrl` y `Queue:BackendUrl` siguen aceptándose como URLs absolutas legacy, pero para nuevas instalaciones se recomienda centralizar rutas en `Backend:BaseUrl` + `Backend:Endpoints`. **Todos los endpoints deben usar HTTPS**; los que no lo hagan se deshabilitan al arrancar (excepto loopback, permitido para desarrollo local).
 
-Para configurar una instalación sin editar `appsettings.json` manualmente, use prompt seguro para no dejar el JWT en historial de consola:
+Para configurar una instalación sin editar `appsettings.json` manualmente, use prompt seguro para no dejar el token del dispositivo en el historial de consola:
 
 ```powershell
 $token = Read-Host "Queue:AgentToken" -AsSecureString
@@ -306,7 +306,7 @@ $token = Read-Host "Queue:AgentToken" -AsSecureString
   -AllowedOrigins "https://app.trazzo.pe"
 ```
 
-El script guarda el JWT en `Queue:AgentTokenProtected` usando DPAPI de Windows con alcance `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON y endurece ACL del archivo para `SYSTEM` y Administradores.
+El script guarda el token del dispositivo en `Queue:AgentTokenProtected` usando DPAPI de Windows con alcance `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON y endurece ACL del archivo para `SYSTEM` y Administradores.
 
 ### Manifiesto de auto-update
 
@@ -645,7 +645,7 @@ Además del cifrado híbrido, el agente aplica los siguientes controles defensiv
 
 - **HTTPS obligatorio** en todos los endpoints de backend. Cualquier URL HTTP no-loopback se rechaza al arrancar (`BackendEndpointResolver.EnsureSecureUrl`).
 - **Loopback aceptado** solo para desarrollo local (`http://localhost`, `http://127.0.0.1`).
-- **DPAPI LocalMachine** protege el token JWT en `Queue:AgentTokenProtected` (via `Configure-Agent.ps1`).
+- **DPAPI LocalMachine** protege el token del dispositivo en `Queue:AgentTokenProtected` (via `Configure-Agent.ps1`).
 
 ### WebSocket local
 
