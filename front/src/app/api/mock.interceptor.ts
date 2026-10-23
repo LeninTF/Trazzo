@@ -871,6 +871,30 @@ function handleCorehrDeviceById(
   return null;
 }
 
+// Mismo formato que el backend: "trzd_" + 32 bytes aleatorios en Base64url; se muestra una sola vez.
+function handleCorehrDeviceAgentToken(
+  method: string, u: string, _req: HttpRequest<unknown>,
+  _page: number, _size: number, _qp: Record<string, string>,
+): Observable<HttpEvent<unknown>> | null {
+  const match = /^\/corehr\/devices\/(\d+)\/agent-token$/.exec(u);
+  if (!match) return null;
+
+  const device = mockDevices.find(d => d.id === Number.parseInt(match[1], 10));
+  if (!device) return _error(404, 'Dispositivo no encontrado');
+  if (method === 'POST') {
+    const secret = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return created({
+      token: 'trzd_' + secret,
+      tenant_id: '00000000-0000-4000-8000-000000000042',
+      device_code: device.code,
+      created_at: new Date().toISOString(),
+    });
+  }
+  if (method === 'DELETE') return noContent();
+  return null;
+}
+
 function handleCorehrDevices(
   method: string, u: string, req: HttpRequest<unknown>,
   page: number, size: number, qp: Record<string, string>,
@@ -878,6 +902,7 @@ function handleCorehrDevices(
   if (!u.startsWith('/corehr/devices')) return null;
   return (
     handleCorehrDeviceListCreate(method, u, req, page, size, qp) ??
+    handleCorehrDeviceAgentToken(method, u, req, page, size, qp) ??
     handleCorehrDeviceById(method, u, req, page, size, qp) ??
     null
   );

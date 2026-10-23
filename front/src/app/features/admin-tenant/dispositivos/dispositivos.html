@@ -1,0 +1,148 @@
+@if (error()) {
+<div class="dispositivos-wrapper dispositivos-error">
+  <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+  <p class="mt-3 text-muted">{{ error() }}</p>
+  <button type="button" class="btn btn-outline-primary btn-sm" (click)="cargar()">Reintentar</button>
+</div>
+} @else {
+<div class="dispositivos-wrapper">
+
+  <header class="dispositivos-header">
+    <div>
+      <h1 class="dispositivos-title">Dispositivos biométricos</h1>
+      <p class="dispositivos-subtitle">
+        Registra los lectores de huella y genera la credencial con la que su agente marca la asistencia.
+      </p>
+    </div>
+  </header>
+
+  <!-- ALTA DE LECTOR -->
+  <section class="dispositivos-card">
+    <h2 class="dispositivos-card__title"><i class="bi bi-plus-circle me-2"></i>Registrar lector</h2>
+    <div class="dispositivos-form">
+      <label class="dispositivos-field">
+        <span>Código del lector *</span>
+        <input type="text" class="form-control" placeholder="ZK-C2PRO-00123"
+               [value]="newCode()" (input)="newCode.set($any($event.target).value)">
+      </label>
+      <label class="dispositivos-field">
+        <span>Nombre</span>
+        <input type="text" class="form-control" placeholder="Lector puerta principal"
+               [value]="newName()" (input)="newName.set($any($event.target).value)">
+      </label>
+      <label class="dispositivos-field">
+        <span>Sede *</span>
+        <select class="form-select" (change)="onBranchChange($any($event.target).value)">
+          <option value="" [selected]="newBranchId() === null">Selecciona una sede</option>
+          @for (sede of sedes(); track sede.id) {
+            <option [value]="sede.id" [selected]="newBranchId() === sede.id">{{ sede.nombre }}</option>
+          }
+        </select>
+      </label>
+      <label class="dispositivos-field">
+        <span>Ubicación</span>
+        <input type="text" class="form-control" placeholder="Ingreso"
+               [value]="newUbicacion()" (input)="newUbicacion.set($any($event.target).value)">
+      </label>
+      <button type="button" class="btn btn-primary dispositivos-form__submit" [disabled]="saving()" (click)="crearDispositivo()">
+        {{ saving() ? 'Registrando…' : 'Registrar' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- LISTA -->
+  <section class="dispositivos-card">
+    <h2 class="dispositivos-card__title"><i class="bi bi-fingerprint me-2"></i>Lectores ({{ devices().length }})</h2>
+    @if (loading()) {
+      <p class="text-muted">Cargando…</p>
+    } @else if (devices().length === 0) {
+      <p class="text-muted">Aún no hay lectores registrados.</p>
+    } @else {
+      <div class="table-responsive">
+        <table class="table dispositivos-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Sede</th>
+              <th>Ubicación</th>
+              <th>Estado</th>
+              <th class="text-end">Agente</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (device of devices(); track device.id) {
+              <tr>
+                <td class="dispositivos-code">{{ device.code }}</td>
+                <td>{{ device.name ?? '—' }}</td>
+                <td>{{ device.branch_name ?? '—' }}</td>
+                <td>{{ device.ubicacion ?? '—' }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="device.state" [class.bg-secondary]="!device.state">
+                    {{ device.state ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td class="text-end dispositivos-actions">
+                  <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="issuing() === device.id"
+                          title="Generar uno nuevo revoca el anterior" (click)="emitirToken(device)">
+                    <i class="bi bi-key"></i> {{ issuing() === device.id ? 'Generando…' : 'Generar token' }}
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="revocarToken(device)">
+                    <i class="bi bi-x-octagon"></i> Revocar
+                  </button>
+                  @if (device.state) {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="desactivar(device)">
+                      Desactivar
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- TOKEN RECIÉN EMITIDO: solo se muestra esta vez -->
+  @if (issuedToken(); as issued) {
+    <div class="dispositivos-token-backdrop" role="dialog" aria-modal="true" aria-labelledby="token-title">
+      <div class="dispositivos-token">
+        <h2 id="token-title" class="dispositivos-card__title">
+          <i class="bi bi-shield-lock me-2"></i>Credencial del agente · {{ issued.device_code }}
+        </h2>
+        <p class="dispositivos-token__warning">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          Cópiala ahora: no se volverá a mostrar. Si se pierde, genera otra (la anterior deja de funcionar).
+        </p>
+
+        <dl class="dispositivos-token__fields">
+          <dt>Token del agente</dt>
+          <dd>
+            <code class="dispositivos-secret">{{ issued.token }}</code>
+            <button type="button" class="btn btn-sm btn-outline-primary" (click)="copiar(issued.token)">
+              <i class="bi bi-clipboard"></i> {{ copied() ? 'Copiado' : 'Copiar' }}
+            </button>
+          </dd>
+          <dt>Tenant ID</dt>
+          <dd><code>{{ issued.tenant_id }}</code></dd>
+          <dt>Código del lector</dt>
+          <dd><code>{{ issued.device_code }}</code></dd>
+          <dt>Huella SHA-256 de la clave del backend</dt>
+          <dd><code>{{ publicKeyFingerprint() ?? 'no disponible' }}</code></dd>
+        </dl>
+
+        <p class="text-muted mb-1">En el equipo del lector, como administrador:</p>
+        <pre class="dispositivos-command">{{ configureCommand() }}</pre>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="copiar(configureCommand())">
+          <i class="bi bi-clipboard"></i> Copiar comando
+        </button>
+
+        <div class="dispositivos-token__footer">
+          <button type="button" class="btn btn-primary" (click)="cerrarToken()">Ya lo guardé, cerrar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+}

@@ -94,6 +94,10 @@ export interface MiddlewareFingerprintEnrollResult {
   deviceId: string | null;
   capturedSamples: number;
   capturedAtUtc: string;
+  /** "backend": enrolamiento iniciado desde el panel y completado por el agente contra el servidor. */
+  source?: 'backend' | 'local';
+  tenantUserId?: number;
+  fingerIndex?: number;
 }
 
 export interface MiddlewareFingerprintEnrollProgress {
@@ -101,6 +105,9 @@ export interface MiddlewareFingerprintEnrollProgress {
   step: number;
   totalSteps: number;
   message: string;
+  source?: 'backend' | 'local';
+  tenantUserId?: number;
+  fingerIndex?: number;
 }
 
 export interface EncryptedPayload {

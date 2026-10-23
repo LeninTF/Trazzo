@@ -23,6 +23,11 @@ const SECTION_MAP: Record<string, SectionMeta> = {
 		subtitle: 'Administra las ubicaciones y la estructura física de la institución.',
 		icon: 'bi-building',
 	},
+	'/tenant/dispositivos': {
+		title: 'Dispositivos',
+		subtitle: 'Lectores de huella y la credencial con la que su agente marca la asistencia.',
+		icon: 'bi-fingerprint',
+	},
 	'/tenant/gestion-roles': {
 		title: 'Gestión de roles',
 		subtitle: 'Define permisos y niveles de acceso para cada perfil administrativo.',

@@ -539,6 +539,14 @@ export interface CreateDeviceRequest {
   ubicacion?: string | null;
 }
 
+/** Credencial del agente del lector: el token solo viaja en esta respuesta (el backend guarda su SHA-256). */
+export interface AgentTokenResponse {
+  token: string;
+  tenant_id: string;
+  device_code: string;
+  created_at: string;
+}
+
 export interface PatchDeviceRequest {
   name?: string | null;
   branch_id?: number;

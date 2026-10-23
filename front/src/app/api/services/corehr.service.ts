@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type {
-  DeviceProfile, DeviceListResponse,
+  DeviceProfile, DeviceListResponse, AgentTokenResponse,
   UserBiometriaProfile, UserBiometriaListResponse, EnrollSessionResponse, InitEnrollRequest,
   CompleteEnrollHttpRequest,
   AttendanceProfile, AttendanceListResponse, PatchAttendanceRequest,
@@ -41,6 +41,15 @@ export class CorehrService {
 
   deleteDevice(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiBase}/corehr/devices/${id}`);
+  }
+
+  /** Emite el token del agente del lector y revoca el anterior; el valor no se puede volver a consultar. */
+  issueAgentToken(id: number): Observable<AgentTokenResponse> {
+    return this.http.post<AgentTokenResponse>(`${this.apiBase}/corehr/devices/${id}/agent-token`, null);
+  }
+
+  revokeAgentToken(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiBase}/corehr/devices/${id}/agent-token`);
   }
 
   // ========== BIOMETRIA ==========

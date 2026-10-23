@@ -6,14 +6,13 @@ import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
 import { ApiService } from '../../../api/services/api.service';
 import { tenantUserToPersonal } from '../../../api/services/helpers';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom, map, switchMap, timer } from 'rxjs';
 import {
   MiddlewareWebSocketService,
   type MiddlewareFingerprintEnrollProgress,
   type MiddlewareFingerprintEnrollResult,
-  type MiddlewareFingerprintQuality,
 } from '../../../services/middleware-websocket.service';
-import { FingerprintStoreService } from '../../../services/fingerprint-store.service';
+import type { DeviceProfile } from '../../../api/types';
 
 export interface Personal {
   id: number;
@@ -45,6 +44,23 @@ interface LogEntry {
   type: 'info' | 'success' | 'error' | 'warn';
 }
 
+// La sesión de enrolamiento del backend dura 120 s; se espera un poco más por la latencia del agente.
+export const ENROLL_POLL_MS = 3000;
+export const ENROLL_TIMEOUT_MS = 130_000;
+
+export const DEDOS: ReadonlyArray<{ index: number; label: string }> = [
+  { index: 0, label: 'Pulgar derecho' },
+  { index: 1, label: 'Índice derecho' },
+  { index: 2, label: 'Medio derecho' },
+  { index: 3, label: 'Anular derecho' },
+  { index: 4, label: 'Meñique derecho' },
+  { index: 5, label: 'Pulgar izquierdo' },
+  { index: 6, label: 'Índice izquierdo' },
+  { index: 7, label: 'Medio izquierdo' },
+  { index: 8, label: 'Anular izquierdo' },
+  { index: 9, label: 'Meñique izquierdo' },
+];
+
 @Component({
   selector: 'app-directorio-personal',
   standalone: true,
@@ -58,7 +74,6 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   private readonly modalService = inject(ModalService);
   private readonly api = inject(ApiService);
   private readonly middlewareWs = inject(MiddlewareWebSocketService);
-  private readonly fingerprintStore = inject(FingerprintStoreService);
   readonly loading = signal(false);
   readonly error = signal('');
 
@@ -108,25 +123,27 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   // ==========================================
   // ENROLLMENT STATE
   // ==========================================
+  // El panel abre una sesión en el backend; el agente del lector elegido la toma (enroll/pendiente), captura
+  // y la completa. El panel confirma consultando las huellas del usuario y, si el agente corre en esta PC,
+  // muestra además el progreso que publica por WebSocket.
   modalEnrolarOpen: boolean = false;
   personaEnrolar: Personal | null = null;
 
+  readonly dedos = DEDOS;
   readonly enrolConnectionState = this.middlewareWs.connectionState.asReadonly();
+  readonly enrolDevices = signal<DeviceProfile[]>([]);
+  readonly enrolDeviceId = signal<number | null>(null);
+  readonly enrolFingerIndex = signal(1);
   readonly enrolOperationLabel = signal('');
   readonly enrolInProgress = signal(false);
   readonly enrolProgress = signal('');
-  readonly enrolFpImageUrl = signal<string | null>(null);
   readonly enrolFpStatus = signal('');
-  readonly enrolQuality = signal<MiddlewareFingerprintQuality | null>(null);
-  readonly enrolTemplateSize = signal(0);
-  readonly enrolTemplatePreview = signal('');
   readonly enrolLogs = signal<LogEntry[]>([]);
   readonly enrolCompleted = signal(false);
   readonly enrolSuccess = signal(false);
-  readonly enrolAwaitingReference = signal(false);
-  private enrolReferenceData: { templateBase64: string; templateSize: number } | null = null;
 
   private unsubscribeEnrol: (() => void)[] = [];
+  private enrolPolling: Subscription | null = null;
 
   // ==========================================
   // OPCIONES PARA FILTROS
@@ -152,6 +169,7 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopEnrollPolling();
     this.cleanupEnrollmentSubscriptions();
   }
 
@@ -399,25 +417,33 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   // ==========================================
 
   abrirModalEnrolar(persona: Personal): void {
+    this.stopEnrollPolling();
     this.personaEnrolar = persona;
     this.modalEnrolarOpen = true;
     this.enrolCompleted.set(false);
     this.enrolSuccess.set(false);
     this.enrolOperationLabel.set('');
     this.enrolInProgress.set(false);
-    this.enrolAwaitingReference.set(false);
-    this.enrolReferenceData = null;
     this.enrolProgress.set('');
-    this.enrolFpImageUrl.set(null);
-    this.enrolFpStatus.set('Preparando conexión...');
-    this.enrolQuality.set(null);
-    this.enrolTemplateSize.set(0);
-    this.enrolTemplatePreview.set('');
+    this.enrolFpStatus.set('Elige el lector y el dedo, y pulsa «Iniciar enrolamiento».');
     this.enrolLogs.set([]);
+    this.enrolDevices.set([]);
+    this.enrolDeviceId.set(null);
+    this.enrolFingerIndex.set(1);
 
-    this.addEnrolLog(`Iniciando enrolamiento para: ${persona.nombre}`, 'info');
-    this.addEnrolLog('Conectando al middleware biométrico...', 'info');
+    this.addEnrolLog(`Enrolamiento de huella para: ${persona.nombre}`, 'info');
+    this.api.corehr.listDevices({ state: true, size: 200 }).subscribe({
+      next: page => {
+        this.enrolDevices.set(page.content);
+        this.enrolDeviceId.set(page.content[0]?.id ?? null);
+        if (page.content.length === 0) {
+          this.enrolFpStatus.set('No hay lectores activos: regístralos en Dispositivos.');
+        }
+      },
+      error: () => this.enrolFpStatus.set('No se pudieron cargar los lectores.'),
+    });
 
+    // Opcional: si el agente corre en esta PC, su progreso llega por WebSocket.
     this.middlewareWs.connect();
     this.setupEnrollmentSubscriptions();
   }
@@ -425,12 +451,16 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   cerrarModalEnrolar(): void {
     this.modalEnrolarOpen = false;
     this.personaEnrolar = null;
-    this.enrolAwaitingReference.set(false);
-    this.enrolReferenceData = null;
+    this.stopEnrollPolling();
     this.cleanupEnrollmentSubscriptions();
-    if (this.enrolInProgress()) {
-      this.middlewareWs.send('fingerprint.enroll.cancel');
-    }
+  }
+
+  onEnrolDeviceChange(value: string): void {
+    this.enrolDeviceId.set(value ? Number(value) : null);
+  }
+
+  onEnrolFingerChange(value: string): void {
+    this.enrolFingerIndex.set(Number(value));
   }
 
   private setupEnrollmentSubscriptions(): void {
@@ -439,84 +469,34 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
     this.unsubscribeEnrol.push(
       this.middlewareWs.on('fingerprint.enroll.progress', (msg) => {
         const data = msg as MiddlewareFingerprintEnrollProgress;
+        if (!this.isOwnBackendEnrollment(data)) return;
         this.enrolProgress.set(`${data.step}/${data.totalSteps}`);
         this.enrolFpStatus.set(data.message || 'Coloca el dedo en el lector...');
-        this.enrolOperationLabel.set('Enrolando huella...');
-        this.enrolInProgress.set(true);
-        this.addEnrolLog(`Progreso: ${data.message}`, 'info');
+        this.enrolOperationLabel.set('Capturando en el lector...');
+        this.addEnrolLog(`Lector: ${data.message}`, 'info');
       })
     );
 
     this.unsubscribeEnrol.push(
       this.middlewareWs.on('fingerprint.enroll.result', (msg) => {
         const data = msg as MiddlewareFingerprintEnrollResult;
-        this.enrolCompleted.set(true);
-        this.enrolSuccess.set(data.success);
-        this.enrolProgress.set(data.success ? `${data.capturedSamples ?? 0}/3` : '—');
-        this.enrolTemplateSize.set(data.registeredTemplateSize);
-        this.enrolTemplatePreview.set(data.registeredTemplateBase64
-          ? `${data.registeredTemplateBase64.slice(0, 18)}…` : '(cifrado)');
-        this.enrolFpStatus.set(data.message || (data.success ? 'Enrolamiento completado.' : 'Enrolamiento fallido.'));
-        this.enrolOperationLabel.set(data.success ? 'Completado' : 'Fallido');
-        this.enrolInProgress.set(false);
-
-        if (data.success && this.personaEnrolar) {
-          const ref = this.enrolReferenceData ?? { templateBase64: '', templateSize: 0 };
-          this.fingerprintStore.save({
-            userId: this.personaEnrolar.id,
-            userName: this.personaEnrolar.nombre,
-            userDisplayId: this.personaEnrolar.idPersonal,
-            templateBase64: data.registeredTemplateBase64 || '',
-            templateSize: data.registeredTemplateSize,
-            referenceTemplateBase64: ref.templateBase64,
-            referenceTemplateSize: ref.templateSize,
-            encryptedTemplate: data.encryptedRegisteredTemplate
-              ? { encryptedTemplateBase64: data.encryptedRegisteredTemplate.encryptedTemplateBase64, encryptedAesKeyBase64: data.encryptedRegisteredTemplate.encryptedAesKeyBase64 }
-              : null,
-            enrolledAt: new Date().toISOString(),
-          });
-          this.enrolReferenceData = null;
-          this.addEnrolLog(`Enrolamiento exitoso para ${this.personaEnrolar.nombre}`, 'success');
-          this.addEnrolLog(`Tamaño de template: ${data.registeredTemplateSize} bytes — almacenado localmente`, 'success');
-          this.toastService.success(`Huella enrolada para ${this.personaEnrolar.nombre}`);
+        if (!this.isOwnBackendEnrollment(data)) return;
+        if (data.success) {
+          this.enrolFpStatus.set('Huella capturada. Confirmando con el servidor...');
+          this.addEnrolLog('El lector terminó la captura; esperando la confirmación del servidor.', 'info');
         } else {
-          this.addEnrolLog(`Enrolamiento fallido: ${data.message}`, 'error');
-          this.toastService.error(`Error al enrolar: ${data.message}`);
+          this.terminarEnrolamiento(false, data.message || 'El lector no pudo completar el enrolamiento.');
         }
       })
     );
+  }
 
-    this.unsubscribeEnrol.push(
-      this.middlewareWs.on('fingerprint.capture.result', (msg) => {
-        const data = msg as any;
-        if (data.fingerprintImageDataUrl) {
-          this.enrolFpImageUrl.set(data.fingerprintImageDataUrl);
-        }
-        if (data.quality) {
-          this.enrolQuality.set(data.quality);
-        }
-        if (this.enrolAwaitingReference()) {
-          this.enrolAwaitingReference.set(false);
-          if (data.success && data.templateBase64) {
-            this.enrolReferenceData = {
-              templateBase64: data.templateBase64,
-              templateSize: data.templateSize ?? 0,
-            };
-            this.addEnrolLog('Referencia capturada. Iniciando enrolamiento (3 capturas)...', 'info');
-            this.enrolOperationLabel.set('Enrolando huella...');
-            this.enrolFpStatus.set('Coloca el dedo para captura 1 de 3...');
-            this.middlewareWs.send('fingerprint.enroll.start');
-          } else {
-            this.addEnrolLog('Fallo captura de referencia. Reintente.', 'error');
-            this.enrolFpStatus.set(data.message || 'Error capturando referencia.');
-            this.enrolOperationLabel.set('Error');
-            this.enrolInProgress.set(false);
-            this.enrolCompleted.set(true);
-            this.enrolSuccess.set(false);
-          }
-        }
-      })
-    );
+  // Solo cuenta lo que el agente publica para la sesión abierta de esta persona y este dedo.
+  private isOwnBackendEnrollment(data: { source?: string; tenantUserId?: number; fingerIndex?: number }): boolean {
+    return this.enrolInProgress()
+      && data.source === 'backend'
+      && data.tenantUserId === this.personaEnrolar?.id
+      && (data.fingerIndex === undefined || data.fingerIndex === this.enrolFingerIndex());
   }
 
   private cleanupEnrollmentSubscriptions(): void {
@@ -525,21 +505,75 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
   }
 
   iniciarEnrolamiento(): void {
-    if (this.enrolInProgress()) return;
+    const persona = this.personaEnrolar;
+    if (this.enrolInProgress() || !persona) return;
+    const deviceId = this.enrolDeviceId();
+    if (deviceId == null) {
+      this.toastService.error('Elige el lector en el que se va a enrolar la huella.');
+      return;
+    }
+    const fingerIndex = this.enrolFingerIndex();
     this.enrolCompleted.set(false);
     this.enrolSuccess.set(false);
     this.enrolProgress.set('0/3');
-    this.enrolFpImageUrl.set(null);
-    this.enrolQuality.set(null);
-    this.enrolTemplateSize.set(0);
-    this.enrolTemplatePreview.set('');
-    this.enrolReferenceData = null;
-    this.enrolOperationLabel.set('Capturando referencia...');
     this.enrolInProgress.set(true);
-    this.enrolAwaitingReference.set(true);
-    this.enrolFpStatus.set('Coloca el dedo para captura de referencia...');
-    this.addEnrolLog('Capturando huella de referencia (1 de 4)...', 'info');
-    this.middlewareWs.send('fingerprint.capture');
+    this.enrolOperationLabel.set('Abriendo sesión...');
+    this.enrolFpStatus.set('Abriendo la sesión de enrolamiento en el servidor...');
+
+    // Las huellas que ya tenía: la nueva es la que aparezca después para ese dedo.
+    this.api.corehr.listBiometria({ tenant_user_id: persona.id, activo: true, size: 50 }).pipe(
+      switchMap(before => this.api.corehr.initEnroll({ tenant_user_id: persona.id, device_id: deviceId, finger_index: fingerIndex })
+        .pipe(map(session => ({ knownIds: new Set(before.content.map(b => b.id)), session })))),
+    ).subscribe({
+      next: ({ knownIds, session }) => {
+        this.enrolOperationLabel.set('Esperando al lector...');
+        this.enrolFpStatus.set(`Ve al lector ${session.device_code} y coloca el dedo cuando lo pida (3 capturas).`);
+        this.addEnrolLog(`Sesión abierta en el lector ${session.device_code}.`, 'info');
+        this.esperarHuella(persona, fingerIndex, knownIds);
+      },
+      error: err => this.terminarEnrolamiento(false, err?.error?.message ?? 'No se pudo iniciar el enrolamiento.'),
+    });
+  }
+
+  // El servidor es la fuente de verdad: la huella está enrolada cuando aparece activa para ese dedo.
+  private esperarHuella(persona: Personal, fingerIndex: number, knownIds: Set<number>): void {
+    this.stopEnrollPolling();
+    const startedAt = Date.now();
+    this.enrolPolling = timer(ENROLL_POLL_MS, ENROLL_POLL_MS).pipe(
+      switchMap(() => this.api.corehr.listBiometria({ tenant_user_id: persona.id, activo: true, size: 50 })),
+    ).subscribe({
+      next: page => {
+        const enrolled = page.content.find(b => b.finger_index === fingerIndex && !knownIds.has(b.id));
+        if (enrolled) {
+          this.terminarEnrolamiento(true, `Huella enrolada en el lector ${enrolled.device_code ?? ''}`.trim() + '.');
+        } else if (Date.now() - startedAt >= ENROLL_TIMEOUT_MS) {
+          this.terminarEnrolamiento(false, 'El lector no completó el enrolamiento a tiempo. Vuelve a intentarlo.');
+        }
+      },
+      error: () => this.terminarEnrolamiento(false, 'Se perdió la conexión con el servidor durante el enrolamiento.'),
+    });
+  }
+
+  private terminarEnrolamiento(success: boolean, message: string): void {
+    this.stopEnrollPolling();
+    this.enrolInProgress.set(false);
+    this.enrolCompleted.set(true);
+    this.enrolSuccess.set(success);
+    this.enrolOperationLabel.set(success ? 'Completado' : 'Fallido');
+    this.enrolFpStatus.set(message);
+    if (success) {
+      this.enrolProgress.set('3/3');
+      this.addEnrolLog(message, 'success');
+      this.toastService.success(`Huella enrolada para ${this.personaEnrolar?.nombre ?? 'el usuario'}`);
+    } else {
+      this.addEnrolLog(message, 'error');
+      this.toastService.error(`Error al enrolar: ${message}`);
+    }
+  }
+
+  private stopEnrollPolling(): void {
+    this.enrolPolling?.unsubscribe();
+    this.enrolPolling = null;
   }
 
   reintentarEnrolamiento(): void {
@@ -548,15 +582,14 @@ export class DirectorioPersonal implements OnInit, OnDestroy {
     this.iniciarEnrolamiento();
   }
 
+  // La sesión del servidor no se puede cerrar desde aquí: caduca sola.
   cancelarEnrolamiento(): void {
     if (!this.enrolInProgress()) return;
-    this.enrolAwaitingReference.set(false);
-    this.enrolReferenceData = null;
-    this.addEnrolLog('Cancelando enrolamiento...', 'warn');
-    this.middlewareWs.send('fingerprint.enroll.cancel');
+    this.stopEnrollPolling();
     this.enrolInProgress.set(false);
     this.enrolOperationLabel.set('Cancelado');
-    this.enrolFpStatus.set('Enrolamiento cancelado.');
+    this.enrolFpStatus.set('Enrolamiento cancelado. La sesión del lector caduca sola en unos minutos.');
+    this.addEnrolLog('Enrolamiento cancelado en el panel.', 'warn');
   }
 
   private addEnrolLog(message: string, type: LogEntry['type'] = 'info'): void {

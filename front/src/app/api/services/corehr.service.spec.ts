@@ -63,6 +63,22 @@ describe('CorehrService', () => {
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
+
+    it('should issue the agent token of a device', () => {
+      let token = '';
+      service.issueAgentToken(7).subscribe(r => (token = r.token));
+      const req = httpMock.expectOne(`${apiBase}/corehr/devices/7/agent-token`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ token: 'trzd_x', tenant_id: 't', device_code: 'ZK-007', created_at: '2026-10-23T09:00:00' });
+      expect(token).toBe('trzd_x');
+    });
+
+    it('should revoke the agent token of a device', () => {
+      service.revokeAgentToken(7).subscribe();
+      const req = httpMock.expectOne(`${apiBase}/corehr/devices/7/agent-token`);
+      expect(req.request.method).toBe('DELETE');
+      req.flush(null);
+    });
   });
 
   describe('biometria', () => {

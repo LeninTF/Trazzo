@@ -427,13 +427,10 @@
         <!-- Status grid -->
         <div class="enroll-status-grid">
           <div class="enroll-status-box">
-            <span class="label">Conexión WS</span>
+            <span class="label">Agente en esta PC</span>
             <span class="value" [class.ok]="enrolConnectionState() === 'connected'"
-                  [class.err]="enrolConnectionState() === 'disconnected'"
-                  [class.warn]="enrolConnectionState() === 'connecting' || enrolConnectionState() === 'reconnecting'">
-              {{ enrolConnectionState() === 'connected' ? 'Conectado' :
-                 enrolConnectionState() === 'connecting' ? 'Conectando...' :
-                 enrolConnectionState() === 'reconnecting' ? 'Reconectando...' : 'Desconectado' }}
+                  [class.warn]="enrolConnectionState() !== 'connected'">
+              {{ enrolConnectionState() === 'connected' ? 'Conectado (progreso en vivo)' : 'No conectado (se confirma con el servidor)' }}
             </span>
           </div>
           <div class="enroll-status-box">
@@ -444,17 +441,39 @@
             <span class="label">Progreso</span>
             <span class="value">{{ enrolProgress() || '—' }}</span>
           </div>
-          <div class="enroll-status-box">
-            <span class="label">Lector ZK9500</span>
-            <span class="value" [class.ok]="enrolConnectionState() === 'connected'">Conectado</span>
-          </div>
+        </div>
+
+        <!-- Lector y dedo -->
+        <div class="enroll-target">
+          <label class="enroll-target__field">
+            <span>Lector</span>
+            <select class="form-select" [disabled]="enrolInProgress() || enrolDevices().length === 0"
+                    (change)="onEnrolDeviceChange($any($event.target).value)">
+              @for (device of enrolDevices(); track device.id) {
+                <option [value]="device.id" [selected]="enrolDeviceId() === device.id">
+                  {{ device.code }}{{ device.name ? ' · ' + device.name : '' }}
+                </option>
+              } @empty {
+                <option value="">Sin lectores activos</option>
+              }
+            </select>
+          </label>
+          <label class="enroll-target__field">
+            <span>Dedo</span>
+            <select class="form-select" [disabled]="enrolInProgress()"
+                    (change)="onEnrolFingerChange($any($event.target).value)">
+              @for (dedo of dedos; track dedo.index) {
+                <option [value]="dedo.index" [selected]="enrolFingerIndex() === dedo.index">{{ dedo.label }}</option>
+              }
+            </select>
+          </label>
         </div>
 
         <!-- Toolbar -->
         <div class="enroll-toolbar">
           @if (!enrolCompleted()) {
             <button class="btn-enroll primary" (click)="iniciarEnrolamiento()"
-                    [disabled]="enrolConnectionState() !== 'connected' || enrolInProgress()">
+                    [disabled]="enrolDeviceId() === null || enrolInProgress()">
               <i class="bi bi-play-fill"></i> Iniciar enrolamiento
             </button>
             <button class="btn-enroll danger" (click)="cancelarEnrolamiento()"
@@ -472,53 +491,15 @@
           }
         </div>
 
-        <!-- Main content: preview + log -->
+        <!-- Main content: estado + log -->
         <div class="enroll-content">
-          <!-- Fingerprint preview -->
           <div class="enroll-fp-section">
             <div class="enroll-fp-status">{{ enrolFpStatus() || 'Esperando instrucción...' }}</div>
             <div class="enroll-fp-preview">
-              @if (enrolFpImageUrl(); as imgUrl) {
-                <img [src]="imgUrl" alt="Huella" class="enroll-fp-image" />
-              } @else {
-                <div class="enroll-fp-empty">
-                  <i class="bi bi-hand-index-thumb"></i>
-                  <span>Sin captura</span>
-                </div>
-              }
-            </div>
-            <div class="enroll-quality">
-              @if (enrolQuality(); as q) {
-                <div class="quality-row">
-                  <span class="label">Calidad</span>
-                  <strong>{{ q.isAcceptable ? 'Aceptable' : 'No aceptable' }}</strong>
-                </div>
-                <div class="quality-row">
-                  <span class="label">Cobertura</span>
-                  <strong>{{ q.foregroundCoveragePercent.toFixed(1) }}%</strong>
-                </div>
-                <div class="quality-row">
-                  <span class="label">Contraste</span>
-                  <strong>{{ q.contrastScore.toFixed(1) }}</strong>
-                </div>
-                <div class="quality-row">
-                  <span class="label">Centrada</span>
-                  <strong>{{ q.isCentered ? 'Sí' : 'No' }}</strong>
-                </div>
-                <div class="quality-row">
-                  <span class="label">Mensaje</span>
-                  <strong>{{ q.message }}</strong>
-                </div>
-              } @else {
-                <div class="quality-row">
-                  <span class="label">Tamaño de template</span>
-                  <strong>{{ enrolTemplateSize() > 0 ? enrolTemplateSize() + ' bytes' : '—' }}</strong>
-                </div>
-                <div class="quality-row">
-                  <span class="label">Vista del template</span>
-                  <strong>{{ enrolTemplatePreview() || '—' }}</strong>
-                </div>
-              }
+              <div class="enroll-fp-empty">
+                <i class="bi bi-fingerprint"></i>
+                <span>La huella se captura en el lector elegido</span>
+              </div>
             </div>
           </div>
 

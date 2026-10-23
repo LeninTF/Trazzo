@@ -3,8 +3,13 @@ import { authGuard } from './auth/auth.guard';
 import { roleGuard } from './auth/role.guard';
 
 describe('app.routes', () => {
-  it('should have 38 route definitions', () => {
-    expect(routes.length).toBe(38);
+  it('should have 39 route definitions', () => {
+    expect(routes.length).toBe(39);
+  });
+
+  it('should guard the devices screen like the rest of the tenant panel', () => {
+    const devices = routes.find(r => r.path === 'tenant/dispositivos');
+    expect(devices?.canActivate).toEqual([authGuard, roleGuard]);
   });
 
   it('should define public routes', () => {
@@ -32,6 +37,7 @@ describe('app.routes', () => {
     expect(paths).toContain('tenant/configuracion-tenant');
     expect(paths).toContain('tenant/planes');
     expect(paths).toContain('tenant/directorio-personal');
+    expect(paths).toContain('tenant/dispositivos');
     expect(paths).toContain('tenant/gestion-horarios');
     expect(paths).toContain('tenant/perfil');
     expect(paths).toContain('tenant/cierres-mensuales');

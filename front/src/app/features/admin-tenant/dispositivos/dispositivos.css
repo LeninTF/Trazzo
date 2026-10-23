@@ -1,0 +1,129 @@
+.dispositivos-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.dispositivos-error {
+  min-height: 400px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.dispositivos-error .bi {
+  font-size: 3rem;
+}
+
+.dispositivos-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dispositivos-subtitle {
+  color: var(--text-muted, #6c757d);
+  margin: 0.25rem 0 0;
+}
+
+.dispositivos-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.dispositivos-card__title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+
+.dispositivos-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.dispositivos-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.dispositivos-code,
+.dispositivos-secret,
+.dispositivos-command {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.dispositivos-actions {
+  white-space: nowrap;
+}
+
+.dispositivos-actions .btn + .btn {
+  margin-left: 0.35rem;
+}
+
+.dispositivos-token-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1050;
+}
+
+.dispositivos-token {
+  background: var(--surface, #fff);
+  border-radius: 12px;
+  max-width: 720px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.dispositivos-token__warning {
+  background: #fff7e6;
+  border: 1px solid #f5c26b;
+  border-radius: 8px;
+  color: #8a5a00;
+  padding: 0.6rem 0.8rem;
+}
+
+.dispositivos-token__fields dt {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6c757d);
+  margin-top: 0.6rem;
+}
+
+.dispositivos-token__fields dd {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.15rem 0 0;
+  word-break: break-all;
+}
+
+.dispositivos-command {
+  background: #0f172a;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.dispositivos-token__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}

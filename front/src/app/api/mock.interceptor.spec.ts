@@ -670,6 +670,36 @@ describe('mockInterceptor', () => {
     });
   });
 
+  it('should mock POST /corehr/devices/{id}/agent-token with a one-time device token', (done) => {
+    const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/corehr/devices/1/agent-token', null);
+    mockInterceptor(req, next).subscribe(res => {
+      const r = res as HttpResponse<any>;
+      expect(r.status).toBe(201);
+      expect(r.body.token).toMatch(/^trzd_[A-Za-z0-9_-]{43}$/);
+      expect(r.body.device_code).toBeTruthy();
+      expect(r.body.tenant_id).toBeTruthy();
+      done();
+    });
+  });
+
+  it('should mock DELETE /corehr/devices/{id}/agent-token', (done) => {
+    const req = new HttpRequest('DELETE', 'https://api.trazzo.pe/api/v1/corehr/devices/1/agent-token');
+    mockInterceptor(req, next).subscribe(res => {
+      expect((res as HttpResponse<any>).status).toBe(204);
+      done();
+    });
+  });
+
+  it('should mock the agent token of an unknown device as not found', (done) => {
+    const req = new HttpRequest('POST', 'https://api.trazzo.pe/api/v1/corehr/devices/999/agent-token', null);
+    mockInterceptor(req, next).subscribe({
+      error: (err) => {
+        expect(err.status).toBe(404);
+        done();
+      },
+    });
+  });
+
   it('should mock GET /corehr/devices/{id} not found', (done) => {
     const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/corehr/devices/999');
     mockInterceptor(req, next).subscribe({

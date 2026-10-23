@@ -1,11 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { DirectorioPersonal } from './directorio-personal';
+import { DirectorioPersonal, ENROLL_POLL_MS, ENROLL_TIMEOUT_MS } from './directorio-personal';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
 import { MiddlewareWebSocketService } from '../../../services/middleware-websocket.service';
-import { FingerprintStoreService } from '../../../services/fingerprint-store.service';
 import { of, throwError } from 'rxjs';
 import { fakeAsync, tick } from '@angular/core/testing';
 
@@ -13,7 +12,6 @@ describe('DirectorioPersonal', () => {
   let component: DirectorioPersonal;
   let fixture: ComponentFixture<DirectorioPersonal>;
   let middlewareWs: MiddlewareWebSocketService;
-  let fingerprintStore: FingerprintStoreService;
 
   const mockUsersResponse = {
     content: [
@@ -43,7 +41,22 @@ describe('DirectorioPersonal', () => {
     page: 0, size: 100, totalElements: 2, totalPages: 1,
   };
 
+  const enrolDevice = (id: number, code: string) => ({
+    id, code, name: `Lector ${id}`, branch_id: 1, branch_name: 'Sede San Isidro',
+    ip: null, puerto: null, ubicacion: null, state: true, created_at: '2026-10-01T08:00:00',
+  });
+  const enrolSession = {
+    enroll_token: 'tok-1', tenant_user_id: 1, device_id: 7, finger_index: 1, device_code: 'ZK-007',
+    expires_at: '2026-10-23T09:02:00',
+  };
+  const enrolPage = (content: any[]) => ({ content, page: 0, size: 200, totalElements: content.length, totalPages: 1 });
+
   const mockApi = {
+    corehr: {
+      listDevices: jasmine.createSpy('listDevices'),
+      listBiometria: jasmine.createSpy('listBiometria'),
+      initEnroll: jasmine.createSpy('initEnroll'),
+    },
     users: {
       list: jasmine.createSpy('list').and.returnValue(of(mockUsersResponse)),
       create: jasmine.createSpy('create').and.returnValue(of(mockUsersResponse.content[0])),
@@ -74,6 +87,14 @@ describe('DirectorioPersonal', () => {
     mockApi.users.create.calls.reset();
     mockApi.users.patch.calls.reset();
     mockApi.users.delete.calls.reset();
+    mockApi.corehr.listDevices.calls.reset();
+    mockApi.corehr.listBiometria.calls.reset();
+    mockApi.corehr.initEnroll.calls.reset();
+    mockApi.corehr.listDevices.and.returnValue(of(enrolPage([enrolDevice(7, 'ZK-007'), enrolDevice(8, 'ZK-008')])));
+    mockApi.corehr.listBiometria.and.returnValue(of(enrolPage([])));
+    mockApi.corehr.initEnroll.and.returnValue(of(enrolSession));
+    mockToast.success.calls.reset();
+    mockToast.error.calls.reset();
     await TestBed.configureTestingModule({
       imports: [DirectorioPersonal],
       providers: [
@@ -87,12 +108,7 @@ describe('DirectorioPersonal', () => {
     fixture = TestBed.createComponent(DirectorioPersonal);
     component = fixture.componentInstance;
     middlewareWs = TestBed.inject(MiddlewareWebSocketService);
-    fingerprintStore = TestBed.inject(FingerprintStoreService);
     fixture.detectChanges();
-  });
-
-  afterEach(() => {
-    fingerprintStore.clear();
   });
 
   it('should create', () => {
@@ -368,78 +384,6 @@ describe('DirectorioPersonal', () => {
     });
   });
 
-  describe('enrollment modal', () => {
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    it('should open enrollment modal and connect middleware', () => {
-      const connectSpy = spyOn(middlewareWs, 'connect');
-      component.abrirModalEnrolar(mockPersona);
-      expect(component.modalEnrolarOpen).toBeTrue();
-      expect(component.personaEnrolar).toBe(mockPersona);
-      expect(component.enrolCompleted()).toBeFalse();
-      expect(component.enrolSuccess()).toBeFalse();
-      expect(component.enrolFpStatus()).toBe('Preparando conexión...');
-      expect(connectSpy).toHaveBeenCalled();
-    });
-
-    it('should close enrollment modal and cancel ongoing enrollment', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolInProgress.set(true);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cerrarModalEnrolar();
-      expect(component.modalEnrolarOpen).toBeFalse();
-      expect(component.personaEnrolar).toBeNull();
-      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
-    });
-
-    it('should close enrollment modal without cancel if not in progress', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cerrarModalEnrolar();
-      expect(sendSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('iniciarEnrolamiento', () => {
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    it('should send fingerprint.capture when starting enrollment', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.iniciarEnrolamiento();
-      expect(component.enrolInProgress()).toBeTrue();
-      expect(component.enrolAwaitingReference()).toBeTrue();
-      expect(component.enrolOperationLabel()).toBe('Capturando referencia...');
-      expect(sendSpy).toHaveBeenCalledWith('fingerprint.capture');
-    });
-
-    it('should not start if already in progress', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolInProgress.set(true);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.iniciarEnrolamiento();
-      expect(sendSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('cancelarEnrolamiento', () => {
-    it('should cancel enrollment and reset state', () => {
-      component.enrolInProgress.set(true);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cancelarEnrolamiento();
-      expect(component.enrolInProgress()).toBeFalse();
-      expect(component.enrolOperationLabel()).toBe('Cancelado');
-      expect(component.enrolFpStatus()).toBe('Enrolamiento cancelado.');
-      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
-    });
-
-    it('should not cancel if not in progress', () => {
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cancelarEnrolamiento();
-      expect(sendSpy).not.toHaveBeenCalled();
-    });
-  });
-
   describe('addEnrolLog', () => {
     it('should add log entries', () => {
       (component as any).addEnrolLog('test message', 'info');
@@ -502,15 +446,13 @@ describe('DirectorioPersonal', () => {
       expect(freshComponent.enrolOperationLabel()).toBe('');
       expect(freshComponent.enrolInProgress()).toBeFalse();
       expect(freshComponent.enrolProgress()).toBe('');
-      expect(freshComponent.enrolFpImageUrl()).toBeNull();
       expect(freshComponent.enrolFpStatus()).toBe('');
-      expect(freshComponent.enrolQuality()).toBeNull();
-      expect(freshComponent.enrolTemplateSize()).toBe(0);
-      expect(freshComponent.enrolTemplatePreview()).toBe('');
       expect(freshComponent.enrolLogs()).toEqual([]);
       expect(freshComponent.enrolCompleted()).toBeFalse();
       expect(freshComponent.enrolSuccess()).toBeFalse();
-      expect(freshComponent.enrolAwaitingReference()).toBeFalse();
+      expect(freshComponent.enrolDevices()).toEqual([]);
+      expect(freshComponent.enrolDeviceId()).toBeNull();
+      expect(freshComponent.enrolFingerIndex()).toBe(1);
     });
 
     afterEach(() => {
@@ -678,58 +620,6 @@ describe('DirectorioPersonal', () => {
     });
   });
 
-  describe('cerrarModalEnrolar - branch coverage', () => {
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    it('should reset awaitingReference and referenceData when closing', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolAwaitingReference.set(true);
-      spyOn(middlewareWs, 'send');
-      component.cerrarModalEnrolar();
-      expect(component.enrolAwaitingReference()).toBeFalse();
-      expect(component.modalEnrolarOpen).toBeFalse();
-      expect(component.personaEnrolar).toBeNull();
-    });
-
-    it('should send cancel when enrolInProgress is true', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolInProgress.set(true);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cerrarModalEnrolar();
-      expect(sendSpy).toHaveBeenCalledWith('fingerprint.enroll.cancel');
-    });
-
-    it('should not send cancel when enrolInProgress is false', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.cerrarModalEnrolar();
-      expect(sendSpy).not.toHaveBeenCalledWith('fingerprint.enroll.cancel');
-    });
-  });
-
-  describe('iniciarEnrolamiento - guard branch', () => {
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    it('should early return when enrolInProgress is true', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolInProgress.set(true);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.iniciarEnrolamiento();
-      expect(sendSpy).not.toHaveBeenCalled();
-      expect(component.enrolOperationLabel()).not.toBe('Capturando referencia...');
-    });
-
-    it('should proceed normally when enrolInProgress is false', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.enrolInProgress.set(false);
-      const sendSpy = spyOn(middlewareWs, 'send');
-      component.iniciarEnrolamiento();
-      expect(sendSpy).toHaveBeenCalledWith('fingerprint.capture');
-      expect(component.enrolInProgress()).toBeTrue();
-      expect(component.enrolAwaitingReference()).toBeTrue();
-    });
-  });
-
   describe('inicioRegistro and finRegistro getters', () => {
     beforeEach(() => {
       setMockPersonal();
@@ -763,9 +653,17 @@ describe('DirectorioPersonal', () => {
     });
   });
 
-  describe('enrollment result handler - fingerprint.enroll.result', () => {
+
+  // El panel abre la sesión en el backend; el agente del lector la completa y el panel lo confirma consultando
+  // las huellas activas del usuario. El progreso por WebSocket solo llega si el agente corre en esta PC.
+  describe('enrolamiento desde el panel (backend)', () => {
     let handlers: Record<string, (msg: any) => void>;
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: 'Sede San Isidro', area: 'Dirección', departamento: 'Matemáticas', cargo: '', estado: 'ACTIVO' as const };
+    const persona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
+    const biometria = (id: number, fingerIndex: number) => ({
+      id, tenant_user_id: 1, device_id: 7, device_code: 'ZK-007', finger_index: fingerIndex, activo: true,
+      capturado_en: null, created_at: '2026-10-23T09:00:00', updated_at: '2026-10-23T09:00:00',
+    });
+    const page = (content: any[]) => ({ content, page: 0, size: 50, totalElements: content.length, totalPages: 1 });
 
     beforeEach(() => {
       handlers = {};
@@ -775,413 +673,180 @@ describe('DirectorioPersonal', () => {
         handlers[type] = handler;
         return () => {};
       });
+      mockApi.corehr.listBiometria.and.returnValue(of(page([biometria(20, 3)])));
     });
 
-    it('should save to fingerprintStore on success with personaEnrolar', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'Enrolamiento completado',
-        registeredTemplateBase64: 'abc123template',
-        encryptedRegisteredTemplate: {
-          encryptedTemplateBase64: 'encTemplate',
-          encryptedAesKeyBase64: 'encKey',
-          ivBase64: 'iv',
-          tagBase64: 'tag',
-        },
-        registeredTemplateSize: 512,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
+    afterEach(() => component.cerrarModalEnrolar());
+
+    it('al abrir carga los lectores activos y elige el primero', () => {
+      component.abrirModalEnrolar(persona);
+
+      expect(mockApi.corehr.listDevices).toHaveBeenCalledWith({ state: true, size: 200 });
+      expect(component.enrolDevices().map(d => d.code)).toEqual(['ZK-007', 'ZK-008']);
+      expect(component.enrolDeviceId()).toBe(7);
+      expect(component.enrolFingerIndex()).toBe(1);
+      expect(middlewareWs.connect).toHaveBeenCalled();
+    });
+
+    it('sin lectores activos no se puede iniciar', () => {
+      mockApi.corehr.listDevices.and.returnValue(of(page([])));
+      component.abrirModalEnrolar(persona);
+
+      component.iniciarEnrolamiento();
+
+      expect(component.enrolFpStatus()).toContain('No hay lectores activos');
+      expect(mockApi.corehr.initEnroll).not.toHaveBeenCalled();
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it('inicia la sesión en el backend con el lector y el dedo elegidos', () => {
+      component.abrirModalEnrolar(persona);
+      component.onEnrolDeviceChange('8');
+      component.onEnrolFingerChange('6');
+
+      component.iniciarEnrolamiento();
+
+      expect(mockApi.corehr.initEnroll).toHaveBeenCalledWith({ tenant_user_id: 1, device_id: 8, finger_index: 6 });
+      expect(component.enrolInProgress()).toBeTrue();
+      expect(component.enrolFpStatus()).toContain('ZK-007');
+      expect(middlewareWs.send).not.toHaveBeenCalled();
+    });
+
+    it('confirma el enrolamiento cuando la huella nueva aparece en el servidor y deja de consultar', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
+
+      tick(ENROLL_POLL_MS);
+      expect(component.enrolInProgress()).toBeTrue();
+
+      mockApi.corehr.listBiometria.and.returnValue(of(page([biometria(20, 3), biometria(21, 1)])));
+      tick(ENROLL_POLL_MS);
+
       expect(component.enrolCompleted()).toBeTrue();
       expect(component.enrolSuccess()).toBeTrue();
+      expect(mockToast.success).toHaveBeenCalled();
+      const calls = mockApi.corehr.listBiometria.calls.count();
+      tick(ENROLL_POLL_MS * 3);
+      expect(mockApi.corehr.listBiometria.calls.count()).toBe(calls);
+    }));
+
+    it('una huella de otro dedo no cuenta como el enrolamiento pedido', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
+      mockApi.corehr.listBiometria.and.returnValue(of(page([biometria(20, 3), biometria(22, 4)])));
+
+      tick(ENROLL_POLL_MS);
+
+      expect(component.enrolCompleted()).toBeFalse();
+      expect(component.enrolInProgress()).toBeTrue();
+      component.cancelarEnrolamiento();
+    }));
+
+    it('muestra el rechazo del backend al iniciar', () => {
+      mockApi.corehr.initEnroll.and.returnValue(throwError(() => ({
+        status: 400, error: { message: 'Ya existe una sesión de enrolamiento activa para este usuario y dispositivo' },
+      })));
+      component.abrirModalEnrolar(persona);
+
+      component.iniciarEnrolamiento();
+
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeFalse();
       expect(component.enrolInProgress()).toBeFalse();
-      expect(component.enrolTemplateSize()).toBe(512);
-      expect(component.enrolOperationLabel()).toBe('Completado');
-      expect(fingerprintStore.count).toBe(1);
-      expect(mockToast.success).toHaveBeenCalled();
+      expect(component.enrolFpStatus()).toContain('Ya existe una sesión');
     });
 
-    it('should save to fingerprintStore with null encryptedRegisteredTemplate', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'OK',
-        registeredTemplateBase64: 'tpl',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(fingerprintStore.count).toBe(1);
-      expect(mockToast.success).toHaveBeenCalled();
-    });
+    it('si el lector no completa a tiempo, falla y deja de consultar', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
 
-    it('should save with fallback when registeredTemplateBase64 is null', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'OK',
-        registeredTemplateBase64: null,
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 0,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(fingerprintStore.count).toBe(1);
-      expect(component.enrolTemplatePreview()).toBe('(cifrado)');
-    });
+      tick(ENROLL_TIMEOUT_MS + ENROLL_POLL_MS);
 
-    it('should show template preview when registeredTemplateBase64 is present', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'OK',
-        registeredTemplateBase64: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(component.enrolTemplatePreview()).toContain('…');
-    });
+      expect(component.enrolCompleted()).toBeTrue();
+      expect(component.enrolSuccess()).toBeFalse();
+      expect(component.enrolFpStatus()).toContain('a tiempo');
+      const calls = mockApi.corehr.listBiometria.calls.count();
+      tick(ENROLL_POLL_MS * 3);
+      expect(mockApi.corehr.listBiometria.calls.count()).toBe(calls);
+    }));
 
-    it('should use capturedSamples in progress display', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'OK',
-        registeredTemplateBase64: 'tpl',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: 2,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
+    it('muestra el progreso que publica el agente local para esta persona', () => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
+
+      handlers['fingerprint.enroll.progress']({
+        type: 'fingerprint.enroll.progress', step: 2, totalSteps: 3, message: 'Captura 2 de 3',
+        source: 'backend', tenantUserId: 1, fingerIndex: 1,
+      });
+
       expect(component.enrolProgress()).toBe('2/3');
+      expect(component.enrolFpStatus()).toBe('Captura 2 de 3');
     });
 
-    it('should default capturedSamples to 0 when null', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'OK',
-        registeredTemplateBase64: 'tpl',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: null,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
+    it('ignora el progreso de otro enrolamiento del agente', () => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
+
+      handlers['fingerprint.enroll.progress']({
+        type: 'fingerprint.enroll.progress', step: 2, totalSteps: 3, message: 'Captura 2 de 3',
+        source: 'backend', tenantUserId: 99, fingerIndex: 1,
+      });
+
       expect(component.enrolProgress()).toBe('0/3');
     });
 
-    it('should use message fallback when message is empty on success', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: '',
-        registeredTemplateBase64: 'tpl',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(component.enrolFpStatus()).toBe('Enrolamiento completado.');
-    });
+    it('un fallo que publica el agente termina el enrolamiento sin esperar al servidor', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
 
-    it('should use message fallback when message is empty on failure', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: false,
-        message: '',
-        registeredTemplateBase64: null,
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 0,
-        deviceId: 'dev1',
-        capturedSamples: 0,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(component.enrolFpStatus()).toBe('Enrolamiento fallido.');
-      expect(component.enrolOperationLabel()).toBe('Fallido');
-      expect(mockToast.error).toHaveBeenCalled();
-    });
-
-    it('should handle failure when personaEnrolar is null', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.personaEnrolar = null;
-      const resultData = {
-        type: 'fingerprint.enroll.result',
-        success: true,
-        message: 'Done',
-        registeredTemplateBase64: 'tpl',
-        encryptedRegisteredTemplate: null,
-        registeredTemplateSize: 100,
-        deviceId: 'dev1',
-        capturedSamples: 3,
-        capturedAtUtc: new Date().toISOString(),
-      };
-      handlers['fingerprint.enroll.result'](resultData);
-      expect(component.enrolCompleted()).toBeTrue();
-      expect(component.enrolSuccess()).toBeTrue();
-      expect(fingerprintStore.count).toBe(0);
-      expect(mockToast.error).toHaveBeenCalled();
-    });
-
-    it('should show enrol progress on enroll.progress event', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const progressData = {
-        type: 'fingerprint.enroll.progress',
-        step: 2,
-        totalSteps: 3,
-        message: 'Coloca el dedo',
-      };
-      handlers['fingerprint.enroll.progress'](progressData);
-      expect(component.enrolProgress()).toBe('2/3');
-      expect(component.enrolFpStatus()).toBe('Coloca el dedo');
-      expect(component.enrolInProgress()).toBeTrue();
-      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
-    });
-
-    it('should default progress message when message is empty', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const progressData = {
-        type: 'fingerprint.enroll.progress',
-        step: 1,
-        totalSteps: 3,
-        message: '',
-      };
-      handlers['fingerprint.enroll.progress'](progressData);
-      expect(component.enrolFpStatus()).toBe('Coloca el dedo en el lector...');
-    });
-  });
-
-  describe('enrollment capture result handler - fingerprint.capture.result', () => {
-    let handlers: Record<string, (msg: any) => void>;
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    beforeEach(() => {
-      handlers = {};
-      spyOn(middlewareWs, 'connect');
-      spyOn(middlewareWs, 'send');
-      spyOn(middlewareWs, 'on').and.callFake((type: string, handler: (msg: any) => void) => {
-        handlers[type] = handler;
-        return () => {};
+      handlers['fingerprint.enroll.result']({
+        type: 'fingerprint.enroll.result', success: false, message: 'Calidad insuficiente',
+        source: 'backend', tenantUserId: 1, fingerIndex: 1,
       });
-    });
 
-    it('should set fingerprint image url when data.fingerprintImageDataUrl is present', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'OK',
-        templateBase64: null,
-        templateSize: 0,
-        fingerprintImageDataUrl: 'data:image/png;base64,abc',
-        quality: null,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,abc');
-    });
-
-    it('should set quality when data.quality is present', () => {
-      component.abrirModalEnrolar(mockPersona);
-      const quality = { isAcceptable: true, foregroundPixelCount: 100, foregroundCoveragePercent: 50, contrastScore: 80, isCentered: true, message: 'Good' };
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'OK',
-        templateBase64: null,
-        templateSize: 0,
-        fingerprintImageDataUrl: null,
-        quality,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-      expect(component.enrolQuality()).toEqual(quality);
-    });
-
-    it('should store reference when awaiting reference with success and templateBase64', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.iniciarEnrolamiento();
-      expect(component.enrolAwaitingReference()).toBeTrue();
-
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'OK',
-        templateBase64: 'refTemplate123',
-        templateSize: 256,
-        fingerprintImageDataUrl: null,
-        quality: null,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-
-      expect(component.enrolAwaitingReference()).toBeFalse();
-      expect(middlewareWs.send).toHaveBeenCalledWith('fingerprint.enroll.start');
-      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
-      expect(component.enrolFpStatus()).toBe('Coloca el dedo para captura 1 de 3...');
-    });
-
-    it('should handle reference capture failure when not success', () => {
-      component.abrirModalEnrolar(mockPersona);
-      component.iniciarEnrolamiento();
-
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: false,
-        message: 'No se detectó dedo',
-        templateBase64: null,
-        templateSize: 0,
-        fingerprintImageDataUrl: null,
-        quality: null,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-
-      expect(component.enrolAwaitingReference()).toBeFalse();
       expect(component.enrolCompleted()).toBeTrue();
       expect(component.enrolSuccess()).toBeFalse();
+      expect(component.enrolFpStatus()).toBe('Calidad insuficiente');
+      const calls = mockApi.corehr.listBiometria.calls.count();
+      tick(ENROLL_POLL_MS * 2);
+      expect(mockApi.corehr.listBiometria.calls.count()).toBe(calls);
+    }));
+
+    it('cancelar deja de esperar al lector', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
+      component.iniciarEnrolamiento();
+
+      component.cancelarEnrolamiento();
+
       expect(component.enrolInProgress()).toBeFalse();
-      expect(component.enrolOperationLabel()).toBe('Error');
-      expect(component.enrolFpStatus()).toBe('No se detectó dedo');
-    });
+      expect(component.enrolOperationLabel()).toBe('Cancelado');
+      const calls = mockApi.corehr.listBiometria.calls.count();
+      tick(ENROLL_POLL_MS * 2);
+      expect(mockApi.corehr.listBiometria.calls.count()).toBe(calls);
+    }));
 
-    it('should handle reference capture failure when success but no templateBase64', () => {
-      component.abrirModalEnrolar(mockPersona);
+    it('cerrar el modal deja de esperar y no envía nada al agente', fakeAsync(() => {
+      component.abrirModalEnrolar(persona);
       component.iniciarEnrolamiento();
 
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'Captured',
-        templateBase64: null,
-        templateSize: 0,
-        fingerprintImageDataUrl: null,
-        quality: null,
-      };
-      handlers['fingerprint.capture.result'](captureData);
+      component.cerrarModalEnrolar();
 
-      expect(component.enrolAwaitingReference()).toBeFalse();
-      expect(component.enrolCompleted()).toBeTrue();
-      expect(component.enrolSuccess()).toBeFalse();
-      expect(component.enrolInProgress()).toBeFalse();
-    });
+      expect(component.modalEnrolarOpen).toBeFalse();
+      expect(component.personaEnrolar).toBeNull();
+      expect(middlewareWs.send).not.toHaveBeenCalled();
+      const calls = mockApi.corehr.listBiometria.calls.count();
+      tick(ENROLL_POLL_MS * 2);
+      expect(mockApi.corehr.listBiometria.calls.count()).toBe(calls);
+    }));
 
-    it('should use fallback message when capture reference fails with empty message', () => {
-      component.abrirModalEnrolar(mockPersona);
+    it('no inicia otra sesión si ya hay una en curso', () => {
+      component.abrirModalEnrolar(persona);
       component.iniciarEnrolamiento();
 
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: false,
-        message: '',
-        templateBase64: null,
-        templateSize: 0,
-        fingerprintImageDataUrl: null,
-        quality: null,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-      expect(component.enrolFpStatus()).toBe('Error capturando referencia.');
-    });
-
-    it('should not process reference logic when not awaiting reference', () => {
-      component.abrirModalEnrolar(mockPersona);
-      expect(component.enrolAwaitingReference()).toBeFalse();
-
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'OK',
-        templateBase64: 'tpl',
-        templateSize: 100,
-        fingerprintImageDataUrl: 'data:image/png;base64,xyz',
-        quality: { isAcceptable: true, foregroundPixelCount: 50, foregroundCoveragePercent: 30, contrastScore: 70, isCentered: true, message: 'OK' },
-      };
-      handlers['fingerprint.capture.result'](captureData);
-      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,xyz');
-      expect(middlewareWs.send).not.toHaveBeenCalledWith('fingerprint.enroll.start');
-    });
-
-    it('should handle capture with both image and quality and template together', () => {
-      component.abrirModalEnrolar(mockPersona);
       component.iniciarEnrolamiento();
 
-      const quality = { isAcceptable: false, foregroundPixelCount: 10, foregroundCoveragePercent: 5, contrastScore: 20, isCentered: false, message: 'Poor' };
-      const captureData = {
-        type: 'fingerprint.capture.result',
-        success: true,
-        message: 'OK',
-        templateBase64: 'refTpl',
-        templateSize: 128,
-        fingerprintImageDataUrl: 'data:image/png;base64,fullData',
-        quality,
-      };
-      handlers['fingerprint.capture.result'](captureData);
-      expect(component.enrolFpImageUrl()).toBe('data:image/png;base64,fullData');
-      expect(component.enrolQuality()).toEqual(quality);
-      expect(component.enrolAwaitingReference()).toBeFalse();
-      expect(middlewareWs.send).toHaveBeenCalledWith('fingerprint.enroll.start');
+      expect(mockApi.corehr.initEnroll).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('enrollment progress handler', () => {
-    let handlers: Record<string, (msg: any) => void>;
-    const mockPersona = { id: 1, nombre: 'José Pérez', idPersonal: '76543210', sede: '', area: '', departamento: '', cargo: '', estado: 'ACTIVO' as const };
-
-    beforeEach(() => {
-      handlers = {};
-      spyOn(middlewareWs, 'connect');
-      spyOn(middlewareWs, 'send');
-      spyOn(middlewareWs, 'on').and.callFake((type: string, handler: (msg: any) => void) => {
-        handlers[type] = handler;
-        return () => {};
-      });
-    });
-
-    it('should update progress, status and operation label on progress event', () => {
-      component.abrirModalEnrolar(mockPersona);
-      handlers['fingerprint.enroll.progress']({
-        type: 'fingerprint.enroll.progress',
-        step: 1,
-        totalSteps: 3,
-        message: 'Coloca el dedo',
-      });
-      expect(component.enrolProgress()).toBe('1/3');
-      expect(component.enrolFpStatus()).toBe('Coloca el dedo');
-      expect(component.enrolInProgress()).toBeTrue();
-      expect(component.enrolOperationLabel()).toBe('Enrolando huella...');
-    });
-
-    it('should default message on progress event with empty message', () => {
-      component.abrirModalEnrolar(mockPersona);
-      handlers['fingerprint.enroll.progress']({
-        type: 'fingerprint.enroll.progress',
-        step: 2,
-        totalSteps: 3,
-        message: '',
-      });
-      expect(component.enrolFpStatus()).toBe('Coloca el dedo en el lector...');
-    });
-  });
 });

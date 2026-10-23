@@ -73,6 +73,12 @@ describe('Section', () => {
       expect(section.title).toBe('Directorio del personal');
     });
 
+    it('should return dispositivos metadata for /tenant/dispositivos', () => {
+      Object.defineProperty(routerSpy, 'url', { get: () => '/tenant/dispositivos' });
+      const section = (component as any).section;
+      expect(section.title).toBe('Dispositivos');
+    });
+
     it('should return gestion-horarios metadata for /tenant/gestion-horarios', () => {
       Object.defineProperty(routerSpy, 'url', { get: () => '/tenant/gestion-horarios' });
       const section = (component as any).section;

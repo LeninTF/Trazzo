@@ -19,6 +19,7 @@ import { GestionRoles } from './features/admin-tenant/gestion-roles/gestion-role
 import { ConfiguracionTenant } from './features/admin-tenant/configuracion-tenant/configuracion-tenant';
 import { Planes } from './features/admin-tenant/planes/planes';
 import { DirectorioPersonal } from './features/admin-tenant/directorio-personal/directorio-personal';
+import { Dispositivos } from './features/admin-tenant/dispositivos/dispositivos';
 import { Perfil } from './features/admin-tenant/perfil/perfil';
 import { CierresMensuales } from './features/admin-tenant/cierres-mensuales/cierres-mensuales';
 import { DetalleCierre } from './features/admin-tenant/cierres-mensuales/detalle-cierre/detalle-cierre';
@@ -113,6 +114,11 @@ export const routes: Routes = [
     {
         path: 'tenant/directorio-personal',
         component: DirectorioPersonal,
+        canActivate: [authGuard, roleGuard]
+    },
+    {
+        path: 'tenant/dispositivos',
+        component: Dispositivos,
         canActivate: [authGuard, roleGuard]
     },
     {
