@@ -23,8 +23,8 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | ZKTeco ZK9500 | Captura, identificación y enrolamiento (3 muestras + DBMerge) |
 | Calidad de huella | Cobertura, contraste, centrado, tamaño mínimo de template |
 | Cifrado híbrido | AES-256-GCM + RSA-2048-OAEP (validación de KeySize ≥ 2048), clave pública desde el backend |
-| Caché de clave RSA | `%PROGRAMDATA%\TrazzoAgent\public_key.cache` cifrado con DPAPI-LocalMachine + marcador de integridad |
-| Cola offline | SQLite (WAL + connection pooling) en `%PROGRAMDATA%\TrazzoAgent\events.db` |
+| Caché de clave RSA | `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\public_key.cache` cifrado con DPAPI de la cuenta del servicio + marcador de integridad |
+| Cola offline | SQLite (WAL + connection pooling) en `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\events.db` |
 | Marcación síncrona | `POST /asistencia/marcar` con `X-Tenant-ID` y `Authorization: Bearer` |
 | Reenvío offline al backend | `POST /asistencia/sync` con `X-Tenant-ID` y `Authorization: Bearer` |
 | Backoff exponencial | Reintento con jitter, hasta 5 minutos entre intentos |
@@ -213,7 +213,7 @@ La palma **sí tiene crestas** (dermatoglifos), igual que la yema, así que **ni
 
 Cómo funciona en el agente (`Biometric:Identify:RequireLocalMatch = true`):
 
-1. **Enrolar** (`fingerprint.enroll.start` con `userRef` + `fingerIndex`): tras el `DBMerge`, el template crudo se guarda en un **padrón local cifrado** (SQLite + DPAPI en `%PROGRAMDATA%\TrazzoAgent\enrolled.db`) y se agrega al motor de identificación con `DBAdd`.
+1. **Enrolar** (`fingerprint.enroll.start` con `userRef` + `fingerIndex`): tras el `DBMerge`, el template crudo se guarda en un **padrón local cifrado** (SQLite + DPAPI de la cuenta del servicio, ligado a persona y dedo, en `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\enrolled.db`) y se agrega al motor de identificación con `DBAdd`.
 2. **Al arrancar**, el agente recarga el padrón en el motor (`DBAdd`), así identifica offline tras un reinicio.
 3. **Identificar** (`fingerprint.identify`): captura y ejecuta `DBIdentify` (1:N). Si el score supera `Biometric:Match:MinScore`, devuelve `matched: true` con `matchedUserReference`. Si **no coincide** (palma, o dedo no enrolado) → `success: false`, `matched: false`, *"Huella no reconocida"* → **no se registra asistencia**.
 
@@ -500,7 +500,7 @@ Para desarrollo local sin backend, se puede reactivar el fallback plaintext con 
 
 ```powershell
 $env:TRAZZO_ALLOW_PLAINTEXT_TEMPLATES = "true"
-Remove-Item "$env:ProgramData\TrazzoAgent" -Recurse -Force
+Remove-Item "$env:LOCALAPPDATA\TrazzoAgent" -Recurse -Force
 dotnet run --project .\Trazzo.Biometric.Agent\Trazzo.Biometric.Agent.csproj
 ```
 
@@ -657,7 +657,8 @@ Además del cifrado híbrido, el agente aplica los siguientes controles defensiv
 
 - **Guard plaintext** cerrado por defecto: `templateBase64: null` si el cifrado no está configurado (opt-in explícito con env var para dev).
 - **Validación de KeySize RSA ≥ 2048 bits**: claves más chicas se rechazan al importarse.
-- **Cache de clave pública** en `%PROGRAMDATA%\TrazzoAgent\public_key.cache` protegido con DPAPI-LocalMachine y marcador de integridad `TRAZZO_KEY_CACHE_V1`. Cache manipulado o de versión previa se descarta.
+- **Cache de clave pública** en `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\public_key.cache` protegido con DPAPI de la cuenta del servicio (LocalSystem) y marcador de integridad `TRAZZO_KEY_CACHE_V2`. Cache manipulado o de versión previa se descarta.
+- **Directorio de datos** en el perfil de LocalSystem, que solo abren SYSTEM y Administradores. Versiones anteriores lo tenían en `%PROGRAMDATA%\TrazzoAgent` (legible y con creación de archivos para cualquier usuario); al arrancar se borra el padrón antiguo de ahí.
 - **Response size limits** en todos los HttpClients al backend (32 KB para public key, 8-16 KB para respuestas de API).
 
 ### Auto-update
@@ -689,7 +690,7 @@ Además del cifrado híbrido, el agente aplica los siguientes controles defensiv
 Los eventos se guardan en SQLite si el backend no está disponible:
 
 ```text
-%PROGRAMDATA%\TrazzoAgent\events.db
+%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\events.db
 ```
 
 El `EventForwarderService` reintenta el reenvío con backoff exponencial (base × 2^n, máximo 5 minutos, con ±10% de jitter). Después de 5 fallos consecutivos el evento queda como `failed`. Los eventos enviados o fallidos se limpian automáticamente después de 7 días.

@@ -227,7 +227,7 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
         string dbPath;
         if (string.IsNullOrWhiteSpace(configuredPath))
         {
-            dbPath = Path.Combine(AgentDataDirectory.EnsurePrivate(defaultBasePath), "events.db");
+            dbPath = Path.Combine(AgentDataDirectory.Resolve(defaultBasePath), "events.db");
         }
         else
         {

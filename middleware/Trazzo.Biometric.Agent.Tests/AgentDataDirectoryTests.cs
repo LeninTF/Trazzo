@@ -1,59 +1,49 @@
-using System.Diagnostics;
-using System.Security.Principal;
+using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Tests;
 
 public sealed class AgentDataDirectoryTests
 {
-    // Un directorio de datos ya existente cuyo dueño no es uno de estos lo creó otro usuario (squatting):
-    // el agente no arranca hasta que un administrador lo revise.
+    // ProgramData hereda lectura y creación de archivos para BUILTIN\Users; el perfil de la cuenta del
+    // servicio (para LocalSystem, system32\config\systemprofile) solo lo abren SYSTEM y Administradores.
     [Fact]
-    public void IsTrustedOwner_SoloSystemAdministradoresYElUsuarioDelServicio()
+    public void LosDatosVivenEnElPerfilDeLaCuentaDelServicioYNoEnProgramData()
     {
-        Assert.True(AgentDataDirectory.IsTrustedOwner(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null)));
-        Assert.True(AgentDataDirectory.IsTrustedOwner(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null)));
-        Assert.True(AgentDataDirectory.IsTrustedOwner(WindowsIdentity.GetCurrent().User));
-
-        Assert.False(AgentDataDirectory.IsTrustedOwner(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null)));
-        Assert.False(AgentDataDirectory.IsTrustedOwner(new SecurityIdentifier("S-1-5-21-1000-2000-3000-1001")));
-        Assert.False(AgentDataDirectory.IsTrustedOwner(null));
+        Assert.Equal(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AgentDataDirectory.DefaultBasePath());
+        Assert.NotEqual(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), AgentDataDirectory.DefaultBasePath());
     }
 
-    // Con un junction dentro, la propagación del DACL alcanzaría su destino y SQLite abriría lo que apunta.
     [Fact]
-    public void EnsurePrivate_NoArrancaSiHayUnEnlaceEnUnSubdirectorio()
+    public void RemoveLegacyTemplates_BorraElPadronAntiguoYDejaLaCola()
     {
-        string programData = Path.Combine(Path.GetTempPath(), "trazzo-reparse-" + Guid.NewGuid().ToString("N"));
-        string outside = Directory.CreateDirectory(Path.Combine(programData, "fuera")).FullName;
-        string nested = Directory.CreateDirectory(Path.Combine(programData, "TrazzoAgent", "logs")).FullName;
-        string link = Path.Combine(nested, "enlace");
+        string legacy = Directory.CreateDirectory(
+            Path.Combine(Path.GetTempPath(), "trazzo-legacy-" + Guid.NewGuid().ToString("N"))).FullName;
         try
         {
-            CreateJunction(link, outside);
+            foreach (string name in new[] { "enrolled.db", "enrolled.db-wal", "enrolled.db-shm", "events.db" })
+                File.WriteAllBytes(Path.Combine(legacy, name), [1]);
 
-            var error = Assert.Throws<InvalidOperationException>(() => AgentDataDirectory.EnsurePrivate(programData));
-            Assert.Contains(link, error.Message);
-            Assert.False(new DirectoryInfo(Path.Combine(programData, "TrazzoAgent")).GetAccessControl().AreAccessRulesProtected);
+            AgentDataDirectory.RemoveLegacyTemplates(legacy, NullLogger.Instance);
+
+            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db")));
+            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db-wal")));
+            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db-shm")));
+            Assert.True(File.Exists(Path.Combine(legacy, "events.db")));
         }
         finally
         {
-            if (Directory.Exists(link))
-                Directory.Delete(link);
-            Directory.Delete(programData, recursive: true);
+            Directory.Delete(legacy, recursive: true);
         }
     }
 
-    // mklink /J no exige privilegios, a diferencia de un symlink.
-    private static void CreateJunction(string link, string target)
+    [Fact]
+    public void RemoveLegacyTemplates_SinDirectorioAntiguoNoHaceNada()
     {
-        using Process process = Process.Start(new ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{target}\"")
-        {
-            CreateNoWindow = true,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-        })!;
-        process.WaitForExit();
-        Assert.Equal(0, process.ExitCode);
+        string missing = Path.Combine(Path.GetTempPath(), "trazzo-legacy-missing-" + Guid.NewGuid().ToString("N"));
+
+        AgentDataDirectory.RemoveLegacyTemplates(missing, NullLogger.Instance);
+
+        Assert.False(Directory.Exists(missing));
     }
 }

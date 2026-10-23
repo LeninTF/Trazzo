@@ -1,6 +1,4 @@
-using System.Security.AccessControl;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -137,70 +135,20 @@ public sealed class SqliteEnrolledFingerprintStoreTests
         Assert.Empty(await store.GetAllAsync());
     }
 
-    private static readonly SecurityIdentifier BuiltinUsers = new(WellKnownSidType.BuiltinUsersSid, null);
-    private static readonly SecurityIdentifier LocalSystem = new(WellKnownSidType.LocalSystemSid, null);
-
-    // Imita C:\ProgramData: BUILTIN\Users heredan lectura y pueden crear archivos en cada subcarpeta.
-    private static string NewProgramDataLikeDirectory()
-    {
-        string path = Path.Combine(Path.GetTempPath(), "trazzo-acl-" + Guid.NewGuid().ToString("N"));
-        DirectoryInfo dir = Directory.CreateDirectory(path);
-        DirectorySecurity security = dir.GetAccessControl();
-        security.AddAccessRule(new FileSystemAccessRule(BuiltinUsers,
-            FileSystemRights.ReadAndExecute | FileSystemRights.CreateFiles | FileSystemRights.AppendData,
-            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
-        dir.SetAccessControl(security);
-        return path;
-    }
-
-    private static List<SecurityIdentifier> GrantedTo(FileSystemSecurity security) =>
-        security.GetAccessRules(includeExplicit: true, includeInherited: true, typeof(SecurityIdentifier))
-            .Cast<FileSystemAccessRule>()
-            .Where(rule => rule.AccessControlType == AccessControlType.Allow)
-            .Select(rule => (SecurityIdentifier)rule.IdentityReference)
-            .ToList();
-
     [Fact]
-    public void BuildConnectionString_ElDirectorioPorDefectoQuedaSoloParaElServicioSystemYAdministradores()
+    public void BuildConnectionString_SinRutaConfigurada_UsaElDirectorioDeDatosDelAgente()
     {
-        string programData = NewProgramDataLikeDirectory();
+        string basePath = Path.Combine(Path.GetTempPath(), $"trazzo-store-default-{Guid.NewGuid():N}");
         try
         {
-            SqliteEnrolledFingerprintStore.BuildConnectionString(new ConfigurationBuilder().Build(), programData);
+            string connectionString = SqliteEnrolledFingerprintStore.BuildConnectionString(new ConfigurationBuilder().Build(), basePath);
 
-            DirectorySecurity security = new DirectoryInfo(Path.Combine(programData, "TrazzoAgent")).GetAccessControl();
-            Assert.True(security.AreAccessRulesProtected);
-            List<SecurityIdentifier> granted = GrantedTo(security);
-            Assert.DoesNotContain(BuiltinUsers, granted);
-            Assert.Contains(LocalSystem, granted);
-            Assert.Contains(WindowsIdentity.GetCurrent().User!, granted);
+            Assert.Equal($"Data Source={Path.Combine(basePath, "TrazzoAgent", "enrolled.db")};Pooling=True", connectionString);
         }
         finally
         {
-            Directory.Delete(programData, recursive: true);
-        }
-    }
-
-    // Un agente anterior dejó el directorio y la base con los permisos heredados de ProgramData.
-    [Fact]
-    public void BuildConnectionString_EndureceElDirectorioYLaBaseQueDejoUnaVersionAnterior()
-    {
-        string programData = NewProgramDataLikeDirectory();
-        try
-        {
-            string directory = Directory.CreateDirectory(Path.Combine(programData, "TrazzoAgent")).FullName;
-            string database = Path.Combine(directory, "enrolled.db");
-            File.WriteAllBytes(database, []);
-
-            SqliteEnrolledFingerprintStore.BuildConnectionString(new ConfigurationBuilder().Build(), programData);
-
-            Assert.True(new DirectoryInfo(directory).GetAccessControl().AreAccessRulesProtected);
-            Assert.DoesNotContain(BuiltinUsers, GrantedTo(new DirectoryInfo(directory).GetAccessControl()));
-            Assert.DoesNotContain(BuiltinUsers, GrantedTo(new FileInfo(database).GetAccessControl()));
-        }
-        finally
-        {
-            Directory.Delete(programData, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
         }
     }
 }

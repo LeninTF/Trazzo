@@ -49,8 +49,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         _keyFetcher = keyFetcher;
         _logger = logger;
         _cacheFilePath = cacheFilePath ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "TrazzoAgent", "public_key.cache");
+            AgentDataDirectory.DefaultBasePath(), AgentDataDirectory.Name, "public_key.cache");
         _refreshInterval = refreshInterval ?? TimeSpan.FromHours(24);
         _pinnedPublicKeySha256 = (pinnedPublicKeySha256 ?? [])
             .Select(NormalizeFingerprint)

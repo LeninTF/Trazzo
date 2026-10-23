@@ -54,7 +54,7 @@ Panel de control → Programas → Desinstalar un programa → `Trazzo Biometric
 **Opción B — Doble clic en el mismo MSI:**
 Doble clic en `Trazzo.Biometric.Agent.msi` → Quitar
 
-Elimina el servicio, los archivos de `C:\Program Files\Trazzo\BiometricAgent\` y los datos de `C:\ProgramData\TrazzoAgent\`.
+Elimina el servicio, los archivos de `C:\Program Files\Trazzo\BiometricAgent\` y los datos de `C:\Windows\System32\config\systemprofile\AppData\Local\TrazzoAgent\` (y los de versiones anteriores en `C:\ProgramData\TrazzoAgent\`).
 
 Para desinstalación silenciosa:
 

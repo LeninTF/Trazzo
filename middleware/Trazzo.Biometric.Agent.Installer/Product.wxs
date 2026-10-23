@@ -68,10 +68,18 @@
         Before="CostInitialize"
         Sequence="both" />
 
+    <!-- Padrón de huellas, cola offline y caché de clave: perfil de LocalSystem (solo SYSTEM y Administradores). -->
+    <SetProperty
+        Id="TRAZZO_AGENT_SERVICE_DATA_DIR"
+        Value="[System64Folder]config\systemprofile\AppData\Local\TrazzoAgent"
+        Before="CostInitialize"
+        Sequence="both" />
+
     <ComponentGroup Id="DataCleanup">
       <Component Id="cmp_DataCleanup" Directory="TrazzoAgentDataDir" Guid="F7A3B2C1-D4E5-4F60-A8B9-C0D1E2F34567">
         <CreateFolder />
-        <util:RemoveFolderEx On="uninstall" Property="TRAZZO_AGENT_DATA_DIR" />
+        <util:RemoveFolderEx Id="rmf_LegacyData" On="uninstall" Property="TRAZZO_AGENT_DATA_DIR" />
+        <util:RemoveFolderEx Id="rmf_ServiceData" On="uninstall" Property="TRAZZO_AGENT_SERVICE_DATA_DIR" />
       </Component>
     </ComponentGroup>
   </Fragment>

@@ -25,6 +25,8 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
     public SqliteEnrolledFingerprintStore(IConfiguration configuration, ILogger<SqliteEnrolledFingerprintStore> logger)
         : this(BuildConnectionString(configuration), logger)
     {
+        if (string.IsNullOrWhiteSpace(configuration["Enrollment:LocalStorePath"]))
+            AgentDataDirectory.RemoveLegacyTemplates(AgentDataDirectory.LegacyDirectory(), logger);
     }
 
     internal SqliteEnrolledFingerprintStore(string connectionString, ILogger<SqliteEnrolledFingerprintStore> logger)
@@ -165,7 +167,7 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
     {
         string? configuredPath = configuration["Enrollment:LocalStorePath"];
         if (string.IsNullOrWhiteSpace(configuredPath))
-            return $"Data Source={Path.Combine(AgentDataDirectory.EnsurePrivate(defaultBasePath), "enrolled.db")};Pooling=True";
+            return $"Data Source={Path.Combine(AgentDataDirectory.Resolve(defaultBasePath), "enrolled.db")};Pooling=True";
 
         // Ruta elegida por el operador: debe ser un directorio dedicado y su ACL queda a su cargo.
         Directory.CreateDirectory(Path.GetDirectoryName(configuredPath)!);

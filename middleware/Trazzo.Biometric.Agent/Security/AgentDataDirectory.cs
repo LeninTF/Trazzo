@@ -1,99 +1,48 @@
-using System.Security.AccessControl;
-using System.Security.Principal;
-
 namespace Trazzo.Biometric.Agent.Security;
 
 /// <summary>
-/// ProgramData\TrazzoAgent guarda el padrón de huellas, la cola offline y la caché de la clave pública.
-/// ProgramData hereda lectura para BUILTIN\Users y les deja crear archivos: cualquier usuario de la PC
-/// podía leer las bases o plantar un enrolled.db-wal / events.db-wal que SQLite aplica al abrirlas.
-/// El directorio queda solo para el usuario del servicio, SYSTEM y Administradores, y el agente no
-/// arranca si encuentra dentro algo cuyo dueño sea otro usuario.
+/// Directorio de datos del agente (padrón de huellas, cola offline y caché de la clave pública) en el perfil
+/// de la cuenta del servicio: para LocalSystem, %SystemRoot%\System32\config\systemprofile\AppData\Local,
+/// que solo abren SYSTEM y Administradores. Antes vivía en ProgramData, que hereda lectura y creación de
+/// archivos para BUILTIN\Users: cualquiera leía las bases o plantaba un *.db-wal que SQLite aplica al
+/// abrirlas, y cerrar ese directorio desde el servicio deja carreras con enlaces y hard links.
 /// </summary>
 internal static class AgentDataDirectory
 {
-    internal static string EnsurePrivate(string? basePath = null)
+    internal const string Name = "TrazzoAgent";
+
+    private static readonly string[] LegacyTemplateFiles = ["enrolled.db", "enrolled.db-wal", "enrolled.db-shm"];
+
+    internal static string DefaultBasePath() => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+    internal static string Resolve(string? basePath = null)
     {
-        string directory = Path.Combine(
-            basePath ?? Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TrazzoAgent");
-        DirectoryInfo info = new(directory);
-        if (!info.Exists)
-        {
-            PrivateSecurity().CreateDirectory(directory);
-            return directory;
-        }
-
-        // Con un enlace dentro, la propagación del DACL alcanzaría su destino: se rechaza antes de tocar nada.
-        List<string> foreign = [];
-        CollectForeign(info, checkOwners: false, foreign);
-        if (foreign.Count == 0)
-        {
-            // Primero se cierra y después se revisan los dueños: lo que alguien cree durante la revisión ya no entra.
-            info.SetAccessControl(PrivateSecurity());
-            CollectForeign(info, checkOwners: true, foreign);
-        }
-
-        if (foreign.Count > 0)
-        {
-            throw new InvalidOperationException(
-                "El directorio de datos del agente contiene enlaces o archivos de otro usuario de la PC; un "
-                + "administrador debe revisarlos y borrarlos antes de iniciar el servicio: " + string.Join(", ", foreign));
-        }
+        string directory = Path.Combine(basePath ?? DefaultBasePath(), Name);
+        Directory.CreateDirectory(directory);
         return directory;
     }
 
-    internal static bool IsTrustedOwner(SecurityIdentifier? owner) =>
-        owner is not null && TrustedPrincipals().Contains(owner);
+    internal static string LegacyDirectory() =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Name);
 
-    // El usuario del servicio es LocalSystem en producción; el desarrollador al correr en consola o en tests.
-    private static List<SecurityIdentifier> TrustedPrincipals()
+    // El padrón de versiones anteriores quedó con DPAPI de ámbito máquina (lo descifra cualquier usuario de
+    // la PC) y sus filas ya no se aceptan: se borra. La cola y la caché antiguas no tienen templates en claro.
+    internal static void RemoveLegacyTemplates(string legacyDirectory, ILogger logger)
     {
-        List<SecurityIdentifier> principals =
-        [
-            new(WellKnownSidType.LocalSystemSid, null),
-            new(WellKnownSidType.BuiltinAdministratorsSid, null),
-        ];
-        SecurityIdentifier? serviceUser = WindowsIdentity.GetCurrent().User;
-        if (serviceUser is not null && !principals.Contains(serviceUser))
-            principals.Add(serviceUser);
-        return principals;
-    }
-
-    private static DirectorySecurity PrivateSecurity()
-    {
-        DirectorySecurity security = new();
-        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-        foreach (SecurityIdentifier principal in TrustedPrincipals())
+        foreach (string name in LegacyTemplateFiles)
         {
-            security.AddAccessRule(new FileSystemAccessRule(principal, FileSystemRights.FullControl,
-                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-                PropagationFlags.None, AccessControlType.Allow));
+            string path = Path.Combine(legacyDirectory, name);
+            try
+            {
+                if (!File.Exists(path))
+                    continue;
+                File.Delete(path);
+                logger.LogWarning("Se borró el padrón de huellas de una versión anterior ({Path}): hay que volver a enrolar.", path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(ex, "No se pudo borrar el padrón de huellas de una versión anterior ({Path}).", path);
+            }
         }
-        return security;
-    }
-
-    // Recorre el árbol sin seguir enlaces: un symlink o junction siempre es ajeno; con checkOwners, también
-    // lo que no sea de un dueño confiable.
-    private static void CollectForeign(FileSystemInfo entry, bool checkOwners, List<string> foreign)
-    {
-        if (entry.Attributes.HasFlag(FileAttributes.ReparsePoint) || (checkOwners && !IsTrustedOwner(OwnerOf(entry))))
-        {
-            foreign.Add(entry.FullName);
-            return;
-        }
-
-        if (entry is DirectoryInfo directory)
-        {
-            foreach (FileSystemInfo child in directory.EnumerateFileSystemInfos())
-                CollectForeign(child, checkOwners, foreign);
-        }
-    }
-
-    private static SecurityIdentifier? OwnerOf(FileSystemInfo entry)
-    {
-        FileSystemSecurity security = entry is DirectoryInfo directory
-            ? directory.GetAccessControl(AccessControlSections.Owner)
-            : ((FileInfo)entry).GetAccessControl(AccessControlSections.Owner);
-        return security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
     }
 }
