@@ -71,10 +71,10 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task OriginAuth_CuandoListaVacia_AceptaOrigenLoopback()
+    public async Task OriginAuth_EnModoDesarrollo_AceptaOrigenLoopback()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        Start(allowedOrigins: []);
+        Start(allowedOrigins: [], allowLocalDevelopmentOrigins: true);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", _httpUrl.TrimEnd('/'));
@@ -85,10 +85,10 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task OriginAuth_CuandoListaVacia_AceptaOriginNullDesdeLoopback()
+    public async Task OriginAuth_EnModoDesarrollo_AceptaOriginNullDesdeLoopback()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        Start(allowedOrigins: []);
+        Start(allowedOrigins: [], allowLocalDevelopmentOrigins: true);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", "null");
@@ -102,7 +102,7 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     public async Task OriginAuth_CuandoOrigenPermitido_AceptaConexion()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        Start(allowedOrigins: ["http://app.trazzo.com"]);
+        Start(allowedOrigins: ["http://app.trazzo.com"], allowLocalDevelopmentOrigins: false);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", "http://app.trazzo.com");
@@ -116,10 +116,27 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
     public async Task OriginAuth_CuandoOrigenNoPermitido_RechazaConexion()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        Start(allowedOrigins: ["http://app.trazzo.com"]);
+        Start(allowedOrigins: ["http://app.trazzo.com"], allowLocalDevelopmentOrigins: false);
 
         using ClientWebSocket client = new();
         client.Options.SetRequestHeader("Origin", "http://evil.com");
+
+        await Assert.ThrowsAnyAsync<WebSocketException>(
+            () => client.ConnectAsync(new Uri(_wsUrl), cts.Token));
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("http://localhost:4200")]
+    public async Task OriginAuth_EnProduccion_RechazaOriginNullYLoopback(string origin)
+    {
+        // Regresión de Cross-Site WebSocket Hijacking: una web ajena obtiene Origin "null" con un
+        // iframe sandbox y el navegador conecta desde loopback.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        Start(allowedOrigins: ["https://trazzosaas.noahtechperu.com"], allowLocalDevelopmentOrigins: false);
+
+        using ClientWebSocket client = new();
+        client.Options.SetRequestHeader("Origin", origin);
 
         await Assert.ThrowsAnyAsync<WebSocketException>(
             () => client.ConnectAsync(new Uri(_wsUrl), cts.Token));
@@ -603,7 +620,8 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         bool includeTrailingSlash = true,
         int deviceMonitorIntervalSeconds = 3,
         FakeBiometricScannerService? scanner = null,
-        FakeAgentHealthService? healthService = null)
+        FakeAgentHealthService? healthService = null,
+        bool allowLocalDevelopmentOrigins = true)
     {
         int port = GetFreePort();
         _wsUrl = $"ws://localhost:{port}/";
@@ -612,7 +630,9 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         var settings = new Dictionary<string, string?>
         {
             ["Agent:WebSocketUrl"] = includeTrailingSlash ? _httpUrl : _httpUrl.TrimEnd('/'),
-            ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString()
+            ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString(),
+            // La mayoría de tests actúan como herramienta local (ClientWebSocket no envía Origin).
+            ["Agent:AllowLocalDevelopmentOrigins"] = allowLocalDevelopmentOrigins ? "true" : "false"
         };
 
         if (allowedOrigins is { Length: > 0 })

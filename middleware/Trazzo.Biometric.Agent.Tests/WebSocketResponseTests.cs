@@ -343,20 +343,20 @@ public sealed class WebSocketResponseTests
     [InlineData("http://[::1]:4200", true)]
     [InlineData("http://evil.example", false)]
     [InlineData("null", false)]
-    public void IsOriginAllowed_WhenAllowedOriginsEmpty_AllowsOnlyLoopbackOriginWithoutRemoteEndpoint(string? origin, bool expected)
+    public void IsOriginAllowed_InDevelopmentMode_AllowsOnlyLoopbackOriginWithoutRemoteEndpoint(string? origin, bool expected)
     {
-        Assert.Equal(expected, LocalWebSocketServerService.IsOriginAllowed(origin, []));
+        Assert.Equal(expected, LocalWebSocketServerService.IsOriginAllowed(origin, [], allowLocalDevelopmentOrigins: true));
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void IsOriginAllowed_WhenOriginMissingAndRemoteIsLoopback_AllowsConnection(string? origin)
+    public void IsOriginAllowed_InDevelopmentMode_WhenOriginMissingAndRemoteIsLoopback_AllowsConnection(string? origin)
     {
         var remoteEndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
 
-        Assert.True(LocalWebSocketServerService.IsOriginAllowed(origin, [], remoteEndPoint));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed(origin, [], remoteEndPoint, allowLocalDevelopmentOrigins: true));
     }
 
     [Theory]
@@ -371,11 +371,11 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
-    public void IsOriginAllowed_WhenOriginIsNullAndRemoteIsLoopback_AllowsConnection()
+    public void IsOriginAllowed_InDevelopmentMode_WhenOriginIsNullAndRemoteIsLoopback_AllowsConnection()
     {
         var remoteEndPoint = new IPEndPoint(IPAddress.Loopback, 49152);
 
-        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", [], remoteEndPoint));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", [], remoteEndPoint, allowLocalDevelopmentOrigins: true));
     }
 
     [Fact]
@@ -397,18 +397,43 @@ public sealed class WebSocketResponseTests
     }
 
     [Fact]
-    public void IsOriginAllowed_ConListaDeProduccion_SiguePermitiendoLoopbackYFileLocal()
+    public void IsOriginAllowed_ConListaDeProduccion_RechazaNullYLoopbackFueraDeDesarrollo()
     {
-        // Con orígenes de producción configurados, las herramientas locales deben seguir
-        // conectando: test-websocket.html (Origin "null" desde loopback) y http://localhost.
+        // Origin "null" lo produce cualquier sitio web con un iframe sandbox o un data: URL, y el
+        // navegador conecta desde loopback porque corre en la misma PC: aceptarlo permitiría que
+        // una web ajena maneje el lector (Cross-Site WebSocket Hijacking).
         string[] allowedOrigins = ["https://trazzosaas.noahtechperu.com"];
         var loopback = new IPEndPoint(IPAddress.Loopback, 49152);
 
-        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", allowedOrigins, loopback));
-        Assert.True(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", allowedOrigins));
-        Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://trazzosaas.noahtechperu.com", allowedOrigins));
-        // Un sitio remoto sigue bloqueado.
-        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://trazzosaas.noahtechperu.com", allowedOrigins, loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("null", allowedOrigins, loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed(null, allowedOrigins, loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", allowedOrigins, loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins, loopback));
+    }
+
+    [Fact]
+    public void IsOriginAllowed_SinListaYSinModoDesarrollo_RechazaTodo()
+    {
+        var loopback = new IPEndPoint(IPAddress.Loopback, 49152);
+
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("null", [], loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed(null, [], loopback));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", [], loopback));
+    }
+
+    [Fact]
+    public void IsOriginAllowed_EnModoDesarrollo_PermiteHerramientasLocales()
+    {
+        // test-websocket.html (file://, Origin "null") y ng serve (http://localhost:4200).
+        var loopback = new IPEndPoint(IPAddress.Loopback, 49152);
+        var external = new IPEndPoint(IPAddress.Parse("203.0.113.10"), 49152);
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", [], loopback, allowLocalDevelopmentOrigins: true));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed(null, [], loopback, allowLocalDevelopmentOrigins: true));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", [], loopback, allowLocalDevelopmentOrigins: true));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("null", [], external, allowLocalDevelopmentOrigins: true));
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", [], loopback, allowLocalDevelopmentOrigins: true));
     }
 
     [Theory]

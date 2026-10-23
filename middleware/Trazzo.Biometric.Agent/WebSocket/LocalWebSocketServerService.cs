@@ -35,6 +35,7 @@ public sealed class LocalWebSocketServerService(
         configuration.GetValue("Agent:MaxIncomingMessageBytes", DefaultMaxIncomingMessageBytes));
     private readonly int _maxPendingOperationsPerClient = Math.Max(1,
         configuration.GetValue("Agent:MaxPendingOperationsPerClient", DefaultMaxPendingOperationsPerClient));
+    private bool AllowLocalDevelopmentOrigins => configuration.GetValue("Agent:AllowLocalDevelopmentOrigins", false);
     private bool? _monitorLastKnownConnected;
     private DateTimeOffset? _monitorDisconnectedSince;
     private CancellationTokenSource? _serverCts;
@@ -137,7 +138,7 @@ public sealed class LocalWebSocketServerService(
 
         string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
         string? origin = context.Request.Headers["Origin"];
-        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint, AllowLocalDevelopmentOrigins))
         {
             logger.LogWarning("Conexión WebSocket rechazada. Origen no permitido: {Origin}", origin);
             context.Response.StatusCode = 403;
@@ -162,7 +163,7 @@ public sealed class LocalWebSocketServerService(
         string? origin = context.Request.Headers["Origin"];
         string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
 
-        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint, AllowLocalDevelopmentOrigins))
         {
             logger.LogWarning("Preflight rechazado. Origen no permitido: {Origin}", origin);
             context.Response.StatusCode = 403;
@@ -485,21 +486,20 @@ public sealed class LocalWebSocketServerService(
     internal static bool IsOriginAllowed(
         string? origin,
         IReadOnlyCollection<string> allowedOrigins,
-        IPEndPoint? remoteEndPoint = null)
+        IPEndPoint? remoteEndPoint = null,
+        bool allowLocalDevelopmentOrigins = false)
     {
-        // Loopback y file:// (Origin "null"/vacío desde un cliente loopback) SIEMPRE se permiten,
-        // incluso con orígenes de producción configurados. El servidor solo escucha en localhost,
-        // así que un sitio remoto malicioso no puede falsear un origen loopback: la protección
-        // contra CSWSH remoto se mantiene, y las herramientas locales (test-websocket.html,
-        // dev server en http://localhost) siguen funcionando.
-        if (IsLoopbackOrigin(origin, remoteEndPoint))
+        // Solo los orígenes configurados (el frontend del tenant). Origin "null" no prueba nada:
+        // lo envía cualquier sitio desde un iframe sandbox o un data: URL, y el navegador conecta
+        // desde loopback porque corre en esta misma PC (Cross-Site WebSocket Hijacking).
+        if (allowedOrigins.Any(allowed => string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase)))
         {
             return true;
         }
 
-        // Orígenes de producción explícitamente permitidos (p. ej. el frontend del tenant).
-        return allowedOrigins.Count > 0
-            && allowedOrigins.Any(allowed => string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+        // Herramientas locales (test-websocket.html por file://, ng serve en localhost): solo con
+        // Agent:AllowLocalDevelopmentOrigins, que activa appsettings.Development.json.
+        return allowLocalDevelopmentOrigins && IsLoopbackOrigin(origin, remoteEndPoint);
     }
 
     private static bool IsLoopbackOrigin(string? origin, IPEndPoint? remoteEndPoint)
