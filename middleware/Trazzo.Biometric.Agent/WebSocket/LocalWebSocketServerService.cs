@@ -19,6 +19,10 @@ public sealed class LocalWebSocketServerService(
     IAttendanceMarkingClient? attendanceMarkingClient = null) : IWebSocketServerService
 {
     private const string ErrorMessageType = "error";
+    // 256 KB por mensaje: suficiente para JSON de matching (~1000 templates base64) sin dar espacio a OOM.
+    private const int DefaultMaxIncomingMessageBytes = 256 * 1024;
+    // Máximo de operaciones biométricas en vuelo por conexión (evita flood).
+    private const int DefaultMaxPendingOperationsPerClient = 8;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpListener _listener = new();
@@ -27,6 +31,10 @@ public sealed class LocalWebSocketServerService(
         Math.Max(5, configuration.GetValue("Agent:KeepAliveIntervalSeconds", 30)));
     private readonly int _deviceMonitorIntervalSeconds = Math.Max(1,
         configuration.GetValue("Agent:DeviceMonitorIntervalSeconds", 3));
+    private readonly int _maxIncomingMessageBytes = Math.Max(4096,
+        configuration.GetValue("Agent:MaxIncomingMessageBytes", DefaultMaxIncomingMessageBytes));
+    private readonly int _maxPendingOperationsPerClient = Math.Max(1,
+        configuration.GetValue("Agent:MaxPendingOperationsPerClient", DefaultMaxPendingOperationsPerClient));
     private bool? _monitorLastKnownConnected;
     private DateTimeOffset? _monitorDisconnectedSince;
     private CancellationTokenSource? _serverCts;
@@ -97,9 +105,20 @@ public sealed class LocalWebSocketServerService(
     {
         if (!context.Request.IsWebSocketRequest)
         {
+            // Preflight de Private/Local Network Access: Chrome lo envía ANTES del handshake
+            // cuando una página pública (https://…) intenta abrir una conexión a localhost.
+            // Sin responderlo, el navegador aborta con ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS.
+            if (context.Request.HttpMethod == "OPTIONS")
+            {
+                WritePreflightResponse(context);
+                context.Response.Close();
+                return;
+            }
+
             if (context.Request.HttpMethod == "GET" &&
                 context.Request.Url?.AbsolutePath is "/" or "/health")
             {
+                AddCorsOriginHeader(context);
                 byte[] body = JsonSerializer.SerializeToUtf8Bytes(
                     healthService.GetHealthResult(), JsonOptions);
                 context.Response.StatusCode = 200;
@@ -133,6 +152,39 @@ public sealed class LocalWebSocketServerService(
         await ReceiveLoopAsync(webSocket, clientId, cancellationToken);
     }
 
+    /// <summary>
+    /// Responde el preflight CORS + Private Network Access. El header
+    /// <c>Access-Control-Allow-Private-Network</c> es el que autoriza a una página pública a
+    /// conectarse a un servicio de la red local (aquí, el agente en localhost).
+    /// </summary>
+    private void WritePreflightResponse(HttpListenerContext context)
+    {
+        string? origin = context.Request.Headers["Origin"];
+        string[] allowedOrigins = configuration.GetSection("Agent:AllowedOrigins").Get<string[]>() ?? [];
+
+        if (!IsOriginAllowed(origin, allowedOrigins, context.Request.RemoteEndPoint))
+        {
+            logger.LogWarning("Preflight rechazado. Origen no permitido: {Origin}", origin);
+            context.Response.StatusCode = 403;
+            return;
+        }
+
+        AddCorsOriginHeader(context);
+        context.Response.AddHeader("Access-Control-Allow-Private-Network", "true");
+        context.Response.AddHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+        context.Response.AddHeader("Access-Control-Allow-Headers", "*");
+        context.Response.AddHeader("Access-Control-Max-Age", "600");
+        context.Response.StatusCode = 204;
+    }
+
+    private static void AddCorsOriginHeader(HttpListenerContext context)
+    {
+        string? origin = context.Request.Headers["Origin"];
+        context.Response.AddHeader(
+            "Access-Control-Allow-Origin",
+            string.IsNullOrWhiteSpace(origin) ? "*" : origin);
+    }
+
     private async Task ReceiveLoopAsync(System.Net.WebSockets.WebSocket webSocket, string clientId, CancellationToken cancellationToken)
     {
         Stopwatch sessionTimer = Stopwatch.StartNew();
@@ -148,6 +200,7 @@ public sealed class LocalWebSocketServerService(
             {
                 using MemoryStream messageStream = new();
                 WebSocketReceiveResult receiveResult;
+                bool messageTooLarge = false;
 
                 do
                 {
@@ -158,12 +211,46 @@ public sealed class LocalWebSocketServerService(
                         return;
                     }
 
+                    // Cap del mensaje para prevenir OOM por cliente malicioso enviando fragmentos infinitos.
+                    if (messageStream.Length + receiveResult.Count > _maxIncomingMessageBytes)
+                    {
+                        messageTooLarge = true;
+                        break;
+                    }
+
                     await messageStream.WriteAsync(buffer.AsMemory(0, receiveResult.Count), cancellationToken);
                 }
                 while (!receiveResult.EndOfMessage);
 
-                string json = Encoding.UTF8.GetString(messageStream.ToArray());
+                if (messageTooLarge)
+                {
+                    logger.LogWarning(
+                        "Cliente {ClientId} envió un mensaje mayor al máximo permitido ({MaxBytes} bytes). Cerrando conexión.",
+                        clientId, _maxIncomingMessageBytes);
+                    await webSocket.CloseAsync(
+                        WebSocketCloseStatus.MessageTooBig,
+                        $"Mensaje excede el máximo permitido ({_maxIncomingMessageBytes} bytes).",
+                        cancellationToken);
+                    return;
+                }
+
                 pendingOperations.RemoveAll(task => task.IsCompleted);
+
+                // Contra-flood: si el cliente supera el límite de operaciones concurrentes, dropea el mensaje con un error.
+                if (pendingOperations.Count >= _maxPendingOperationsPerClient)
+                {
+                    logger.LogWarning(
+                        "Cliente {ClientId} excedió el límite de operaciones concurrentes ({Max}). Mensaje rechazado.",
+                        clientId, _maxPendingOperationsPerClient);
+                    await SendJsonAsync(
+                        webSocket,
+                        new { type = ErrorMessageType, success = false, message = "Demasiadas operaciones concurrentes. Espere a que terminen las actuales." },
+                        sendLock,
+                        cancellationToken);
+                    continue;
+                }
+
+                string json = Encoding.UTF8.GetString(messageStream.ToArray());
                 pendingOperations.Add(Task.Run(
                     () => ProcessClientMessageAsync(json, webSocket, clientId, sendLock, cancellationToken),
                     CancellationToken.None));
@@ -400,22 +487,30 @@ public sealed class LocalWebSocketServerService(
         IReadOnlyCollection<string> allowedOrigins,
         IPEndPoint? remoteEndPoint = null)
     {
-        if (allowedOrigins.Count > 0)
+        // Loopback y file:// (Origin "null"/vacío desde un cliente loopback) SIEMPRE se permiten,
+        // incluso con orígenes de producción configurados. El servidor solo escucha en localhost,
+        // así que un sitio remoto malicioso no puede falsear un origen loopback: la protección
+        // contra CSWSH remoto se mantiene, y las herramientas locales (test-websocket.html,
+        // dev server en http://localhost) siguen funcionando.
+        if (IsLoopbackOrigin(origin, remoteEndPoint))
         {
-            return allowedOrigins.Any(allowed =>
-                string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+            return true;
         }
 
-        if (string.IsNullOrWhiteSpace(origin))
+        // Orígenes de producción explícitamente permitidos (p. ej. el frontend del tenant).
+        return allowedOrigins.Count > 0
+            && allowedOrigins.Any(allowed => string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsLoopbackOrigin(string? origin, IPEndPoint? remoteEndPoint)
+    {
+        // Sin Origin o "null" (file://): solo se acepta si el cliente conecta desde loopback.
+        if (string.IsNullOrWhiteSpace(origin) || string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
         {
             return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
         }
 
-        if (string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase))
-        {
-            return remoteEndPoint is not null && IPAddress.IsLoopback(remoteEndPoint.Address);
-        }
-
+        // Origin explícito http(s)://localhost / 127.0.0.1 / [::1].
         return Uri.TryCreate(origin, UriKind.Absolute, out Uri? originUri) && originUri.IsLoopback;
     }
 
@@ -434,7 +529,7 @@ public sealed class LocalWebSocketServerService(
                 "fingerprint.capture" => await CaptureAndEnqueueAsync(cancellationToken),
                 "fingerprint.identify" => await IdentifyAndEnqueueAsync(cancellationToken),
                 "fingerprint.match" => await MatchAndEnqueueAsync(json, cancellationToken),
-                "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, cancellationToken),
+                "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, message.UserRef, message.FingerIndex, cancellationToken),
                 "fingerprint.enroll.cancel" => scannerService.CancelEnrollment(),
                 "queue.status" => new
                 {
@@ -492,9 +587,29 @@ public sealed class LocalWebSocketServerService(
     private async Task<FingerprintIdentifyResult> IdentifyAndEnqueueAsync(CancellationToken ct)
     {
         FingerprintIdentifyResult result = await scannerService.IdentifyFingerprintAsync(ct);
-        bool marked = false;
 
-        if (result.Success && result.EncryptedTemplate is not null && attendanceMarkingClient is not null)
+        if (!result.Success)
+        {
+            return result;
+        }
+
+        // Sin template cifrado (no hay clave RSA del backend) no se puede transmitir la
+        // marcación. Antes esto devolvía success=true sin marcar ni encolar → asistencia
+        // fantasma. Se marca explícitamente como "not_transmitted" para que el frontend
+        // no muestre asistencia confirmada.
+        if (result.EncryptedTemplate is null)
+        {
+            logger.LogWarning(
+                "Identificación capturada pero NO transmitida: falta el template cifrado (clave RSA del backend no configurada).");
+            return result with
+            {
+                DeliveryStatus = "not_transmitted",
+                Message = "Huella capturada, pero la asistencia no se transmitió: falta la clave de cifrado del backend."
+            };
+        }
+
+        bool marked = false;
+        if (attendanceMarkingClient is not null)
         {
             marked = await attendanceMarkingClient.TryMarkAsync(
                 result.EncryptedTemplate,
@@ -503,12 +618,17 @@ public sealed class LocalWebSocketServerService(
                 ct);
         }
 
-        if (!marked)
+        if (marked)
         {
-            await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+            return result with { DeliveryStatus = "marked" };
         }
 
-        return result;
+        await TryEnqueueAsync(result.EncryptedTemplate, result.DeviceId, result.CapturedAtUtc, "identify", ct);
+        return result with
+        {
+            DeliveryStatus = "queued",
+            Message = "Huella capturada. Backend no disponible: asistencia encolada para sincronización."
+        };
     }
 
     private async Task<FingerprintMatchResult> MatchAndEnqueueAsync(string json, CancellationToken ct)
@@ -554,9 +674,26 @@ public sealed class LocalWebSocketServerService(
     }
 
     private async Task<FingerprintEnrollResult> EnrollAndEnqueueAsync(
-        Func<FingerprintEnrollProgress, CancellationToken, Task> callback, CancellationToken ct)
+        Func<FingerprintEnrollProgress, CancellationToken, Task> callback,
+        string? userRef,
+        int fingerIndex,
+        CancellationToken ct)
     {
-        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(callback, ct);
+        // Clientes que no envían `userRef` (p. ej. el frontend desplegado) igual deben quedar
+        // enrolados en el padrón local: sin una referencia, la huella no se registraría y luego
+        // `fingerprint.identify` rechazaría a todo el mundo. Se genera una referencia local
+        // estable para esta huella; el cliente puede enviar `userRef` para controlarla.
+        bool generated = string.IsNullOrWhiteSpace(userRef);
+        string effectiveUserRef = generated ? $"local-{Guid.NewGuid():N}" : userRef!;
+        if (generated)
+        {
+            logger.LogInformation(
+                "Enrolamiento sin 'userRef': se registrará en el padrón local como {UserRef}.",
+                effectiveUserRef);
+        }
+
+        FingerprintEnrollResult result = await scannerService.EnrollFingerprintAsync(
+            callback, ct, effectiveUserRef, fingerIndex);
         return result;
     }
 

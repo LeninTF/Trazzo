@@ -68,6 +68,11 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
         return InvokeStatic<int>("DBMatch", databaseHandle, template1, template2);
     }
 
+    public int DBAdd(IntPtr databaseHandle, int fingerId, byte[] registeredTemplate)
+    {
+        return InvokeStatic<int>("DBAdd", databaseHandle, fingerId, registeredTemplate);
+    }
+
     public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score)
     {
         EnsureLoaded();
@@ -99,12 +104,9 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
             return loadedType;
         }
 
+        // Solo AppContext.BaseDirectory: si un atacante controla CurrentDirectory de un servicio,
+        // podría inyectar libzkfpcsharp.dll maliciosa que corra como SYSTEM.
         string sdkPath = Path.Combine(AppContext.BaseDirectory, "Native", "x64", "libzkfpcsharp.dll");
-        if (!File.Exists(sdkPath))
-        {
-            sdkPath = Path.Combine(Environment.CurrentDirectory, "Native", "x64", "libzkfpcsharp.dll");
-        }
-
         if (!File.Exists(sdkPath))
         {
             return null;

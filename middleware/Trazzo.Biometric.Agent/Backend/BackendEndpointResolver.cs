@@ -4,6 +4,25 @@ internal static class BackendEndpointResolver
 {
     private const string BaseUrlKey = "Backend:BaseUrl";
 
+    // HTTPS obligatorio en producción. Loopback permitido solo para desarrollo local.
+    public static bool IsSecureBackendUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)) return false;
+        return uri.Scheme == Uri.UriSchemeHttps || uri.IsLoopback;
+    }
+
+    public static string? EnsureSecureUrl(string? url, ILogger logger, string endpointName)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (IsSecureBackendUrl(url)) return url;
+
+        logger.LogError(
+            "El endpoint '{EndpointName}' con URL '{Url}' no es seguro. Debe usar HTTPS (o loopback para desarrollo). El endpoint se deshabilita.",
+            endpointName, url);
+        return null;
+    }
+
     public static string? ResolveSecurityPublicKeyUrl(IConfiguration configuration)
     {
         return Resolve(

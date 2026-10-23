@@ -59,7 +59,7 @@ public sealed class SqliteEventQueueTests
                 directory);
 
             Assert.Equal(
-                $"Data Source={Path.Combine(directory, "TrazzoAgent", "events.db")}",
+                $"Data Source={Path.Combine(directory, "TrazzoAgent", "events.db")};Pooling=True",
                 connectionString);
             Assert.True(Directory.Exists(Path.Combine(directory, "TrazzoAgent")));
         }
@@ -125,7 +125,9 @@ public sealed class SqliteEventQueueTests
     {
         using SqliteEventQueue queue = CreateQueue();
         BiometricEvent expected = MakeEvent("capture", deviceId: null);
+        DateTimeOffset before = DateTimeOffset.UtcNow.AddSeconds(-1);
         await queue.EnqueueAsync(expected);
+        DateTimeOffset after = DateTimeOffset.UtcNow.AddSeconds(1);
 
         BiometricEvent actual = Assert.Single(await queue.GetPendingAsync());
 
@@ -139,6 +141,10 @@ public sealed class SqliteEventQueueTests
         Assert.Equal(expected.CapturedAtUtc, actual.CapturedAtUtc);
         Assert.Equal(BiometricEventStatus.Pending, actual.Status);
         Assert.Equal(0, actual.RetryCount);
+        // El queue debe poblar CreatedAtUtc al leer (usado luego como `created_at_utc`
+        // opcional en el payload de /asistencia/sync per openapi).
+        Assert.NotNull(actual.CreatedAtUtc);
+        Assert.InRange(actual.CreatedAtUtc!.Value, before, after);
     }
 
     [Fact]

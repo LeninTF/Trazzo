@@ -28,6 +28,8 @@ public interface IZKTecoNativeSdk
 
     int DBMatch(IntPtr databaseHandle, byte[] template1, byte[] template2);
 
+    int DBAdd(IntPtr databaseHandle, int fingerId, byte[] registeredTemplate);
+
     int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score);
 
     int DBMerge(

@@ -1,20 +1,25 @@
 <#
 Configura una instalacion del Trazzo Biometric Agent sin editar appsettings.json a mano.
 
+TenantId, DeviceCode y el token del agente salen de la pantalla "Dispositivos" del panel
+del tenant: al generar el token se muestran una sola vez el token (trzd_...), el
+device_code del lector y el tenant_id.
+
 Ejemplo interactivo:
   .\Configure-Agent.ps1 `
     -TenantId "00000000-0000-0000-0000-000000000000" `
     -DeviceCode "ZK-C2PRO-00123" `
-    -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-    -AllowedOrigins "https://app.trazzo.pe"
+    -BackendBaseUrl "https://trazzosaas.noahtechperu.com/api/v1"
 
 Ejemplo con token seguro:
   .\Configure-Agent.ps1 `
     -TenantId "00000000-0000-0000-0000-000000000000" `
     -DeviceCode "ZK-C2PRO-00123" `
-    -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-    -AgentTokenSecure (Read-Host "Queue:AgentToken" -AsSecureString) `
-    -AllowedOrigins "https://app.trazzo.pe"
+    -BackendBaseUrl "https://trazzosaas.noahtechperu.com/api/v1" `
+    -AgentTokenSecure (Read-Host "Queue:AgentToken" -AsSecureString)
+
+-AllowedOrigins por defecto es el frontend de produccion; para pruebas locales anadir
+"http://localhost:4200" (ng serve) o "http://localhost:4000" (docker-compose.local.yml).
 #>
 
 param(
@@ -35,7 +40,7 @@ param(
 
     [SecureString]$AgentTokenSecure,
 
-    [string[]]$AllowedOrigins = @("https://app.trazzo.pe"),
+    [string[]]$AllowedOrigins = @("https://trazzosaas.noahtechperu.com"),
 
     [string]$ServiceName = "TrazzoAgent",
 

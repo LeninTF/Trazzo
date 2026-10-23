@@ -10,7 +10,12 @@ namespace Trazzo.Biometric.Agent.Backend;
 
 public sealed class RemoteEnrollmentService : BackgroundService
 {
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    // 16 KB para sesión pendiente (token + metadata).
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+        MaxResponseContentBufferSize = 16 * 1024
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IBiometricScannerService _scannerService;
@@ -45,8 +50,14 @@ public sealed class RemoteEnrollmentService : BackgroundService
         _httpClient = httpClient;
         _delay = delay ?? Task.Delay;
 
-        _pendingEnrollmentUrl = BackendEndpointResolver.ResolvePendingEnrollmentUrl(configuration);
-        _completeEnrollmentUrl = BackendEndpointResolver.ResolveCompleteEnrollmentUrl(configuration);
+        _pendingEnrollmentUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolvePendingEnrollmentUrl(configuration),
+            logger,
+            "Backend:Endpoints:PendingEnrollment");
+        _completeEnrollmentUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolveCompleteEnrollmentUrl(configuration),
+            logger,
+            "Backend:Endpoints:CompleteEnrollment");
         _tenantId = configuration["Agent:TenantId"];
         _agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         _deviceCode = configuration["Agent:DeviceCode"];
@@ -100,7 +111,11 @@ public sealed class RemoteEnrollmentService : BackgroundService
         AddBackendHeaders(request);
 
         using HttpResponseMessage response = await _httpClient.SendAsync(request, cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        // "Sin sesión pendiente" es un estado normal del polling (cada pocos segundos).
+        // El contrato define 204; el backend actual responde 404. Ambos se tratan igual
+        // y en silencio, para no llenar el log con un warning por cada ciclo.
+        if (response.StatusCode is System.Net.HttpStatusCode.NoContent
+            or System.Net.HttpStatusCode.NotFound)
         {
             return false;
         }
@@ -121,6 +136,14 @@ public sealed class RemoteEnrollmentService : BackgroundService
             return false;
         }
 
+        if (pending.ExpiresAt is not null && pending.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            _logger.LogWarning(
+                "Sesion de enrolamiento pendiente expirada (ExpiresAt={ExpiresAt}). Se ignora.",
+                pending.ExpiresAt.Value);
+            return false;
+        }
+
         FingerprintEnrollResult enrollResult = await _scannerService.EnrollFingerprintAsync(
             (progress, _) =>
             {
@@ -132,7 +155,10 @@ public sealed class RemoteEnrollmentService : BackgroundService
                         progress.Message);
                 return Task.CompletedTask;
             },
-            cancellationToken);
+            cancellationToken,
+            // Puebla el padrón local de identificación 1:N con la referencia del usuario del backend.
+            userReference: pending.TenantUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            fingerIndex: pending.FingerIndex);
 
         if (!enrollResult.Success || enrollResult.EncryptedRegisteredTemplate is null)
         {
@@ -152,6 +178,9 @@ public sealed class RemoteEnrollmentService : BackgroundService
     {
         EncryptedPayload encrypted = enrollResult.EncryptedRegisteredTemplate!;
         string deviceCode = pending.DeviceCode ?? enrollResult.DeviceId ?? _deviceCode!;
+
+        // Contrato del backend: CompleteEnrollHttpRequest (iv y tag SEPARADOS). El backend
+        // guarda estos campos tal cual y luego los descifra con el mismo AAD al matchear.
         var payload = new
         {
             enroll_token = pending.EnrollToken,
@@ -161,7 +190,7 @@ public sealed class RemoteEnrollmentService : BackgroundService
             encrypted_aes_key_base64 = encrypted.EncryptedAesKeyBase64,
             iv_base64 = encrypted.IvBase64,
             tag_base64 = encrypted.TagBase64,
-            captured_at_utc = enrollResult.CapturedAtUtc.ToString("O")
+            captured_at_utc = FormatAsLocalDateTime(enrollResult.CapturedAtUtc)
         };
 
         using StringContent content = new(
@@ -198,6 +227,11 @@ public sealed class RemoteEnrollmentService : BackgroundService
         string separator = endpointUrl.Contains('?') ? "&" : "?";
         return $"{endpointUrl}{separator}device_code={Uri.EscapeDataString(deviceCode)}";
     }
+
+    // Jackson en Spring parsea LocalDateTime sin offset. Convertimos a UTC y
+    // emitimos ISO 8601 sin zona (los milisegundos son opcionales pero útiles).
+    internal static string FormatAsLocalDateTime(DateTimeOffset value)
+        => value.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff", System.Globalization.CultureInfo.InvariantCulture);
 
     private sealed class PendingEnrollSessionResponse
     {

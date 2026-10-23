@@ -10,6 +10,9 @@ public sealed class BiometricEvent
     public required string TagBase64 { get; init; }
     public string? DeviceId { get; init; }
     public required DateTimeOffset CapturedAtUtc { get; init; }
+    // Poblado por SqliteEventQueue en INSERT/SELECT; se envía como `created_at_utc`
+    // opcional en BiometricIdentifyRequest para trazabilidad de la cola offline.
+    public DateTimeOffset? CreatedAtUtc { get; init; }
     public BiometricEventStatus Status { get; init; } = BiometricEventStatus.Pending;
     public int RetryCount { get; init; }
 }

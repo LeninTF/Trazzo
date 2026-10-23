@@ -176,7 +176,9 @@ public sealed class WorkerTests
 
         public Task<FingerprintEnrollResult> EnrollFingerprintAsync(
             Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string? userReference = null,
+            int fingerIndex = 0)
             => Task.FromResult(FingerprintEnrollResult.Failed("Not used."));
 
         public Task<FingerprintMatchResult> MatchFingerprintAgainstTemplatesAsync(

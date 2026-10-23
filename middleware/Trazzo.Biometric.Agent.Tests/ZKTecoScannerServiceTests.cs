@@ -102,11 +102,12 @@ public sealed class ZKTecoScannerServiceTests
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
 
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.CaptureFingerprintAsync(CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal("Huella capturada correctamente.", result.Message);
-        // Sin crypto configurado, el template viaja en Base64 (modo desarrollo)
+        // Sin crypto configurado, el template viaja en Base64 solo si el gate plaintext está abierto (modo desarrollo)
         Assert.Equal(Convert.ToBase64String(capturedTemplate), result.TemplateBase64);
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
@@ -182,6 +183,7 @@ public sealed class ZKTecoScannerServiceTests
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
 
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
 
         Assert.True(result.Success);
@@ -189,6 +191,69 @@ public sealed class ZKTecoScannerServiceTests
         Assert.Equal(Convert.ToBase64String(capturedTemplate), result.TemplateBase64);
         Assert.Null(result.EncryptedTemplate);
         Assert.Equal(capturedTemplate.Length, result.TemplateSize);
+    }
+
+    [Fact]
+    public async Task IdentifyFingerprintAsync_ConMatchLocal_CuandoHuellaEnrolada_Identifica()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBAddResult = 0,
+            DBIdentifyResult = 0,     // encontrado
+            DBIdentifyFid = 1,        // primer fingerId asignado por DBAdd
+            DBIdentifyScore = 90      // ≥ umbral (50)
+        };
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?> { ["Biometric:Identify:RequireLocalMatch"] = "true" });
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(result.Matched);
+        Assert.Equal("user-1", result.MatchedUserReference);
+        Assert.Equal(90, result.MatchScore);
+    }
+
+    [Fact]
+    public async Task IdentifyFingerprintAsync_ConMatchLocal_CuandoNoCoincide_RechazaComoNoReconocida()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBAddResult = 0,
+            DBIdentifyResult = 0,
+            DBIdentifyFid = 1,
+            DBIdentifyScore = 10      // < umbral (50): no reconocida (p. ej. la palma)
+        };
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?> { ["Biometric:Identify:RequireLocalMatch"] = "true" });
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.False(result.Matched);
+        Assert.Contains("no coincide", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -221,6 +286,7 @@ public sealed class ZKTecoScannerServiceTests
         await service.InitializeAsync(CancellationToken.None);
 
         var progressMessages = new List<string>();
+        using var _ = new PlaintextGateScope(open: true);
         var result = await service.EnrollFingerprintAsync(
             (progress, _) => { progressMessages.Add(progress.Message); return Task.CompletedTask; },
             CancellationToken.None);
@@ -683,6 +749,26 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task EnrollFingerprintAsync_CuandoUnaMuestraEsDeOtroDedo_LaDescartaYReintenta()
+    {
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk();
+        // La verificación de la 2ª muestra devuelve score bajo (dedo distinto) → se descarta;
+        // los siguientes DBMatch caen al fallback 100 (mismo dedo) y el enrolamiento completa.
+        sdk.DBMatchResultSequence = new Queue<int>([10]);
+        List<string> progress = [];
+        await using ZKTecoScannerService service = CreateService(sdk);
+        await service.InitializeAsync(CancellationToken.None);
+
+        var result = await service.EnrollFingerprintAsync(
+            (update, _) => { progress.Add(update.Message); return Task.CompletedTask; },
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(3, result.CapturedSamples);
+        Assert.Contains(progress, message => message.Contains("MISMO dedo", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EnrollFingerprintAsync_WhenFingerLiftRequired_WaitsBetweenSamples()
     {
         // Múltiples -1 por lift: IsFingerAlreadyOnReaderAsync puede consumir 0 o más
@@ -930,7 +1016,8 @@ public sealed class ZKTecoScannerServiceTests
     public async Task MatchFingerprintAgainstTemplatesAsync_CuandoCoincide_DevuelveMatchedResult()
     {
         byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
-        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(template: capturedTemplate);
+        // Score 80 ≥ umbral por defecto (50): coincidencia válida según el SDK real.
+        FakeZKTecoNativeSdk sdk = CreateConnectedSdk(template: capturedTemplate, dbMatchResult: 80);
         await using ZKTecoScannerService service = CreateService(sdk);
         await service.InitializeAsync(CancellationToken.None);
         var templates = new List<(int Index, byte[] Template)>
@@ -1264,7 +1351,8 @@ public sealed class ZKTecoScannerServiceTests
         bool fillQualityImage = true,
         Exception? captureException = null,
         int captureDelayMilliseconds = 0,
-        int dbMergeResult = 0)
+        int dbMergeResult = 0,
+        int dbMatchResult = 100)
     {
         return new FakeZKTecoNativeSdk
         {
@@ -1277,7 +1365,8 @@ public sealed class ZKTecoScannerServiceTests
             FillQualityImage = fillQualityImage,
             CaptureException = captureException,
             CaptureDelayMilliseconds = captureDelayMilliseconds,
-            DBMergeResult = dbMergeResult
+            DBMergeResult = dbMergeResult,
+            DBMatchResult = dbMatchResult
         };
     }
 }

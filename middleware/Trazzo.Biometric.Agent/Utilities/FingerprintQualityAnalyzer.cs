@@ -8,11 +8,23 @@ public sealed record FingerprintQualityCriteria(
     double MinimumContrastScore,
     bool RequireCenteredFingerprint,
     double CenterTolerancePercent,
-    double ContrastThresholdOffset = 15);
+    double ContrastThresholdOffset = 15,
+    // Coherencia direccional mínima (0-100) que debe presentar la estructura de la
+    // superficie para aceptarla como huella. 0 = desactivado (útil para pruebas
+    // sintéticas). Producción lo activa por configuración: distingue una huella real
+    // (crestas con orientación local dominante) de un codo/objeto sin crestas.
+    double MinimumRidgeCoherencePercent = 0,
+    // Variación mínima de orientación de crestas (0-100). La yema del dedo apoya un
+    // núcleo con crestas que se curvan (orientación muy variada); un parche de palma
+    // muestra crestas casi paralelas (orientación uniforme). 0 = desactivado.
+    double MinimumRidgeOrientationSpreadPercent = 0);
 
 public static class FingerprintQualityAnalyzer
 {
     private const double MaximumRejectedScorePercent = 50;
+    // Tamaño de bloque para el análisis de estructura por tensor. 16 px equilibra
+    // resolución de orientación y costo en la imagen 300×400 del ZK9500.
+    private const int RidgeAnalysisBlockSize = 16;
 
     public static FingerprintQualityResult Analyze(
         byte[] imageBuffer,
@@ -67,7 +79,16 @@ public static class FingerprintQualityAnalyzer
         double contrastScore = Math.Max(0, backgroundAverage - foregroundAverage);
         bool isCentered = IsForegroundCentered(width, height, minX, minY, maxX, maxY, criteria.CenterTolerancePercent);
 
-        return EvaluateQuality(criteria, foregroundCount, coveragePercent, contrastScore, isCentered);
+        // Solo se calculan cuando su criterio está activo: el análisis por bloques es el
+        // paso más costoso y las pruebas sintéticas los dejan en 0.
+        double ridgeCoherencePercent = criteria.MinimumRidgeCoherencePercent > 0
+            ? CalculateRidgeCoherencePercent(imageBuffer, width, height)
+            : 0;
+        double ridgeOrientationSpreadPercent = criteria.MinimumRidgeOrientationSpreadPercent > 0
+            ? CalculateRidgeOrientationSpreadPercent(imageBuffer, width, height)
+            : 0;
+
+        return EvaluateQuality(criteria, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent);
     }
 
     private static FingerprintQualityResult EvaluateQuality(
@@ -75,29 +96,45 @@ public static class FingerprintQualityAnalyzer
         int foregroundCount,
         double coveragePercent,
         double contrastScore,
-        bool isCentered)
+        bool isCentered,
+        double ridgeCoherencePercent,
+        double ridgeOrientationSpreadPercent)
     {
         if (coveragePercent < criteria.MinimumForegroundCoveragePercent)
         {
-            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella insuficiente.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "Área de huella insuficiente.");
         }
 
         if (coveragePercent > criteria.MaximumForegroundCoveragePercent)
         {
-            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Área de huella excesiva.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "Área de huella excesiva.");
         }
 
         if (contrastScore < criteria.MinimumContrastScore)
         {
-            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, "Contraste de huella insuficiente.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "Contraste de huella insuficiente.");
+        }
+
+        // Rechaza superficies sin crestas (codo, nudillo, objeto): tienen cobertura y
+        // contraste, pero no la orientación local dominante propia de una huella.
+        if (criteria.MinimumRidgeCoherencePercent > 0 && ridgeCoherencePercent < criteria.MinimumRidgeCoherencePercent)
+        {
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "La superficie no tiene estructura de huella. Coloque la yema del dedo sobre el lector.");
+        }
+
+        // Rechaza la palma de la mano: tiene crestas (coherencia alta) pero fluyen casi
+        // paralelas. La yema apoya un núcleo cuyas crestas se curvan → orientación variada.
+        if (criteria.MinimumRidgeOrientationSpreadPercent > 0 && ridgeOrientationSpreadPercent < criteria.MinimumRidgeOrientationSpreadPercent)
+        {
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "No parece la yema de un dedo. Coloque la yema (no la palma) centrada sobre el lector.");
         }
 
         if (criteria.RequireCenteredFingerprint && !isCentered)
         {
-            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, false, "La huella no está centrada.");
+            return CreateResult(criteria, false, foregroundCount, coveragePercent, contrastScore, false, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "La huella no está centrada.");
         }
 
-        return CreateResult(criteria, true, foregroundCount, coveragePercent, contrastScore, isCentered, "Calidad de huella aceptable.");
+        return CreateResult(criteria, true, foregroundCount, coveragePercent, contrastScore, isCentered, ridgeCoherencePercent, ridgeOrientationSpreadPercent, "Calidad de huella aceptable.");
     }
 
     private static double CalculateAverage(byte[] imageBuffer, int totalPixels)
@@ -109,6 +146,125 @@ public static class FingerprintQualityAnalyzer
         }
 
         return sum / (double)totalPixels;
+    }
+
+    // Coherencia direccional agregada por bloques (tensor de estructura), ponderada por la
+    // energía de gradiente de cada bloque. Una huella real presenta crestas con orientación
+    // local muy definida → coherencia alta. Codo/palma/objeto liso o con textura difusa →
+    // gradientes sin orientación dominante → coherencia baja. Resultado en 0-100.
+    internal static double CalculateRidgeCoherencePercent(byte[] image, int width, int height)
+    {
+        int block = RidgeAnalysisBlockSize;
+        if (width < block + 2 || height < block + 2)
+        {
+            return 0;
+        }
+
+        double totalEnergy = 0;
+        double coherentEnergy = 0;
+
+        for (int by = 1; by + block < height; by += block)
+        {
+            for (int bx = 1; bx + block < width; bx += block)
+            {
+                double gxx = 0;
+                double gyy = 0;
+                double gxy = 0;
+
+                for (int y = by; y < by + block; y++)
+                {
+                    int row = y * width;
+                    int rowUp = (y - 1) * width;
+                    int rowDown = (y + 1) * width;
+                    for (int x = bx; x < bx + block; x++)
+                    {
+                        // Diferencias centrales: gradiente horizontal y vertical.
+                        double gx = image[row + x + 1] - image[row + x - 1];
+                        double gy = image[rowDown + x] - image[rowUp + x];
+                        gxx += gx * gx;
+                        gyy += gy * gy;
+                        gxy += gx * gy;
+                    }
+                }
+
+                double energy = gxx + gyy;
+                if (energy <= 1e-6)
+                {
+                    continue;
+                }
+
+                // Coherencia del tensor de estructura: 1 = orientación única, 0 = isótropo.
+                double coherence = Math.Sqrt((gxx - gyy) * (gxx - gyy) + 4 * gxy * gxy) / energy;
+                totalEnergy += energy;
+                coherentEnergy += coherence * energy;
+            }
+        }
+
+        return totalEnergy > 0 ? Clamp(coherentEnergy / totalEnergy * 100, 0, 100) : 0;
+    }
+
+    // Variación de orientación de las crestas entre bloques (estadística circular sobre el
+    // ángulo doblado 2θ, ponderada por energía de gradiente). La orientación de una cresta
+    // es módulo 180°, por eso se dobla el ángulo. La longitud del vector resultante medio R
+    // mide la concentración: R≈1 = todas las crestas paralelas (palma/parche laminar) →
+    // variación baja; R pequeño = orientaciones repartidas (núcleo de la yema, crestas que
+    // se curvan) → variación alta. Resultado = (1 − R) · 100, en 0-100.
+    internal static double CalculateRidgeOrientationSpreadPercent(byte[] image, int width, int height)
+    {
+        int block = RidgeAnalysisBlockSize;
+        if (width < block + 2 || height < block + 2)
+        {
+            return 0;
+        }
+
+        double sumCos = 0;
+        double sumSin = 0;
+        double totalEnergy = 0;
+
+        for (int by = 1; by + block < height; by += block)
+        {
+            for (int bx = 1; bx + block < width; bx += block)
+            {
+                double gxx = 0;
+                double gyy = 0;
+                double gxy = 0;
+
+                for (int y = by; y < by + block; y++)
+                {
+                    int row = y * width;
+                    int rowUp = (y - 1) * width;
+                    int rowDown = (y + 1) * width;
+                    for (int x = bx; x < bx + block; x++)
+                    {
+                        double gx = image[row + x + 1] - image[row + x - 1];
+                        double gy = image[rowDown + x] - image[rowUp + x];
+                        gxx += gx * gx;
+                        gyy += gy * gy;
+                        gxy += gx * gy;
+                    }
+                }
+
+                double energy = gxx + gyy;
+                if (energy <= 1e-6)
+                {
+                    continue;
+                }
+
+                // Ángulo dominante doblado del bloque: (2θ) = atan2(2·Gxy, Gxx − Gyy).
+                double doubleAngle = Math.Atan2(2 * gxy, gxx - gyy);
+                sumCos += energy * Math.Cos(doubleAngle);
+                sumSin += energy * Math.Sin(doubleAngle);
+                totalEnergy += energy;
+            }
+        }
+
+        if (totalEnergy <= 0)
+        {
+            return 0;
+        }
+
+        double resultantLength = Math.Sqrt(sumCos * sumCos + sumSin * sumSin) / totalEnergy;
+        return Clamp((1 - resultantLength) * 100, 0, 100);
     }
 
     private static bool IsForegroundCentered(
@@ -143,6 +299,8 @@ public static class FingerprintQualityAnalyzer
         double coveragePercent,
         double contrastScore,
         bool isCentered,
+        double ridgeCoherencePercent,
+        double ridgeOrientationSpreadPercent,
         string message)
     {
         return new FingerprintQualityResult(
@@ -153,7 +311,9 @@ public static class FingerprintQualityAnalyzer
             isCentered,
             message)
         {
-            ScorePercent = Math.Round(CalculateScorePercent(criteria, coveragePercent, contrastScore, isCentered, isAcceptable), 2)
+            ScorePercent = Math.Round(CalculateScorePercent(criteria, coveragePercent, contrastScore, isCentered, isAcceptable), 2),
+            RidgeCoherencePercent = Math.Round(ridgeCoherencePercent, 2),
+            RidgeOrientationSpreadPercent = Math.Round(ridgeOrientationSpreadPercent, 2)
         };
     }
 

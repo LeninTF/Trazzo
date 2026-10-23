@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -239,10 +241,21 @@ public sealed class HybridCryptographyServiceTests
     public async Task InitializeAsync_WhenCacheExists_LoadsCachedKey()
     {
         string cachePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.cache");
-        await File.WriteAllTextAsync(cachePath, GenerateTestPublicKeyBase64());
+        string publicKey = GenerateTestPublicKeyBase64();
 
         try
         {
+            // Primero calentamos el cache pasando el service con un fetcher que sí devuelve la clave.
+            // El service escribirá el cache con DPAPI + marcador de integridad.
+            using (HybridCryptographyService warmup = new(
+                _ => Task.FromResult<string?>(publicKey),
+                NullLogger<HybridCryptographyService>.Instance,
+                cachePath))
+            {
+                await warmup.InitializeAsync(CancellationToken.None);
+            }
+
+            // Segundo service sin fetcher — debe cargar del cache existente.
             using HybridCryptographyService service = new(
                 _ => Task.FromResult<string?>(null),
                 NullLogger<HybridCryptographyService>.Instance,
@@ -254,7 +267,31 @@ public sealed class HybridCryptographyServiceTests
         }
         finally
         {
-            File.Delete(cachePath);
+            if (File.Exists(cachePath)) File.Delete(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenCacheHasBeenTampered_RejectsAndRemainsUnconfigured()
+    {
+        string cachePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.cache");
+        try
+        {
+            // Cache escrito con contenido raw (sin DPAPI ni marker) simula manipulación externa.
+            await File.WriteAllTextAsync(cachePath, GenerateTestPublicKeyBase64());
+
+            using HybridCryptographyService service = new(
+                _ => Task.FromResult<string?>(null),
+                NullLogger<HybridCryptographyService>.Instance,
+                cachePath);
+
+            await service.InitializeAsync(CancellationToken.None);
+
+            Assert.False(service.IsConfigured);
+        }
+        finally
+        {
+            if (File.Exists(cachePath)) File.Delete(cachePath);
         }
     }
 
@@ -418,10 +455,197 @@ public sealed class HybridCryptographyServiceTests
         Assert.True(callCount >= 2);
     }
 
+    // ---------------------------------------------------------------------
+    // Cobertura del contrato openapi para /security/public-key:
+    // - Segunda llamada envía If-None-Match con el ETag recibido.
+    // - 304 devuelve null (mantener clave en memoria/cache).
+    // - 429 con Retry-After se maneja de forma no-fatal.
+    // - `kid` se lee desde la respuesta y se registra.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public async Task BuildHttpFetcher_CuandoSegundaLlamada_EnviaIfNoneMatchConEtagRecibido()
+    {
+        string publicKey = GenerateTestPublicKeyBase64();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "https://localhost/public-key"
+            })
+            .Build();
+        StatefulPublicKeyHandler handler = new()
+        {
+            FirstResponse = HttpResponseFactory.OkWithKey(publicKey, etag: "\"pubkey-abc\"", kid: "abc"),
+            SecondResponse = HttpResponseFactory.NotModified("\"pubkey-abc\"")
+        };
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        string? first = await fetcher(CancellationToken.None);
+        string? second = await fetcher(CancellationToken.None);
+
+        Assert.Equal(publicKey, first);
+        // 304 → null indica al servicio "mantener clave anterior".
+        Assert.Null(second);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.False(handler.Requests[0].Headers.Contains("If-None-Match"));
+        Assert.True(handler.Requests[1].Headers.Contains("If-None-Match"));
+        Assert.Equal("\"pubkey-abc\"", handler.Requests[1].Headers.GetValues("If-None-Match").Single());
+    }
+
+    [Fact]
+    public async Task BuildHttpFetcher_CuandoBackendResponde304DesdeElInicio_NoAlmacenaEtag()
+    {
+        // Escenario defensivo: no debe cachear ETag si nunca recibió cuerpo válido.
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "https://localhost/public-key"
+            })
+            .Build();
+        StatefulPublicKeyHandler handler = new()
+        {
+            FirstResponse = HttpResponseFactory.NotModified("\"stale\""),
+            SecondResponse = HttpResponseFactory.NotModified("\"stale\"")
+        };
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        await fetcher(CancellationToken.None);
+        await fetcher(CancellationToken.None);
+
+        Assert.False(handler.Requests[1].Headers.Contains("If-None-Match"));
+    }
+
+    [Fact]
+    public async Task BuildHttpFetcher_CuandoBackendDevuelve429_RetornaNullYNoLanza()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "https://localhost/public-key"
+            })
+            .Build();
+        HttpResponseMessage response = new(HttpStatusCode.TooManyRequests);
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(30));
+        StatefulPublicKeyHandler handler = new()
+        {
+            FirstResponse = response
+        };
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        string? result = await fetcher(CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task BuildHttpFetcher_CuandoBackendDevuelve5xx_RetornaNullYNoLanza()
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "https://localhost/public-key"
+            })
+            .Build();
+        StatefulPublicKeyHandler handler = new()
+        {
+            FirstResponse = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+        };
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        string? result = await fetcher(CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task BuildHttpFetcher_CuandoBackendIncluyeKid_LeeCampoDelJson()
+    {
+        // Verificamos que la extracción del cuerpo tolere `kid` presente/ausente
+        // (openapi lo declara junto con `publicKey`).
+        string publicKey = GenerateTestPublicKeyBase64();
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Security:BackendPublicKeyUrl"] = "https://localhost/public-key"
+            })
+            .Build();
+        MockHttpMessageHandler handler = new()
+        {
+            ResponseContent = $$"""{"publicKey":"{{publicKey}}","kid":"rotational-2026-07"}"""
+        };
+        using HttpClient httpClient = new(handler);
+        Func<CancellationToken, Task<string?>> fetcher = HybridCryptographyService.BuildHttpFetcher(
+            configuration,
+            NullLogger<HybridCryptographyService>.Instance,
+            httpClient);
+
+        string? result = await fetcher(CancellationToken.None);
+
+        Assert.Equal(publicKey, result);
+    }
+
     private static HybridCryptographyService CreateService(string? keyBase64 = null)
     {
         Func<CancellationToken, Task<string?>> fetcher = _ => Task.FromResult(keyBase64);
         return new HybridCryptographyService(fetcher, NullLogger<HybridCryptographyService>.Instance, NoCache());
+    }
+
+    private static class HttpResponseFactory
+    {
+        public static HttpResponseMessage OkWithKey(string publicKey, string etag, string? kid = null)
+        {
+            HttpResponseMessage response = new(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    kid is null
+                        ? $$"""{"publicKey":"{{publicKey}}"}"""
+                        : $$"""{"publicKey":"{{publicKey}}","kid":"{{kid}}"}""")
+            };
+            response.Headers.ETag = EntityTagHeaderValue.Parse(etag);
+            return response;
+        }
+
+        public static HttpResponseMessage NotModified(string etag)
+        {
+            HttpResponseMessage response = new(HttpStatusCode.NotModified);
+            response.Headers.ETag = EntityTagHeaderValue.Parse(etag);
+            return response;
+        }
+    }
+
+    private sealed class StatefulPublicKeyHandler : HttpMessageHandler
+    {
+        public required HttpResponseMessage FirstResponse { get; init; }
+        public HttpResponseMessage? SecondResponse { get; init; }
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            HttpResponseMessage response = Requests.Count switch
+            {
+                1 => FirstResponse,
+                _ => SecondResponse ?? new HttpResponseMessage(HttpStatusCode.OK)
+            };
+            return Task.FromResult(response);
+        }
     }
 
     // Returns a path that does not exist so tests cannot read from or write to disk cache

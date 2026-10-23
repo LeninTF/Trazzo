@@ -257,4 +257,170 @@ public sealed class FingerprintQualityAnalyzerTests
         // Score must be between 75 and 100 (interpolated — not full 100 since contrast < target 150)
         Assert.InRange(result.ScorePercent, 75, 99);
     }
+
+    [Fact]
+    public void Analyze_CuandoCoherenciaDesactivada_NoRechazaSuperficieSinCrestas()
+    {
+        // MinimumRidgeCoherencePercent = 0 (default) → no se evalúa estructura.
+        // Superficie uniforme oscura centrada: pasa como en el comportamiento previo.
+        const int size = 32;
+        byte[] buffer = new byte[size * size];
+        Array.Fill(buffer, (byte)200);
+        for (int y = 8; y < 24; y++)
+            for (int x = 8; x < 24; x++)
+                buffer[y * size + x] = 30;
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 10,
+            MaximumForegroundCoveragePercent: 60,
+            MinimumContrastScore: 50,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(0, result.RidgeCoherencePercent);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCoherenciaActivaYHayCrestas_Acepta()
+    {
+        // Patrón de bandas horizontales (crestas/valles): orientación vertical dominante →
+        // coherencia alta, como una huella real.
+        const int size = 32;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                buffer[y * size + x] = (byte)((y % 4) < 2 ? 30 : 200);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeCoherencePercent: 35);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.True(result.RidgeCoherencePercent >= 35);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCoherenciaActivaYNoHayCrestas_Rechaza()
+    {
+        // Textura pseudo-aleatoria sin orientación dominante (codo/palma/objeto):
+        // pasa cobertura y contraste, pero falla la validación de estructura de crestas.
+        const int size = 32;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                // Hash pseudo-aleatorio (sin relación lineal con x/y) → sin orientación dominante.
+                int h = (x * 374761393) + (y * 668265263);
+                h = (h ^ (h >> 13)) * 1274126177;
+                buffer[y * size + x] = (byte)(20 + ((h & 0x7fffffff) % 50));
+            }
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeCoherencePercent: 35);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.False(result.IsAcceptable);
+        Assert.Equal("La superficie no tiene estructura de huella. Coloque la yema del dedo sobre el lector.", result.Message);
+        Assert.True(result.RidgeCoherencePercent < 35);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCrestasCurvadasComoYema_ConSpreadActivo_Acepta()
+    {
+        // Crestas concéntricas (núcleo de la yema): la orientación varía en todas direcciones
+        // → variación de orientación alta.
+        const int size = 64;
+        byte[] buffer = BuildConcentricRidges(size, center: size / 2.0, period: 6);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeOrientationSpreadPercent: 22);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.True(result.RidgeOrientationSpreadPercent >= 22);
+    }
+
+    [Fact]
+    public void Analyze_CuandoCrestasParalelasComoPalma_ConSpreadActivo_Rechaza()
+    {
+        // Bandas paralelas (parche de palma): una sola orientación dominante → variación baja.
+        const int size = 64;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                buffer[y * size + x] = (byte)((y % 6) < 3 ? 30 : 200);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25,
+            MinimumRidgeOrientationSpreadPercent: 22);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.False(result.IsAcceptable);
+        Assert.Equal("No parece la yema de un dedo. Coloque la yema (no la palma) centrada sobre el lector.", result.Message);
+        Assert.True(result.RidgeOrientationSpreadPercent < 22);
+    }
+
+    [Fact]
+    public void Analyze_CuandoSpreadDesactivado_NoRechazaCrestasParalelas()
+    {
+        // Sin el criterio (default 0), las crestas paralelas pasan como antes.
+        const int size = 64;
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                buffer[y * size + x] = (byte)((y % 6) < 3 ? 30 : 200);
+
+        var criteria = new FingerprintQualityCriteria(
+            MinimumForegroundCoveragePercent: 1,
+            MaximumForegroundCoveragePercent: 99,
+            MinimumContrastScore: 1,
+            RequireCenteredFingerprint: false,
+            CenterTolerancePercent: 25);
+
+        var result = FingerprintQualityAnalyzer.Analyze(buffer, size, size, criteria);
+
+        Assert.True(result.IsAcceptable);
+        Assert.Equal(0, result.RidgeOrientationSpreadPercent);
+    }
+
+    private static byte[] BuildConcentricRidges(int size, double center, int period)
+    {
+        byte[] buffer = new byte[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                double dist = Math.Sqrt((x - center) * (x - center) + (y - center) * (y - center));
+                bool dark = ((int)(dist / period)) % 2 == 0;
+                buffer[y * size + x] = (byte)(dark ? 30 : 200);
+            }
+        }
+        return buffer;
+    }
 }

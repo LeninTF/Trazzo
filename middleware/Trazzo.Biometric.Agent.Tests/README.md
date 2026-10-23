@@ -2,7 +2,7 @@
 
 Suite de pruebas xUnit para el **Trazzo Biometric Agent**. Cubre toda la lógica de negocio sin necesitar hardware real ni base de datos externa.
 
-**262 pruebas**. No requieren lector ZK9500, DLL nativa ni conexión al backend. En entornos restringidos pueden fallar las 22 pruebas que abren `HttpListener`; las 240 restantes son unitarias o de integración in-process.
+**345 pruebas**. No requieren lector ZK9500, DLL nativa ni conexión al backend. En entornos restringidos pueden fallar las pruebas de `LocalWebSocketServerServiceTests` que abren `HttpListener`; el resto son unitarias o de integración in-process.
 
 ---
 
@@ -49,7 +49,8 @@ dotnet test .\Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj -
 | `WebSocketResponseTests.cs` | Estructura de respuestas JSON del protocolo WebSocket |
 | `AgentHealthServiceTests.cs` | Respuesta local de health check |
 | `WorkerTests.cs` | Inicialización del worker y reporte de arranque |
-| `AutoUpdateServiceTests.cs` | Manifiesto, descarga, SHA-256 obligatorio y aplicación segura del MSI |
+| `AutoUpdateServiceTests.cs` | Manifiesto, descarga, SHA-256 obligatorio, verificación Authenticode y aplicación segura del MSI |
+| `PlaintextGateScope.cs` | Helper para tests que necesitan abrir/cerrar el gate `BiometricSecurityGates.AllowPlaintextTemplateFallback` |
 | `Fakes.cs` | Implementaciones falsas compartidas: `FakeBiometricScanner`, `FakeEventQueue`, etc. |
 
 ---

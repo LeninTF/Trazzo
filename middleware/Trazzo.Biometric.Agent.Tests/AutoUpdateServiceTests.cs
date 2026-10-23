@@ -375,6 +375,41 @@ public sealed class AutoUpdateServiceTests
         }
     }
 
+    [Fact]
+    public async Task CheckAndApplyUpdateAsync_WhenAuthenticodeFails_DoesNotApplyUpdate()
+    {
+        byte[] msiContent = [1, 2, 3, 4, 5];
+        string expectedSha = Convert.ToHexStringLower(SHA256.HashData(msiContent));
+        SequentialHttpMessageHandler handler = new();
+        handler.Enqueue(HttpStatusCode.OK, SerializeManifest("2.0.0.0", "https://updates.example.com/a.msi", expectedSha));
+        handler.Enqueue(HttpStatusCode.OK, msiContent);
+        using HttpClient httpClient = new(handler);
+        string updatesDirectory = Path.Combine(Path.GetTempPath(), $"trazzo-update-{Guid.NewGuid():N}");
+        bool applied = false;
+
+        try
+        {
+            AutoUpdateService service = CreateService(
+                "https://updates.example.com/v.json",
+                httpClient,
+                getCurrentVersion: () => new Version(1, 0, 0, 0),
+                applyUpdate: _ => applied = true,
+                updatesDirectory: updatesDirectory,
+                verifyAuthenticode: (_, _) => false);
+
+            await service.CheckAndApplyUpdateAsync(CancellationToken.None);
+
+            Assert.False(applied);
+            // El MSI debe haberse borrado tras el rechazo.
+            Assert.Empty(Directory.Exists(updatesDirectory) ? Directory.GetFiles(updatesDirectory) : []);
+        }
+        finally
+        {
+            if (Directory.Exists(updatesDirectory))
+                Directory.Delete(updatesDirectory, recursive: true);
+        }
+    }
+
     // ─── Helpers ───────────────────────────────────────────────────────────
 
     private static AutoUpdateService CreateService(
@@ -384,7 +419,8 @@ public sealed class AutoUpdateServiceTests
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<Version>? getCurrentVersion = null,
         Action<string>? applyUpdate = null,
-        string? updatesDirectory = null)
+        string? updatesDirectory = null,
+        Func<string, string, bool>? verifyAuthenticode = null)
     {
         IConfiguration config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -395,6 +431,8 @@ public sealed class AutoUpdateServiceTests
             })
             .Build();
 
+        // Los tests que no evalúan Authenticode inyectan un verifier que siempre aprueba.
+        // Los que sí lo evalúan pasan explícitamente su propio verifier.
         return new AutoUpdateService(
             config,
             NullLogger<AutoUpdateService>.Instance,
@@ -402,7 +440,8 @@ public sealed class AutoUpdateServiceTests
             delay,
             getCurrentVersion,
             applyUpdate,
-            updatesDirectory);
+            updatesDirectory,
+            verifyAuthenticode ?? ((_, _) => true));
     }
 
     private static string SerializeManifest(string version, string downloadUrl, string sha256)

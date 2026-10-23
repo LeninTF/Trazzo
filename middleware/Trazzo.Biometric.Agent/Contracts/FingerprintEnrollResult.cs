@@ -18,7 +18,7 @@ public sealed record FingerprintEnrollResult(
         string? deviceId = null,
         EncryptedPayload? encryptedTemplate = null)
     {
-        string? plainBase64 = encryptedTemplate is null
+        string? plainBase64 = encryptedTemplate is null && BiometricSecurityGates.AllowPlaintextTemplateFallback
             ? Convert.ToBase64String(registeredTemplate.AsSpan(0, registeredTemplateSize))
             : null;
 

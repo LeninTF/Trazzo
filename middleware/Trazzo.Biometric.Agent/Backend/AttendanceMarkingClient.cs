@@ -9,7 +9,12 @@ namespace Trazzo.Biometric.Agent.Backend;
 
 public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
 {
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+    // 8 KB alcanza para respuesta de marcación (ok / rejected + metadata).
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(15),
+        MaxResponseContentBufferSize = 8 * 1024
+    };
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly HttpClient _httpClient;
@@ -34,7 +39,10 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
     {
         _logger = logger;
         _httpClient = httpClient;
-        _attendanceMarkUrl = BackendEndpointResolver.ResolveAttendanceMarkUrl(configuration);
+        _attendanceMarkUrl = BackendEndpointResolver.EnsureSecureUrl(
+            BackendEndpointResolver.ResolveAttendanceMarkUrl(configuration),
+            logger,
+            "Backend:Endpoints:AttendanceMark");
         _agentToken = AgentTokenProtector.ResolveAgentToken(configuration, logger);
         _tenantId = configuration["Agent:TenantId"];
         _deviceCode = configuration["Agent:DeviceCode"];
@@ -67,6 +75,8 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
             return false;
         }
 
+        // Contrato del backend: BiometricIdentifyRequest (iv y tag SEPARADOS, no empaquetados).
+        // captured_at_utc se mapea a LocalDateTime en Java, por eso va sin offset.
         var payload = new
         {
             event_type = "identify",
@@ -74,7 +84,7 @@ public sealed class AttendanceMarkingClient : IAttendanceMarkingClient
             encrypted_aes_key_base64 = encryptedTemplate.EncryptedAesKeyBase64,
             iv_base64 = encryptedTemplate.IvBase64,
             tag_base64 = encryptedTemplate.TagBase64,
-            captured_at_utc = capturedAtUtc.ToString("O"),
+            captured_at_utc = RemoteEnrollmentService.FormatAsLocalDateTime(capturedAtUtc),
             device_code = resolvedDeviceCode
         };
 

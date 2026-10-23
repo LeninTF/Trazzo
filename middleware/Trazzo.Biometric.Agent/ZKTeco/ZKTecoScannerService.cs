@@ -10,7 +10,8 @@ public sealed class ZKTecoScannerService(
     IZKTecoNativeSdk sdk,
     ICryptographyService cryptoService,
     IConfiguration configuration,
-    ILogger<ZKTecoScannerService> logger) : IBiometricScannerService
+    ILogger<ZKTecoScannerService> logger,
+    Trazzo.Biometric.Agent.Enrollment.IEnrolledFingerprintStore? enrolledStore = null) : IBiometricScannerService
 {
     private const string DeviceDisconnectedMessage = "Lector biométrico desconectado.";
     private const string NoDeviceConnectedMessage = "No se encontró ningún lector biométrico conectado.";
@@ -20,21 +21,32 @@ public sealed class ZKTecoScannerService(
     private const int DefaultImageWidth = 300;
     private const int DefaultImageHeight = 400;
     private const int DefaultTemplateBufferSize = 2048;
-    private const double DefaultCaptureTimeoutSeconds = 1.75;
-    private const int DefaultCapturePollingIntervalMilliseconds = 50;
-    private const int DefaultPostCaptureCooldownMilliseconds = 300;
+    // Alineado con el demo C# del SDK ZKTeco (ZKFinger Standard SDK 5.3.0.33 / Demo2 / Form1.cs):
+    // el loop DoCapture hace Thread.Sleep(200) sin cooldown ni espera de lift entre muestras.
+    private const double DefaultCaptureTimeoutSeconds = 15;
+    private const int DefaultCapturePollingIntervalMilliseconds = 200;
+    private const int DefaultPostCaptureCooldownMilliseconds = 200;
     private const int DefaultMinimumTemplateSize = 400;
     private const int DefaultEnrollmentSamples = 3;
-    private const double DefaultEnrollmentSampleTimeoutSeconds = 1.75;
-    private const double MaxCaptureTimeoutSeconds = 1.75;
-    private const int MaxCapturePollingIntervalMilliseconds = 80;
+    private const double DefaultEnrollmentSampleTimeoutSeconds = 15;
+    private const double MaxCaptureTimeoutSeconds = 15;
+    private const int MaxCapturePollingIntervalMilliseconds = 200;
     private const int MaxPostCaptureCooldownMilliseconds = 300;
-    private const double MaxEnrollmentSampleTimeoutSeconds = 1.75;
+    private const double MaxEnrollmentSampleTimeoutSeconds = 15;
     private const double DefaultMinimumForegroundCoveragePercent = 8;
     private const double DefaultMaximumForegroundCoveragePercent = 75;
     private const double DefaultMinimumContrastScore = 18;
     private const double DefaultCenterTolerancePercent = 28;
     private const double DefaultContrastThresholdOffset = 15;
+    // 0 = análisis de estructura desactivado por defecto en código (las pruebas sintéticas
+    // no configuran esta clave). Producción lo activa en appsettings.json con un valor real.
+    private const double DefaultMinimumRidgeCoherencePercent = 0;
+    // 0 = análisis de variación de orientación (palma vs yema) desactivado por defecto en código.
+    private const double DefaultMinimumRidgeOrientationSpreadPercent = 0;
+    // Umbral de similitud de ZKFinger DBMatch para aceptar una coincidencia 1:N.
+    // El SDK devuelve un score: mayor = más parecido. El demo oficial acepta score > 0;
+    // subir el umbral endurece contra falsos positivos (menor FAR). Calibrar con hardware.
+    private const int DefaultMatchMinScore = 50;
 
     private readonly SemaphoreSlim _sdkLock = new(1, 1);
     private readonly SemaphoreSlim _operationLock = new(1, 1);
@@ -47,14 +59,26 @@ public sealed class ZKTecoScannerService(
     private readonly int _minimumTemplateSize = GetPositiveConfigurationValue(configuration, "Biometric:Quality:MinimumTemplateSize", DefaultMinimumTemplateSize);
     private readonly int _enrollmentSamples = ClampEnrollmentSamples(GetPositiveConfigurationValue(configuration, "Enrollment:RequiredSamples", DefaultEnrollmentSamples), logger);
     private readonly double _enrollmentSampleTimeoutSeconds = GetStandardizedDoubleConfigurationValue(configuration, "Enrollment:SampleTimeoutSeconds", DefaultEnrollmentSampleTimeoutSeconds, MaxEnrollmentSampleTimeoutSeconds);
-    private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", true);
+    private readonly bool _requireFingerLiftBetweenEnrollmentSamples = configuration.GetValue("Enrollment:RequireFingerLiftBetweenSamples", false);
+    private readonly int _matchMinScore = GetPositiveConfigurationValue(configuration, "Biometric:Match:MinScore", DefaultMatchMinScore);
+    // true = fingerprint.identify hace identificación 1:N on-device (DBIdentify) y rechaza lo no
+    // enrolado (palma, dedo no enrolado). Default false en código para no romper pruebas que no
+    // enrolan; producción lo activa en appsettings.json.
+    private readonly bool _requireLocalIdentifyMatch = configuration.GetValue("Biometric:Identify:RequireLocalMatch", false);
+    // El backend matchea con SourceAFIS, que no entiende el template propietario de ZKFinger.
+    // Cuando está activo, lo que se cifra y envía al backend es un template SourceAFIS extraído
+    // de la imagen. Default false en código para no penalizar pruebas que no lo necesitan.
+    private readonly bool _sendSourceAfisTemplate = configuration.GetValue("Biometric:SendSourceAfisTemplate", false);
+    private readonly int _sourceAfisDpi = GetPositiveConfigurationValue(configuration, "Biometric:SourceAfisDpi", SourceAfisTemplateExtractor.DefaultDpi);
     private readonly FingerprintQualityCriteria _qualityCriteria = new(
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumForegroundCoveragePercent", DefaultMinimumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MaximumForegroundCoveragePercent", DefaultMaximumForegroundCoveragePercent),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumContrastScore", DefaultMinimumContrastScore),
         configuration.GetValue("Biometric:Quality:RequireCenteredFingerprint", true),
         GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:CenterTolerancePercent", DefaultCenterTolerancePercent),
-        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:ContrastThresholdOffset", DefaultContrastThresholdOffset));
+        GetPositiveDoubleConfigurationValue(configuration, "Biometric:Quality:ContrastThresholdOffset", DefaultContrastThresholdOffset),
+        GetNonNegativeDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumRidgeCoherencePercent", DefaultMinimumRidgeCoherencePercent),
+        GetNonNegativeDoubleConfigurationValue(configuration, "Biometric:Quality:MinimumRidgeOrientationSpreadPercent", DefaultMinimumRidgeOrientationSpreadPercent));
 
     private byte[] _imageBuffer = new byte[DefaultImageWidth * DefaultImageHeight];
     private byte[] _templateBuffer = new byte[DefaultTemplateBufferSize];
@@ -68,6 +92,13 @@ public sealed class ZKTecoScannerService(
     private Guid? _activeOperationId;
     private CancellationTokenSource? _activeOperationCts;
     private BiometricOperationState _operationState = BiometricOperationState.Idle;
+
+    // Motor de identificación 1:N: mapea el fingerId del SDK (asignado con DBAdd) a la
+    // referencia de usuario enrolada. Protegido por _enrolledEngineLock porque DBAdd/DBIdentify
+    // operan sobre el mismo _databaseHandle y el mapa se lee/escribe desde varias operaciones.
+    private readonly Dictionary<int, string> _fingerIdToUserReference = new();
+    private readonly object _enrolledEngineLock = new();
+    private int _nextFingerId = 1;
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -103,6 +134,7 @@ public sealed class ZKTecoScannerService(
 
             InitializeDatabase();
             ConfigureCaptureBuffers();
+            await LoadEnrolledTemplatesIntoEngineAsync(cancellationToken);
         }
         catch (Exception ex)
         {
@@ -111,6 +143,87 @@ public sealed class ZKTecoScannerService(
         finally
         {
             _sdkLock.Release();
+        }
+    }
+
+    // Carga el padrón local en el motor de identificación del SDK (DBAdd). Sin esto, DBIdentify
+    // no reconocería a nadie tras un reinicio del servicio.
+    private async Task LoadEnrolledTemplatesIntoEngineAsync(CancellationToken cancellationToken)
+    {
+        if (enrolledStore is null || _databaseHandle == IntPtr.Zero)
+            return;
+
+        IReadOnlyList<Enrollment.EnrolledFingerprint> enrolled;
+        try
+        {
+            enrolled = await enrolledStore.GetAllAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "No se pudo cargar el padrón local de huellas enroladas.");
+            return;
+        }
+
+        int loaded = 0;
+        lock (_enrolledEngineLock)
+        {
+            _fingerIdToUserReference.Clear();
+            _nextFingerId = 1;
+            foreach (Enrollment.EnrolledFingerprint fp in enrolled)
+            {
+                int fingerId = _nextFingerId++;
+                int addResult = sdk.DBAdd(_databaseHandle, fingerId, fp.Template);
+                if (addResult == 0)
+                {
+                    _fingerIdToUserReference[fingerId] = fp.UserReference;
+                    loaded++;
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "No se pudo cargar en el motor una huella enrolada (Usuario={UserRef}). DBAdd={Result}.",
+                        fp.UserReference, addResult);
+                }
+            }
+        }
+
+        logger.LogInformation("Padrón de identificación cargado: {Count} huella(s) enrolada(s).", loaded);
+    }
+
+    private async Task RegisterEnrolledTemplateAsync(
+        string userReference,
+        int fingerIndex,
+        byte[] template,
+        CancellationToken cancellationToken)
+    {
+        if (enrolledStore is not null)
+        {
+            await enrolledStore.SaveAsync(
+                new Enrollment.EnrolledFingerprint(userReference, fingerIndex, template),
+                cancellationToken);
+        }
+
+        if (_databaseHandle == IntPtr.Zero)
+            return;
+
+        lock (_enrolledEngineLock)
+        {
+            int fingerId = _nextFingerId++;
+            int addResult = sdk.DBAdd(_databaseHandle, fingerId, template);
+            if (addResult == 0)
+            {
+                _fingerIdToUserReference[fingerId] = userReference;
+                if (logger.IsEnabled(LogLevel.Information))
+                    logger.LogInformation(
+                        "Huella agregada al motor de identificación. Usuario={UserRef}, Dedo={FingerIndex}.",
+                        userReference, fingerIndex);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "No se pudo agregar al motor la huella enrolada (Usuario={UserRef}). DBAdd={Result}.",
+                    userReference, addResult);
+            }
         }
     }
 
@@ -157,7 +270,7 @@ public sealed class ZKTecoScannerService(
             logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
-            EncryptedPayload? encryptedTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+            EncryptedPayload? encryptedTemplate = EncryptForBackend(sample);
 
             return FingerprintCaptureResult.Succeeded(
                 sample.Template,
@@ -224,7 +337,29 @@ public sealed class ZKTecoScannerService(
             logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
-            EncryptedPayload? encryptedIdentifyTemplate = cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+            // Identificación 1:N on-device: la captura debe coincidir con una huella enrolada.
+            // Así se rechaza la palma o cualquier dedo no enrolado, sin heurísticos de imagen.
+            if (_requireLocalIdentifyMatch)
+            {
+                (bool matched, string? userReference, int score) = TryIdentifyEnrolled(sample.Template);
+                if (!matched)
+                {
+                    logger.LogInformation("Captura no reconocida en el padrón (score={Score}). Rechazada.", score);
+                    return FingerprintIdentifyResult.NotIdentified(sample.Quality, _deviceSerial, score);
+                }
+
+                EncryptedPayload? encryptedMatched = EncryptForBackend(sample);
+                return FingerprintIdentifyResult.Identified(
+                    sample.Template,
+                    sample.TemplateSize,
+                    sample.Quality,
+                    _deviceSerial,
+                    encryptedMatched,
+                    userReference!,
+                    score);
+            }
+
+            EncryptedPayload? encryptedIdentifyTemplate = EncryptForBackend(sample);
 
             return FingerprintIdentifyResult.Succeeded(
                 sample.Template,
@@ -330,7 +465,9 @@ public sealed class ZKTecoScannerService(
 
     public async Task<FingerprintEnrollResult> EnrollFingerprintAsync(
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? userReference = null,
+        int fingerIndex = 0)
     {
         if (!await TryEnterOperationAsync())
         {
@@ -339,6 +476,7 @@ public sealed class ZKTecoScannerService(
 
         Guid? operationId = null;
         List<byte[]> samples = [];
+        List<byte[]> sourceAfisSamples = [];
 
         try
         {
@@ -353,6 +491,7 @@ public sealed class ZKTecoScannerService(
             FingerprintEnrollResult? captureFailure = await CaptureEnrollmentSamplesAsync(
                 operationId.Value,
                 samples,
+                sourceAfisSamples,
                 progressCallback,
                 operationToken);
             if (captureFailure is not null)
@@ -371,7 +510,37 @@ public sealed class ZKTecoScannerService(
             logger.LogInformation("Captura finalizada correctamente. Cerrando sesión: {OperationId}", operationId);
             FinalizeOperation(operationId.Value, BiometricOperationState.Completed);
 
-            EncryptedPayload? encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(registeredTemplate, registeredTemplateSize);
+            // Registro on-device: guarda el template CRUDO en el padrón local y lo agrega al motor
+            // de identificación (DBAdd). Debe hacerse aquí porque en producción el template sale
+            // cifrado del enrolamiento y la capa WebSocket ya no tiene el binario original.
+            if (!string.IsNullOrWhiteSpace(userReference))
+            {
+                byte[] rawTemplate = registeredTemplate[..registeredTemplateSize].ToArray();
+                await RegisterEnrolledTemplateAsync(userReference!, fingerIndex, rawTemplate, cancellationToken);
+            }
+
+            // Al backend se envía un template SourceAFIS de una de las muestras: el resultado de
+            // DBMerge es formato ZKFinger y SourceAFIS no puede leerlo. Se toma la última muestra
+            // aceptada (la de colocación más reciente).
+            EncryptedPayload? encryptedEnrollTemplate;
+            if (_sendSourceAfisTemplate)
+            {
+                if (sourceAfisSamples.Count > 0)
+                {
+                    byte[] afis = sourceAfisSamples[^1];
+                    encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(afis, afis.Length);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Enrolamiento sin template SourceAFIS: el backend no podrá identificar a este usuario.");
+                    encryptedEnrollTemplate = null;
+                }
+            }
+            else
+            {
+                encryptedEnrollTemplate = cryptoService.TryEncryptTemplate(registeredTemplate, registeredTemplateSize);
+            }
 
             return FingerprintEnrollResult.Succeeded(
                 registeredTemplate,
@@ -408,6 +577,7 @@ public sealed class ZKTecoScannerService(
     private async Task<FingerprintEnrollResult?> CaptureEnrollmentSamplesAsync(
         Guid operationId,
         List<byte[]> samples,
+        List<byte[]> sourceAfisSamples,
         Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
         CancellationToken operationToken)
     {
@@ -435,7 +605,27 @@ public sealed class ZKTecoScannerService(
                 continue;
             }
 
+            // Verifica que la muestra sea del MISMO dedo que la primera aceptada. Sin esto,
+            // un usuario podría enrolar 3 dedos distintos (o de 2 personas) y DBMerge fusionaría
+            // un template que luego coincide con varias huellas → rompe la distinción biométrica.
+            if (samples.Count > 0 && !IsSameFingerAsReference(samples[0], sample.Template))
+            {
+                logger.LogWarning(
+                    "Muestra de enrolamiento descartada: no coincide con la primera muestra (dedo distinto).");
+                await progressCallback(
+                    FingerprintEnrollProgress.Create(step, _enrollmentSamples,
+                        "Use el MISMO dedo en todas las capturas. Coloque nuevamente el dedo inicial."),
+                    operationToken);
+                // Espera el retiro para forzar una colocación nueva y no re-leer la misma huella.
+                if (_requireFingerLiftBetweenEnrollmentSamples)
+                    await WaitForFingerLiftAsync(operationToken);
+                continue;
+            }
+
             samples.Add(sample.Template);
+            if (sample.SourceAfisTemplate is { Length: > 0 } afisSample)
+                sourceAfisSamples.Add(afisSample);
+
             if (step < _enrollmentSamples && _requireFingerLiftBetweenEnrollmentSamples)
             {
                 await progressCallback(
@@ -626,12 +816,14 @@ public sealed class ZKTecoScannerService(
 
         FingerprintQualityResult qualityResult = FingerprintQualityAnalyzer.Analyze(_imageBuffer, _imageWidth, _imageHeight, _qualityCriteria);
         logger.LogInformation(
-            "Calidad de huella. Aceptable: {IsAcceptable}. Score: {ScorePercent}%. Área cruda: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Mensaje: {Message}",
+            "Calidad de huella. Aceptable: {IsAcceptable}. Score: {ScorePercent}%. Área cruda: {CoveragePercent}%. Contraste: {ContrastScore}. Centrada: {IsCentered}. Coherencia crestas: {RidgeCoherence}%. Variación orientación: {RidgeSpread}%. Mensaje: {Message}",
             qualityResult.IsAcceptable,
             qualityResult.ScorePercent,
             qualityResult.ForegroundCoveragePercent,
             qualityResult.ContrastScore,
             qualityResult.IsCentered,
+            qualityResult.RidgeCoherencePercent,
+            qualityResult.RidgeOrientationSpreadPercent,
             qualityResult.Message);
 
         if (!qualityResult.IsAcceptable)
@@ -645,17 +837,108 @@ public sealed class ZKTecoScannerService(
         }
 
         byte[] template = _templateBuffer[..templateSize].ToArray();
-        return CapturedSample.Succeeded(template, templateSize, qualityResult, image);
+
+        // Template SourceAFIS desde la MISMA imagen: es el que entiende el backend. El de ZKFinger
+        // (`template`) se conserva para la identificación 1:N on-device y para el frontend.
+        byte[]? sourceAfisTemplate = null;
+        if (_sendSourceAfisTemplate)
+        {
+            sourceAfisTemplate = SourceAfisTemplateExtractor.TryExtract(_imageBuffer, _imageWidth, _imageHeight, _sourceAfisDpi);
+            if (sourceAfisTemplate is null)
+                logger.LogWarning("No se pudo extraer el template SourceAFIS; el backend no podrá identificar esta captura.");
+        }
+
+        return CapturedSample.Succeeded(template, templateSize, qualityResult, image, sourceAfisTemplate);
     }
 
+    // ZKFinger DBMatch devuelve un SCORE de similitud: mayor = más parecido, 0/negativo = no
+    // coincide (ver Demo2/Form1.cs oficial que acepta con `0 < ret`). Se elige el MEJOR score
+    // que además supere el umbral `_matchMinScore`, para una identificación 1:N robusta y no
+    // por el primer positivo. Antes se comparaba `== 0`, lo que invertía el criterio: aceptaba
+    // huellas distintas (score 0) y rechazaba la correcta (score > 0).
     private int FindMatchingTemplateIndex(byte[] sampleTemplate, IReadOnlyList<(int Index, byte[] Template)> templates)
     {
+        int bestIndex = -1;
+        int bestScore = 0;
+
         for (int i = 0; i < templates.Count; i++)
         {
-            if (sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template) == 0)
-                return i;
+            int score = sdk.DBMatch(_databaseHandle, sampleTemplate, templates[i].Template);
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug(
+                    "DBMatch contra template índice {Index}: score={Score} (umbral mínimo={Threshold}).",
+                    i, score, _matchMinScore);
+
+            if (score >= _matchMinScore && score > bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
         }
-        return -1;
+
+        if (bestIndex >= 0 && logger.IsEnabled(LogLevel.Information))
+            logger.LogInformation(
+                "Mejor coincidencia: índice {Index} con score {Score} (umbral {Threshold}).",
+                bestIndex, bestScore, _matchMinScore);
+
+        return bestIndex;
+    }
+
+    /// <summary>
+    /// Cifra el template que se envía al backend. Cuando el envío en formato SourceAFIS está
+    /// activo se usa ese template (es el único que el backend puede matchear); si no se pudo
+    /// extraer, no se envía nada en vez de mandar un ZKFinger que el backend rechazaría.
+    /// </summary>
+    private EncryptedPayload? EncryptForBackend(CapturedSample sample)
+    {
+        if (!_sendSourceAfisTemplate)
+            return cryptoService.TryEncryptTemplate(sample.Template, sample.TemplateSize);
+
+        if (sample.SourceAfisTemplate is not { Length: > 0 } afis)
+            return null;
+
+        return cryptoService.TryEncryptTemplate(afis, afis.Length);
+    }
+
+    // Identificación 1:N con el motor del SDK: DBIdentify devuelve el fingerId y el score de la
+    // mejor coincidencia en el padrón cargado. Se acepta solo si el score supera el umbral y el
+    // fingerId está mapeado a un usuario enrolado.
+    private (bool Matched, string? UserReference, int Score) TryIdentifyEnrolled(byte[] template)
+    {
+        lock (_enrolledEngineLock)
+        {
+            if (_databaseHandle == IntPtr.Zero || _fingerIdToUserReference.Count == 0)
+                return (false, null, 0);
+
+            int fingerId = 0;
+            int score = 0;
+            int result = sdk.DBIdentify(_databaseHandle, template, ref fingerId, ref score);
+
+            if (logger.IsEnabled(LogLevel.Debug))
+                logger.LogDebug(
+                    "DBIdentify: result={Result}, fingerId={FingerId}, score={Score} (umbral {Threshold}).",
+                    result, fingerId, score, _matchMinScore);
+
+            if (result == 0 && score >= _matchMinScore
+                && _fingerIdToUserReference.TryGetValue(fingerId, out string? userReference))
+            {
+                return (true, userReference, score);
+            }
+
+            return (false, null, score);
+        }
+    }
+
+    // Compara dos capturas del enrolamiento: deben ser del mismo dedo para poder fusionarse.
+    // Reutiliza el umbral de matching (score de DBMatch ≥ _matchMinScore).
+    private bool IsSameFingerAsReference(byte[] reference, byte[] candidate)
+    {
+        int score = sdk.DBMatch(_databaseHandle, reference, candidate);
+        if (logger.IsEnabled(LogLevel.Debug))
+            logger.LogDebug(
+                "Verificación de mismo dedo en enrolamiento: score={Score} (umbral {Threshold}).",
+                score, _matchMinScore);
+        return score >= _matchMinScore;
     }
 
     private async Task<bool> TryEnterOperationAsync()
@@ -879,16 +1162,33 @@ public sealed class ZKTecoScannerService(
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
+        // Buffers locales por llamada y serialización con _sdkLock: evita mutar los buffers
+        // compartidos y ejecutar AcquireFingerprint en paralelo con otra llamada nativa
+        // (p. ej. una captura previa que excedió su timeout y sigue viva en background).
+        byte[] localImage = new byte[_imageBuffer.Length];
+        byte[] localTemplate = new byte[_templateBuffer.Length];
+
         while (stopwatch.Elapsed < checkDuration)
         {
-            Array.Clear(_imageBuffer);
-            Array.Clear(_templateBuffer);
-            int templateSize = _templateBuffer.Length;
-            int captureResult = await Task.Run(
-                () => sdk.AcquireFingerprint(_deviceHandle, _imageBuffer, _templateBuffer, ref templateSize),
-                cancellationToken);
+            int captureResult = await Task.Run(async () =>
+            {
+                await _sdkLock.WaitAsync(cancellationToken);
+                try
+                {
+                    Array.Clear(localImage);
+                    Array.Clear(localTemplate);
+                    int size = localTemplate.Length;
+                    return sdk.AcquireFingerprint(_deviceHandle, localImage, localTemplate, ref size) == 0 && size > 0
+                        ? 1
+                        : 0;
+                }
+                finally
+                {
+                    _sdkLock.Release();
+                }
+            }, cancellationToken);
 
-            if (captureResult == 0 && templateSize > 0)
+            if (captureResult == 1)
             {
                 return true;
             }
@@ -1301,6 +1601,16 @@ public sealed class ZKTecoScannerService(
     {
         string? configuredValue = configuration[key];
         return double.TryParse(configuredValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double value) && value > 0
+            ? value
+            : fallback;
+    }
+
+    // Permite el valor 0 (p. ej. desactivar el análisis de estructura de crestas), a diferencia
+    // de GetPositiveDoubleConfigurationValue que exige > 0.
+    private static double GetNonNegativeDoubleConfigurationValue(IConfiguration configuration, string key, double fallback)
+    {
+        string? configuredValue = configuration[key];
+        return double.TryParse(configuredValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double value) && value >= 0
             ? value
             : fallback;
     }

@@ -44,6 +44,7 @@ public sealed class WebSocketResponseTests
     [Fact]
     public async Task HandleMessageAsync_ForFingerprintCapture_ReturnsCaptureResultJson()
     {
+        using var _ = new PlaintextGateScope(open: true);
         FingerprintCaptureResult captureResult = FingerprintCaptureResult.Succeeded([9, 8, 7], 3);
         LocalWebSocketServerService server = CreateServer(captureResult: captureResult);
 
@@ -160,10 +161,37 @@ public sealed class WebSocketResponseTests
             """{ "type": "fingerprint.identify" }""",
             CancellationToken.None);
 
-        Assert.Equal(identifyResult, response);
+        var identify = Assert.IsType<FingerprintIdentifyResult>(response);
+        Assert.True(identify.Success);
+        Assert.Equal("queued", identify.DeliveryStatus);
         BiometricEvent queued = Assert.Single(queue.Enqueued);
         Assert.Equal("identify", queued.EventType);
         Assert.Equal("ZK9500-IDENTIFY", queued.DeviceId);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForIdentifyWithoutEncryptedTemplate_NoTransmiteNiEncola()
+    {
+        // Éxito de captura pero sin template cifrado (falta clave RSA): NO debe marcar ni encolar,
+        // y debe informar el estado "not_transmitted" para no simular asistencia registrada.
+        FingerprintIdentifyResult identifyResult = FingerprintIdentifyResult.Succeeded(
+            [1, 2, 3],
+            3,
+            quality: null,
+            deviceId: "ZK9500-IDENTIFY",
+            encryptedTemplate: null);
+        FakeEventQueue queue = new();
+        LocalWebSocketServerService server = CreateServer(
+            identifyResult: identifyResult,
+            eventQueue: queue);
+
+        object response = await server.HandleMessageAsync(
+            """{ "type": "fingerprint.identify" }""",
+            CancellationToken.None);
+
+        var identify = Assert.IsType<FingerprintIdentifyResult>(response);
+        Assert.Equal("not_transmitted", identify.DeliveryStatus);
+        Assert.Empty(queue.Enqueued);
     }
 
     [Fact]
@@ -216,6 +244,44 @@ public sealed class WebSocketResponseTests
 
         Assert.Equal(1, attendanceClient.Calls);
         Assert.Single(queue.Enqueued);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollSinUserRef_GeneraReferenciaParaElPadronLocal()
+    {
+        // El frontend desplegado envía enroll.start sin `userRef`. Sin una referencia la huella
+        // no quedaría en el padrón local y luego identify rechazaría a todos.
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Succeeded(
+                [1, 2, 3], 3, capturedSamples: 3, deviceId: "ZK9500-ENROLL")
+        };
+        LocalWebSocketServerService server = CreateServer(scannerOverride: scanner);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.enroll.start" }""",
+            CancellationToken.None);
+
+        Assert.False(string.IsNullOrWhiteSpace(scanner.LastEnrollUserReference));
+        Assert.StartsWith("local-", scanner.LastEnrollUserReference);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_ForEnrollConUserRef_RespetaLaReferenciaDelCliente()
+    {
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollResult = FingerprintEnrollResult.Succeeded(
+                [1, 2, 3], 3, capturedSamples: 3, deviceId: "ZK9500-ENROLL")
+        };
+        LocalWebSocketServerService server = CreateServer(scannerOverride: scanner);
+
+        await server.HandleMessageAsync(
+            """{ "type": "fingerprint.enroll.start", "userRef": "42", "fingerIndex": 1 }""",
+            CancellationToken.None);
+
+        Assert.Equal("42", scanner.LastEnrollUserReference);
+        Assert.Equal(1, scanner.LastEnrollFingerIndex);
     }
 
     [Fact]
@@ -330,6 +396,21 @@ public sealed class WebSocketResponseTests
         Assert.False(LocalWebSocketServerService.IsOriginAllowed(null, allowedOrigins));
     }
 
+    [Fact]
+    public void IsOriginAllowed_ConListaDeProduccion_SiguePermitiendoLoopbackYFileLocal()
+    {
+        // Con orígenes de producción configurados, las herramientas locales deben seguir
+        // conectando: test-websocket.html (Origin "null" desde loopback) y http://localhost.
+        string[] allowedOrigins = ["https://trazzosaas.noahtechperu.com"];
+        var loopback = new IPEndPoint(IPAddress.Loopback, 49152);
+
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("null", allowedOrigins, loopback));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("http://localhost:4200", allowedOrigins));
+        Assert.True(LocalWebSocketServerService.IsOriginAllowed("https://trazzosaas.noahtechperu.com", allowedOrigins));
+        // Un sitio remoto sigue bloqueado.
+        Assert.False(LocalWebSocketServerService.IsOriginAllowed("https://evil.example", allowedOrigins));
+    }
+
     [Theory]
     [InlineData("null")]
     [InlineData("{}")]
@@ -374,9 +455,10 @@ public sealed class WebSocketResponseTests
         FingerprintIdentifyResult? identifyResult = null,
         FingerprintEnrollResult? enrollResult = null,
         FakeEventQueue? eventQueue = null,
-        FakeAttendanceMarkingClient? attendanceClient = null)
+        FakeAttendanceMarkingClient? attendanceClient = null,
+        FakeBiometricScannerService? scannerOverride = null)
     {
-        FakeBiometricScannerService scanner = new()
+        FakeBiometricScannerService scanner = scannerOverride ?? new()
         {
             Status = new FingerprintDeviceStatus(
                 "device.status.result",

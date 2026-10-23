@@ -28,8 +28,7 @@ public sealed record FingerprintCaptureResult(
         FingerprintCaptureOptions? options = null)
     {
         options ??= new FingerprintCaptureOptions();
-        // TemplateBase64 solo se incluye cuando el cifrado no está configurado (modo desarrollo)
-        string? plainBase64 = options.EncryptedTemplate is null
+        string? plainBase64 = options.EncryptedTemplate is null && BiometricSecurityGates.AllowPlaintextTemplateFallback
             ? Convert.ToBase64String(template.AsSpan(0, templateSize))
             : null;
 
