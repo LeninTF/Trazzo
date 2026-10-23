@@ -55,6 +55,25 @@ class JwtAuthFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
+    // DeviceTokenAuthFilter corre antes: su token trzd_ no es un JWT y no debe convertirse en un 401.
+    @Test
+    void request_alreadyAuthenticatedByTheDeviceFilter_isLeftAlone() throws Exception {
+        var agent = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "agente", null, List.of(new SimpleGrantedAuthority("ROLE_AGENT")));
+        SecurityContextHolder.getContext().setAuthentication(agent);
+        when(tokenValidator.extractUsername(anyString())).thenThrow(new io.jsonwebtoken.JwtException("not a JWT"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer trzd_" + "A".repeat(43));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isSameAs(agent);
+        verifyNoInteractions(userDetailsService);
+    }
+
     @Test
     void request_withValidBearerToken_setsAuthentication() throws Exception {
         UserDetails userDetails = User.withUsername("user@test.com")

@@ -1,6 +1,11 @@
 package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import trazzo.back.shared.security.DeviceAgentPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,8 +21,10 @@ import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionRespon
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -121,6 +128,41 @@ class UserBiometriaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.enroll_token").value("token-abc"))
                 .andExpect(jsonPath("$.device_code").value("DVC-001"));
+    }
+
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
+
+    // El filtro del token de dispositivo deja este principal; aquí se simula sin pasar por él.
+    private static void actingAsAgentOf(String deviceCode) {
+        var agent = new DeviceAgentPrincipal(UUID.randomUUID(), "tenant_demo", 7L, deviceCode);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                agent, null, List.of(new SimpleGrantedAuthority("ROLE_AGENT"))));
+    }
+
+    @Test
+    void pendingEnroll_anAgentOnlyAsksForItsOwnDevice() throws Exception {
+        actingAsAgentOf("DVC-OTRO");
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente").param("device_code", "DVC-001"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(userBiometriaUseCase);
+    }
+
+    @Test
+    void completeEnroll_anAgentCannotCompleteForAnotherDevice() throws Exception {
+        actingAsAgentOf("DVC-OTRO");
+
+        mockMvc.perform(post("/corehr/biometria/enroll/completar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"enroll_token": "tok", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "iv_base64": "aXY=", "tag_base64": "dGFn", "finger_index": 2, "device_code": "DVC-001"}
+                                """))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(enrollService);
     }
 
     @Test

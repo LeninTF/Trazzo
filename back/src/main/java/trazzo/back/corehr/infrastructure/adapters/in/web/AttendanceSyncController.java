@@ -15,6 +15,7 @@ import trazzo.back.corehr.application.usecase.SyncAttendanceUseCase;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.BiometricIdentifyRequest;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.AttendanceResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.MarcacionSyncResponse;
+import trazzo.back.shared.security.DeviceAgentPrincipal;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class AttendanceSyncController {
 
     @PostMapping("/marcar")
     public ResponseEntity<AttendanceResponse> mark(@Valid @RequestBody BiometricIdentifyRequest request) {
+        DeviceAgentPrincipal.requireOwnDevice(request.deviceCode());
         var command = new MarkAttendanceCommand(
                 request.encryptedTemplateBase64(),
                 request.encryptedAesKeyBase64(),
@@ -42,6 +44,7 @@ public class AttendanceSyncController {
 
     @PostMapping("/sync")
     public ResponseEntity<MarcacionSyncResponse> sync(@Valid @RequestBody List<BiometricIdentifyRequest> requests) {
+        requests.forEach(r -> DeviceAgentPrincipal.requireOwnDevice(r.deviceCode()));
         var commands = requests.stream()
                 .map(r -> new SyncAttendanceBatchItemCommand(
                         r.encryptedTemplateBase64(),

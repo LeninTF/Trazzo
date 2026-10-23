@@ -1,6 +1,11 @@
 package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import trazzo.back.shared.security.DeviceAgentPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -59,6 +65,46 @@ class AttendanceSyncControllerTest {
                     "tenant_user_id": 100
                 }
                 """;
+    }
+
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
+
+    // El filtro del token de dispositivo deja este principal; aquí se simula sin pasar por él.
+    private static void actingAsAgentOf(String deviceCode) {
+        var agent = new DeviceAgentPrincipal(UUID.randomUUID(), "tenant_demo", 7L, deviceCode);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                agent, null, List.of(new SimpleGrantedAuthority("ROLE_AGENT"))));
+    }
+
+    @Test
+    void mark_anAgentCannotMarkForAnotherDevice() throws Exception {
+        actingAsAgentOf("DVC-OTRO");
+
+        mockMvc.perform(post("/asistencia/marcar").contentType(MediaType.APPLICATION_JSON).content(validRequestJson()))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(markAttendanceUseCase);
+    }
+
+    @Test
+    void mark_anAgentMarksForItsOwnDevice() throws Exception {
+        actingAsAgentOf("DVC-001");
+        when(markAttendanceUseCase.mark(any())).thenReturn(anAttendanceResult());
+
+        mockMvc.perform(post("/asistencia/marcar").contentType(MediaType.APPLICATION_JSON).content(validRequestJson()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void sync_anAgentCannotSyncAnotherDevicesEvents() throws Exception {
+        actingAsAgentOf("DVC-OTRO");
+
+        mockMvc.perform(post("/asistencia/sync").contentType(MediaType.APPLICATION_JSON).content("[" + validRequestJson() + "]"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(syncAttendanceUseCase);
     }
 
     @Test

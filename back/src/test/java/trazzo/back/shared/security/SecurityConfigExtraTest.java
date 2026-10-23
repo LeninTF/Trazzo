@@ -34,6 +34,30 @@ class SecurityConfigExtraTest {
         });
     }
 
+    // El token trzd_ no es un JWT: el filtro del dispositivo tiene que resolverlo antes que JwtAuthFilter.
+    @Test
+    void deviceTokenFilterRunsBeforeTheJwtFilterAndOnlyInsideTheSecurityChain() {
+        runner().run(context -> {
+            var filters = context.getBean(SecurityFilterChain.class).getFilters();
+            int device = indexOf(filters, DeviceTokenAuthFilter.class);
+            int jwt = indexOf(filters, JwtAuthFilter.class);
+            assertThat(device).isNotNegative().isLessThan(jwt);
+
+            FilterRegistrationBean<?> registration =
+                    context.getBean("deviceTokenAuthFilterRegistration", FilterRegistrationBean.class);
+            assertThat(registration.isEnabled()).isFalse();
+        });
+    }
+
+    private static int indexOf(java.util.List<jakarta.servlet.Filter> filters, Class<?> type) {
+        for (int i = 0; i < filters.size(); i++) {
+            if (type.isInstance(filters.get(i))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Test
     void authenticationManagerBeanIsExposed() {
         runner().run(context ->

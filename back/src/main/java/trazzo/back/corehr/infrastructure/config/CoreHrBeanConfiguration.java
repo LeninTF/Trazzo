@@ -22,6 +22,7 @@ import trazzo.back.corehr.application.port.out.ToleranciaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.application.usecase.AttendanceService;
+import trazzo.back.corehr.application.usecase.DeviceAgentTokenService;
 import trazzo.back.corehr.application.usecase.DeviceService;
 import trazzo.back.corehr.application.usecase.MarkAttendanceUseCase;
 import trazzo.back.corehr.application.usecase.NonWorkingDayService;
@@ -36,6 +37,7 @@ import trazzo.back.corehr.application.usecase.UserBiometriaService;
 import trazzo.back.corehr.application.usecase.UserScheduleService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollSessionStore;
+import trazzo.back.shared.security.AgentDeviceTokenRepository;
 import trazzo.back.corehr.infrastructure.adapters.out.reporting.CoreHrAttendanceSummaryJdbcAdapter;
 import trazzo.back.saasglobal.application.port.out.UserRepositoryPort;
 
@@ -130,6 +132,12 @@ public class CoreHrBeanConfiguration {
                                        BiometricCryptoPort biometricCrypto, BiometricMatchingPort biometricMatching) {
         return new EnrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore,
                 biometricCrypto, biometricMatching);
+    }
+
+    @Bean
+    public DeviceAgentTokenService deviceAgentTokenService(DeviceRepositoryPort deviceRepo,
+                                                           AgentDeviceTokenRepository agentDeviceTokenRepository) {
+        return new DeviceAgentTokenService(deviceRepo, agentDeviceTokenRepository);
     }
 
     @Bean

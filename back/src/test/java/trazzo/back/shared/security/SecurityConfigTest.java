@@ -1,5 +1,6 @@
 package trazzo.back.shared.security;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,17 +8,77 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Optional;
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SecurityConfigTest {
+
+    // Cadena completa: DeviceTokenAuthFilter resuelve el token trzd_ antes de que JwtAuthFilter lo vea.
+    @Nested
+    @SpringBootTest(classes = TestApplication.class)
+    @AutoConfigureMockMvc
+    class DeviceAgentTokens {
+
+        private static final String AGENT_TOKEN = "trzd_" + "A".repeat(43);
+
+        @Autowired MockMvc mockMvc;
+        @MockitoBean TokenValidator tokenValidator;
+        @MockitoBean UserDetailsService userDetailsService;
+        @MockitoBean AgentDeviceTokenRepository agentDeviceTokenRepository;
+
+        @BeforeEach
+        void anAgentOfDeviceSeven() {
+            when(agentDeviceTokenRepository.findActive(AGENT_TOKEN)).thenReturn(Optional.of(
+                    new DeviceAgentPrincipal(UUID.randomUUID(), "tenant_demo", 7L, "DVC-007")));
+        }
+
+        @Test
+        void anAgentTokenPassesSecurityOnItsEndpoints() throws Exception {
+            // 404: la seguridad deja pasar y en este contexto mínimo no hay controlador.
+            mockMvc.perform(post("/asistencia/marcar").header("Authorization", "Bearer " + AGENT_TOKEN))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void anAgentTokenCannotReachAnyOtherEndpoint() throws Exception {
+            mockMvc.perform(get("/corehr/devices").header("Authorization", "Bearer " + AGENT_TOKEN))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        void anUnknownAgentTokenIs401EvenOnAPublicEndpoint() throws Exception {
+            mockMvc.perform(get("/security/public-key").header("Authorization", "Bearer trzd_desconocido"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        void aUserJwtStillAuthenticatesWithoutTouchingTheDeviceTokens() throws Exception {
+            UserDetails userDetails = User.withUsername("admin@demo").password("x")
+                    .authorities("configuracion-tenant.gestionar-metodos").build();
+            when(tokenValidator.extractUsername("jwt-de-usuario")).thenReturn("admin@demo");
+            when(tokenValidator.extractTenantSchema("jwt-de-usuario")).thenReturn("tenant_demo");
+            when(userDetailsService.loadUserByUsername("admin@demo")).thenReturn(userDetails);
+            when(tokenValidator.isTokenValid("jwt-de-usuario", userDetails)).thenReturn(true);
+
+            mockMvc.perform(get("/corehr/devices").header("Authorization", "Bearer jwt-de-usuario"))
+                    .andExpect(status().isNotFound());
+            verifyNoInteractions(agentDeviceTokenRepository);
+        }
+    }
 
     @Nested
     @SpringBootTest(classes = TestApplication.class)
@@ -27,6 +88,7 @@ class SecurityConfigTest {
         @Autowired MockMvc mockMvc;
         @MockitoBean TokenValidator tokenValidator;
         @MockitoBean UserDetailsService userDetailsService;
+        @MockitoBean AgentDeviceTokenRepository agentDeviceTokenRepository;
 
         @Test
         void login_isAccessibleWithoutToken() throws Exception {
@@ -76,6 +138,7 @@ class SecurityConfigTest {
         @Autowired MockMvc mockMvc;
         @MockitoBean TokenValidator tokenValidator;
         @MockitoBean UserDetailsService userDetailsService;
+        @MockitoBean AgentDeviceTokenRepository agentDeviceTokenRepository;
 
         @Test
         void actuatorHealth_onMainPort_requiresAuthentication() throws Exception {
@@ -115,6 +178,7 @@ class SecurityConfigTest {
         @Autowired MockMvc mockMvc;
         @MockitoBean TokenValidator tokenValidator;
         @MockitoBean UserDetailsService userDetailsService;
+        @MockitoBean AgentDeviceTokenRepository agentDeviceTokenRepository;
 
         @Test
         void health_onManagementPort_isAccessibleWithoutToken() throws Exception {
@@ -152,6 +216,7 @@ class SecurityConfigTest {
         @Autowired MockMvc mockMvc;
         @MockitoBean TokenValidator tokenValidator;
         @MockitoBean UserDetailsService userDetailsService;
+        @MockitoBean AgentDeviceTokenRepository agentDeviceTokenRepository;
 
         // --- Unauthenticated: must return 401 ---
 

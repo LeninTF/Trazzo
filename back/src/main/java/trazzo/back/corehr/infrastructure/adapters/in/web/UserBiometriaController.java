@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import trazzo.back.corehr.application.port.in.UserBiometriaUseCase;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.*;
 import trazzo.back.corehr.infrastructure.adapters.out.enroll.EnrollService;
+import trazzo.back.shared.security.DeviceAgentPrincipal;
 
 @RestController
 @RequestMapping("/corehr/biometria")
@@ -37,6 +38,7 @@ public class UserBiometriaController {
 
     @GetMapping("/enroll/pendiente")
     public ResponseEntity<PendingEnrollSessionResponse> pendingEnroll(@RequestParam("device_code") String deviceCode) {
+        DeviceAgentPrincipal.requireOwnDevice(deviceCode);
         return userBiometriaUseCase.findPendingEnrollSession(deviceCode)
                 .map(PendingEnrollSessionResponse::from)
                 .map(ResponseEntity::ok)
@@ -45,6 +47,7 @@ public class UserBiometriaController {
 
     @PostMapping("/enroll/completar")
     public ResponseEntity<UserBiometriaResponse> completeEnroll(@Valid @RequestBody CompleteEnrollHttpRequest request) {
+        DeviceAgentPrincipal.requireOwnDevice(request.deviceCode());
         var result = enrollService.completeEnroll(
                 request.enrollToken(),
                 request.deviceCode(),

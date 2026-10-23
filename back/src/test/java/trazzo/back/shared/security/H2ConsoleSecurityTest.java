@@ -32,6 +32,9 @@ class H2ConsoleSecurityTest {
         @MockitoBean
         UserDetailsService userDetailsService;
 
+        @MockitoBean
+        AgentDeviceTokenRepository agentDeviceTokenRepository;
+
         @Test
         void h2ConsoleIsDisabledByDefault() throws Exception {
             mockMvc.perform(get("/h2-console/").with(user("developer")))
@@ -54,6 +57,9 @@ class H2ConsoleSecurityTest {
 
         @MockitoBean
         UserDetailsService userDetailsService;
+
+        @MockitoBean
+        AgentDeviceTokenRepository agentDeviceTokenRepository;
 
         @Test
         void h2ConsoleRequiresAuthenticationWhenEnabled() throws Exception {

@@ -1,31 +1,44 @@
 package trazzo.back.corehr.infrastructure.adapters.in.web;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import trazzo.back.corehr.application.dto.command.CreateDeviceCommand;
 import trazzo.back.corehr.application.dto.command.PatchDeviceCommand;
 import trazzo.back.corehr.application.dto.result.DeviceResult;
+import trazzo.back.corehr.application.dto.result.IssuedAgentToken;
 import trazzo.back.corehr.application.dto.result.PaginatedResult;
 import trazzo.back.corehr.application.port.in.DeviceUseCase;
+import trazzo.back.corehr.application.usecase.DeviceAgentTokenService;
 import trazzo.back.corehr.domain.exception.InactiveDeviceException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import trazzo.back.shared.tenancy.TenantContext;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DeviceController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@EnableMethodSecurity
 class DeviceControllerTest {
 
     @Autowired
@@ -33,6 +46,75 @@ class DeviceControllerTest {
 
     @MockitoBean
     DeviceUseCase deviceUseCase;
+
+    @MockitoBean
+    DeviceAgentTokenService deviceAgentTokenService;
+
+    @AfterEach
+    void clearContexts() {
+        SecurityContextHolder.clearContext();
+        TenantContext.clear();
+    }
+
+    private static void actingAsTenantUserWith(String... authorities) {
+        TenantContext.set("tenant_demo");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("admin@demo", null,
+                java.util.Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()));
+    }
+
+    @Test
+    void issueAgentToken_returnsTheTokenOnlyInThisResponse() throws Exception {
+        actingAsTenantUserWith("configuracion-tenant.gestionar-metodos");
+        UUID tenant = UUID.fromString("11111111-2222-3333-4444-555555555555");
+        when(deviceAgentTokenService.issue("tenant_demo", 7L))
+                .thenReturn(new IssuedAgentToken("trzd_secreto", tenant, "DVC-007", LocalDateTime.of(2026, 10, 23, 9, 0)));
+
+        mockMvc.perform(post("/corehr/devices/7/agent-token"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").value("trzd_secreto"))
+                .andExpect(jsonPath("$.tenant_id").value(tenant.toString()))
+                .andExpect(jsonPath("$.device_code").value("DVC-007"))
+                .andExpect(jsonPath("$.created_at").exists());
+    }
+
+    @Test
+    void issueAgentToken_requiresTheDeviceManagementPermission() throws Exception {
+        actingAsTenantUserWith("asistencia-docente.ver-historial");
+
+        mockMvc.perform(post("/corehr/devices/7/agent-token"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(deviceAgentTokenService);
+    }
+
+    @Test
+    void revokeAgentToken_returns204() throws Exception {
+        actingAsTenantUserWith("configuracion-tenant.gestionar-metodos");
+
+        mockMvc.perform(delete("/corehr/devices/7/agent-token"))
+                .andExpect(status().isNoContent());
+        verify(deviceAgentTokenService).revoke("tenant_demo", 7L);
+    }
+
+    @Test
+    void revokeAgentToken_requiresTheDeviceManagementPermission() throws Exception {
+        actingAsTenantUserWith("asistencia-docente.ver-historial");
+
+        mockMvc.perform(delete("/corehr/devices/7/agent-token"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(deviceAgentTokenService);
+    }
+
+    @Test
+    void deletingADeviceRevokesItsTokensFirst() throws Exception {
+        TenantContext.set("tenant_demo");
+
+        mockMvc.perform(delete("/corehr/devices/7"))
+                .andExpect(status().isNoContent());
+
+        var order = inOrder(deviceAgentTokenService, deviceUseCase);
+        order.verify(deviceAgentTokenService).revoke("tenant_demo", 7L);
+        order.verify(deviceUseCase).deleteById(7L);
+    }
 
     private static final LocalDateTime NOW = LocalDateTime.now();
 

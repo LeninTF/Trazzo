@@ -53,6 +53,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             String header = request.getHeader("Authorization");
 
+            // Ya autenticado por un filtro anterior (DeviceTokenAuthFilter): su token no es un JWT.
+            if (SecurityContextHolder.getContext().getAuthentication() != null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             if (header == null || !header.startsWith("Bearer ")) {
                 filterChain.doFilter(request, response);
                 return;

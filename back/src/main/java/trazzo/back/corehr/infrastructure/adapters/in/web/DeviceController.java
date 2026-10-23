@@ -2,16 +2,21 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.corehr.application.dto.command.CreateDeviceCommand;
 import trazzo.back.corehr.application.dto.command.PatchDeviceCommand;
 import trazzo.back.corehr.application.port.in.DeviceUseCase;
+import trazzo.back.corehr.application.usecase.DeviceAgentTokenService;
+import trazzo.back.corehr.infrastructure.adapters.in.web.dto.AgentTokenResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.CreateDeviceRequest;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.DeviceListResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.DeviceResponse;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.PatchDeviceRequest;
+import trazzo.back.shared.tenancy.TenantContext;
 
 @RestController
 @RequestMapping("/corehr/devices")
@@ -19,6 +24,7 @@ import trazzo.back.corehr.infrastructure.adapters.in.web.dto.PatchDeviceRequest;
 public class DeviceController {
 
     private final DeviceUseCase deviceUseCase;
+    private final DeviceAgentTokenService deviceAgentTokenService;
 
     @GetMapping
     public ResponseEntity<DeviceListResponse> list(
@@ -59,7 +65,26 @@ public class DeviceController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+        // El token de un lector borrado no debe seguir abriendo los endpoints del agente.
+        deviceAgentTokenService.revoke(TenantContext.get(), id);
         deviceUseCase.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // El token solo viaja en esta respuesta: emitir otro revoca el anterior.
+    @PostMapping("/{id}/agent-token")
+    @PreAuthorize("hasAuthority('configuracion-tenant.gestionar-metodos')")
+    public ResponseEntity<AgentTokenResponse> issueAgentToken(@PathVariable Long id) {
+        var issued = deviceAgentTokenService.issue(TenantContext.get(), id);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(AgentTokenResponse.from(issued));
+    }
+
+    @DeleteMapping("/{id}/agent-token")
+    @PreAuthorize("hasAuthority('configuracion-tenant.gestionar-metodos')")
+    public ResponseEntity<Void> revokeAgentToken(@PathVariable Long id) {
+        deviceAgentTokenService.revoke(TenantContext.get(), id);
         return ResponseEntity.noContent().build();
     }
 }

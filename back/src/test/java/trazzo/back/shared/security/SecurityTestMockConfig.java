@@ -20,4 +20,9 @@ public class SecurityTestMockConfig {
     UserDetailsService userDetailsService() {
         return mock(UserDetailsService.class);
     }
+
+    @Bean
+    AgentDeviceTokenRepository agentDeviceTokenRepository() {
+        return mock(AgentDeviceTokenRepository.class);
+    }
 }

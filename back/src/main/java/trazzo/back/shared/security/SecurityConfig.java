@@ -53,6 +53,20 @@ public class SecurityConfig {
     }
 
     @Bean
+    DeviceTokenAuthFilter deviceTokenAuthFilter(AgentDeviceTokenRepository agentDeviceTokenRepository) {
+        return new DeviceTokenAuthFilter(agentDeviceTokenRepository);
+    }
+
+    // Solo dentro de la cadena de seguridad, como JwtAuthFilter: registrado también como filtro de servlet
+    // correría fuera de ella.
+    @Bean
+    FilterRegistrationBean<DeviceTokenAuthFilter> deviceTokenAuthFilterRegistration(DeviceTokenAuthFilter deviceTokenAuthFilter) {
+        FilterRegistrationBean<DeviceTokenAuthFilter> registration = new FilterRegistrationBean<>(deviceTokenAuthFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
     @ConditionalOnBean(DataSource.class)
     TenantContextGuard tenantContextGuard(DataSource dataSource) {
         return new TenantContextGuard(dataSource);
@@ -70,6 +84,7 @@ public class SecurityConfig {
     SecurityFilterChain filterChain(
             HttpSecurity http,
             JwtAuthFilter jwtAuthFilter,
+            DeviceTokenAuthFilter deviceTokenAuthFilter,
             @org.springframework.lang.Nullable TenantContextGuard tenantContextGuard,
             @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
             @Value("${spring.h2.console.path:/h2-console}") String h2ConsolePath,
@@ -108,7 +123,9 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) -> res.setStatus(401))
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            // El token del dispositivo (trzd_) no es un JWT: se resuelve antes y JwtAuthFilter lo deja pasar.
+            .addFilterBefore(deviceTokenAuthFilter, JwtAuthFilter.class);
 
         if (tenantContextGuard != null) {
             http.addFilterAfter(tenantContextGuard, UsernamePasswordAuthenticationFilter.class);
