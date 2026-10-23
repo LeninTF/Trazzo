@@ -10,7 +10,7 @@ class SyncItemResultTest {
     @Test
     void shouldConstructRecordWithAllFields() {
         var now = LocalDateTime.of(2026, 7, 19, 8, 0);
-        var result = new SyncItemResult(true, "att-1", AttendanceState.PUNTUAL, 0, now, null, 50);
+        var result = new SyncItemResult(SyncItemResult.Status.ACCEPTED, "att-1", AttendanceState.PUNTUAL, 0, now, null, 50);
         assertTrue(result.success());
         assertEquals("att-1", result.attendanceId());
         assertEquals(AttendanceState.PUNTUAL, result.state());
@@ -25,6 +25,7 @@ class SyncItemResultTest {
         var checkIn = LocalDateTime.of(2026, 7, 19, 8, 5);
         var result = SyncItemResult.success("att-2", AttendanceState.TARDANZA, 5, checkIn, 77);
         assertTrue(result.success());
+        assertEquals(SyncItemResult.Status.ACCEPTED, result.status());
         assertEquals("att-2", result.attendanceId());
         assertEquals(AttendanceState.TARDANZA, result.state());
         assertEquals(5, result.minutesLate());
@@ -37,6 +38,7 @@ class SyncItemResultTest {
     void failureFactoryShouldCreateFailureResult() {
         var result = SyncItemResult.failure("fingerprint mismatch", 33);
         assertFalse(result.success());
+        assertEquals(SyncItemResult.Status.FAILED, result.status());
         assertNull(result.attendanceId());
         assertNull(result.state());
         assertEquals(0, result.minutesLate());
@@ -49,6 +51,7 @@ class SyncItemResultTest {
     void skippedFactoryShouldCreateSkippedResult() {
         var result = SyncItemResult.skipped(88);
         assertFalse(result.success());
+        assertEquals(SyncItemResult.Status.SKIPPED, result.status());
         assertNull(result.attendanceId());
         assertNull(result.state());
         assertEquals(0, result.minutesLate());
@@ -60,8 +63,8 @@ class SyncItemResultTest {
     @Test
     void shouldHaveValueEquality() {
         var now = LocalDateTime.of(2026, 7, 19, 8, 0);
-        var a = new SyncItemResult(true, "att-1", AttendanceState.PUNTUAL, 0, now, null, 1);
-        var b = new SyncItemResult(true, "att-1", AttendanceState.PUNTUAL, 0, now, null, 1);
+        var a = new SyncItemResult(SyncItemResult.Status.ACCEPTED, "att-1", AttendanceState.PUNTUAL, 0, now, null, 1);
+        var b = new SyncItemResult(SyncItemResult.Status.ACCEPTED, "att-1", AttendanceState.PUNTUAL, 0, now, null, 1);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }

@@ -44,7 +44,8 @@ public class SyncAttendanceUseCase {
                         item.ivBase64(),
                         item.tagBase64(),
                         item.capturedAtUtc(),
-                        item.deviceCode()
+                        item.deviceCode(),
+                        item.offlineEventId()
                 );
 
                 var result = markAttendanceUseCase.mark(command);

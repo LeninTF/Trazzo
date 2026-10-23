@@ -215,6 +215,50 @@ class AttendanceSyncControllerTest {
                 .andExpect(jsonPath("$.correlation_id").isNotEmpty());
     }
 
+    // El agente envía un evento por lote: con 202 lo da por enviado, así que un rechazo tiene que ser un 4xx.
+    @Test
+    void sync_aBatchWhereNothingWasAcceptedNorSkippedIs422WithItems() throws Exception {
+        when(syncAttendanceUseCase.syncBatch(any(), any())).thenReturn(new SyncAttendanceUseCase.SyncBatchResult(
+                UUID.randomUUID(), 0, List.of(SyncItemResult.failure("Huella no reconocida", 1001))));
+
+        mockMvc.perform(post("/asistencia/sync").contentType(MediaType.APPLICATION_JSON).content("[" + validRequestJson() + "]"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.accepted_count").value(0))
+                .andExpect(jsonPath("$.items[0].offline_event_id").value(1001))
+                .andExpect(jsonPath("$.items[0].status").value("failed"))
+                .andExpect(jsonPath("$.items[0].message").value("Huella no reconocida"));
+    }
+
+    @Test
+    void sync_aMixedBatchIs202AndReportsEveryItem() throws Exception {
+        when(syncAttendanceUseCase.syncBatch(any(), any())).thenReturn(new SyncAttendanceUseCase.SyncBatchResult(
+                UUID.randomUUID(), 1, List.of(
+                        SyncItemResult.success("att-001", AttendanceState.PUNTUAL, 0, NOW, 1001),
+                        SyncItemResult.failure("Huella no reconocida", 1002),
+                        SyncItemResult.skipped(1003))));
+
+        mockMvc.perform(post("/asistencia/sync").contentType(MediaType.APPLICATION_JSON).content("[" + validRequestJson() + "]"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.accepted_count").value(1))
+                .andExpect(jsonPath("$.items[0].offline_event_id").value(1001))
+                .andExpect(jsonPath("$.items[0].status").value("accepted"))
+                .andExpect(jsonPath("$.items[1].status").value("failed"))
+                .andExpect(jsonPath("$.items[1].message").value("Huella no reconocida"))
+                .andExpect(jsonPath("$.items[2].offline_event_id").value(1003))
+                .andExpect(jsonPath("$.items[2].status").value("skipped"));
+    }
+
+    // Un reenvío de algo ya procesado no es un error: el agente debe darlo por enviado.
+    @Test
+    void sync_aBatchOfAlreadyProcessedEventsIs202() throws Exception {
+        when(syncAttendanceUseCase.syncBatch(any(), any())).thenReturn(new SyncAttendanceUseCase.SyncBatchResult(
+                UUID.randomUUID(), 0, List.of(SyncItemResult.skipped(1001))));
+
+        mockMvc.perform(post("/asistencia/sync").contentType(MediaType.APPLICATION_JSON).content("[" + validRequestJson() + "]"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.items[0].status").value("skipped"));
+    }
+
     @Test
     void sync_shouldReturn202WithEmptyList() throws Exception {
         var correlationId = UUID.randomUUID();

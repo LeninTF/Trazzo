@@ -215,6 +215,7 @@ class SyncAttendanceUseCaseTest {
                         && cmd.tagBase64().equals("tagData")
                         && cmd.capturedAtUtc().equals(capturedAt)
                         && cmd.deviceCode().equals("DEV-02")
+                        && cmd.offlineEventId().equals(200)
         ));
     }
 

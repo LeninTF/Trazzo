@@ -82,6 +82,11 @@ public class MarkAttendanceUseCase {
 
         if (existingAttendance.isPresent()) {
             var existing = existingAttendance.get();
+            // La misma captura reenviada (el agente la encola si la marcación en vivo falla, también por timeout
+            // aunque el backend ya la hubiera registrado): no es una salida nueva.
+            if (capturedAt.equals(existing.getCheckIn()) || capturedAt.equals(existing.getCheckOut())) {
+                return toResult(existing);
+            }
             if (existing.getCheckIn() != null && existing.getCheckOut() == null) {
                 existing.registerCheckOutAt(capturedAt);
                 var saved = attendanceRepository.save(existing);
@@ -99,7 +104,7 @@ public class MarkAttendanceUseCase {
 
         var attendance = Attendance.registerCheckInAt(
                 tenantUserId, scheduleId, device.getId(),
-                entryTime, toleranceMinutes, capturedAt
+                entryTime, toleranceMinutes, capturedAt, command.offlineEventId(), command.deviceCode()
         );
 
         var saved = attendanceRepository.save(attendance);

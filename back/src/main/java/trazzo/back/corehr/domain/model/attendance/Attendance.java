@@ -137,6 +137,21 @@ public class Attendance {
             int toleranceMinutes,
             LocalDateTime capturedAt
     ) {
+        return registerCheckInAt(tenantUserId, scheduleId, deviceId, scheduledEntryTime, toleranceMinutes, capturedAt,
+                null, null);
+    }
+
+    /** offlineEventId + deviceCode identifican el evento de la cola del agente: un reenvío se detecta y se omite. */
+    public static Attendance registerCheckInAt(
+            Long tenantUserId,
+            Long scheduleId,
+            Long deviceId,
+            LocalTime scheduledEntryTime,
+            int toleranceMinutes,
+            LocalDateTime capturedAt,
+            Integer offlineEventId,
+            String deviceCode
+    ) {
         LocalDate today = capturedAt.toLocalDate();
         LocalTime actualCheckIn = capturedAt.toLocalTime();
 
@@ -165,8 +180,8 @@ public class Attendance {
                 today,
                 lateMinutes,
                 initialState,
-                null,
-                null,
+                offlineEventId,
+                deviceCode,
                 capturedAt,
                 capturedAt
         );

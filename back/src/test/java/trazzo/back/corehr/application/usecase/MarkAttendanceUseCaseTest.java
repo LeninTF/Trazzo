@@ -131,7 +131,7 @@ class MarkAttendanceUseCaseTest {
     }
 
     private static MarkAttendanceCommand command(LocalDateTime capturedAt) {
-        return new MarkAttendanceCommand("tpl", "key", "iv", "tag", capturedAt, "DEV-01");
+        return new MarkAttendanceCommand("tpl", "key", "iv", "tag", capturedAt, "DEV-01", null);
     }
 
     private void activeDevice(long id) {
@@ -335,6 +335,55 @@ class MarkAttendanceUseCaseTest {
         assertEquals(LocalDate.of(2026, 10, 22), result.attendanceDate());
         assertEquals(LocalDateTime.of(2026, 10, 22, 23, 30), result.checkIn());
         verify(attendanceRepository).findByTenantUserIdAndDate(1L, LocalDate.of(2026, 10, 22));
+    }
+
+    // El agente encola la captura si la marcación en vivo falla (también por timeout, aunque el backend ya la
+    // hubiera registrado) y la reenvía después con la misma hora: no debe convertirse en la salida.
+    @Test
+    void mark_theSameCaptureSentAgainIsNotTurnedIntoACheckOut() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        var checkIn = LocalDateTime.of(2025, 7, 15, 8, 0);
+        var existing = Attendance.restore("att-1", 1L, 10L, 1L, checkIn, null, LocalDate.of(2025, 7, 15), 0,
+                AttendanceState.PUNTUAL, null, "DEV-01", checkIn, checkIn);
+        when(attendanceRepository.findByTenantUserIdAndDate(1L, LocalDate.of(2025, 7, 15))).thenReturn(Optional.of(existing));
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 13, 0)));
+
+        assertEquals("att-1", result.id());
+        assertNull(result.checkOut());
+        verify(attendanceRepository, never()).save(any());
+    }
+
+    @Test
+    void mark_aRepeatedCheckOutReturnsTheAttendanceInsteadOfFailing() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        var checkIn = LocalDateTime.of(2025, 7, 15, 8, 0);
+        var checkOut = LocalDateTime.of(2025, 7, 15, 18, 0);
+        var complete = Attendance.restore("att-1", 1L, 10L, 1L, checkIn, checkOut, LocalDate.of(2025, 7, 15), 0,
+                AttendanceState.PUNTUAL, null, "DEV-01", checkIn, checkOut);
+        when(attendanceRepository.findByTenantUserIdAndDate(1L, LocalDate.of(2025, 7, 15))).thenReturn(Optional.of(complete));
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 23, 0)));
+
+        assertEquals(checkOut, result.checkOut());
+        verify(attendanceRepository, never()).save(any());
+    }
+
+    // Sin esto, un lote reenviado por el agente registraba la misma entrada como salida.
+    @Test
+    void mark_aCheckInFromTheOfflineQueueRemembersItsEventSoARetryIsSkipped() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        when(userScheduleRepository.findByTenantUserId(1L)).thenReturn(List.of());
+
+        useCase.mark(new MarkAttendanceCommand("tpl", "key", "iv", "tag", LocalDateTime.of(2025, 7, 15, 13, 0), "DEV-01", 55));
+
+        ArgumentCaptor<Attendance> saved = ArgumentCaptor.forClass(Attendance.class);
+        verify(attendanceRepository).save(saved.capture());
+        assertEquals(55, saved.getValue().getOfflineEventId());
+        assertEquals("DEV-01", saved.getValue().getDeviceCode());
     }
 
     @Test

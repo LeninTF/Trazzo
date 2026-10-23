@@ -9,7 +9,7 @@ class MarkAttendanceCommandTest {
     @Test
     void shouldConstructRecordWithAllFields() {
         var now = LocalDateTime.of(2026, 7, 19, 8, 30);
-        var cmd = new MarkAttendanceCommand("tmpl", "aes", "iv", "tag", now, "DEV-01");
+        var cmd = new MarkAttendanceCommand("tmpl", "aes", "iv", "tag", now, "DEV-01", null);
         assertEquals("tmpl", cmd.encryptedTemplateBase64());
         assertEquals("aes", cmd.encryptedAesKeyBase64());
         assertEquals("iv", cmd.ivBase64());
@@ -21,8 +21,8 @@ class MarkAttendanceCommandTest {
     @Test
     void shouldHaveValueEquality() {
         var now = LocalDateTime.of(2026, 7, 19, 8, 30);
-        var a = new MarkAttendanceCommand("t", "a", "i", "tag", now, "D1");
-        var b = new MarkAttendanceCommand("t", "a", "i", "tag", now, "D1");
+        var a = new MarkAttendanceCommand("t", "a", "i", "tag", now, "D1", null);
+        var b = new MarkAttendanceCommand("t", "a", "i", "tag", now, "D1", null);
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
     }
@@ -30,8 +30,8 @@ class MarkAttendanceCommandTest {
     @Test
     void shouldNotBeEqualWhenFieldsDiffer() {
         var now = LocalDateTime.now();
-        var a = new MarkAttendanceCommand("t1", "a", "i", "tag", now, "D1");
-        var b = new MarkAttendanceCommand("t2", "a", "i", "tag", now, "D1");
+        var a = new MarkAttendanceCommand("t1", "a", "i", "tag", now, "D1", null);
+        var b = new MarkAttendanceCommand("t2", "a", "i", "tag", now, "D1", null);
         assertNotEquals(a, b);
     }
 }
