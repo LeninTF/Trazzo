@@ -25,8 +25,14 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
     public SqliteEnrolledFingerprintStore(IConfiguration configuration, ILogger<SqliteEnrolledFingerprintStore> logger)
         : this(BuildConnectionString(configuration), logger)
     {
-        if (string.IsNullOrWhiteSpace(configuration["Enrollment:LocalStorePath"]))
-            AgentDataDirectory.RemoveLegacyTemplates(AgentDataDirectory.LegacyDirectory(), logger);
+        string legacyDirectory = AgentDataDirectory.LegacyDirectory();
+        if (string.IsNullOrWhiteSpace(configuration["Enrollment:LocalStorePath"]) && AgentDataDirectory.HasLegacyTemplates(legacyDirectory))
+        {
+            logger.LogWarning(
+                "Hay un padrón de huellas de una versión anterior en {Directory} que cualquier usuario de la PC puede descifrar. "
+                + "Ya no se usa: un administrador debe borrar ese directorio y volver a enrolar las huellas.",
+                legacyDirectory);
+        }
     }
 
     internal SqliteEnrolledFingerprintStore(string connectionString, ILogger<SqliteEnrolledFingerprintStore> logger)

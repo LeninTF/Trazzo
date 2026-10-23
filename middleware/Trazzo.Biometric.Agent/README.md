@@ -658,7 +658,7 @@ Además del cifrado híbrido, el agente aplica los siguientes controles defensiv
 - **Guard plaintext** cerrado por defecto: `templateBase64: null` si el cifrado no está configurado (opt-in explícito con env var para dev).
 - **Validación de KeySize RSA ≥ 2048 bits**: claves más chicas se rechazan al importarse.
 - **Cache de clave pública** en `%SystemRoot%\System32\config\systemprofile\AppData\Local\TrazzoAgent\public_key.cache` protegido con DPAPI de la cuenta del servicio (LocalSystem) y marcador de integridad `TRAZZO_KEY_CACHE_V2`. Cache manipulado o de versión previa se descarta.
-- **Directorio de datos** en el perfil de LocalSystem, que solo abren SYSTEM y Administradores. Versiones anteriores lo tenían en `%PROGRAMDATA%\TrazzoAgent` (legible y con creación de archivos para cualquier usuario); al arrancar se borra el padrón antiguo de ahí.
+- **Directorio de datos** en el perfil de LocalSystem, que solo abren SYSTEM y Administradores. Versiones anteriores lo tenían en `%PROGRAMDATA%\TrazzoAgent` (legible y con creación de archivos para cualquier usuario). El servicio no borra nada ahí (un borrado como SYSTEM en un directorio que otros manipulan sería un borrado arbitrario); si encuentra el padrón antiguo lo avisa en el log y un administrador debe borrar `%PROGRAMDATA%\TrazzoAgent` y volver a enrolar.
 - **Response size limits** en todos los HttpClients al backend (32 KB para public key, 8-16 KB para respuestas de API).
 
 ### Auto-update

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Tests;
@@ -14,22 +13,20 @@ public sealed class AgentDataDirectoryTests
         Assert.NotEqual(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), AgentDataDirectory.DefaultBasePath());
     }
 
+    // ProgramData lo pueden manipular otros usuarios (junction + symlink del object manager): borrar ahí como
+    // SYSTEM sería un borrado arbitrario. El servicio solo detecta el padrón antiguo; lo borra un administrador.
     [Fact]
-    public void RemoveLegacyTemplates_BorraElPadronAntiguoYDejaLaCola()
+    public void HasLegacyTemplates_DetectaElPadronAntiguoSinBorrarNada()
     {
         string legacy = Directory.CreateDirectory(
             Path.Combine(Path.GetTempPath(), "trazzo-legacy-" + Guid.NewGuid().ToString("N"))).FullName;
         try
         {
-            foreach (string name in new[] { "enrolled.db", "enrolled.db-wal", "enrolled.db-shm", "events.db" })
-                File.WriteAllBytes(Path.Combine(legacy, name), [1]);
+            string padron = Path.Combine(legacy, "enrolled.db");
+            File.WriteAllBytes(padron, [1]);
 
-            AgentDataDirectory.RemoveLegacyTemplates(legacy, NullLogger.Instance);
-
-            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db")));
-            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db-wal")));
-            Assert.False(File.Exists(Path.Combine(legacy, "enrolled.db-shm")));
-            Assert.True(File.Exists(Path.Combine(legacy, "events.db")));
+            Assert.True(AgentDataDirectory.HasLegacyTemplates(legacy));
+            Assert.True(File.Exists(padron));
         }
         finally
         {
@@ -38,12 +35,11 @@ public sealed class AgentDataDirectoryTests
     }
 
     [Fact]
-    public void RemoveLegacyTemplates_SinDirectorioAntiguoNoHaceNada()
+    public void HasLegacyTemplates_SinPadronAntiguoEsFalso()
     {
         string missing = Path.Combine(Path.GetTempPath(), "trazzo-legacy-missing-" + Guid.NewGuid().ToString("N"));
 
-        AgentDataDirectory.RemoveLegacyTemplates(missing, NullLogger.Instance);
-
+        Assert.False(AgentDataDirectory.HasLegacyTemplates(missing));
         Assert.False(Directory.Exists(missing));
     }
 }
