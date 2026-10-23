@@ -12,6 +12,7 @@ public interface ToleranciaRepositoryPort {
     List<Tolerancia> findAllByScheduleId(Long scheduleId, int page, int size);
     long countByScheduleId(Long scheduleId);
     boolean existsActiveByScheduleIdAndType(Long scheduleId, ToleranciaType type);
+    Optional<Tolerancia> findActiveByScheduleIdAndType(Long scheduleId, ToleranciaType type);
     void deleteById(Long id);
     Optional<Tolerancia> findByScheduleIdAndId(Long scheduleId, Long toleranciaId);
 }

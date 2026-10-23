@@ -9,6 +9,7 @@ import trazzo.back.corehr.application.port.out.AttendanceNotificationPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
+import trazzo.back.corehr.application.port.out.BusinessTimeZonePort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.NonWorkingDaysRepositoryPort;
@@ -85,11 +86,14 @@ public class CoreHrBeanConfiguration {
             BiometricMatchingPort biometricMatching,
             UserBiometriaRepositoryPort biometriaRepository,
             UserScheduleRepositoryPort userScheduleRepository,
+            ToleranciaRepositoryPort toleranciaRepository,
             AttendanceRepositoryPort attendanceRepository,
             EventPublisherPort eventPublisher,
-            AttendanceNotificationPort notificationPort) {
+            AttendanceNotificationPort notificationPort,
+            BusinessTimeZonePort businessTimeZone) {
         return new MarkAttendanceUseCase(deviceRepository, biometricCrypto, biometricMatching,
-                biometriaRepository, userScheduleRepository, attendanceRepository, eventPublisher, notificationPort);
+                biometriaRepository, userScheduleRepository, toleranciaRepository, attendanceRepository,
+                eventPublisher, notificationPort, businessTimeZone);
     }
 
     @Bean

@@ -14,21 +14,26 @@ import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
+import trazzo.back.corehr.application.port.out.BusinessTimeZonePort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
+import trazzo.back.corehr.application.port.out.ToleranciaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.exception.BiometricDecryptionException;
 import trazzo.back.corehr.domain.model.AttendanceState;
+import trazzo.back.corehr.domain.model.ToleranciaType;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
 import trazzo.back.corehr.domain.model.attendance.BiometricIdentifyResult;
 import trazzo.back.corehr.domain.model.attendance.Device;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
+import trazzo.back.corehr.domain.model.schedule.Tolerancia;
 import trazzo.back.corehr.domain.model.schedule.UserSchedule;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.LongStream;
@@ -36,12 +41,15 @@ import java.util.stream.LongStream;
 class MarkAttendanceUseCaseTest {
 
     private static final byte[] PROBE_TEMPLATE = {7, 7, 7};
+    // Lima es UTC-5 todo el año: 12:55Z son las 07:55 locales.
+    private static final ZoneId LIMA = ZoneId.of("America/Lima");
 
     private DeviceRepositoryPort deviceRepository;
     private BiometricCryptoPort biometricCrypto;
     private BiometricMatchingPort biometricMatching;
     private UserBiometriaRepositoryPort biometriaRepository;
     private UserScheduleRepositoryPort userScheduleRepository;
+    private ToleranciaRepositoryPort toleranciaRepository;
     private AttendanceRepositoryPort attendanceRepository;
     private EventPublisherPort eventPublisher;
     private AttendanceNotificationPort notificationPort;
@@ -54,13 +62,14 @@ class MarkAttendanceUseCaseTest {
         biometricMatching = mock(BiometricMatchingPort.class);
         biometriaRepository = mock(UserBiometriaRepositoryPort.class);
         userScheduleRepository = mock(UserScheduleRepositoryPort.class);
+        toleranciaRepository = mock(ToleranciaRepositoryPort.class);
         attendanceRepository = mock(AttendanceRepositoryPort.class);
         eventPublisher = mock(EventPublisherPort.class);
         notificationPort = mock(AttendanceNotificationPort.class);
         useCase = new MarkAttendanceUseCase(
                 deviceRepository, biometricCrypto, biometricMatching,
-                biometriaRepository, userScheduleRepository,
-                attendanceRepository, eventPublisher, notificationPort
+                biometriaRepository, userScheduleRepository, toleranciaRepository,
+                attendanceRepository, eventPublisher, notificationPort, () -> LIMA
         );
         ReflectionTestUtils.setField(useCase, "matchThreshold", 40);
         when(biometricCrypto.openTransport(any())).thenReturn(PROBE_TEMPLATE);
@@ -135,6 +144,12 @@ class MarkAttendanceUseCaseTest {
                 .thenReturn(Optional.of(BiometricIdentifyResult.match(tenantUserId, 85)));
     }
 
+    private void entryToleranceOf(int minutes) {
+        when(toleranciaRepository.findActiveByScheduleIdAndType(10L, ToleranciaType.ENTRADA)).thenReturn(Optional.of(
+                Tolerancia.restore(3L, 10L, "Ingreso", ToleranciaType.ENTRADA, minutes, null, true,
+                        LocalDateTime.now(), LocalDateTime.now())));
+    }
+
     private void scheduleAt(LocalTime entry) {
         var userSchedule = UserSchedule.restore(1L, 1L, 10L, "Turno mañana", entry, LocalTime.of(17, 0),
                 LocalDateTime.now(), LocalDateTime.now());
@@ -183,7 +198,7 @@ class MarkAttendanceUseCaseTest {
 
     @Test
     void mark_shouldRegisterCheckOut_whenCheckInExists() {
-        var capturedAt = LocalDateTime.of(2025, 7, 15, 18, 0);
+        var capturedAt = LocalDateTime.of(2025, 7, 15, 23, 0);
         var checkInTime = LocalDateTime.of(2025, 7, 15, 9, 0);
         var attendanceDate = LocalDate.of(2025, 7, 15);
         activeDevice(1L);
@@ -194,7 +209,7 @@ class MarkAttendanceUseCaseTest {
 
         var result = useCase.mark(command(capturedAt));
 
-        assertEquals(capturedAt, result.checkOut());
+        assertEquals(LocalDateTime.of(2025, 7, 15, 18, 0), result.checkOut());
         assertEquals(checkInTime, result.checkIn());
         verify(attendanceRepository).save(any());
         verify(eventPublisher, atLeastOnce()).publish(any());
@@ -257,7 +272,7 @@ class MarkAttendanceUseCaseTest {
         when(attendanceRepository.findByTenantUserIdAndDate(1L, attendanceDate)).thenReturn(Optional.empty());
         scheduleAt(LocalTime.of(8, 0));
 
-        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 30)));
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 14, 30)));
 
         assertEquals(AttendanceState.TARDANZA, result.state());
         assertEquals(90, result.minutesLate());
@@ -272,7 +287,7 @@ class MarkAttendanceUseCaseTest {
         scheduleAt(LocalTime.of(8, 0));
         doThrow(new RuntimeException("smtp down")).when(notificationPort).notifyTardanza(any(), any(), anyInt(), any());
 
-        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 30)));
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 14, 30)));
 
         assertEquals(AttendanceState.TARDANZA, result.state());
         verify(notificationPort).notifyTardanza(isNull(), isNull(), anyInt(), any());
@@ -285,7 +300,7 @@ class MarkAttendanceUseCaseTest {
         when(attendanceRepository.findByTenantUserIdAndDate(eq(1L), any())).thenReturn(Optional.empty());
         scheduleAt(LocalTime.of(8, 0));
 
-        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 0)));
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 14, 0)));
 
         assertEquals(10L, result.scheduleId());
         assertEquals(AttendanceState.TARDANZA, result.state());
@@ -299,11 +314,53 @@ class MarkAttendanceUseCaseTest {
         when(attendanceRepository.findByTenantUserIdAndDate(eq(1L), any())).thenReturn(Optional.empty());
         scheduleAt(LocalTime.of(8, 0));
 
-        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 7, 55)));
+        entryToleranceOf(5);
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 12, 55)));
 
         assertEquals(AttendanceState.PUNTUAL, result.state());
         assertEquals(0, result.minutesLate());
+        assertEquals(LocalDateTime.of(2025, 7, 15, 7, 55), result.checkIn());
         verifyNoInteractions(notificationPort);
+    }
+
+    @Test
+    void mark_aMarkAfter19hInLimaBelongsToThatLocalDay() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        when(userScheduleRepository.findByTenantUserId(1L)).thenReturn(List.of());
+
+        var result = useCase.mark(command(LocalDateTime.of(2026, 10, 23, 4, 30)));
+
+        assertEquals(LocalDate.of(2026, 10, 22), result.attendanceDate());
+        assertEquals(LocalDateTime.of(2026, 10, 22, 23, 30), result.checkIn());
+        verify(attendanceRepository).findByTenantUserIdAndDate(1L, LocalDate.of(2026, 10, 22));
+    }
+
+    @Test
+    void mark_withinTheEntryToleranceIsPuntual() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        scheduleAt(LocalTime.of(8, 0));
+        entryToleranceOf(5);
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 13, 4)));
+
+        assertEquals(AttendanceState.PUNTUAL, result.state());
+        assertEquals(0, result.minutesLate());
+    }
+
+    @Test
+    void mark_pastTheEntryToleranceCountsOnlyTheMinutesBeyondIt() {
+        activeDevice(1L);
+        identifiedAs(1L);
+        scheduleAt(LocalTime.of(8, 0));
+        entryToleranceOf(5);
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 13, 10)));
+
+        assertEquals(AttendanceState.TARDANZA, result.state());
+        assertEquals(5, result.minutesLate());
     }
 
     @Test

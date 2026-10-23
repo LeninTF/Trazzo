@@ -54,6 +54,11 @@ public class ToleranciaRepositoryAdapter implements ToleranciaRepositoryPort {
     }
 
     @Override
+    public Optional<Tolerancia> findActiveByScheduleIdAndType(Long scheduleId, ToleranciaType type) {
+        return toleranciaRepo.findFirstByScheduleIdAndTypeAndActivoTrue(scheduleId, type).map(ToleranciaMapper::toDomain);
+    }
+
+    @Override
     @Transactional
     public void deleteById(Long id) {
         toleranciaRepo.deleteById(id);

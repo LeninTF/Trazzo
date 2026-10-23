@@ -120,6 +120,17 @@ class ToleranciaRepositoryAdapterTest {
     }
 
     @Test
+    void findActiveByScheduleIdAndType_returnsTheActiveToleranceOfThatType() {
+        when(toleranciaRepo.findFirstByScheduleIdAndTypeAndActivoTrue(10L, ToleranciaType.ENTRADA))
+                .thenReturn(Optional.of(createEntity(1L)));
+
+        var result = adapter.findActiveByScheduleIdAndType(10L, ToleranciaType.ENTRADA);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getMinutes()).isEqualTo(15);
+    }
+
+    @Test
     void deleteById_shouldDelegate() {
         adapter.deleteById(1L);
 

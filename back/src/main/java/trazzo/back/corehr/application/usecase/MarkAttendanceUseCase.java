@@ -10,17 +10,23 @@ import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
+import trazzo.back.corehr.application.port.out.BusinessTimeZonePort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
+import trazzo.back.corehr.application.port.out.ToleranciaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.AttendanceState;
+import trazzo.back.corehr.domain.model.ToleranciaType;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
 import trazzo.back.corehr.domain.model.attendance.BiometricIdentifyResult;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
+import trazzo.back.corehr.domain.model.schedule.Tolerancia;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,9 +41,11 @@ public class MarkAttendanceUseCase {
     private final BiometricMatchingPort biometricMatching;
     private final UserBiometriaRepositoryPort biometriaRepository;
     private final UserScheduleRepositoryPort userScheduleRepository;
+    private final ToleranciaRepositoryPort toleranciaRepository;
     private final AttendanceRepositoryPort attendanceRepository;
     private final EventPublisherPort eventPublisher;
     private final AttendanceNotificationPort notificationPort;
+    private final BusinessTimeZonePort businessTimeZone;
 
     @Value("${corehr.biometric.match-threshold:40}")
     private int matchThreshold;
@@ -64,14 +72,18 @@ public class MarkAttendanceUseCase {
         }
 
         Long tenantUserId = matchResult.tenantUserId();
-        LocalDate attendanceDate = command.capturedAtUtc().toLocalDate();
+        // El agente envía el instante en UTC; los horarios (y el día) son locales del negocio.
+        LocalDateTime capturedAt = command.capturedAtUtc().atOffset(ZoneOffset.UTC)
+                .atZoneSameInstant(businessTimeZone.zone())
+                .toLocalDateTime();
+        LocalDate attendanceDate = capturedAt.toLocalDate();
 
         var existingAttendance = attendanceRepository.findByTenantUserIdAndDate(tenantUserId, attendanceDate);
 
         if (existingAttendance.isPresent()) {
             var existing = existingAttendance.get();
             if (existing.getCheckIn() != null && existing.getCheckOut() == null) {
-                existing.registerCheckOutAt(command.capturedAtUtc());
+                existing.registerCheckOutAt(capturedAt);
                 var saved = attendanceRepository.save(existing);
                 var events = saved.pullDomainEvents();
                 events.forEach(eventPublisher::publish);
@@ -87,7 +99,7 @@ public class MarkAttendanceUseCase {
 
         var attendance = Attendance.registerCheckInAt(
                 tenantUserId, scheduleId, device.getId(),
-                entryTime, toleranceMinutes, command.capturedAtUtc()
+                entryTime, toleranceMinutes, capturedAt
         );
 
         var saved = attendanceRepository.save(attendance);
@@ -133,7 +145,9 @@ public class MarkAttendanceUseCase {
             return Optional.empty();
         }
         var userSchedule = userSchedules.getFirst();
-        int tolerance = 0;
+        int tolerance = toleranciaRepository.findActiveByScheduleIdAndType(userSchedule.getScheduleId(), ToleranciaType.ENTRADA)
+                .map(Tolerancia::getMinutes)
+                .orElse(0);
         return Optional.of(new ScheduleInfo(userSchedule.getScheduleId(), userSchedule.getEntryTime(), tolerance));
     }
 

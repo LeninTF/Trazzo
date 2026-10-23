@@ -18,5 +18,7 @@ public interface ToleranciaJpaRepository extends JpaRepository<ToleranciaEntity,
 
     boolean existsByScheduleIdAndTypeAndActivoTrue(Long scheduleId, ToleranciaType type);
 
+    Optional<ToleranciaEntity> findFirstByScheduleIdAndTypeAndActivoTrue(Long scheduleId, ToleranciaType type);
+
     Optional<ToleranciaEntity> findByScheduleIdAndId(Long scheduleId, Long id);
 }
