@@ -6,10 +6,17 @@ import org.springframework.stereotype.Component;
 import trazzo.back.corehr.application.port.out.CryptoKeyProviderPort;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
@@ -24,8 +31,10 @@ import java.security.spec.RSAPublicKeySpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.EnumSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Clave RSA con la que el middleware envuelve la llave AES de cada template. Tiene que sobrevivir a
@@ -104,22 +113,63 @@ public class RsaKeyProviderAdapter implements CryptoKeyProviderPort {
 
     private static KeyPair loadOrCreate(Path file) {
         try {
-            if (Files.exists(file)) {
-                return parsePrivateKey(Files.readString(file, StandardCharsets.US_ASCII), KEY_FILE_PROPERTY);
+            if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+                return load(file);
             }
             KeyPair generated = generate();
-            Path parent = file.toAbsolutePath().getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-            Files.writeString(file, toPkcs8Pem(generated.getPrivate()), StandardCharsets.US_ASCII);
-            if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-                Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-------"));
+            createPrivateParent(file);
+            try {
+                writeNewOwnerOnly(file, toPkcs8Pem(generated.getPrivate()).getBytes(StandardCharsets.US_ASCII));
+            } catch (FileAlreadyExistsException concurrentStart) {
+                // Otra instancia la creó al mismo tiempo: se usa la suya.
+                return load(file);
             }
             log.info("Clave RSA biométrica generada y guardada en {}", file);
             return generated;
         } catch (IOException e) {
             throw new IllegalStateException(KEY_FILE_PROPERTY + " no se pudo leer ni crear: " + file, e);
+        }
+    }
+
+    private static boolean posix() {
+        return FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+    }
+
+    private static KeyPair load(Path file) throws IOException {
+        if (Files.isSymbolicLink(file)) {
+            throw new IllegalStateException(KEY_FILE_PROPERTY + " es un enlace simbólico; se rechaza: " + file);
+        }
+        if (posix()) {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file, LinkOption.NOFOLLOW_LINKS);
+            if (permissions.stream().anyMatch(p -> p.name().startsWith("GROUP_") || p.name().startsWith("OTHERS_"))) {
+                throw new IllegalStateException(KEY_FILE_PROPERTY + " es accesible por otros usuarios ("
+                        + PosixFilePermissions.toString(permissions) + "); debe tener permisos 600: " + file);
+            }
+        }
+        return parsePrivateKey(Files.readString(file, StandardCharsets.US_ASCII), KEY_FILE_PROPERTY);
+    }
+
+    // Solo se crea (con 700) el directorio que falta; uno existente, como /app/keys de la imagen, no se toca.
+    private static void createPrivateParent(Path file) throws IOException {
+        Path parent = file.toAbsolutePath().getParent();
+        if (parent == null || Files.isDirectory(parent)) {
+            return;
+        }
+        if (posix()) {
+            Files.createDirectories(parent, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        } else {
+            Files.createDirectories(parent);
+        }
+    }
+
+    // CREATE_NEW con 600 desde el primer byte: no hay ventana en la que la clave sea legible por otros.
+    private static void writeNewOwnerOnly(Path file, byte[] content) throws IOException {
+        FileAttribute<?>[] attributes = posix()
+                ? new FileAttribute<?>[]{PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))}
+                : new FileAttribute<?>[0];
+        try (SeekableByteChannel channel = Files.newByteChannel(file,
+                EnumSet.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE), attributes)) {
+            channel.write(ByteBuffer.wrap(content));
         }
     }
 

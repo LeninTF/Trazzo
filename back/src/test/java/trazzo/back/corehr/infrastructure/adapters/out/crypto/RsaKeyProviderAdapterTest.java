@@ -3,8 +3,10 @@ package trazzo.back.corehr.infrastructure.adapters.out.crypto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
@@ -13,6 +15,7 @@ import java.util.HexFormat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class RsaKeyProviderAdapterTest {
 
@@ -98,6 +101,46 @@ class RsaKeyProviderAdapterTest {
         assertThatThrownBy(() -> new RsaKeyProviderAdapter("", keyFile.toString(), ""))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("app.biometric.rsa.key-file");
+    }
+
+    private static boolean posix() {
+        return FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+    }
+
+    @Test
+    void createsTheKeyFileAndItsDirectoryReadableOnlyByTheOwner(@TempDir Path dir) throws Exception {
+        assumeTrue(posix(), "permisos POSIX (CI en Linux)");
+        Path keyFile = dir.resolve("keys").resolve("biometric-rsa.pem");
+
+        new RsaKeyProviderAdapter("", keyFile.toString(), "");
+
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(keyFile))).isEqualTo("rw-------");
+        assertThat(PosixFilePermissions.toString(Files.getPosixFilePermissions(keyFile.getParent()))).isEqualTo("rwx------");
+    }
+
+    @Test
+    void refusesAKeyFileReadableByOtherUsers(@TempDir Path dir) throws Exception {
+        assumeTrue(posix(), "permisos POSIX (CI en Linux)");
+        Path keyFile = dir.resolve("biometric-rsa.pem");
+        Files.writeString(keyFile, pkcs8Pem(newKeyPair()));
+        Files.setPosixFilePermissions(keyFile, PosixFilePermissions.fromString("rw-r--r--"));
+
+        assertThatThrownBy(() -> new RsaKeyProviderAdapter("", keyFile.toString(), ""))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.biometric.rsa.key-file");
+    }
+
+    @Test
+    void refusesAKeyFileThatIsASymbolicLink(@TempDir Path dir) throws Exception {
+        assumeTrue(posix(), "crear symlinks en Windows exige privilegios");
+        Path target = dir.resolve("real.pem");
+        Files.writeString(target, pkcs8Pem(newKeyPair()));
+        Files.setPosixFilePermissions(target, PosixFilePermissions.fromString("rw-------"));
+        Path link = Files.createSymbolicLink(dir.resolve("biometric-rsa.pem"), target);
+
+        assertThatThrownBy(() -> new RsaKeyProviderAdapter("", link.toString(), ""))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("enlace simbólico");
     }
 
     @Test
