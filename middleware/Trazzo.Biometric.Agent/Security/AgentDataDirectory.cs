@@ -17,14 +17,27 @@ internal static class AgentDataDirectory
         string directory = Path.Combine(
             basePath ?? Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TrazzoAgent");
         DirectoryInfo info = new(directory);
-        if (info.Exists)
-        {
-            RequireTrustedOwners(info);
-            info.SetAccessControl(PrivateSecurity());
-        }
-        else
+        if (!info.Exists)
         {
             PrivateSecurity().CreateDirectory(directory);
+            return directory;
+        }
+
+        // Con un enlace dentro, la propagación del DACL alcanzaría su destino: se rechaza antes de tocar nada.
+        List<string> foreign = [];
+        CollectForeign(info, checkOwners: false, foreign);
+        if (foreign.Count == 0)
+        {
+            // Primero se cierra y después se revisan los dueños: lo que alguien cree durante la revisión ya no entra.
+            info.SetAccessControl(PrivateSecurity());
+            CollectForeign(info, checkOwners: true, foreign);
+        }
+
+        if (foreign.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "El directorio de datos del agente contiene enlaces o archivos de otro usuario de la PC; un "
+                + "administrador debe revisarlos y borrarlos antes de iniciar el servicio: " + string.Join(", ", foreign));
         }
         return directory;
     }
@@ -59,25 +72,28 @@ internal static class AgentDataDirectory
         return security;
     }
 
-    private static void RequireTrustedOwners(DirectoryInfo directory)
+    // Recorre el árbol sin seguir enlaces: un symlink o junction siempre es ajeno; con checkOwners, también
+    // lo que no sea de un dueño confiable.
+    private static void CollectForeign(FileSystemInfo entry, bool checkOwners, List<string> foreign)
     {
-        List<string> foreign = [];
-        if (!IsTrustedOwner(OwnerOf(directory.GetAccessControl(AccessControlSections.Owner))))
-            foreign.Add(directory.FullName);
-        foreach (FileInfo file in directory.EnumerateFiles())
+        if (entry.Attributes.HasFlag(FileAttributes.ReparsePoint) || (checkOwners && !IsTrustedOwner(OwnerOf(entry))))
         {
-            if (!IsTrustedOwner(OwnerOf(file.GetAccessControl(AccessControlSections.Owner))))
-                foreign.Add(file.FullName);
+            foreign.Add(entry.FullName);
+            return;
         }
 
-        if (foreign.Count > 0)
+        if (entry is DirectoryInfo directory)
         {
-            throw new InvalidOperationException(
-                "El directorio de datos del agente contiene archivos de otro usuario de la PC; un administrador "
-                + "debe revisarlos y borrarlos antes de iniciar el servicio: " + string.Join(", ", foreign));
+            foreach (FileSystemInfo child in directory.EnumerateFileSystemInfos())
+                CollectForeign(child, checkOwners, foreign);
         }
     }
 
-    private static SecurityIdentifier? OwnerOf(FileSystemSecurity security) =>
-        security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+    private static SecurityIdentifier? OwnerOf(FileSystemInfo entry)
+    {
+        FileSystemSecurity security = entry is DirectoryInfo directory
+            ? directory.GetAccessControl(AccessControlSections.Owner)
+            : ((FileInfo)entry).GetAccessControl(AccessControlSections.Owner);
+        return security.GetOwner(typeof(SecurityIdentifier)) as SecurityIdentifier;
+    }
 }
