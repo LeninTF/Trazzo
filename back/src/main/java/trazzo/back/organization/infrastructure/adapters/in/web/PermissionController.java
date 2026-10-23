@@ -2,6 +2,7 @@ package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,7 @@ public class PermissionController {
     private final PermissionUseCase permissionUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<PaginatedResult<PermissionResult>> list(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -30,6 +32,7 @@ public class PermissionController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<PermissionResult> create(@Valid @RequestBody PermissionRequest request) {
         var result = permissionUseCase.create(
                 new CreatePermissionCommand(request.name(), request.description(), request.masterFeaturesCode()));
@@ -37,6 +40,7 @@ public class PermissionController {
     }
 
     @GetMapping("/{permissionId}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<PermissionResult> getById(@PathVariable String permissionId) {
         return permissionUseCase.findById(permissionId)
                 .map(ResponseEntity::ok)
@@ -44,6 +48,7 @@ public class PermissionController {
     }
 
     @PutMapping("/{permissionId}")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<PermissionResult> update(
             @PathVariable String permissionId,
             @Valid @RequestBody PermissionRequest request
@@ -53,6 +58,7 @@ public class PermissionController {
     }
 
     @DeleteMapping("/{permissionId}")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<Void> delete(@PathVariable String permissionId) {
         permissionUseCase.delete(permissionId);
         return ResponseEntity.noContent().build();

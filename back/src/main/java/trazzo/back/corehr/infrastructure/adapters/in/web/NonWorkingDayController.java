@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ public class NonWorkingDayController {
     private final NonWorkingDayUseCase nonWorkingDayUseCase;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<NonWorkingDayListResponse> list(
             @RequestParam(name = "date_from", required = false) LocalDate dateFrom,
             @RequestParam(name = "date_to", required = false) LocalDate dateTo,
@@ -35,6 +37,7 @@ public class NonWorkingDayController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<NonWorkingDayResponse> create(@Valid @RequestBody CreateNonWorkingDayRequest request) {
         var command = new CreateNonWorkingDayCommand(request.date(), request.description(), request.isRecurring());
         var result = nonWorkingDayUseCase.create(command);
@@ -42,6 +45,7 @@ public class NonWorkingDayController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<NonWorkingDayResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchNonWorkingDayRequest request
@@ -52,6 +56,7 @@ public class NonWorkingDayController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         nonWorkingDayUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

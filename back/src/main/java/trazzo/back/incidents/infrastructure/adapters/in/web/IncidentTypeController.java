@@ -2,6 +2,7 @@ package trazzo.back.incidents.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class IncidentTypeController {
     private final IncidentTypeUseCase useCase;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<IncidentTypeListResponse> list(
             @RequestParam(required = false) Boolean activo,
             @RequestParam(defaultValue = "0") int page,
@@ -31,6 +33,7 @@ public class IncidentTypeController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('permisos-licencias.aprobar-incidencias')")
     public ResponseEntity<IncidentTypeResponse> create(@Valid @RequestBody CreateIncidentTypeRequest request) {
         var command = new CreateIncidentTypeCommand(request.nombre(), request.descripcion());
         var result = useCase.create(command);
@@ -38,6 +41,7 @@ public class IncidentTypeController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<IncidentTypeResponse> getById(@PathVariable String id) {
         return useCase.findById(toInt(id))
                 .map(result -> ResponseEntity.ok(IncidentTypeResponse.from(result)))
@@ -45,6 +49,7 @@ public class IncidentTypeController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('permisos-licencias.aprobar-incidencias')")
     public ResponseEntity<IncidentTypeResponse> patch(
             @PathVariable String id,
             @Valid @RequestBody PatchIncidentTypeRequest request

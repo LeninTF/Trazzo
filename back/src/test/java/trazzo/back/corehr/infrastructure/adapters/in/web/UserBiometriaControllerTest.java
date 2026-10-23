@@ -3,7 +3,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import trazzo.back.shared.security.TenantSecuritySlice;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(UserBiometriaController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@EnableMethodSecurity
+@TenantSecuritySlice
 class UserBiometriaControllerTest {
 
     @Autowired

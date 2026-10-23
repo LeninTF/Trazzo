@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ public class UserScheduleController {
     private final UserScheduleUseCase userScheduleUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<UserScheduleListResponse> list(
             @RequestParam(name = "tenant_user_id", required = false) Long tenantUserId,
             @RequestParam(name = "schedule_id", required = false) Long scheduleId,
@@ -30,6 +32,7 @@ public class UserScheduleController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-horarios.asignacion-masiva')")
     public ResponseEntity<UserScheduleResponse> create(@Valid @RequestBody CreateUserScheduleRequest request) {
         var command = new CreateUserScheduleCommand(request.tenantUserId(), request.scheduleId(),
                 request.description(), request.entryTime(), request.departureTime());
@@ -38,6 +41,7 @@ public class UserScheduleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.asignacion-masiva')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userScheduleUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

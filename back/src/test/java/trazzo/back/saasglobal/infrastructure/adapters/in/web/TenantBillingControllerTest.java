@@ -3,6 +3,7 @@ package trazzo.back.saasglobal.infrastructure.adapters.in.web;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,9 +40,11 @@ import trazzo.back.saasglobal.domain.model.iam.User;
 import trazzo.back.saasglobal.domain.model.multitenancy.Tenant;
 import trazzo.back.shared.security.AuthenticatedUser;
 import trazzo.back.shared.security.SecurityConfig;
+import trazzo.back.shared.security.TenantAuthorization;
+import trazzo.back.shared.security.TenantUserIdResolver;
 
 @WebMvcTest(TenantBillingController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, TenantAuthorization.class})
 class TenantBillingControllerTest {
 
     private static final UUID USER_ID = UUID.randomUUID();
@@ -52,10 +55,33 @@ class TenantBillingControllerTest {
     @MockitoBean TenantRepositoryPort tenantRepository;
     @MockitoBean UserRepositoryPort userRepository;
     @MockitoBean SubscribeToPlanUseCase subscribeToPlanUseCase;
+    @MockitoBean TenantUserIdResolver tenantUserIdResolver;
 
-    private static UsernamePasswordAuthenticationToken authenticatedTenantUser() {
-        var authUser = new AuthenticatedUser(USER_ID, "tenant.admin@demo.pe", "pass", List.of(), true);
-        return new UsernamePasswordAuthenticationToken(authUser, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    private static UsernamePasswordAuthenticationToken authenticatedTenantAdmin() {
+        return authenticatedTenantUserWith("administrador_tenant");
+    }
+
+    private static UsernamePasswordAuthenticationToken authenticatedTenantUserWith(String... permissions) {
+        var authorities = new java.util.ArrayList<>(List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        java.util.Arrays.stream(permissions).map(SimpleGrantedAuthority::new).forEach(authorities::add);
+        var authUser = new AuthenticatedUser(USER_ID, "tenant.admin@demo.pe", "pass", authorities, true);
+        return new UsernamePasswordAuthenticationToken(authUser, null, authorities);
+    }
+
+    @Test
+    void billingIsOnlyForTheTenantAdministrator() throws Exception {
+        var director = authenticatedTenantUserWith("gestion-trabajadores.crear", "reportes.exportar-pdf",
+                "permisos-licencias.aprobar-incidencias", "configuracion-tenant.gestionar-metodos");
+
+        mockMvc.perform(get("/org/billing/plan").with(authentication(director))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/org/billing/plans").with(authentication(director))).andExpect(status().isForbidden());
+        mockMvc.perform(get("/org/billing/invoices").with(authentication(director))).andExpect(status().isForbidden());
+        mockMvc.perform(post("/org/billing/subscribe")
+                        .with(authentication(director))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"planId\":3}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(planUseCase, invoiceUseCase, subscribeToPlanUseCase, userRepository, tenantRepository);
     }
 
     private static User tenantScopedUser() {
@@ -74,7 +100,7 @@ class TenantBillingControllerTest {
                 Tenant.restore("tenant-1", null, "demo", 2, null, null, LocalDateTime.now(), null, LocalDateTime.now(), LocalDateTime.now(), null)));
         when(planUseCase.getById(2)).thenReturn(planResult());
 
-        mockMvc.perform(get("/org/billing/plan").with(authentication(authenticatedTenantUser())))
+        mockMvc.perform(get("/org/billing/plan").with(authentication(authenticatedTenantAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Plan Demo"));
     }
@@ -88,7 +114,7 @@ class TenantBillingControllerTest {
     void listAvailablePlans_returns200() throws Exception {
         when(planUseCase.listActive()).thenReturn(List.of(planResult()));
 
-        mockMvc.perform(get("/org/billing/plans").with(authentication(authenticatedTenantUser())))
+        mockMvc.perform(get("/org/billing/plans").with(authentication(authenticatedTenantAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Plan Demo"));
     }
@@ -99,7 +125,7 @@ class TenantBillingControllerTest {
         when(invoiceUseCase.listAll(any(), eq("tenant-1"), any(), any(), anyInt(), anyInt()))
                 .thenReturn(PaginatedResult.of(List.of(invoiceResult()), 0, 20, 1));
 
-        mockMvc.perform(get("/org/billing/invoices").with(authentication(authenticatedTenantUser())))
+        mockMvc.perform(get("/org/billing/invoices").with(authentication(authenticatedTenantAdmin())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value("inv-1"));
     }
@@ -117,7 +143,7 @@ class TenantBillingControllerTest {
                 .thenReturn(new SubscribeToPlanResult("sub-1", "https://www.mercadopago.com/init-point"));
 
         mockMvc.perform(post("/org/billing/subscribe")
-                        .with(authentication(authenticatedTenantUser()))
+                        .with(authentication(authenticatedTenantAdmin()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"planId\":3}"))
                 .andExpect(status().isOk())

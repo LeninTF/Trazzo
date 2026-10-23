@@ -62,6 +62,74 @@ class TenantAuthorizationTest {
     }
 
     @Test
+    void any_aModuleWildcardMatchesAnyPermissionOfThatModule() {
+        actingAsTenantUserWith("reportes.exportar-pdf");
+
+        assertThat(authz.any("reportes.*")).isTrue();
+        assertThat(authz.any("gestion-trabajadores.*", "reportes-docente.*")).isFalse();
+    }
+
+    @Test
+    void canViewStaff_includesMassScheduleAssignmentButNotShiftConfiguration() {
+        actingAsTenantUserWith("gestion-horarios.asignacion-masiva");
+        assertThat(authz.canViewStaff()).isTrue();
+
+        actingAsTenantUserWith("gestion-horarios.configurar-turnos");
+        assertThat(authz.canViewStaff()).isFalse();
+
+        actingAsTenantUserWith("incidencias.aprobar-rechazar");
+        assertThat(authz.canViewStaff()).isTrue();
+    }
+
+    @Test
+    void canViewStructure_addsTheStructureAndScheduleModules() {
+        actingAsTenantUserWith("gestion-horarios.configurar-turnos");
+        assertThat(authz.canViewStructure()).isTrue();
+
+        actingAsTenantUserWith("estructura-organizacional.crear-editar-sedes");
+        assertThat(authz.canViewStructure()).isTrue();
+    }
+
+    @Test
+    void canViewSchedules_includesTeacherSchedules() {
+        actingAsTenantUserWith("horarios-docente.ver-turnos");
+        assertThat(authz.canViewSchedules()).isTrue();
+
+        actingAsTenantUserWith("gestion-trabajadores.crear");
+        assertThat(authz.canViewSchedules()).isFalse();
+    }
+
+    @Test
+    void canViewAllAttendance_isNotGrantedByTheOwnHistoryPermission() {
+        actingAsTenantUserWith("asistencia-docente.ver-historial");
+        assertThat(authz.canViewAllAttendance()).isFalse();
+
+        actingAsTenantUserWith("asistencia-docente.ver-tardanzas-faltas");
+        assertThat(authz.canViewAllAttendance()).isTrue();
+    }
+
+    @Test
+    void approver_isAnyOfTheIncidentApprovalPermissions() {
+        actingAsTenantUserWith("permisos-licencias.rechazar-incidencias");
+        assertThat(authz.approver()).isTrue();
+
+        actingAsTenantUserWith("incidencias.crear", "incidencias.ver-propias");
+        assertThat(authz.approver()).isFalse();
+    }
+
+    @Test
+    void thePlainUserRoleSeesNoTenantWideGroup() {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear", "asistencia-docente.ver-historial",
+                "perfil.ver-actualizar-datos");
+
+        assertThat(authz.canViewStaff()).isFalse();
+        assertThat(authz.canViewStructure()).isFalse();
+        assertThat(authz.canViewSchedules()).isFalse();
+        assertThat(authz.canViewAllAttendance()).isFalse();
+        assertThat(authz.approver()).isFalse();
+    }
+
+    @Test
     void any_rejectsWithoutAuthentication() {
         assertThat(authz.any("incidencias.ver-propias")).isFalse();
     }

@@ -1,5 +1,6 @@
 package trazzo.back.reports.infrastructure.adapters.in.web;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/reports/monthly-reports")
+@PreAuthorize("@authz.any('reportes.exportar-excel', 'reportes.exportar-pdf')")
 public class MonthlyReportController {
 
     private final GetMonthlyReportUseCase reportUseCase;

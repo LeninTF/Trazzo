@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import trazzo.back.shared.security.TenantSecuritySlice;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -32,7 +32,7 @@ import java.util.UUID;
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(StorageController.class)
 @Import(SecurityTestMockConfig.class)
-@EnableMethodSecurity
+@TenantSecuritySlice
 class StorageControllerTest {
 
     @Autowired

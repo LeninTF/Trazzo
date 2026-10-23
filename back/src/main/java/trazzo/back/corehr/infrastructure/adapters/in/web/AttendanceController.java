@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.corehr.application.dto.command.PatchAttendanceCommand;
@@ -21,6 +22,7 @@ public class AttendanceController {
     private final AttendanceUseCase attendanceUseCase;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AttendanceListResponse> list(
             @RequestParam(required = false) String scope,
             @RequestParam(name = "branch_id", required = false) Long branchId,
@@ -40,6 +42,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AttendanceResponse> getById(@PathVariable String id) {
         return attendanceUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(AttendanceResponse.from(result)))
@@ -47,6 +50,7 @@ public class AttendanceController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('control-asistencia.corregir-marcaciones')")
     public ResponseEntity<AttendanceResponse> correct(
             @PathVariable String id,
             @Valid @RequestBody PatchAttendanceRequest request

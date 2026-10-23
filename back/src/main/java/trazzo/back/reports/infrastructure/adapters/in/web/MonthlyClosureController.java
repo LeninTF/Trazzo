@@ -1,6 +1,7 @@
 package trazzo.back.reports.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +28,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/reports/monthly-closures")
+@PreAuthorize("@authz.any('reportes.exportar-excel', 'reportes.exportar-pdf')")
 public class MonthlyClosureController {
 
     private final CreateMonthlyClosureUseCase createUseCase;

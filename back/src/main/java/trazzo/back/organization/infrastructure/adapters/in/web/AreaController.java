@@ -2,6 +2,7 @@ package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class AreaController {
     private final AreaUseCase areaUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewStructure()")
     public ResponseEntity<PaginatedResult<AreaResult>> list(
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) Boolean state,
@@ -33,12 +35,14 @@ public class AreaController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<AreaResult> create(@Valid @RequestBody AreaRequest request) {
         var result = areaUseCase.create(new CreateAreaCommand(request.branchId(), request.name(), request.description()));
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.canViewStructure()")
     public ResponseEntity<AreaResult> getById(@PathVariable Long id) {
         return areaUseCase.findById(id)
                 .map(ResponseEntity::ok)
@@ -46,6 +50,7 @@ public class AreaController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<AreaResult> update(
             @PathVariable Long id,
             @Valid @RequestBody UpdateHierarchyRequest request
@@ -54,6 +59,7 @@ public class AreaController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         areaUseCase.delete(id);
         return ResponseEntity.noContent().build();

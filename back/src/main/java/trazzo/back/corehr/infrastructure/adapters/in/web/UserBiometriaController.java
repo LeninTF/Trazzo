@@ -20,6 +20,7 @@ public class UserBiometriaController {
     private final EnrollService enrollService;
 
     @GetMapping
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos', 'control-asistencia.operador-asistencia', 'gestion-trabajadores.editar')")
     public ResponseEntity<UserBiometriaListResponse> list(
             @RequestParam(name = "tenant_user_id", required = false) Long tenantUserId,
             @RequestParam(name = "device_id", required = false) Long deviceId,
@@ -32,6 +33,7 @@ public class UserBiometriaController {
     }
 
     @PostMapping("/enroll/iniciar")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos', 'control-asistencia.operador-asistencia', 'gestion-trabajadores.editar')")
     public ResponseEntity<EnrollSessionResponse> initEnroll(@Valid @RequestBody InitEnrollRequest request) {
         var result = enrollService.initEnroll(request.tenantUserId(), request.deviceId(), request.fingerIndex());
         return ResponseEntity.status(HttpStatus.CREATED).body(EnrollSessionResponse.from(result));
@@ -65,6 +67,7 @@ public class UserBiometriaController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos', 'control-asistencia.operador-asistencia', 'gestion-trabajadores.editar')")
     public ResponseEntity<UserBiometriaResponse> patchActivo(
             @PathVariable Long id,
             @Valid @RequestBody PatchBiometriaRequest request

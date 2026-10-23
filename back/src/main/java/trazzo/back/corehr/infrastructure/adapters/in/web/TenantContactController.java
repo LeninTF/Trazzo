@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class TenantContactController {
     private final TenantContactUseCase tenantContactUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewStaff()")
     public ResponseEntity<TenantContactListResponse> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -30,6 +32,7 @@ public class TenantContactController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-trabajadores.editar')")
     public ResponseEntity<TenantContactResponse> create(@Valid @RequestBody CreateTenantContactRequest request) {
         var command = new CreateTenantContactCommand(request.tenantUserId(), request.type());
         var result = tenantContactUseCase.create(command);
@@ -37,6 +40,7 @@ public class TenantContactController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.editar')")
     public ResponseEntity<TenantContactResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchTenantContactRequest request
@@ -47,6 +51,7 @@ public class TenantContactController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.editar')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         tenantContactUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

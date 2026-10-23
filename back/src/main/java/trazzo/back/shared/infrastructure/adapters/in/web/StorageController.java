@@ -26,7 +26,7 @@ public class StorageController {
     }
 
     @GetMapping("/presigned-url")
-    @PreAuthorize("hasAuthority('incidencias.crear')")
+    @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<PresignedUrlResponse> getPresignedUrl(
             @RequestParam String fileName,
             @RequestParam String contentType,

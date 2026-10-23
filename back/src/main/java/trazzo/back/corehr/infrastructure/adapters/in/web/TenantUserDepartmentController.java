@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class TenantUserDepartmentController {
     private final TenantUserDepartmentUseCase tenantUserDepartmentUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewStaff()")
     public ResponseEntity<TenantUserDepartmentListResponse> listByUser(
             @PathVariable Long tenantUserId,
             @RequestParam(defaultValue = "0") int page,
@@ -31,6 +33,7 @@ public class TenantUserDepartmentController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('estructura-organizacional.asignar-personal')")
     public ResponseEntity<TenantUserDepartmentResponse> create(
             @PathVariable Long tenantUserId,
             @Valid @RequestBody CreateTenantUserDepartmentRequest request
@@ -42,6 +45,7 @@ public class TenantUserDepartmentController {
     }
 
     @PatchMapping("/{departamentoId}")
+    @PreAuthorize("@authz.any('estructura-organizacional.asignar-personal')")
     public ResponseEntity<TenantUserDepartmentResponse> patch(
             @PathVariable Long tenantUserId,
             @PathVariable Long departamentoId,

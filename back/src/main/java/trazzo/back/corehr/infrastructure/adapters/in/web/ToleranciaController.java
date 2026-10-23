@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class ToleranciaController {
     private final ToleranciaUseCase toleranciaUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<ToleranciaListResponse> listBySchedule(
             @PathVariable Long scheduleId,
             @RequestParam(defaultValue = "0") int page,
@@ -31,6 +33,7 @@ public class ToleranciaController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-tolerancias')")
     public ResponseEntity<ToleranciaResponse> create(
             @PathVariable Long scheduleId,
             @Valid @RequestBody CreateToleranciaRequest request
@@ -42,6 +45,7 @@ public class ToleranciaController {
     }
 
     @PatchMapping("/{toleranciaId}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-tolerancias')")
     public ResponseEntity<ToleranciaResponse> patch(
             @PathVariable Long scheduleId,
             @PathVariable Long toleranciaId,
@@ -54,6 +58,7 @@ public class ToleranciaController {
     }
 
     @DeleteMapping("/{toleranciaId}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-tolerancias')")
     public ResponseEntity<Void> delete(
             @PathVariable Long scheduleId,
             @PathVariable Long toleranciaId

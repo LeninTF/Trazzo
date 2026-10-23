@@ -13,7 +13,7 @@ public record DeviceAgentPrincipal(UUID tenantId, String schemaName, Long device
 
     /** Endpoints del lector: el agente con su token, o una persona con permiso de operador de asistencia. */
     public static final String AGENT_OR_ATTENDANCE_OPERATOR =
-            "hasAnyAuthority('ROLE_AGENT', 'control-asistencia.operador-asistencia', 'administrador_tenant')";
+            "@authz.agent() or @authz.any('control-asistencia.operador-asistencia')";
 
     /**
      * Si quien llama es un agente, el device_code de la petición tiene que ser el de su token (403 si no).

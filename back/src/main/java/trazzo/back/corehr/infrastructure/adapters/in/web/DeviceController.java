@@ -27,6 +27,7 @@ public class DeviceController {
     private final DeviceAgentTokenService deviceAgentTokenService;
 
     @GetMapping
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos', 'control-asistencia.operador-asistencia')")
     public ResponseEntity<DeviceListResponse> list(
             @RequestParam(name = "branch_id", required = false) Long branchId,
             @RequestParam(required = false) Boolean state,
@@ -38,6 +39,7 @@ public class DeviceController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos')")
     public ResponseEntity<DeviceResponse> create(@Valid @RequestBody CreateDeviceRequest request) {
         var command = new CreateDeviceCommand(request.code(), request.name(), request.branchId(),
                 request.ip(), request.puerto(), request.ubicacion());
@@ -46,6 +48,7 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos', 'control-asistencia.operador-asistencia')")
     public ResponseEntity<DeviceResponse> getById(@PathVariable Long id) {
         return deviceUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(DeviceResponse.from(result)))
@@ -53,6 +56,7 @@ public class DeviceController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos')")
     public ResponseEntity<DeviceResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchDeviceRequest request
@@ -64,6 +68,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         // El token de un lector borrado no debe seguir abriendo los endpoints del agente.
         deviceAgentTokenService.revoke(TenantContext.get(), id);
@@ -73,7 +78,7 @@ public class DeviceController {
 
     // El token solo viaja en esta respuesta: emitir otro revoca el anterior.
     @PostMapping("/{id}/agent-token")
-    @PreAuthorize("hasAuthority('configuracion-tenant.gestionar-metodos')")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos')")
     public ResponseEntity<AgentTokenResponse> issueAgentToken(@PathVariable Long id) {
         var issued = deviceAgentTokenService.issue(TenantContext.get(), id);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -82,7 +87,7 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{id}/agent-token")
-    @PreAuthorize("hasAuthority('configuracion-tenant.gestionar-metodos')")
+    @PreAuthorize("@authz.any('configuracion-tenant.gestionar-metodos')")
     public ResponseEntity<Void> revokeAgentToken(@PathVariable Long id) {
         deviceAgentTokenService.revoke(TenantContext.get(), id);
         return ResponseEntity.noContent().build();

@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,7 @@ public class TenantUserController {
     private final TenantUserUseCase tenantUserUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewStaff()")
     public ResponseEntity<PaginatedResult<TenantUserProfileResult>> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
@@ -34,6 +36,7 @@ public class TenantUserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.canViewStaff()")
     public ResponseEntity<TenantUserProfileResult> getById(@PathVariable Long id) {
         return tenantUserUseCase.findById(id)
                 .map(ResponseEntity::ok)
@@ -41,6 +44,7 @@ public class TenantUserController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-trabajadores.crear')")
     public ResponseEntity<TenantUserProfileResult> create(@Valid @RequestBody CreateTenantUserRequest request) {
         var command = new CreateTenantUserCommand(
                 request.documentType(), request.documentValue(),
@@ -55,6 +59,7 @@ public class TenantUserController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.editar')")
     public ResponseEntity<TenantUserProfileResult> update(
             @PathVariable Long id,
             @Valid @RequestBody CreateTenantUserRequest request
@@ -71,6 +76,7 @@ public class TenantUserController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.editar')")
     public ResponseEntity<TenantUserProfileResult> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchTenantUserRequest request
@@ -86,11 +92,13 @@ public class TenantUserController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.eliminar')")
     public ResponseEntity<SoftDeleteResult> delete(@PathVariable Long id) {
         return ResponseEntity.ok(tenantUserUseCase.delete(id));
     }
 
     @PutMapping("/{id}/rol")
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<TenantUserProfileResult> assignRole(
             @PathVariable Long id,
             @Valid @RequestBody AssignRoleRequest request
@@ -99,6 +107,7 @@ public class TenantUserController {
     }
 
     @PatchMapping("/{id}/password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> changePassword(
             @PathVariable Long id,
             @Valid @RequestBody ChangePasswordRequest request
@@ -108,6 +117,7 @@ public class TenantUserController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TenantUserProfileResult> getMe(
             @AuthenticationPrincipal AuthenticatedUser principal
     ) {
@@ -117,6 +127,7 @@ public class TenantUserController {
     }
 
     @PatchMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TenantUserProfileResult> patchMe(
             @AuthenticationPrincipal AuthenticatedUser principal,
             @RequestBody PatchTenantUserRequest request

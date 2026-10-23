@@ -2,6 +2,7 @@ package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/org/users/{tenantUserId}/roles")
 @RequiredArgsConstructor
+@PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
 public class UserRoleController {
 
     private final UserRoleUseCase userRoleUseCase;

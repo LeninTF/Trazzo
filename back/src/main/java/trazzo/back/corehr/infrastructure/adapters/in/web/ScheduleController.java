@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class ScheduleController {
     private final ScheduleUseCase scheduleUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<ScheduleListResponse> list(
             @RequestParam(name = "shift_id", required = false) Long shiftId,
             @RequestParam(defaultValue = "0") int page,
@@ -32,6 +34,7 @@ public class ScheduleController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ScheduleResponse> create(@Valid @RequestBody CreateScheduleRequest request) {
         var command = new CreateScheduleCommand(request.shiftId(), request.name(),
                 request.description(), request.entryTime(), request.departureTime());
@@ -40,6 +43,7 @@ public class ScheduleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<ScheduleResponse> getById(@PathVariable Long id) {
         return scheduleUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(ScheduleResponse.from(result)))
@@ -47,6 +51,7 @@ public class ScheduleController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ScheduleResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchScheduleRequest request
@@ -58,6 +63,7 @@ public class ScheduleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         scheduleUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

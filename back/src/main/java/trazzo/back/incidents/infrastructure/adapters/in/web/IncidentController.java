@@ -37,7 +37,7 @@ public class IncidentController {
     private final TenantUserPort tenantUserPort;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
+    @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
     public ResponseEntity<IncidentListResponse> list(
             @RequestParam(required = false) String scope,
             @RequestParam(name = "sede_id", required = false) String sedeId,
@@ -66,7 +66,7 @@ public class IncidentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('incidencias.crear')")
+    @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<IncidentResponse> create(
             @Valid @RequestBody CreateIncidentRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
@@ -82,7 +82,7 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
+    @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
     public ResponseEntity<IncidentResponse> getById(@PathVariable String id) {
         return incidentUseCase.findById(toInt(id))
                 .map(result -> ResponseEntity.ok(IncidentResponse.from(result)))
@@ -90,6 +90,7 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<IncidentResponse> patch(
             @PathVariable String id,
             @Valid @RequestBody PatchIncidentRequest request
@@ -100,7 +101,7 @@ public class IncidentController {
     }
 
     @PatchMapping("/{id}/estado")
-    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
+    @PreAuthorize("@authz.approver()")
     public ResponseEntity<IncidentResponse> changeState(
             @PathVariable String id,
             @Valid @RequestBody IncidentStateChangeRequest request
@@ -111,7 +112,7 @@ public class IncidentController {
     }
 
     @PostMapping("/{id}/evidencias")
-    @PreAuthorize("hasAuthority('incidencias.crear')")
+    @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<IncidentEvidenceResponse> createEvidence(
             @PathVariable String id,
             @Valid @RequestBody CreateEvidenceRequest request
@@ -123,7 +124,7 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}/evidencias")
-    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
+    @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
     public ResponseEntity<java.util.List<IncidentEvidenceResponse>> listEvidences(@PathVariable String id) {
         var results = evidenceUseCase.findAllByIncidentId(toInt(id));
         var response = results.stream().map(IncidentEvidenceResponse::from).toList();
@@ -131,7 +132,7 @@ public class IncidentController {
     }
 
     @GetMapping("/{id}/evidencias/{evidenceId}/descarga")
-    @PreAuthorize("hasAuthority('incidencias.ver-propias')")
+    @PreAuthorize("@authz.any('incidencias.ver-propias') or @authz.approver()")
     public ResponseEntity<InputStreamResource> downloadEvidence(
             @PathVariable String id,
             @PathVariable String evidenceId
@@ -148,14 +149,14 @@ public class IncidentController {
     }
 
     @DeleteMapping("/{id}/evidencias/{evidenceId}")
-    @PreAuthorize("hasAuthority('incidencias.crear')")
+    @PreAuthorize("@authz.any('incidencias.crear')")
     public ResponseEntity<Void> deleteEvidence(@PathVariable String id, @PathVariable String evidenceId) {
         evidenceUseCase.delete(toInt(id), toInt(evidenceId));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/notificar")
-    @PreAuthorize("hasAuthority('incidencias.aprobar-rechazar')")
+    @PreAuthorize("@authz.approver()")
     public ResponseEntity<Void> notify(@PathVariable String id, @Valid @RequestBody NotifyIncidentRequest request) {
         var command = new trazzo.back.incidents.application.dto.command.NotifyIncidentCommand(request.tipo());
         notificationUseCase.notify(toInt(id), command);
@@ -163,6 +164,7 @@ public class IncidentController {
     }
 
     @PostMapping("/{id}/justificar")
+    @PreAuthorize("@authz.approver() or @authz.any('control-asistencia.justificar-marcaciones')")
     public ResponseEntity<Void> justify(@PathVariable String id) {
         notificationUseCase.justifyAttendance(toInt(id));
         return ResponseEntity.accepted().build();

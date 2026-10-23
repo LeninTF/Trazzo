@@ -2,6 +2,7 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class ShiftController {
     private final ShiftUseCase shiftUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<ShiftListResponse> list(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -32,6 +34,7 @@ public class ShiftController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ShiftResponse> create(@Valid @RequestBody CreateShiftRequest request) {
         var command = new CreateShiftCommand(request.name(), request.description());
         var result = shiftUseCase.create(command);
@@ -39,6 +42,7 @@ public class ShiftController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.canViewSchedules()")
     public ResponseEntity<ShiftResponse> getById(@PathVariable Long id) {
         return shiftUseCase.findById(id)
                 .map(result -> ResponseEntity.ok(ShiftResponse.from(result)))
@@ -46,6 +50,7 @@ public class ShiftController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<ShiftResponse> patch(
             @PathVariable Long id,
             @Valid @RequestBody PatchShiftRequest request
@@ -56,6 +61,7 @@ public class ShiftController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('gestion-horarios.configurar-turnos')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         shiftUseCase.deleteById(id);
         return ResponseEntity.noContent().build();

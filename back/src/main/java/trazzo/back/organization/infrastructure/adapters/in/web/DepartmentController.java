@@ -2,6 +2,7 @@ package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class DepartmentController {
     private final DepartmentUseCase departmentUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.canViewStructure()")
     public ResponseEntity<PaginatedResult<DepartmentResult>> list(
             @RequestParam(required = false) Long areaId,
             @RequestParam(required = false) Boolean state,
@@ -33,12 +35,14 @@ public class DepartmentController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<DepartmentResult> create(@Valid @RequestBody DepartmentRequest request) {
         var result = departmentUseCase.create(new CreateDepartmentCommand(request.areaId(), request.name(), request.description()));
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("@authz.canViewStructure()")
     public ResponseEntity<DepartmentResult> getById(@PathVariable Long id) {
         return departmentUseCase.findById(id)
                 .map(ResponseEntity::ok)
@@ -46,6 +50,7 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<DepartmentResult> update(
             @PathVariable Long id,
             @Valid @RequestBody UpdateHierarchyRequest request
@@ -54,6 +59,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("@authz.any('estructura-organizacional.crear-editar-areas')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         departmentUseCase.delete(id);
         return ResponseEntity.noContent().build();

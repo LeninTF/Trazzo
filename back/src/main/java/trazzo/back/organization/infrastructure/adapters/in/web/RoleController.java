@@ -2,6 +2,7 @@ package trazzo.back.organization.infrastructure.adapters.in.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,7 @@ public class RoleController {
     private final UserRoleUseCase userRoleUseCase;
 
     @GetMapping
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<PaginatedResult<RoleResult>> list(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
@@ -40,12 +42,14 @@ public class RoleController {
     }
 
     @PostMapping
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<RoleResult> create(@Valid @RequestBody RoleRequest request) {
         var result = roleUseCase.create(new CreateRoleCommand(request.name(), request.description()));
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }
 
     @GetMapping("/{roleId}")
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<RoleResult> getById(@PathVariable String roleId) {
         return roleUseCase.findById(roleId)
                 .map(ResponseEntity::ok)
@@ -53,6 +57,7 @@ public class RoleController {
     }
 
     @PutMapping("/{roleId}")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<RoleResult> update(
             @PathVariable String roleId,
             @Valid @RequestBody RoleRequest request
@@ -61,6 +66,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{roleId}")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<Void> delete(@PathVariable String roleId) {
         roleUseCase.delete(roleId);
         return ResponseEntity.noContent().build();
@@ -69,11 +75,13 @@ public class RoleController {
     // ── Permissions sub-resource ─────────────────────────────────────────────
 
     @GetMapping("/{roleId}/permissions")
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<List<RolePermissionResult>> listPermissions(@PathVariable String roleId) {
         return ResponseEntity.ok(rolePermissionsUseCase.findByRoleId(roleId));
     }
 
     @PostMapping("/{roleId}/permissions")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<RolePermissionResult> assignPermission(
             @PathVariable String roleId,
             @Valid @RequestBody AssignPermissionRequest request
@@ -83,6 +91,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{roleId}/permissions/{permissionId}")
+    @PreAuthorize("@authz.admin()")
     public ResponseEntity<Void> removePermission(
             @PathVariable String roleId,
             @PathVariable String permissionId
@@ -94,6 +103,7 @@ public class RoleController {
     // ── Users sub-resource ───────────────────────────────────────────────────
 
     @GetMapping("/{roleId}/users")
+    @PreAuthorize("@authz.any('gestion-trabajadores.asignar-roles')")
     public ResponseEntity<List<UserRoleAssignmentResult>> listUsers(@PathVariable String roleId) {
         return ResponseEntity.ok(userRoleUseCase.findByRoleId(roleId));
     }
