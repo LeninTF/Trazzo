@@ -6,6 +6,7 @@ set -eu
 APP_DB_NAME="${APP_DB_NAME:-master_db}"
 APP_DB_USER="${APP_DB_USER:-trazzo_app}"
 APP_DB_PASSWORD="${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"
+export APP_DB_NAME APP_DB_USER APP_DB_PASSWORD
 
 # Con PGHOST (bootstrap) se conecta por TCP; sin el (initdb) psql usa el socket local.
 set -- -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres
@@ -13,10 +14,15 @@ if [ -n "${PGHOST:-}" ]; then
     set -- -h "$PGHOST" "$@"
 fi
 
-# Las credenciales viajan como variables de psql y format() las cita (%I identificador,
-# %L literal): una contrasena con comillas, $ o espacios no rompe el script ni inyecta SQL.
-# El heredoc va entre comillas para que el shell no expanda nada dentro del SQL.
-psql "$@" -v app_db="$APP_DB_NAME" -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" <<'EOSQL'
+# psql lee las credenciales del entorno con \getenv (nunca del argv, que se ve en ps) y
+# format() las cita (%I identificador, %L literal): una contrasena con comillas, $ o
+# espacios no rompe el script ni inyecta SQL. El heredoc va entre comillas para que el
+# shell no expanda nada dentro del SQL.
+psql "$@" <<'EOSQL'
+\getenv app_db APP_DB_NAME
+\getenv app_user APP_DB_USER
+\getenv app_password APP_DB_PASSWORD
+
 SELECT format('CREATE ROLE %I LOGIN', :'app_user')
 WHERE NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = :'app_user')\gexec
 
