@@ -83,19 +83,19 @@ class TenantUserControllerTest {
     private static String fullCreateJson() {
         return """
                 {
-                  "documentType": "DNI",
-                  "documentValue": "12345678",
+                  "document_type": "DNI",
+                  "document_value": "12345678",
                   "name": "Juan",
-                  "fatherSurname": "Perez",
-                  "motherSurname": "Lopez",
-                  "birthDate": "1990-01-15",
-                  "imgUrl": "https://img.test.com/juan.png",
+                  "father_surname": "Perez",
+                  "mother_surname": "Lopez",
+                  "birth_date": "1990-01-15",
+                  "img_url": "https://img.test.com/juan.png",
                   "email": "juan@trazzo.pe",
                   "phone": "999888777",
-                  "roleId": "role-1",
-                  "sedeIds": [1],
-                  "areaIds": [10],
-                  "departamentoIds": [100]
+                  "role_id": "role-1",
+                  "sede_ids": [1],
+                  "area_ids": [10],
+                  "departamento_ids": [100]
                 }
                 """;
     }
@@ -181,12 +181,12 @@ class TenantUserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "documentValue": "12345678",
+                                  "document_value": "12345678",
                                   "name": "Juan",
-                                  "fatherSurname": "Perez",
-                                  "motherSurname": "Lopez",
+                                  "father_surname": "Perez",
+                                  "mother_surname": "Lopez",
                                   "email": "juan@trazzo.pe",
-                                  "roleId": "role-1"
+                                  "role_id": "role-1"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -198,12 +198,12 @@ class TenantUserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "documentType": "DNI",
-                                  "documentValue": "12345678",
-                                  "fatherSurname": "Perez",
-                                  "motherSurname": "Lopez",
+                                  "document_type": "DNI",
+                                  "document_value": "12345678",
+                                  "father_surname": "Perez",
+                                  "mother_surname": "Lopez",
                                   "email": "juan@trazzo.pe",
-                                  "roleId": "role-1"
+                                  "role_id": "role-1"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -215,11 +215,11 @@ class TenantUserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "documentType": "DNI",
-                                  "documentValue": "12345678",
+                                  "document_type": "DNI",
+                                  "document_value": "12345678",
                                   "name": "Juan",
-                                  "fatherSurname": "Perez",
-                                  "motherSurname": "Lopez",
+                                  "father_surname": "Perez",
+                                  "mother_surname": "Lopez",
                                   "email": "juan@trazzo.pe"
                                 }
                                 """))
@@ -299,7 +299,7 @@ class TenantUserControllerTest {
         mockMvc.perform(put("/usuarios/1/rol")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"roleId": "role-2"}
+                                {"role_id": "role-2"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
@@ -396,7 +396,7 @@ class TenantUserControllerTest {
                         .content("""
                                 {
                                   "phone": "111222333",
-                                  "imgUrl": "https://img.test.com/new.png"
+                                  "img_url": "https://img.test.com/new.png"
                                 }
                                 """))
                 .andExpect(status().isOk())
