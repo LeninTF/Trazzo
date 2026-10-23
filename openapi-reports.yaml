@@ -342,6 +342,9 @@ paths:
       description: |
         Retorna todos los cierres mensuales del tenant. Opcionalmente filtrable
         por `year` y/o `month`.
+
+        **Permisos requeridos:** `reportes.exportar-excel` o `reportes.exportar-pdf` (`administrador_tenant`
+        siempre pasa).
       operationId: listMonthlyClosures
       tags: [Monthly Closures]
       parameters:
@@ -404,6 +407,9 @@ paths:
           5. Publicar un evento de dominio `MonthlyClosureCreatedEvent`.
 
         El usuario autenticado se registra como creador del cierre.
+
+        **Permisos requeridos:** `reportes.exportar-excel` o `reportes.exportar-pdf` (`administrador_tenant`
+        siempre pasa).
       operationId: createMonthlyClosure
       tags: [Monthly Closures]
       requestBody:
@@ -446,6 +452,9 @@ paths:
         Retorna los datos del cierre mensual (sin los detalles por empleado).
         Para obtener el reporte completo con detalles, usar
         `/reports/monthly-reports/{id}`.
+
+        **Permisos requeridos:** `reportes.exportar-excel` o `reportes.exportar-pdf` (`administrador_tenant`
+        siempre pasa).
       operationId: getMonthlyClosureById
       tags: [Monthly Closures]
       parameters:
@@ -482,6 +491,9 @@ paths:
       description: |
         Retorna el detalle individual de un empleado dentro de un cierre mensual,
         incluyendo horas trabajadas, tardanzas, ausencias y horas extras.
+
+        **Permisos requeridos:** `reportes.exportar-excel` o `reportes.exportar-pdf` (`administrador_tenant`
+        siempre pasa).
       operationId: getMonthlyClosureDetailById
       tags: [Monthly Closure Details]
       parameters:
@@ -525,6 +537,9 @@ paths:
         Retorna el cierre mensual junto con toda la lista de detalles por
         empleado. Este endpoint consolida la información del cierre y de
         todos sus detalles en una sola respuesta.
+
+        **Permisos requeridos:** `reportes.exportar-excel` o `reportes.exportar-pdf` (`administrador_tenant`
+        siempre pasa).
       operationId: getMonthlyReportById
       tags: [Monthly Reports]
       parameters:

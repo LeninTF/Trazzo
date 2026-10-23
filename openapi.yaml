@@ -17,6 +17,17 @@ info:
       | `/incidentes` | Panel Tenant    | TenantRole válido | `tenant_{slug}_db` |
       | `/corehr`     | Panel Tenant    | TenantRole válido | `tenant_{slug}_db` |
 
+    ## Autorización (permisos de tenant)
+    Cada operación de tenant indica sus **Permisos requeridos**; `administrador_tenant` pasa siempre y sin el
+    permiso la respuesta es 403. `modulo.*` es cualquier permiso de ese módulo. Grupos de lectura:
+    - `VER_PERSONAL`: `gestion-trabajadores.*`, `estructura-organizacional.asignar-personal`, `control-asistencia.*`,
+      `gestion-horarios.asignacion-masiva`, `reportes.*`, `permisos-licencias.*`, `incidencias.aprobar-rechazar`.
+    - `VER_ESTRUCTURA`: `VER_PERSONAL`, `estructura-organizacional.*` y `gestion-horarios.*`.
+    - `VER_HORARIOS`: `gestion-horarios.*`, `horarios-docente.*`, `control-asistencia.*`, `reportes.*`.
+    - `VER_ASISTENCIA_TODOS`: `control-asistencia.*`, `reportes.*`, `asistencia-docente.ver-tardanzas-faltas`.
+    - `APROBADOR`: `incidencias.aprobar-rechazar`, `permisos-licencias.aprobar-incidencias`,
+      `permisos-licencias.rechazar-incidencias`.
+
     ## ⚠️ Breaking Changes v3.0.0
     - `/asistencia/marcar` y `/asistencia/sync` refactorizados con nuevo schema coreHR.
       Los campos `dispositivoId`, `templateCifrado`, `llaveAesCifrada` ahora usan
@@ -3453,7 +3464,7 @@ paths:
         con el ID correspondiente. El backend valida que el ID pertenezca al tenant
         y que el solicitante tenga asignación en esa entidad.
 
-        **Permisos requeridos:** `VIEW_USUARIOS` o `VIEW_ALL_TENANT_USERS`
+        **Permisos requeridos:** `VER_PERSONAL` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/ScopeParam'
@@ -3503,7 +3514,7 @@ paths:
         4. Asigna el rol indicado (valida anti-escalation).
         5. Genera contraseña temporal → envía email → marca `must_change_password = true`.
 
-        **Permisos requeridos:** `CREATE_USER`
+        **Permisos requeridos:** `gestion-trabajadores.crear` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -3565,7 +3576,7 @@ paths:
         Si el solicitante solo tiene `VIEW_USUARIOS` (sin `VIEW_ALL_TENANT_USERS`),
         solo puede ver usuarios dentro de su scope de asignaciones.
 
-        **Permisos requeridos:** `VIEW_USUARIOS` o `VIEW_ALL_TENANT_USERS`
+        **Permisos requeridos:** `VER_PERSONAL` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Perfil extendido del usuario.
@@ -3598,7 +3609,7 @@ paths:
         **Campos inmutables:** `document_type`, `document_value`.
         **No modifica:** `estado` (usar PATCH), contraseña (usar endpoint dedicado).
 
-        **Permisos requeridos:** `EDIT_USER`
+        **Permisos requeridos:** `gestion-trabajadores.editar` (`administrador_tenant` siempre pasa).
         **Restricción de scope:** el usuario objetivo debe estar dentro del scope del solicitante.
         **Anti-escalation:** si se cambia `role_id`, el nuevo rol no puede tener más permisos
         que el rol del solicitante.
@@ -3666,9 +3677,7 @@ paths:
           asistencia. No es una baja.
         - `{ "role_id": X }`: requiere permiso `ASSIGN_ROLES` y anti-escalation.
 
-        **Permisos requeridos:** `EDIT_USER` (para campos personales),
-        `ASSIGN_ROLES` (si se incluye `role_id`),
-        `REACTIVATE_USER` (si `estado` pasa de `INACTIVO` a `ACTIVO`).
+        **Permisos requeridos:** `gestion-trabajadores.editar` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -3770,7 +3779,7 @@ paths:
 
         Genera registro en `Auditoria_sistema` tipo `DELETE`.
 
-        **Permisos requeridos:** `DELETE_USER`
+        **Permisos requeridos:** `gestion-trabajadores.eliminar` (`administrador_tenant` siempre pasa).
       parameters:
         - name: motivo
           in: query
@@ -3828,7 +3837,7 @@ paths:
         Genera registro en `Auditoria_sistema` con `valor_anterior`
         (rol anterior) y `valor_nuevo` (rol nuevo).
 
-        **Permisos requeridos:** `ASSIGN_ROLES`
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -3889,6 +3898,8 @@ paths:
 
         Genera registro en `Auditoria_sistema` tipo `UPDATE` (solo el campo `password_hash`,
         sin valores en `valor_anterior` / `valor_nuevo` por seguridad).
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       requestBody:
         required: true
         content:
@@ -3931,6 +3942,8 @@ paths:
         Shortcut que devuelve el perfil del usuario que porta el JWT.
         Accesible por **todos los roles** incluyendo `TRABAJADOR`.
         Equivale a `GET /usuarios/{mi_id}` pero sin necesidad de conocer el propio ID.
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       responses:
@@ -3955,6 +3968,8 @@ paths:
         **Campos permitidos:** `phone`, `img_url`.
         **Campos bloqueados** (siempre `403`): `email`, `role_id`,
         `estado`, `sede_ids`, `area_ids`, `departamento_ids`.
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -4438,8 +4453,7 @@ paths:
         **Redis:** la lista de tipos activos se cachea en Redis (TTL: 1 hora)
         para reducir carga en la base de datos.
 
-        **Permisos requeridos:** `VIEW_OWN_INCIDENTS` (para consulta básica),
-        `MANAGE_INCIDENT_TYPES` (para ver tipos inactivos).
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: activo
@@ -4476,7 +4490,7 @@ paths:
         - El `nombre` debe ser único dentro del tenant.
         - Longitud máxima: 100 caracteres.
 
-        **Permisos requeridos:** `MANAGE_INCIDENT_TYPES`
+        **Permisos requeridos:** `permisos-licencias.aprobar-incidencias` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -4520,7 +4534,7 @@ paths:
 
         **Redis:** si el tipo está activo, se sirve desde caché cuando esté disponible.
 
-        **Permisos requeridos:** `VIEW_OWN_INCIDENTS` o `MANAGE_INCIDENT_TYPES`
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       responses:
         "200":
           description: Tipo de incidencia.
@@ -4549,7 +4563,7 @@ paths:
         - `{ "activo": true }`: reactiva un tipo desactivado.
         - `{ "nombre": "Nuevo Nombre" }`: renombra el tipo (debe ser único).
 
-        **Permisos requeridos:** `MANAGE_INCIDENT_TYPES`
+        **Permisos requeridos:** `permisos-licencias.aprobar-incidencias` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -4603,8 +4617,7 @@ paths:
         **Redis:** los conteos de incidencias por estado se cachean en
         Redis (TTL: 5 minutos) para el dashboard del supervisor.
 
-        **Permisos requeridos:** `VIEW_OWN_INCIDENTS`, `VIEW_AREA_INCIDENTS`
-        o `VIEW_ALL_INCIDENTS`
+        **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/IncidentScopeParam'
@@ -4650,7 +4663,7 @@ paths:
         **Redis:** el `comment` se cachea en Redis para acceso rápido
         en el dashboard de incidencias.
 
-        **Permisos requeridos:** `CREATE_INCIDENT` (para creación manual)
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -4699,8 +4712,7 @@ paths:
         **Regla de visibilidad:** aplica las mismas reglas que `GET /incidentes`.
         El trabajador siempre puede ver sus propias incidencias (`VIEW_OWN_INCIDENTS`).
 
-        **Permisos requeridos:** `VIEW_OWN_INCIDENTS`, `VIEW_AREA_INCIDENTS`
-        o `VIEW_ALL_INCIDENTS`
+        **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Detalle completo de la incidencia.
@@ -4736,8 +4748,7 @@ paths:
 
         **Redis:** el `comment` se actualiza en Redis al modificarse.
 
-        **Permisos requeridos:** El trabajador es el propietario de la incidencia
-        (se valida contra el `sub` del JWT). No requiere permiso adicional.
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -4798,7 +4809,7 @@ paths:
         3. Cambia el estado a `DENEGADO`.
         4. Notifica al trabajador vía WebSocket y email (Resend).
 
-        **Permisos requeridos:** `APPROVE_INCIDENT`
+        **Permisos requeridos:** `APROBADOR` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -4856,8 +4867,7 @@ paths:
         - Solo mientras la incidencia está `PENDIENTE`.
         - Formatos permitidos: PDF, Word, imágenes, videos.
 
-        **Permisos requeridos:** `CREATE_INCIDENT` (para su propia incidencia)
-        o el sistema en creación automática.
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -4902,8 +4912,7 @@ paths:
         - Los administradores con permiso `VIEW_EVIDENCE` pueden ver
           evidencias de incidencias dentro de su scope.
 
-        **Permisos requeridos:** `VIEW_EVIDENCE` o ser el propietario
-        de la incidencia.
+        **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Evidencias asociadas a la incidencia (0..1).
@@ -4949,7 +4958,7 @@ paths:
         - La eliminación es lógica (se marca como eliminada en BD).
         El archivo en Cloudflare R2 no se elimina.
 
-        **Permisos requeridos:** `DELETE_EVIDENCE`
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Evidencia eliminada. Sin cuerpo de respuesta.
@@ -4994,7 +5003,7 @@ paths:
         - El `Content-Type` y `Content-Disposition` se derivan de los
           metadatos registrados en BD (`mime_type`, `file_name`, `file_size`).
 
-        **Permisos requeridos:** `VIEW_EVIDENCE` o ser el propietario de la incidencia.
+        **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Contenido binario del archivo.
@@ -5074,7 +5083,7 @@ paths:
         }
         ```
 
-        **Permisos requeridos:** `APPROVE_INCIDENT`
+        **Permisos requeridos:** `APROBADOR` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -5129,8 +5138,8 @@ paths:
         del endpoint de aprobación, separando la responsabilidad de justificar
         asistencia en un proceso independiente.
 
-        **Permisos requeridos:** El sistema interno (sin exposición directa
-        al frontend). Invocado por `APPROVE_INCIDENT`.
+        **Permisos requeridos:** `APROBADOR` o `control-asistencia.justificar-marcaciones`
+        (`administrador_tenant` siempre pasa).
       responses:
         "202":
           description: Proceso de justificación encolado.
@@ -5167,7 +5176,7 @@ paths:
         para aislar los objetos por tenant (`evidences/{tenantId}/...`). Si se
         proporciona `incident_id`, se anida también en la clave.
 
-        **Permisos requeridos:** `incidencias.crear`.
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
 
         **Flujo:**
         1. Frontend solicita `GET /storage/presigned-url?fileName=...&contentType=...`
@@ -5335,7 +5344,7 @@ paths:
         Cacheado en Redis (`shifts:{tenant_id}`, TTL 10 min). Se invalida
         al crear, editar o eliminar un shift o cualquiera de sus schedules.
 
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/SearchParam'
@@ -5365,7 +5374,7 @@ paths:
         Crea un turno. Los schedules se crean por separado vía `POST /corehr/schedules`.
         Invalida caché Redis de shifts.
 
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -5406,7 +5415,7 @@ paths:
       operationId: getShiftById
       description: |
         Devuelve el turno con sus schedules y tolerancias anidadas.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Turno encontrado.
@@ -5429,7 +5438,7 @@ paths:
       description: |
         Actualiza nombre y/o descripción del turno.
         Invalida caché Redis de shifts.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -5465,7 +5474,7 @@ paths:
         Elimina un turno. **Solo si no tiene schedules ni user_schedules activos.**
         Si tiene dependencias, se responde `409`.
         Invalida caché Redis de shifts.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Turno eliminado.
@@ -5500,7 +5509,7 @@ paths:
       description: |
         Devuelve schedules con sus tolerancias anidadas.
         Cacheado en Redis (`schedules:{tenant_id}`, TTL 10 min).
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: shift_id
@@ -5535,7 +5544,7 @@ paths:
         Crea un horario dentro de un turno existente.
         Las tolerancias se crean por separado vía `POST /corehr/schedules/{id}/tolerancias`.
         Invalida caché Redis de schedules.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -5582,7 +5591,7 @@ paths:
       operationId: getScheduleById
       description: |
         Devuelve el schedule con tolerancias anidadas.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Schedule encontrado.
@@ -5606,7 +5615,7 @@ paths:
         Actualiza campos del schedule. `shift_id` no es modificable.
         Invalida caché Redis de schedules y recalcula `minutes_late`
         de asistencias futuras que usen este schedule.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -5648,7 +5657,7 @@ paths:
         Elimina un schedule. **Solo si no tiene user_schedules ni asistencias activas.**
         Si tiene dependencias, se responde `409`.
         Invalida caché Redis de schedules.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Schedule eliminado.
@@ -5680,7 +5689,7 @@ paths:
       operationId: listToleranciasBySchedule
       description: |
         Devuelve todas las tolerancias (activas e inactivas) de un schedule.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/SizeParam'
@@ -5716,7 +5725,8 @@ paths:
         Agrega una tolerancia a un schedule.
         Solo puede existir una tolerancia activa por `type` por schedule.
         Si ya existe una activa del mismo tipo, se responde `409`.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-tolerancias` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -5763,7 +5773,8 @@ paths:
       description: |
         Actualiza `minutes`, `name`, `description` o `activo` de una tolerancia.
         `type` no es modificable.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-tolerancias` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -5797,7 +5808,8 @@ paths:
       operationId: deleteTolerancia
       description: |
         Elimina una tolerancia. Eliminación física.
-        **Permisos requeridos:** `MANAGE_SCHEDULES`
+        **Permisos requeridos:** `gestion-horarios.configurar-tolerancias` (`administrador_tenant` siempre
+        pasa).
       responses:
         "204":
           description: Tolerancia eliminada.
@@ -5820,7 +5832,7 @@ paths:
       description: |
         Devuelve asignaciones de schedules a trabajadores.
         Soporta filtro por `tenant_user_id` para ver los schedules de un trabajador específico.
-        **Permisos requeridos:** `MANAGE_USER_SHIFTS`
+        **Permisos requeridos:** `VER_HORARIOS` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: tenant_user_id
@@ -5866,7 +5878,7 @@ paths:
         Si el trabajador ya tenía un schedule asignado, la nueva asignación coexiste
         (un trabajador puede tener múltiples schedules activos simultáneamente).
 
-        **Permisos requeridos:** `MANAGE_USER_SHIFTS`
+        **Permisos requeridos:** `gestion-horarios.asignacion-masiva` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -5913,7 +5925,7 @@ paths:
       operationId: deleteUserSchedule
       description: |
         Elimina la asignación de schedule a un trabajador. Eliminación física.
-        **Permisos requeridos:** `MANAGE_USER_SHIFTS`
+        **Permisos requeridos:** `gestion-horarios.asignacion-masiva` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Asignación eliminada.
@@ -5944,7 +5956,8 @@ paths:
         Filtrable por sede (`branch_id`) y por estado (`state`).
         Cacheado en Redis (`devices:{tenant_id}`, TTL 5 min).
 
-        **Permisos requeridos:** `MANAGE_DEVICES`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` o
+        `control-asistencia.operador-asistencia` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/BranchIdParam'
@@ -5981,7 +5994,7 @@ paths:
         Invalida caché Redis de devices.
 
         **Acceso:** admin del tenant con `MANAGE_DEVICES` **o** usuario Trazzo con `MANAGE_DEVICES`.
-        **Permisos requeridos:** `MANAGE_DEVICES`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -6027,7 +6040,8 @@ paths:
       summary: Obtener un dispositivo por ID
       operationId: getDeviceById
       description: |
-        **Permisos requeridos:** `MANAGE_DEVICES`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` o
+        `control-asistencia.operador-asistencia` (`administrador_tenant` siempre pasa).
       responses:
         "200":
           description: Dispositivo encontrado.
@@ -6058,7 +6072,7 @@ paths:
            - El trabajador que intente marcar desde ese dispositivo.
 
         Invalida caché Redis de devices.
-        **Permisos requeridos:** `MANAGE_DEVICES`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -6094,7 +6108,7 @@ paths:
         Eliminación física del dispositivo.
         **Solo si no tiene asistencias ni registros biométricos asociados** → `409`.
         Invalida caché Redis de devices.
-        **Permisos requeridos:** `MANAGE_DEVICES`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Dispositivo eliminado.
@@ -6130,6 +6144,8 @@ paths:
         anterior del dispositivo. El valor solo se devuelve en esta respuesta. Borrar el dispositivo revoca sus tokens.
 
         **Permiso requerido:** `configuracion-tenant.gestionar-metodos`.
+
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` (`administrador_tenant` siempre pasa).
       responses:
         "201":
           description: Token emitido.
@@ -6159,6 +6175,8 @@ paths:
         El agente deja de poder marcar hasta que se emita otro token.
 
         **Permiso requerido:** `configuracion-tenant.gestionar-metodos`.
+
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Token revocado.
@@ -6184,7 +6202,9 @@ paths:
         Devuelve registros biométricos. Filtrable por trabajador o dispositivo.
         **`template_cifrado` y `llave_cifrado` NUNCA se incluyen en la respuesta.**
 
-        **Permisos requeridos:** `MANAGE_BIOMETRICS`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` o
+        `control-asistencia.operador-asistencia` o `gestion-trabajadores.editar` (`administrador_tenant` siempre
+        pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: tenant_user_id
@@ -6246,7 +6266,9 @@ paths:
         **Seguridad:** el `enroll_token` es un UUID v4 aleatorio de un solo uso.
         El TTL de 120s en Redis evita sesiones zombi.
 
-        **Permisos requeridos:** `MANAGE_BIOMETRICS`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` o
+        `control-asistencia.operador-asistencia` o `gestion-trabajadores.editar` (`administrador_tenant` siempre
+        pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -6409,7 +6431,9 @@ paths:
         Útil para desactivar manualmente una huella sin eliminarla.
         Al dar de baja un `tenant_user` (soft-delete), el backend desactiva
         automáticamente todos sus registros biométricos (`activo = false`).
-        **Permisos requeridos:** `MANAGE_BIOMETRICS`
+        **Permisos requeridos:** `configuracion-tenant.gestionar-metodos` o
+        `control-asistencia.operador-asistencia` o `gestion-trabajadores.editar` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -6467,6 +6491,8 @@ paths:
 
         **Caché Redis:** resultados de asistencia por día y tenant cacheados
         (`attendance:{tenant_id}:{date}`, TTL hasta fin del día).
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/IncidentScopeParam'
@@ -6518,7 +6544,7 @@ paths:
       description: |
         Devuelve el registro de asistencia completo.
         Aplican las mismas reglas de scope que en el listado.
-        **Permisos requeridos:** `VIEW_ATTENDANCE` | `VIEW_ALL_ATTENDANCE` | `VIEW_OWN_ATTENDANCE` (solo propio)
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       responses:
         "200":
           description: Registro de asistencia encontrado.
@@ -6554,7 +6580,8 @@ paths:
         **No confundir con la solicitud de revisión del trabajador:**
         esa solicitud se gestiona como una incidencia dentro del módulo `/incidentes`.
 
-        **Permisos requeridos:** `EDIT_ATTENDANCE`
+        **Permisos requeridos:** `control-asistencia.corregir-marcaciones` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -6613,7 +6640,7 @@ paths:
         Los días con `is_recurring = true` aplican anualmente;
         el backend los resuelve para el año consultado si se usa `date_from`/`date_to`.
         Cacheado en Redis (`non_working_days:{tenant_id}`, TTL 1 hora).
-        **Permisos requeridos:** `MANAGE_NON_WORKING_DAYS`
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/AttendanceDateFromParam'
@@ -6648,7 +6675,7 @@ paths:
         Registra un día no laborable para el tenant.
         Si `is_recurring = true`, el backend lo aplica anualmente sin crear registros nuevos.
         Invalida caché Redis de non_working_days.
-        **Permisos requeridos:** `MANAGE_NON_WORKING_DAYS`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -6690,7 +6717,7 @@ paths:
       description: |
         Actualiza descripción, fecha o recurrencia.
         Invalida caché Redis de non_working_days.
-        **Permisos requeridos:** `MANAGE_NON_WORKING_DAYS`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -6718,7 +6745,7 @@ paths:
       operationId: deleteNonWorkingDay
       description: |
         Eliminación física del registro. Invalida caché Redis.
-        **Permisos requeridos:** `MANAGE_NON_WORKING_DAYS`
+        **Permisos requeridos:** `gestion-horarios.configurar-turnos` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Registro eliminado.
@@ -6747,7 +6774,7 @@ paths:
       description: |
         Devuelve los TenantUsers designados como contactos del tenant.
         Incluye datos personales heredados del TenantUser.
-        **Permisos requeridos:** `VIEW_ALL_TENANT_USERS`
+        **Permisos requeridos:** `VER_PERSONAL` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - name: type
@@ -6780,7 +6807,7 @@ paths:
       description: |
         Designa a un TenantUser activo como contacto del tenant para un tipo específico.
         Un usuario puede ser contacto de múltiples tipos (múltiples registros).
-        **Permisos requeridos:** `EDIT_USER`
+        **Permisos requeridos:** `gestion-trabajadores.editar` (`administrador_tenant` siempre pasa).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
       requestBody:
@@ -6827,7 +6854,7 @@ paths:
       operationId: patchTenantContact
       description: |
         Actualiza el tipo de contacto.
-        **Permisos requeridos:** `EDIT_USER`
+        **Permisos requeridos:** `gestion-trabajadores.editar` (`administrador_tenant` siempre pasa).
       requestBody:
         required: true
         content:
@@ -6856,7 +6883,7 @@ paths:
       description: |
         Soft-delete: establece `deleted_at` en el registro.
         El TenantUser referenciado no se ve afectado.
-        **Permisos requeridos:** `EDIT_USER`
+        **Permisos requeridos:** `gestion-trabajadores.editar` (`administrador_tenant` siempre pasa).
       responses:
         "204":
           description: Contacto eliminado (soft-delete).
@@ -6890,7 +6917,7 @@ paths:
         Devuelve el historial completo de asignaciones de departamento de un trabajador.
         Incluye asignaciones activas (`end_date = null`) e históricas.
         Útil para filtrar trabajadores por departamento en el módulo de usuarios.
-        **Permisos requeridos:** `VIEW_USUARIOS` | `VIEW_ALL_TENANT_USERS`
+        **Permisos requeridos:** `VER_PERSONAL` (`administrador_tenant` siempre pasa).
       parameters:
         - name: activa
           in: query
@@ -6936,7 +6963,8 @@ paths:
         no se dispara notificación (la notificación de trabajador sin schedule
         es independiente y ocurre al crear el TenantUser).
 
-        **Permisos requeridos:** `MANAGE_DEPARTMENTS`
+        **Permisos requeridos:** `estructura-organizacional.asignar-personal` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -6988,7 +7016,8 @@ paths:
       description: |
         Caso más común: cerrar la asignación activa estableciendo `end_date`.
         También permite cambiar `is_primary`.
-        **Permisos requeridos:** `MANAGE_DEPARTMENTS`
+        **Permisos requeridos:** `estructura-organizacional.asignar-personal` (`administrador_tenant` siempre
+        pasa).
       requestBody:
         required: true
         content:
@@ -7135,6 +7164,8 @@ paths:
       description: |
         Devuelve el email y los roles del usuario extraídos directamente del JWT.
         No realiza consulta a base de datos. Válido en contexto MASTER y TENANT.
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       security:
         - bearerAuth: []
       responses:

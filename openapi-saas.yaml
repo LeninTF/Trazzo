@@ -451,6 +451,8 @@ paths:
       description: |
         Devuelve el email y roles del JWT sin consultar la base de datos.
         Válido en contexto MASTER y TENANT.
+
+        **Permisos requeridos:** cualquier usuario autenticado del tenant.
       responses:
         "200":
           description: Datos del usuario.

@@ -661,6 +661,8 @@ paths:
       description: |
         Retorna todas las sucursales del tenant, incluyendo inactivas.
         Para filtrar solo las activas usar el parámetro `active=true`.
+
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: listBranches
       tags: [Branches]
       parameters:
@@ -704,6 +706,9 @@ paths:
       description: |
         Registra una nueva sucursal para el tenant. El nombre debe ser único
         dentro del tenant.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-sedes` (`administrador_tenant` siempre
+        pasa).
       operationId: createBranch
       tags: [Branches]
       requestBody:
@@ -742,6 +747,8 @@ paths:
   /org/branches/{id}:
     get:
       summary: Obtener sucursal por ID
+      description: |
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: getBranchById
       tags: [Branches]
       parameters:
@@ -770,7 +777,11 @@ paths:
 
     put:
       summary: Actualizar sucursal
-      description: Modifica el nombre y descripción de una sucursal existente.
+      description: |
+        Modifica el nombre y descripción de una sucursal existente.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-sedes` (`administrador_tenant` siempre
+        pasa).
       operationId: updateBranch
       tags: [Branches]
       parameters:
@@ -807,6 +818,9 @@ paths:
       description: |
         Marca la sucursal como eliminada (`state = false`, `deleted_at = now`).
         Las áreas y departamentos asociados no se eliminan automáticamente.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-sedes` (`administrador_tenant` siempre
+        pasa).
       operationId: deleteBranch
       tags: [Branches]
       parameters:
@@ -891,6 +905,8 @@ paths:
       description: |
         Retorna todas las áreas del tenant. Filtrable por sucursal con
         `branchId` o por estado con `active`.
+
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: listAreas
       tags: [Areas]
       parameters:
@@ -935,6 +951,9 @@ paths:
       description: |
         Registra una nueva área asociada a una sucursal. El nombre debe ser
         único dentro de la misma sucursal.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: createArea
       tags: [Areas]
       requestBody:
@@ -978,6 +997,8 @@ paths:
   /org/areas/{id}:
     get:
       summary: Obtener área por ID
+      description: |
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: getAreaById
       tags: [Areas]
       parameters:
@@ -998,7 +1019,11 @@ paths:
 
     put:
       summary: Actualizar área
-      description: Modifica el nombre y descripción de un área existente.
+      description: |
+        Modifica el nombre y descripción de un área existente.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: updateArea
       tags: [Areas]
       parameters:
@@ -1035,6 +1060,9 @@ paths:
       description: |
         Marca el área como eliminada (`state = false`, `deleted_at = now`).
         Los departamentos asociados no se eliminan automáticamente.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: deleteArea
       tags: [Areas]
       parameters:
@@ -1101,6 +1129,8 @@ paths:
       description: |
         Retorna todos los departamentos del tenant. Filtrable por área con
         `areaId` o por estado con `active`.
+
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: listDepartments
       tags: [Departments]
       parameters:
@@ -1145,6 +1175,9 @@ paths:
       description: |
         Registra un nuevo departamento asociado a un área. El nombre debe ser
         único dentro del mismo área.
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: createDepartment
       tags: [Departments]
       requestBody:
@@ -1179,6 +1212,8 @@ paths:
   /org/departments/{id}:
     get:
       summary: Obtener departamento por ID
+      description: |
+        **Permisos requeridos:** `VER_ESTRUCTURA` (`administrador_tenant` siempre pasa).
       operationId: getDepartmentById
       tags: [Departments]
       parameters:
@@ -1199,6 +1234,9 @@ paths:
 
     put:
       summary: Actualizar departamento
+      description: |
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: updateDepartment
       tags: [Departments]
       parameters:
@@ -1232,7 +1270,11 @@ paths:
 
     delete:
       summary: Eliminar departamento (soft delete)
-      description: Marca el departamento como eliminado (`state = false`, `deleted_at = now`).
+      description: |
+        Marca el departamento como eliminado (`state = false`, `deleted_at = now`).
+
+        **Permisos requeridos:** `estructura-organizacional.crear-editar-areas` (`administrador_tenant` siempre
+        pasa).
       operationId: deleteDepartment
       tags: [Departments]
       parameters:
@@ -1296,7 +1338,10 @@ paths:
   /org/roles:
     get:
       summary: Listar roles
-      description: Retorna todos los roles definidos en el tenant.
+      description: |
+        Retorna todos los roles definidos en el tenant.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: listRoles
       tags: [Roles]
       responses:
@@ -1321,6 +1366,8 @@ paths:
 
     post:
       summary: Crear rol
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: createRole
       tags: [Roles]
       requestBody:
@@ -1349,6 +1396,8 @@ paths:
   /org/roles/{id}:
     get:
       summary: Obtener rol por ID
+      description: |
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: getRoleById
       tags: [Roles]
       parameters:
@@ -1369,6 +1418,8 @@ paths:
 
     put:
       summary: Actualizar rol
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: updateRole
       tags: [Roles]
       parameters:
@@ -1403,6 +1454,8 @@ paths:
       description: |
         Elimina el rol de forma permanente. Fallará si el rol tiene usuarios
         asignados (`tenant_user_role`). Desasignar usuarios antes de eliminar.
+
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: deleteRole
       tags: [Roles]
       parameters:
@@ -1423,7 +1476,10 @@ paths:
   /org/roles/{roleId}/permissions:
     get:
       summary: Listar permisos de un rol
-      description: Retorna todos los permisos asignados al rol especificado.
+      description: |
+        Retorna todos los permisos asignados al rol especificado.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: listRolePermissions
       tags: [Roles]
       parameters:
@@ -1471,7 +1527,10 @@ paths:
 
     delete:
       summary: Remover permiso de rol
-      description: Elimina la relación `role_permissions` entre el rol y el permiso.
+      description: |
+        Elimina la relación `role_permissions` entre el rol y el permiso.
+
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: removePermissionFromRole
       tags: [Roles]
       parameters:
@@ -1498,6 +1557,8 @@ paths:
       description: |
         Retorna todos los permisos disponibles en el tenant. Filtrable por
         `masterFeaturesCode` para ver solo los permisos de un módulo específico.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: listPermissions
       tags: [Permissions]
       parameters:
@@ -1537,6 +1598,8 @@ paths:
 
     post:
       summary: Crear permiso
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: createPermission
       tags: [Permissions]
       requestBody:
@@ -1566,6 +1629,8 @@ paths:
   /org/permissions/{id}:
     get:
       summary: Obtener permiso por ID
+      description: |
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: getPermissionById
       tags: [Permissions]
       parameters:
@@ -1586,6 +1651,8 @@ paths:
 
     put:
       summary: Actualizar permiso
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: updatePermission
       tags: [Permissions]
       parameters:
@@ -1622,6 +1689,8 @@ paths:
         Elimina el permiso de forma permanente. Las relaciones
         `role_permissions` que lo referencien se eliminan en cascada
         (`ON DELETE CASCADE` en la FK).
+
+        **Permisos requeridos:** solo `administrador_tenant`.
       operationId: deletePermission
       tags: [Permissions]
       parameters:
@@ -1800,6 +1869,8 @@ paths:
       description: |
         Retorna todas las asignaciones usuario-rol de un `tenant_user`.
         Cada asignación puede tener un `departmentId` que limita el scope del rol.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: listUserRoles
       tags: [UserAssignments]
       parameters:
@@ -1832,6 +1903,8 @@ paths:
         Crea una fila en `tenant_user_role`. El campo `departmentId` es opcional
         y limita el scope del rol a un departamento específico. Si se omite,
         el rol aplica a todo el tenant.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: assignRoleToUser
       tags: [UserAssignments]
       parameters:
@@ -1868,7 +1941,10 @@ paths:
   /org/users/{tenantUserId}/roles/{assignmentId}:
     delete:
       summary: Remover rol de usuario
-      description: Elimina la asignación `tenant_user_role` de forma permanente.
+      description: |
+        Elimina la asignación `tenant_user_role` de forma permanente.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: removeRoleFromUser
       tags: [UserAssignments]
       parameters:
@@ -1887,7 +1963,10 @@ paths:
   /org/roles/{roleId}/users:
     get:
       summary: Listar usuarios con un rol
-      description: Retorna todas las asignaciones de usuarios que tienen el rol especificado.
+      description: |
+        Retorna todas las asignaciones de usuarios que tienen el rol especificado.
+
+        **Permisos requeridos:** `gestion-trabajadores.asignar-roles` (`administrador_tenant` siempre pasa).
       operationId: listRoleUsers
       tags: [UserAssignments]
       parameters:
