@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Sort;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,13 +46,14 @@ class AttendanceRepositoryAdapterTest {
     @Captor
     private ArgumentCaptor<MapSqlParameterSource> paramsCaptor;
 
-    private final String id = "att-1";
+    private final UUID uuid = UUID.fromString("0b6f3c2e-1d4a-4c5b-9e8f-7a6b5c4d3e2f");
+    private final String id = uuid.toString();
     private final LocalDate date = LocalDate.of(2025, 1, 15);
     private final LocalDateTime now = LocalDateTime.now();
 
     private AttendanceEntity createEntity() {
         var e = new AttendanceEntity();
-        e.setId(id);
+        e.setId(uuid);
         e.setTenantUserId(100L);
         e.setScheduleId(10L);
         e.setDeviceId(200L);
@@ -83,7 +85,7 @@ class AttendanceRepositoryAdapterTest {
     @Test
     void findById_whenExists_shouldReturnDomain() {
         var entity = createEntity();
-        when(attendanceRepo.findById(id)).thenReturn(Optional.of(entity));
+        when(attendanceRepo.findById(uuid)).thenReturn(Optional.of(entity));
 
         var result = adapter.findById(id);
 
@@ -93,11 +95,19 @@ class AttendanceRepositoryAdapterTest {
 
     @Test
     void findById_whenNotExists_shouldReturnEmpty() {
-        when(attendanceRepo.findById("invalid")).thenReturn(Optional.empty());
+        var missing = UUID.randomUUID();
+        when(attendanceRepo.findById(missing)).thenReturn(Optional.empty());
 
-        var result = adapter.findById("invalid");
+        var result = adapter.findById(missing.toString());
 
         assertThat(result).isEmpty();
+    }
+
+    // attendances.id es UUID: un id que no lo es no puede existir y no llega a la base.
+    @Test
+    void findById_whenTheIdIsNotAUuid_shouldReturnEmptyWithoutQuerying() {
+        assertThat(adapter.findById("invalid")).isEmpty();
+        verifyNoInteractions(attendanceRepo);
     }
 
     @Test

@@ -11,9 +11,10 @@ import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.Attenda
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface AttendanceJpaRepository extends JpaRepository<AttendanceEntity, String> {
+public interface AttendanceJpaRepository extends JpaRepository<AttendanceEntity, UUID> {
 
     Optional<AttendanceEntity> findByTenantUserIdAndAttendanceDate(Long tenantUserId, LocalDate attendanceDate);
 

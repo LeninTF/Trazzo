@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -61,7 +62,13 @@ public class AttendanceRepositoryAdapter implements AttendanceRepositoryPort {
 
     @Override
     public Optional<Attendance> findById(String id) {
-        return attendanceRepo.findById(id).map(AttendanceMapper::toDomain);
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(id);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return Optional.empty();
+        }
+        return attendanceRepo.findById(uuid).map(AttendanceMapper::toDomain);
     }
 
     @Override

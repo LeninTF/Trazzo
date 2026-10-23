@@ -20,9 +20,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class TenantFlywayMigratorIntegrationTest {
 
-    /** Baseline row (version 0) plus V2, V3, V3.1, V4, V5 and V6. Raise when a new tenant migration is added. */
-    private static final int HISTORY_ROWS = 7;
-    private static final int MIGRATIONS = 6;
+    /** Baseline row (version 0) plus V2, V3, V3.1, V4, V5, V6 and V7. Raise when a new tenant migration is added. */
+    private static final int HISTORY_ROWS = 8;
+    private static final int MIGRATIONS = 7;
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine");

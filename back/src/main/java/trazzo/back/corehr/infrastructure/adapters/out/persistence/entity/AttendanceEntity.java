@@ -9,6 +9,7 @@ import trazzo.back.corehr.domain.model.AttendanceState;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "attendances")
@@ -18,9 +19,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class AttendanceEntity extends AuditableEntity {
 
+    // attendances.id es UUID en PostgreSQL: como String, Hibernate lo enviaba como VARCHAR y fallaba.
     @Id
-    @Column(length = 36)
-    private String id;
+    private UUID id;
 
     @Column(name = "tenant_user_id", nullable = false)
     private Long tenantUserId;

@@ -7,6 +7,7 @@ import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.Attenda
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,12 +16,12 @@ class AttendanceMapperTest {
     @Test
     void shouldMapToEntity() {
         var now = LocalDateTime.now();
-        var domain = Attendance.restore("id-1", 1L, 2L, 3L, now, now.plusHours(8),
+        var domain = Attendance.restore("1f0e2d3c-4b5a-4968-8776-655443322110", 1L, 2L, 3L, now, now.plusHours(8),
                 LocalDate.now(), 5, AttendanceState.PUNTUAL, null, null, now, now);
 
         var entity = AttendanceMapper.toEntity(domain);
 
-        assertEquals("id-1", entity.getId());
+        assertEquals(UUID.fromString("1f0e2d3c-4b5a-4968-8776-655443322110"), entity.getId());
         assertEquals(1L, entity.getTenantUserId());
         assertEquals(2L, entity.getScheduleId());
         assertEquals(3L, entity.getDeviceId());
@@ -37,7 +38,7 @@ class AttendanceMapperTest {
     void shouldMapToDomain() {
         var now = LocalDateTime.now();
         var entity = new AttendanceEntity();
-        entity.setId("id-1");
+        entity.setId(UUID.fromString("1f0e2d3c-4b5a-4968-8776-655443322110"));
         entity.setTenantUserId(1L);
         entity.setScheduleId(2L);
         entity.setDeviceId(3L);
@@ -51,7 +52,7 @@ class AttendanceMapperTest {
 
         var domain = AttendanceMapper.toDomain(entity);
 
-        assertEquals("id-1", domain.getId());
+        assertEquals("1f0e2d3c-4b5a-4968-8776-655443322110", domain.getId());
         assertEquals(1L, domain.getTenantUserId());
         assertEquals(2L, domain.getScheduleId());
         assertEquals(3L, domain.getDeviceId());
@@ -65,7 +66,7 @@ class AttendanceMapperTest {
     void shouldHandleNullFieldsInEntity() {
         var now = LocalDateTime.now();
         var entity = new AttendanceEntity();
-        entity.setId("id-2");
+        entity.setId(UUID.fromString("2a1b0c9d-8e7f-4a6b-9c5d-4e3f2a1b0c9d"));
         entity.setTenantUserId(1L);
         entity.setAttendanceDate(LocalDate.now());
         entity.setMinutesLate(0);
@@ -75,7 +76,7 @@ class AttendanceMapperTest {
 
         var domain = AttendanceMapper.toDomain(entity);
 
-        assertEquals("id-2", domain.getId());
+        assertEquals("2a1b0c9d-8e7f-4a6b-9c5d-4e3f2a1b0c9d", domain.getId());
         assertNull(domain.getScheduleId());
         assertNull(domain.getDeviceId());
         assertNull(domain.getCheckIn());
@@ -86,7 +87,7 @@ class AttendanceMapperTest {
     @Test
     void shouldMapRoundTrip() {
         var now = LocalDateTime.now();
-        var original = Attendance.restore("id-3", 1L, 2L, 3L, now, now.plusHours(8),
+        var original = Attendance.restore("3c2b1a09-8f7e-4d6c-9b5a-493827160514", 1L, 2L, 3L, now, now.plusHours(8),
                 LocalDate.now(), 10, AttendanceState.TARDANZA, null, null, now, now);
 
         var entity = AttendanceMapper.toEntity(original);

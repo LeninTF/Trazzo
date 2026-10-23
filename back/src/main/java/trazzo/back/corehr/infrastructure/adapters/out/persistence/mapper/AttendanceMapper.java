@@ -3,6 +3,8 @@ package trazzo.back.corehr.infrastructure.adapters.out.persistence.mapper;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.AttendanceEntity;
 
+import java.util.UUID;
+
 public final class AttendanceMapper {
 
     private AttendanceMapper() {
@@ -10,7 +12,7 @@ public final class AttendanceMapper {
 
     public static AttendanceEntity toEntity(Attendance domain) {
         var entity = new AttendanceEntity();
-        entity.setId(domain.getId());
+        entity.setId(domain.getId() == null ? null : UUID.fromString(domain.getId()));
         entity.setTenantUserId(domain.getTenantUserId());
         entity.setScheduleId(domain.getScheduleId());
         entity.setDeviceId(domain.getDeviceId());
@@ -28,7 +30,7 @@ public final class AttendanceMapper {
 
     public static Attendance toDomain(AttendanceEntity entity) {
         return Attendance.restore(
-                entity.getId(),
+                entity.getId() == null ? null : entity.getId().toString(),
                 entity.getTenantUserId(),
                 entity.getScheduleId(),
                 entity.getDeviceId(),
