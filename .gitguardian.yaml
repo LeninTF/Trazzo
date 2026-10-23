@@ -7,3 +7,5 @@ ignore-known-secrets: true
 paths-ignore:
   # Local properties files are gitignored; only appear in old commits already remediated
   - 'back/src/main/resources/application-local.properties'
+  # Vector de interoperabilidad .NET -> Java con una clave RSA generada solo para tests.
+  - 'back/src/test/resources/biometric/dotnet-interop-vector.json'

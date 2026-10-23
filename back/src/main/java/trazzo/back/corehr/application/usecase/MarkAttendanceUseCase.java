@@ -7,8 +7,9 @@ import trazzo.back.corehr.application.dto.command.MarkAttendanceCommand;
 import trazzo.back.corehr.application.dto.result.AttendanceResult;
 import trazzo.back.corehr.application.port.out.AttendanceNotificationPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
-import trazzo.back.corehr.application.port.out.CryptoKeyProviderPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
@@ -16,14 +17,8 @@ import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.AttendanceState;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.PrivateKey;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Base64;
 import java.util.Optional;
 
 @Slf4j
@@ -31,7 +26,7 @@ import java.util.Optional;
 public class MarkAttendanceUseCase {
 
     private final DeviceRepositoryPort deviceRepository;
-    private final CryptoKeyProviderPort cryptoKeyProvider;
+    private final BiometricCryptoPort biometricCrypto;
     private final BiometricMatchingPort biometricMatching;
     private final UserBiometriaRepositoryPort biometriaRepository;
     private final UserScheduleRepositoryPort userScheduleRepository;
@@ -50,7 +45,11 @@ public class MarkAttendanceUseCase {
             throw new IllegalStateException("El dispositivo está inactivo: " + command.deviceCode());
         }
 
-        byte[] decryptedTemplate = decryptTemplate(command);
+        byte[] decryptedTemplate = biometricCrypto.openTransport(new TransportPayload(
+                command.encryptedTemplateBase64(),
+                command.encryptedAesKeyBase64(),
+                command.ivBase64(),
+                command.tagBase64()));
 
         var allTemplates = biometriaRepository.findAll(null, null, true, 0, 10000);
 
@@ -101,37 +100,6 @@ public class MarkAttendanceUseCase {
         }
 
         return toResult(saved);
-    }
-
-    private byte[] decryptTemplate(MarkAttendanceCommand command) {
-        try {
-            PrivateKey privateKey = cryptoKeyProvider.getPrivateKey();
-            byte[] encryptedAesKey = Base64.getDecoder().decode(command.encryptedAesKeyBase64());
-
-            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
-            rsaCipher.init(Cipher.DECRYPT_MODE, privateKey);
-            byte[] aesKeyBytes = rsaCipher.doFinal(encryptedAesKey);
-
-            byte[] iv = Base64.getDecoder().decode(command.ivBase64());
-            byte[] tag = Base64.getDecoder().decode(command.tagBase64());
-            byte[] encryptedTemplate = Base64.getDecoder().decode(command.encryptedTemplateBase64());
-
-            SecretKey aesKey = new SecretKeySpec(aesKeyBytes, "AES");
-            Cipher aesCipher = Cipher.getInstance("AES/GCM/NoPadding");
-            GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
-            aesCipher.init(Cipher.DECRYPT_MODE, aesKey, gcmSpec);
-
-            byte[] aad = "biometric-identify".getBytes();
-            aesCipher.updateAAD(aad);
-
-            byte[] combined = new byte[encryptedTemplate.length + tag.length];
-            System.arraycopy(encryptedTemplate, 0, combined, 0, encryptedTemplate.length);
-            System.arraycopy(tag, 0, combined, encryptedTemplate.length, tag.length);
-
-            return aesCipher.doFinal(combined);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Error descifrado biométrico: " + e.getMessage(), e);
-        }
     }
 
     private record ScheduleInfo(Long scheduleId, LocalTime entryTime, int toleranceMinutes) {}

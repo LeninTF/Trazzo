@@ -8,7 +8,7 @@ import trazzo.back.corehr.application.port.in.CoreHrAttendanceSummaryPort;
 import trazzo.back.corehr.application.port.out.AttendanceNotificationPort;
 import trazzo.back.corehr.application.port.out.AttendanceRepositoryPort;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
-import trazzo.back.corehr.application.port.out.CryptoKeyProviderPort;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.EventPublisherPort;
 import trazzo.back.corehr.application.port.out.NonWorkingDaysRepositoryPort;
@@ -81,14 +81,14 @@ public class CoreHrBeanConfiguration {
     @Bean
     public MarkAttendanceUseCase markAttendanceUseCase(
             DeviceRepositoryPort deviceRepository,
-            CryptoKeyProviderPort cryptoKeyProvider,
+            BiometricCryptoPort biometricCrypto,
             BiometricMatchingPort biometricMatching,
             UserBiometriaRepositoryPort biometriaRepository,
             UserScheduleRepositoryPort userScheduleRepository,
             AttendanceRepositoryPort attendanceRepository,
             EventPublisherPort eventPublisher,
             AttendanceNotificationPort notificationPort) {
-        return new MarkAttendanceUseCase(deviceRepository, cryptoKeyProvider, biometricMatching,
+        return new MarkAttendanceUseCase(deviceRepository, biometricCrypto, biometricMatching,
                 biometriaRepository, userScheduleRepository, attendanceRepository, eventPublisher, notificationPort);
     }
 
