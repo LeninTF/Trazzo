@@ -3,6 +3,7 @@ package trazzo.back.corehr.infrastructure.adapters.out.biometric;
 import org.junit.jupiter.api.Test;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
 import trazzo.back.corehr.domain.exception.BiometricDecryptionException;
+import trazzo.back.corehr.domain.exception.BiometricTemplateFormatException;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 
 import java.io.IOException;
@@ -13,6 +14,8 @@ import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Usa templates SourceAFIS reales generados por el middleware .NET (ver resources/biometric/README.md):
@@ -23,14 +26,41 @@ class SourceAfisMatchingAdapterTest {
 
     private static final LocalDateTime NOW = LocalDateTime.now();
 
-    private static final BiometricCryptoPort FAKE_OPENER = payload -> {
-        if (payload.encryptedTemplateBase64().equals("corrupto")) {
-            throw new BiometricDecryptionException("Error descifrado biométrico: tag", null);
+    private static final class FakeOpener implements BiometricCryptoPort {
+        @Override
+        public byte[] open(UserBiometria enrolled) {
+            if (enrolled.getEncryptedTemplateBase64().equals("corrupto")) {
+                throw new BiometricDecryptionException("Error descifrado biométrico: tag", null);
+            }
+            return Base64.getDecoder().decode(enrolled.getEncryptedTemplateBase64());
         }
-        return Base64.getDecoder().decode(payload.encryptedTemplateBase64());
-    };
 
-    private final SourceAfisMatchingAdapter adapter = new SourceAfisMatchingAdapter(FAKE_OPENER);
+        @Override
+        public byte[] openTransport(TransportPayload payload) {
+            throw new UnsupportedOperationException("el matching abre filas guardadas, no payloads de transporte");
+        }
+
+        @Override
+        public StoredTemplate seal(byte[] template) {
+            throw new UnsupportedOperationException("el matching no sella");
+        }
+    }
+
+    private final SourceAfisMatchingAdapter adapter = new SourceAfisMatchingAdapter(new FakeOpener());
+
+    @Test
+    void acceptsARealSourceAfisTemplate() throws IOException {
+        byte[] real = template("sourceafis-template-a.b64");
+
+        assertThatCode(() -> adapter.requireValidTemplate(real)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void rejectsBytesThatAreNotASourceAfisTemplateAsABadRequest() {
+        assertThatThrownBy(() -> adapter.requireValidTemplate(new byte[]{9, 8, 7}))
+                .isInstanceOf(BiometricTemplateFormatException.class)
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
     private static byte[] template(String name) throws IOException {
         try (InputStream in = SourceAfisMatchingAdapterTest.class.getResourceAsStream("/biometric/" + name)) {

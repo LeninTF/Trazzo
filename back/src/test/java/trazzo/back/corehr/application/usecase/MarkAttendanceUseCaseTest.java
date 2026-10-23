@@ -23,6 +23,7 @@ import trazzo.back.corehr.domain.model.AttendanceState;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
 import trazzo.back.corehr.domain.model.attendance.BiometricIdentifyResult;
 import trazzo.back.corehr.domain.model.attendance.Device;
+import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 import trazzo.back.corehr.domain.model.schedule.UserSchedule;
 
 import java.time.LocalDate;
@@ -30,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.LongStream;
 
 class MarkAttendanceUseCaseTest {
 
@@ -62,8 +64,61 @@ class MarkAttendanceUseCaseTest {
         );
         ReflectionTestUtils.setField(useCase, "matchThreshold", 40);
         when(biometricCrypto.openTransport(any())).thenReturn(PROBE_TEMPLATE);
-        when(biometriaRepository.findAll(isNull(), isNull(), eq(true), eq(0), eq(10000))).thenReturn(List.of());
+        when(biometriaRepository.findActiveAfterId(0L, 1000)).thenReturn(List.of(enrolled(1L, 1L)));
         when(attendanceRepository.save(any())).thenAnswer(inv -> inv.<Attendance>getArgument(0));
+    }
+
+    private static UserBiometria enrolled(long id, long tenantUserId) {
+        var now = LocalDateTime.now();
+        return UserBiometria.restore(id, tenantUserId, 1L, "DEV-01", 1, "c2VsbGFkbw==", null, "aXY=", "dGFn",
+                now, true, now, now, "storage-v1");
+    }
+
+    private static final List<UserBiometria> FIRST_PAGE =
+            LongStream.rangeClosed(1, 1000).mapToObj(id -> enrolled(id, id)).toList();
+    private static final List<UserBiometria> SECOND_PAGE = List.of(enrolled(1001L, 77L));
+
+    private void twoPagesOfTemplates() {
+        when(biometriaRepository.findActiveAfterId(0L, 1000)).thenReturn(FIRST_PAGE);
+        when(biometriaRepository.findActiveAfterId(1000L, 1000)).thenReturn(SECOND_PAGE);
+    }
+
+    @Test
+    void mark_identifiesSomeoneEnrolledBeyondTheFirstThousandTemplates() {
+        activeDevice(1L);
+        twoPagesOfTemplates();
+        when(biometricMatching.identify(PROBE_TEMPLATE, FIRST_PAGE, 40)).thenReturn(Optional.empty());
+        when(biometricMatching.identify(PROBE_TEMPLATE, SECOND_PAGE, 40))
+                .thenReturn(Optional.of(BiometricIdentifyResult.match(77L, 90)));
+
+        var result = useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 0)));
+
+        assertEquals(77L, result.tenantUserId());
+        verify(biometriaRepository, never()).findActiveAfterId(eq(1001L), anyInt());
+    }
+
+    @Test
+    void mark_aBetterMatchOnALaterPageWins() {
+        activeDevice(1L);
+        twoPagesOfTemplates();
+        when(biometricMatching.identify(PROBE_TEMPLATE, FIRST_PAGE, 40))
+                .thenReturn(Optional.of(BiometricIdentifyResult.match(5L, 50)));
+        when(biometricMatching.identify(PROBE_TEMPLATE, SECOND_PAGE, 40))
+                .thenReturn(Optional.of(BiometricIdentifyResult.match(77L, 90)));
+
+        assertEquals(77L, useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 0))).tenantUserId());
+    }
+
+    @Test
+    void mark_aBetterMatchOnAnEarlierPageIsKept() {
+        activeDevice(1L);
+        twoPagesOfTemplates();
+        when(biometricMatching.identify(PROBE_TEMPLATE, FIRST_PAGE, 40))
+                .thenReturn(Optional.of(BiometricIdentifyResult.match(5L, 90)));
+        when(biometricMatching.identify(PROBE_TEMPLATE, SECOND_PAGE, 40))
+                .thenReturn(Optional.of(BiometricIdentifyResult.match(77L, 50)));
+
+        assertEquals(5L, useCase.mark(command(LocalDateTime.of(2025, 7, 15, 9, 0))).tenantUserId());
     }
 
     private static MarkAttendanceCommand command(LocalDateTime capturedAt) {

@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,23 +105,23 @@ class UserBiometriaRepositoryAdapterTest {
     }
 
     @Test
-    void findByTenantUserIdAndFingerIndex_whenExists_shouldReturnDomain() {
-        var entity = createEntity(1L);
-        when(userBiometriaRepo.findByTenantUserIdAndFingerIndex(100L, 1)).thenReturn(Optional.of(entity));
+    void findActiveByTenantUserIdAndFingerIndex_returnsEveryActiveRowOfThatFinger() {
+        when(userBiometriaRepo.findByTenantUserIdAndFingerIndexAndActivoTrue(100L, 1))
+                .thenReturn(List.of(createEntity(1L), createEntity(2L)));
 
-        var result = adapter.findByTenantUserIdAndFingerIndex(100L, 1);
+        var result = adapter.findActiveByTenantUserIdAndFingerIndex(100L, 1);
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getFingerIndex()).isEqualTo(1);
+        assertThat(result).extracting(UserBiometria::getId).containsExactly(1L, 2L);
     }
 
     @Test
-    void findByTenantUserIdAndFingerIndex_whenNotExists_shouldReturnEmpty() {
-        when(userBiometriaRepo.findByTenantUserIdAndFingerIndex(99L, 1)).thenReturn(Optional.empty());
+    void findActiveAfterId_asksForOnePageAfterTheLastSeenId() {
+        when(userBiometriaRepo.findActiveAfterId(eq(41L), any())).thenReturn(List.of(createEntity(42L)));
 
-        var result = adapter.findByTenantUserIdAndFingerIndex(99L, 1);
+        var result = adapter.findActiveAfterId(41L, 1000);
 
-        assertThat(result).isEmpty();
+        assertThat(result).extracting(UserBiometria::getId).containsExactly(42L);
+        verify(userBiometriaRepo).findActiveAfterId(41L, PageRequest.ofSize(1000));
     }
 
     @Test

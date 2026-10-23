@@ -16,14 +16,19 @@ import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.application.port.out.UserScheduleRepositoryPort;
 import trazzo.back.corehr.domain.model.AttendanceState;
 import trazzo.back.corehr.domain.model.attendance.Attendance;
+import trazzo.back.corehr.domain.model.attendance.BiometricIdentifyResult;
+import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
 public class MarkAttendanceUseCase {
+
+    static final int MATCH_PAGE_SIZE = 1000;
 
     private final DeviceRepositoryPort deviceRepository;
     private final BiometricCryptoPort biometricCrypto;
@@ -51,9 +56,7 @@ public class MarkAttendanceUseCase {
                 command.ivBase64(),
                 command.tagBase64()));
 
-        var allTemplates = biometriaRepository.findAll(null, null, true, 0, 10000);
-
-        var matchResult = biometricMatching.identify(decryptedTemplate, allTemplates, matchThreshold)
+        var matchResult = identifyAmongActiveTemplates(decryptedTemplate)
                 .orElseThrow(() -> new IllegalArgumentException("Huella no reconocida"));
 
         if (!matchResult.matched()) {
@@ -100,6 +103,26 @@ public class MarkAttendanceUseCase {
         }
 
         return toResult(saved);
+    }
+
+    // Recorre todas las huellas activas por páginas (sin tope) y se queda con la de mayor confianza.
+    private Optional<BiometricIdentifyResult> identifyAmongActiveTemplates(byte[] probe) {
+        Optional<BiometricIdentifyResult> best = Optional.empty();
+        long afterId = 0;
+        while (true) {
+            List<UserBiometria> page = biometriaRepository.findActiveAfterId(afterId, MATCH_PAGE_SIZE);
+            if (page.isEmpty()) {
+                return best;
+            }
+            var candidate = biometricMatching.identify(probe, page, matchThreshold);
+            if (candidate.isPresent() && (best.isEmpty() || candidate.get().confidence() > best.get().confidence())) {
+                best = candidate;
+            }
+            if (page.size() < MATCH_PAGE_SIZE) {
+                return best;
+            }
+            afterId = page.getLast().getId();
+        }
     }
 
     private record ScheduleInfo(Long scheduleId, LocalTime entryTime, int toleranceMinutes) {}

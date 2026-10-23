@@ -35,7 +35,8 @@ public class UserBiometriaEntity extends AuditableEntity {
     @Column(name = "encrypted_template_base64", nullable = false, columnDefinition = "TEXT")
     private String encryptedTemplateBase64;
 
-    @Column(name = "encrypted_aes_key_base64", nullable = false, columnDefinition = "TEXT")
+    // Nula en filas selladas con la clave de almacenamiento (key_ref no nulo).
+    @Column(name = "encrypted_aes_key_base64", columnDefinition = "TEXT")
     private String encryptedAesKeyBase64;
 
     @Column(name = "iv_base64", columnDefinition = "TEXT")
@@ -49,4 +50,7 @@ public class UserBiometriaEntity extends AuditableEntity {
 
     @Column(nullable = false)
     private boolean activo;
+
+    @Column(name = "key_ref", length = 32)
+    private String keyRef;
 }

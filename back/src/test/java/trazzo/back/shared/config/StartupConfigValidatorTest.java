@@ -20,7 +20,27 @@ class StartupConfigValidatorTest {
                 .withProperty("mercadopago.webhook-secret", "webhook-value-789")
                 .withProperty("mercadopago.use-sandbox", "false")
                 .withProperty("mercadopago.back-url", "https://app.example.com")
-                .withProperty("app.biometric.rsa.key-file", "/app/keys/biometric-rsa.pem");
+                .withProperty("app.biometric.rsa.key-file", "/app/keys/biometric-rsa.pem")
+                .withProperty("app.encryption.key", "encryption-key-value");
+    }
+
+    @Test
+    void missingBiometricStorageKey_failsNamingItAndItsFallback() {
+        MockEnvironment env = validEnv()
+                .withProperty("app.encryption.key", "")
+                .withProperty("app.biometric.storage-key", "");
+        assertThatThrownBy(() -> new StartupConfigValidator(env))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.biometric.storage-key")
+                .hasMessageContaining("app.encryption.key");
+    }
+
+    @Test
+    void biometricStorageKeyAlone_isEnough() {
+        MockEnvironment env = validEnv()
+                .withProperty("app.encryption.key", "")
+                .withProperty("app.biometric.storage-key", "storage-key-value");
+        assertThatCode(() -> new StartupConfigValidator(env)).doesNotThrowAnyException();
     }
 
     @Test

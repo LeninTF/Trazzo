@@ -59,6 +59,11 @@ public class StartupConfigValidator {
             // Sin una clave RSA persistente, cada reinicio deja indescifrables los templates enrolados.
             problems.add("app.biometric.rsa.private-key or app.biometric.rsa.key-file must be set");
         }
+        if (!StringUtils.hasText(env.getProperty("app.biometric.storage-key"))
+                && !StringUtils.hasText(env.getProperty("app.encryption.key"))) {
+            // Sin clave de almacenamiento no se puede guardar ninguna huella enrolada.
+            problems.add("app.biometric.storage-key (or its fallback app.encryption.key) must be set");
+        }
         return problems;
     }
 

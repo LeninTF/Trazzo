@@ -21,6 +21,7 @@ public final class UserBiometriaMapper {
         entity.setTagBase64(domain.getTagBase64());
         entity.setCapturadoEn(domain.getCapturadoEn());
         entity.setActivo(domain.isActivo());
+        entity.setKeyRef(domain.getKeyRef());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         return entity;
@@ -40,7 +41,8 @@ public final class UserBiometriaMapper {
                 entity.getCapturadoEn(),
                 entity.isActivo(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getKeyRef()
         );
     }
 }

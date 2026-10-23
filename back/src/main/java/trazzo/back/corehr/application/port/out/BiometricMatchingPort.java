@@ -8,4 +8,7 @@ import java.util.List;
 
 public interface BiometricMatchingPort {
     Optional<BiometricIdentifyResult> identify(byte[] probeTemplate, List<UserBiometria> enrolledTemplates, int threshold);
+
+    /** Lanza BiometricTemplateFormatException si los bytes no son un template del motor. */
+    void requireValidTemplate(byte[] template);
 }

@@ -5,8 +5,8 @@ import com.machinezoo.sourceafis.FingerprintTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
-import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
 import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
+import trazzo.back.corehr.domain.exception.BiometricTemplateFormatException;
 import trazzo.back.corehr.domain.model.attendance.BiometricIdentifyResult;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 
@@ -44,11 +44,7 @@ public class SourceAfisMatchingAdapter implements BiometricMatchingPort {
         for (UserBiometria enrolled : enrolledTemplates) {
             FingerprintTemplate candidate;
             try {
-                candidate = new FingerprintTemplate(biometricCrypto.openTransport(new TransportPayload(
-                        enrolled.getEncryptedTemplateBase64(),
-                        enrolled.getEncryptedAesKeyBase64(),
-                        enrolled.getIvBase64(),
-                        enrolled.getTagBase64())));
+                candidate = new FingerprintTemplate(biometricCrypto.open(enrolled));
             } catch (RuntimeException e) {
                 unreadable++;
                 continue;
@@ -65,5 +61,14 @@ public class SourceAfisMatchingAdapter implements BiometricMatchingPort {
                     unreadable, enrolledTemplates.size());
         }
         return bestScore >= threshold ? Optional.ofNullable(best) : Optional.empty();
+    }
+
+    @Override
+    public void requireValidTemplate(byte[] template) {
+        try {
+            new FingerprintTemplate(template);
+        } catch (RuntimeException e) {
+            throw new BiometricTemplateFormatException("La huella recibida no es un template SourceAFIS válido", e);
+        }
     }
 }

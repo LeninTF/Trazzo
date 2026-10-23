@@ -3,6 +3,9 @@ package trazzo.back.corehr.infrastructure.adapters.out.enroll;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import trazzo.back.corehr.application.dto.result.UserBiometriaResult;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
+import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
@@ -20,6 +23,8 @@ public class EnrollService {
     private final DeviceRepositoryPort deviceRepository;
     private final UserBiometriaRepositoryPort userBiometriaRepository;
     private final EnrollSessionStore enrollSessionStore;
+    private final BiometricCryptoPort biometricCrypto;
+    private final BiometricMatchingPort biometricMatching;
 
     public EnrollSessionResponse initEnroll(Long tenantUserId, Long deviceId, Integer fingerIndex) {
         if (!tenantUserPort.existsById(tenantUserId)) {
@@ -73,8 +78,14 @@ public class EnrollService {
             throw new IllegalArgumentException("El código de dispositivo no coincide con la sesión");
         }
 
-        userBiometriaRepository.findByTenantUserIdAndFingerIndex(session.tenantUserId(), fingerIndex)
-                .ifPresent(existing -> {
+        // Se descifra y valida antes de tocar la huella vigente: un payload malo no deja al usuario sin dedo.
+        byte[] template = biometricCrypto.openTransport(
+                new TransportPayload(encryptedTemplateBase64, encryptedAesKeyBase64, ivBase64, tagBase64));
+        biometricMatching.requireValidTemplate(template);
+        var sealed = biometricCrypto.seal(template);
+
+        userBiometriaRepository.findActiveByTenantUserIdAndFingerIndex(session.tenantUserId(), fingerIndex)
+                .forEach(existing -> {
                     existing.deactivate();
                     userBiometriaRepository.save(existing);
                 });
@@ -84,11 +95,12 @@ public class EnrollService {
                 session.deviceId(),
                 deviceCode,
                 fingerIndex,
-                encryptedTemplateBase64,
-                encryptedAesKeyBase64,
-                ivBase64,
-                tagBase64,
-                capturedAtUtc
+                sealed.ciphertextBase64(),
+                null,
+                sealed.ivBase64(),
+                sealed.tagBase64(),
+                capturedAtUtc,
+                sealed.keyRef()
         );
 
         var saved = userBiometriaRepository.save(biometria);

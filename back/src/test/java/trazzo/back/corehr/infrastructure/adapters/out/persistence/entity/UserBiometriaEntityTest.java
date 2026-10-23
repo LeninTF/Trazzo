@@ -15,7 +15,7 @@ class UserBiometriaEntityTest {
     @Test
     void allArgsConstructor() {
         var now = LocalDateTime.now();
-        var entity = new UserBiometriaEntity(1L, 10L, 5L, "DVC-001", 3, "dGVtcGxhdGU=", "YWVzS2V5", "aXY=", "dGFn", now, true);
+        var entity = new UserBiometriaEntity(1L, 10L, 5L, "DVC-001", 3, "dGVtcGxhdGU=", "YWVzS2V5", "aXY=", "dGFn", now, true, null);
         assertThat(entity.getId()).isEqualTo(1L);
         assertThat(entity.getTenantUserId()).isEqualTo(10L);
         assertThat(entity.getDeviceId()).isEqualTo(5L);
@@ -24,6 +24,16 @@ class UserBiometriaEntityTest {
         assertThat(entity.getEncryptedAesKeyBase64()).isEqualTo("YWVzS2V5");
         assertThat(entity.getCapturadoEn()).isEqualTo(now);
         assertThat(entity.isActivo()).isTrue();
+    }
+
+    @Test
+    void keepsTheKeyRefOfASealedRow() {
+        var entity = new UserBiometriaEntity();
+        entity.setKeyRef("storage-v1");
+        entity.setEncryptedAesKeyBase64(null);
+
+        assertThat(entity.getKeyRef()).isEqualTo("storage-v1");
+        assertThat(entity.getEncryptedAesKeyBase64()).isNull();
     }
 
     @Test

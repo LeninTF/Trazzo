@@ -14,7 +14,7 @@ class UserBiometriaTest {
 
     @Test
     void shouldCreateUserBiometria() {
-        var ub = UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
+        var ub = UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), null);
         assertNull(ub.getId());
         assertEquals(1L, ub.getTenantUserId());
         assertEquals(1, ub.getFingerIndex());
@@ -33,7 +33,7 @@ class UserBiometriaTest {
 
     @Test
     void shouldActivateAndDeactivate() {
-        var ub = UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
+        var ub = UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), null);
         ub.deactivate();
         assertFalse(ub.isActivo());
         ub.activate();
@@ -43,7 +43,37 @@ class UserBiometriaTest {
     @Test
     void shouldThrowWhenTenantUserIdIsNull() {
         assertThrows(CoreHrValidationException.class, () ->
-            UserBiometria.create(null, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now())
+            UserBiometria.create(null, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), null)
         );
+    }
+
+    @Test
+    void aSealedRowNeedsNoWrappedKey() {
+        var ub = UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, null, IV, TAG, LocalDateTime.now(), "storage-v1");
+
+        assertEquals("storage-v1", ub.getKeyRef());
+        assertNull(ub.getEncryptedAesKeyBase64());
+    }
+
+    @Test
+    void aSealedRowWithoutIvOrTagIsRejected() {
+        assertThrows(CoreHrValidationException.class, () ->
+            UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, null, null, TAG, LocalDateTime.now(), "storage-v1"));
+        assertThrows(CoreHrValidationException.class, () ->
+            UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, null, IV, " ", LocalDateTime.now(), "storage-v1"));
+    }
+
+    @Test
+    void aLegacyTransportRowStillNeedsItsWrappedKey() {
+        assertThrows(CoreHrValidationException.class, () ->
+            UserBiometria.create(1L, 1L, "DVC-001", 1, TEMPLATE, null, IV, TAG, LocalDateTime.now(), null));
+    }
+
+    @Test
+    void restoringARowFromBeforeKeyRefLeavesItNull() {
+        var now = LocalDateTime.now();
+        var ub = UserBiometria.restore(1L, 1L, 1L, "DVC-001", 1, TEMPLATE, AES_KEY, IV, TAG, now, true, now, now);
+
+        assertNull(ub.getKeyRef());
     }
 }

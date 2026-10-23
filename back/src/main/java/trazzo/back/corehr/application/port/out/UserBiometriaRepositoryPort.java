@@ -10,6 +10,8 @@ public interface UserBiometriaRepositoryPort {
     Optional<UserBiometria> findById(Long id);
     List<UserBiometria> findAll(Long tenantUserId, Long deviceId, Boolean activo, int page, int size);
     long count(Long tenantUserId, Long deviceId, Boolean activo);
-    Optional<UserBiometria> findByTenantUserIdAndFingerIndex(Long tenantUserId, Integer fingerIndex);
+    List<UserBiometria> findActiveByTenantUserIdAndFingerIndex(Long tenantUserId, Integer fingerIndex);
+    /** Hasta {@code limit} filas activas con id mayor que {@code afterId}, en orden de id. */
+    List<UserBiometria> findActiveAfterId(long afterId, int limit);
     List<UserBiometria> findByTenantUserId(Long tenantUserId);
 }

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import trazzo.back.corehr.infrastructure.adapters.out.persistence.entity.UserBiometriaEntity;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface UserBiometriaJpaRepository extends JpaRepository<UserBiometriaEntity, Long> {
@@ -33,7 +32,11 @@ public interface UserBiometriaJpaRepository extends JpaRepository<UserBiometriaE
             @Param("deviceId") Long deviceId,
             @Param("activo") Boolean activo);
 
-    Optional<UserBiometriaEntity> findByTenantUserIdAndFingerIndex(Long tenantUserId, Integer fingerIndex);
+    List<UserBiometriaEntity> findByTenantUserIdAndFingerIndexAndActivoTrue(Long tenantUserId, Integer fingerIndex);
+
+    // Keyset (id > último visto): a diferencia de OFFSET, no salta filas si otra se desactiva entre páginas.
+    @Query("SELECT u FROM UserBiometriaEntity u WHERE u.activo = true AND u.id > :afterId ORDER BY u.id")
+    List<UserBiometriaEntity> findActiveAfterId(@Param("afterId") Long afterId, Pageable pageable);
 
     List<UserBiometriaEntity> findByTenantUserId(Long tenantUserId);
 }

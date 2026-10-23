@@ -5,13 +5,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort.StoredTemplate;
+import trazzo.back.corehr.application.port.out.BiometricCryptoPort.TransportPayload;
+import trazzo.back.corehr.application.port.out.BiometricMatchingPort;
 import trazzo.back.corehr.application.port.out.DeviceRepositoryPort;
+import trazzo.back.corehr.domain.exception.BiometricDecryptionException;
+import trazzo.back.corehr.domain.exception.BiometricTemplateFormatException;
 import trazzo.back.corehr.application.port.out.TenantUserPort;
 import trazzo.back.corehr.application.port.out.UserBiometriaRepositoryPort;
 import trazzo.back.corehr.domain.model.attendance.Device;
 import trazzo.back.corehr.domain.model.attendance.UserBiometria;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +45,20 @@ class EnrollServiceTest {
 
     @Mock
     private EnrollSessionStore enrollSessionStore;
+
+    @Mock
+    private BiometricCryptoPort biometricCrypto;
+
+    @Mock
+    private BiometricMatchingPort biometricMatching;
+
+    private static final byte[] PLAIN_TEMPLATE = {9, 8, 7};
+    private static final StoredTemplate SEALED = new StoredTemplate("c2VsbGFkbw==", "aXY=", "dGFn", "storage-v1");
+
+    private void transportOpensAndSeals() {
+        when(biometricCrypto.openTransport(new TransportPayload(TEMPLATE, AES_KEY, IV, TAG))).thenReturn(PLAIN_TEMPLATE);
+        when(biometricCrypto.seal(PLAIN_TEMPLATE)).thenReturn(SEALED);
+    }
 
     @InjectMocks
     private EnrollService enrollService;
@@ -146,7 +168,8 @@ class EnrollServiceTest {
         var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
 
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
-        when(userBiometriaRepository.findByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(Optional.of(existingBiometria));
+        when(userBiometriaRepository.findActiveByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(List.of(existingBiometria));
+        transportOpensAndSeals();
         when(userBiometriaRepository.save(any())).thenReturn(savedBiometria);
 
         var result = enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
@@ -156,6 +179,68 @@ class EnrollServiceTest {
         assertThat(result.tenantUserId()).isEqualTo(tenantUserId);
         verify(existingBiometria).deactivate();
         verify(userBiometriaRepository, times(2)).save(any());
+    }
+
+    @Test
+    void completeEnroll_storesTheStoredTemplateInsteadOfTheTransportPayload() {
+        var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
+        when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
+        when(userBiometriaRepository.findActiveByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(List.of());
+        transportOpensAndSeals();
+        when(userBiometriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
+
+        ArgumentCaptor<UserBiometria> saved = ArgumentCaptor.forClass(UserBiometria.class);
+        verify(userBiometriaRepository).save(saved.capture());
+        verify(biometricMatching).requireValidTemplate(PLAIN_TEMPLATE);
+        assertThat(saved.getValue().getEncryptedTemplateBase64()).isEqualTo("c2VsbGFkbw==");
+        assertThat(saved.getValue().getIvBase64()).isEqualTo("aXY=");
+        assertThat(saved.getValue().getTagBase64()).isEqualTo("dGFn");
+        assertThat(saved.getValue().getKeyRef()).isEqualTo("storage-v1");
+        assertThat(saved.getValue().getEncryptedAesKeyBase64()).isNull();
+    }
+
+    // Reactivar desde PATCH /biometria una huella vieja deja dos filas activas del mismo dedo.
+    @Test
+    void completeEnroll_deactivatesEveryActiveRowOfThatFinger() {
+        var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
+        var first = mock(UserBiometria.class);
+        var second = mock(UserBiometria.class);
+        when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
+        when(userBiometriaRepository.findActiveByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(List.of(first, second));
+        transportOpensAndSeals();
+        when(userBiometriaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());
+
+        verify(first).deactivate();
+        verify(second).deactivate();
+        verify(userBiometriaRepository, times(3)).save(any());
+    }
+
+    @Test
+    void completeEnroll_rejectsAPayloadThatCannotBeDecryptedWithoutTouchingTheExistingFinger() {
+        var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
+        when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
+        when(biometricCrypto.openTransport(any())).thenThrow(new BiometricDecryptionException("Error descifrado biométrico", null));
+
+        assertThatThrownBy(() -> enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now()))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(userBiometriaRepository, never()).save(any());
+        verify(userBiometriaRepository, never()).findActiveByTenantUserIdAndFingerIndex(any(), any());
+    }
+
+    @Test
+    void completeEnroll_rejectsATemplateThatIsNotSourceAfis() {
+        var session = new EnrollSession("token", tenantUserId, deviceId, 1, "DEV-001", LocalDateTime.now().plusMinutes(1));
+        when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
+        when(biometricCrypto.openTransport(any())).thenReturn(PLAIN_TEMPLATE);
+        doThrow(new BiometricTemplateFormatException("no es SourceAFIS")).when(biometricMatching).requireValidTemplate(PLAIN_TEMPLATE);
+
+        assertThatThrownBy(() -> enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now()))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(userBiometriaRepository, never()).save(any());
     }
 
     @Test
@@ -186,7 +271,8 @@ class EnrollServiceTest {
         var savedBiometria = UserBiometria.restore(1L, tenantUserId, deviceId, "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now(), true, LocalDateTime.now(), LocalDateTime.now());
 
         when(enrollSessionStore.findAndConsume("token")).thenReturn(session);
-        when(userBiometriaRepository.findByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(Optional.empty());
+        when(userBiometriaRepository.findActiveByTenantUserIdAndFingerIndex(tenantUserId, 1)).thenReturn(List.of());
+        transportOpensAndSeals();
         when(userBiometriaRepository.save(any())).thenReturn(savedBiometria);
 
         var result = enrollService.completeEnroll("token", "DEV-001", 1, TEMPLATE, AES_KEY, IV, TAG, LocalDateTime.now());

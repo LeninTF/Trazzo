@@ -122,8 +122,10 @@ public class CoreHrBeanConfiguration {
 
     @Bean
     public EnrollService enrollService(TenantUserPort tenantUserPort, DeviceRepositoryPort deviceRepo,
-                                       UserBiometriaRepositoryPort userBiometriaRepo, EnrollSessionStore enrollSessionStore) {
-        return new EnrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore);
+                                       UserBiometriaRepositoryPort userBiometriaRepo, EnrollSessionStore enrollSessionStore,
+                                       BiometricCryptoPort biometricCrypto, BiometricMatchingPort biometricMatching) {
+        return new EnrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore,
+                biometricCrypto, biometricMatching);
     }
 
     @Bean

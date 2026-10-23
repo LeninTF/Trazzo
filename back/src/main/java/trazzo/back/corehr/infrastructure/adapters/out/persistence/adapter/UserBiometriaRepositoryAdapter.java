@@ -47,9 +47,19 @@ public class UserBiometriaRepositoryAdapter implements UserBiometriaRepositoryPo
     }
 
     @Override
-    public Optional<UserBiometria> findByTenantUserIdAndFingerIndex(Long tenantUserId, Integer fingerIndex) {
-        return userBiometriaRepo.findByTenantUserIdAndFingerIndex(tenantUserId, fingerIndex)
-                .map(UserBiometriaMapper::toDomain);
+    public List<UserBiometria> findActiveByTenantUserIdAndFingerIndex(Long tenantUserId, Integer fingerIndex) {
+        return userBiometriaRepo.findByTenantUserIdAndFingerIndexAndActivoTrue(tenantUserId, fingerIndex)
+                .stream()
+                .map(UserBiometriaMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<UserBiometria> findActiveAfterId(long afterId, int limit) {
+        return userBiometriaRepo.findActiveAfterId(afterId, PageRequest.ofSize(limit))
+                .stream()
+                .map(UserBiometriaMapper::toDomain)
+                .toList();
     }
 
     @Override

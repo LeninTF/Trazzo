@@ -32,6 +32,8 @@ class CoreHrBeanConfigurationTest {
     @Mock private JdbcTemplate jdbcTemplate;
     @Mock private EnrollSessionStore enrollSessionStore;
     @Mock private EnrollService enrollService;
+    @Mock private BiometricCryptoPort biometricCrypto;
+    @Mock private BiometricMatchingPort biometricMatching;
 
     @Test
     void shouldCreateShiftUseCase() {
@@ -90,6 +92,7 @@ class CoreHrBeanConfigurationTest {
 
     @Test
     void shouldCreateEnrollService() {
-        assertNotNull(config.enrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore));
+        assertNotNull(config.enrollService(tenantUserPort, deviceRepo, userBiometriaRepo, enrollSessionStore,
+                biometricCrypto, biometricMatching));
     }
 }

@@ -20,9 +20,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class TenantFlywayMigratorIntegrationTest {
 
-    /** Baseline row (version 0) plus V2, V3, V3.1 and V4. Raise when a new tenant migration is added. */
-    private static final int HISTORY_ROWS = 5;
-    private static final int MIGRATIONS = 4;
+    /** Baseline row (version 0) plus V2, V3, V3.1, V4 and V5. Raise when a new tenant migration is added. */
+    private static final int HISTORY_ROWS = 6;
+    private static final int MIGRATIONS = 5;
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:15-alpine");
@@ -72,6 +72,19 @@ class TenantFlywayMigratorIntegrationTest {
         assertThat(historyRows("tenant_b")).isEqualTo(HISTORY_ROWS);
         assertThat(failedHistoryRows("tenant_a")).isZero();
         assertThat(failedHistoryRows("tenant_b")).isZero();
+    }
+
+    // V5: un template sellado con la clave de almacenamiento lleva key_ref y ninguna llave AES envuelta.
+    @Test
+    void aSealedTemplateRowFitsTheMigratedSchema() {
+        migrator.migrate("tenant_a");
+
+        jdbc.update("INSERT INTO \"tenant_a\".usuario_biometria "
+                + "(encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, key_ref) "
+                + "VALUES ('c2VsbGFkbw==', NULL, 'aXY=', 'dGFn', 'storage-v1')");
+
+        assertThat(jdbc.queryForObject("SELECT key_ref FROM \"tenant_a\".usuario_biometria", String.class))
+                .isEqualTo("storage-v1");
     }
 
     @Test

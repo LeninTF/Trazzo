@@ -58,6 +58,21 @@ class UserBiometriaMapperTest {
     }
 
     @Test
+    void shouldCarryTheKeyRefOfASealedRowBothWays() {
+        var now = LocalDateTime.now();
+        var domain = UserBiometria.restore(3L, 30L, 5L, "DVC-001", 1, TEMPLATE, null, IV, TAG,
+                now, true, now, now, "storage-v1");
+
+        var entity = UserBiometriaMapper.toEntity(domain);
+        var restored = UserBiometriaMapper.toDomain(entity);
+
+        assertEquals("storage-v1", entity.getKeyRef());
+        assertNull(entity.getEncryptedAesKeyBase64());
+        assertEquals("storage-v1", restored.getKeyRef());
+        assertNull(restored.getEncryptedAesKeyBase64());
+    }
+
+    @Test
     void shouldHandleNullOptionalFields() {
         var now = LocalDateTime.now();
         var domain = UserBiometria.restore(2L, 20L, null, null, null, TEMPLATE, AES_KEY, null, null,
