@@ -31,14 +31,17 @@ jobs:
           cache: maven
 
       - name: Compilar y Testear (Maven)
-        run: mvn -f back/pom.xml clean verify
+        working-directory: back
+        run: ./mvnw -B verify
 
+      # Solo el análisis: reutiliza las clases y el informe de JaCoCo del paso anterior (los tests no se repiten).
       - name: Análisis Estático y Quality Gate (SonarCloud)
+        working-directory: back
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          mvn -f back/pom.xml -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
+          ./mvnw -B org.sonarsource.scanner.maven:sonar-maven-plugin:5.7.0.6970:sonar \
           -Dsonar.projectKey=methodsync-trazzo-back \
           -Dsonar.organization=methodsync \
           -Dsonar.sources=src/main,pom.xml,Dockerfile \

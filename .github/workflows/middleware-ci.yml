@@ -105,19 +105,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          # El nombre de la rama del PR lo elige quien lo abre: por variable, no expandido dentro del script.
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PR_BASE_REF: ${{ github.base_ref }}
         run: |
           dotnet sonarscanner begin `
             /k:"methodsync-trazzo-middleware" `
             /o:"methodsync" `
             /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.qualitygate.wait=false `
             /d:sonar.cs.cobertura.reportsPaths="TestResults\*\coverage.cobertura.xml" `
             /d:sonar.coverage.exclusions="**/ZKTeco/ZKTecoNativeSdk.cs,**/Program.cs,**/Properties/**" `
             /d:sonar.exclusions="**/Native/**,**/bin/**,**/obj/**,**/tmp-agent-test/**" `
-            /d:sonar.pullrequest.key="${{ github.event.pull_request.number }}" `
-            /d:sonar.pullrequest.branch="${{ github.head_ref }}" `
-            /d:sonar.pullrequest.base="${{ github.base_ref }}"
+            /d:sonar.pullrequest.key="$env:PR_NUMBER" `
+            /d:sonar.pullrequest.branch="$env:PR_HEAD_REF" `
+            /d:sonar.pullrequest.base="$env:PR_BASE_REF"
 
       - name: Restaurar dependencias
         run: |

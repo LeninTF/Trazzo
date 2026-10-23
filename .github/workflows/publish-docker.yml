@@ -1,39 +1,45 @@
 name: Publish Docker Images
 
+# Solo se publica lo que ya pasó su CI en main (AUD-13): este workflow corre cuando termina el CI del
+# backend o del frontend, y construye exactamente el commit que ese CI probó (head_sha), no el último de main.
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'back/**'
-      - 'front/**'
+  workflow_run:
+    workflows: ["CI/CD Backend Spring Boot", "CI/CD Frontend Angular"]
+    types: [completed]
 
 permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: publish-docker-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
 jobs:
-  changes:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
-    outputs:
-      back: ${{ steps.filter.outputs.back }}
-      front: ${{ steps.filter.outputs.front }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            back:
-              - 'back/**'
-            front:
-              - 'front/**'
+      - name: Elegir la imagen según el CI que terminó
+        id: target
+        env:
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          case "$WORKFLOW" in
+            "CI/CD Backend Spring Boot") echo "component=back" >> "$GITHUB_OUTPUT" ;;
+            "CI/CD Frontend Angular") echo "component=front" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::CI inesperado: $WORKFLOW"; exit 1 ;;
+          esac
+          echo "short_sha=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
 
-  publish-back:
-    needs: changes
-    if: needs.changes.outputs.back == 'true'
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Iniciar sesión en GitHub Container Registry
         uses: docker/login-action@v4
@@ -46,50 +52,22 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}/trazzo-back
+          # Las etiquetas OCI (revision) salen del checkout de head_sha, no de github.sha.
+          context: git
+          images: ghcr.io/${{ github.repository }}/trazzo-${{ steps.target.outputs.component }}
+          tags: |
+            type=raw,value=main
+            type=raw,value=sha-${{ steps.target.outputs.short_sha }}
 
       - name: Configurar Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Construir y Empujar (Push) Imagen Backend
+      - name: Construir y empujar la imagen
         uses: docker/build-push-action@v7
         with:
-          context: ./back
+          context: ./${{ steps.target.outputs.component }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  publish-front:
-    needs: changes
-    if: needs.changes.outputs.front == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Iniciar sesión en GitHub Container Registry
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extraer metadatos (etiquetas) para Docker
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository }}/trazzo-front
-
-      - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Construir y Empujar (Push) Imagen Frontend
-        uses: docker/build-push-action@v7
-        with:
-          context: ./front
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ steps.target.outputs.component }}
+          cache-to: type=gha,mode=max,scope=${{ steps.target.outputs.component }}

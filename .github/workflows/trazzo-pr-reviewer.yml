@@ -56,7 +56,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
 
-          FILES=$(gh pr view $PR_NUMBER --json files --jq '.files[].path')
+          FILES=$(gh pr view "$PR_NUMBER" --json files --jq '.files[].path')
           LABELS=""
           
           if echo "$FILES" | grep -iqE '\.cs$|\.csproj$'; then LABELS="$LABELS,.NET"; fi
@@ -67,7 +67,7 @@ jobs:
           
           if [ -n "$LABELS" ]; then
             LABELS=${LABELS#,}
-            gh pr edit $PR_NUMBER --add-label "$LABELS"
+            gh pr edit "$PR_NUMBER" --add-label "$LABELS"
           fi
 
       - name: Ejecutar OpenCode Agent (Big Pickle)
@@ -136,12 +136,12 @@ jobs:
           
           if [ -n "$EFFORT_LABEL" ]; then
             # Buena Práctica: Remover la etiqueta de esfuerzo anterior si el PR fue actualizado (sincronizado)
-            gh pr view $PR_NUMBER --json labels --jq '.labels[].name' | grep 'Review effort' | while read old_label; do
-              gh pr edit $PR_NUMBER --remove-label "$old_label"
+            gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name' | grep 'Review effort' | while read -r old_label; do
+              gh pr edit "$PR_NUMBER" --remove-label "$old_label"
             done
             
             # Aplicar la nueva etiqueta calculada
-            gh pr edit $PR_NUMBER --add-label "$EFFORT_LABEL"
+            gh pr edit "$PR_NUMBER" --add-label "$EFFORT_LABEL"
             echo "✅ Etiqueta de esfuerzo aplicada con éxito: $EFFORT_LABEL"
           else
             echo "⚠️ No se detectó la etiqueta de esfuerzo en la respuesta de la IA."
