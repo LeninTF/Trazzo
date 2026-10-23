@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using System.Globalization;
+using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Queue;
 
@@ -223,13 +224,17 @@ public sealed class SqliteEventQueue : IEventQueue, IDisposable
     internal static string BuildConnectionString(IConfiguration configuration, string? defaultBasePath = null)
     {
         string? configuredPath = configuration["Queue:DatabasePath"];
-        string dbPath = string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(
-                defaultBasePath ?? Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "TrazzoAgent", "events.db")
-            : configuredPath;
-
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+        string dbPath;
+        if (string.IsNullOrWhiteSpace(configuredPath))
+        {
+            dbPath = Path.Combine(AgentDataDirectory.EnsurePrivate(defaultBasePath), "events.db");
+        }
+        else
+        {
+            // Ruta elegida por el operador: debe ser un directorio dedicado y su ACL queda a su cargo.
+            dbPath = configuredPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+        }
         // Pooling=True reduce el overhead de abrir conexión por operación.
         return $"Data Source={dbPath};Pooling=True";
     }

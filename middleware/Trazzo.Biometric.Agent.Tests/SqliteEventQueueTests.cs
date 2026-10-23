@@ -1,3 +1,5 @@
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -67,6 +69,30 @@ public sealed class SqliteEventQueueTests
         {
             if (Directory.Exists(directory))
                 Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    // La cola comparte ProgramData\TrazzoAgent con el padrón: un events.db-wal plantado inyectaría marcaciones.
+    [Fact]
+    public void BuildConnectionString_ElDirectorioPorDefectoNoHeredaLosPermisosDeProgramData()
+    {
+        string programData = Path.Combine(Path.GetTempPath(), $"trazzo-queue-acl-{Guid.NewGuid():N}");
+        DirectoryInfo baseDirectory = Directory.CreateDirectory(programData);
+        DirectorySecurity security = baseDirectory.GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null),
+            FileSystemRights.ReadAndExecute | FileSystemRights.CreateFiles,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        baseDirectory.SetAccessControl(security);
+
+        try
+        {
+            SqliteEventQueue.BuildConnectionString(new ConfigurationBuilder().Build(), programData);
+
+            Assert.True(new DirectoryInfo(Path.Combine(programData, "TrazzoAgent")).GetAccessControl().AreAccessRulesProtected);
+        }
+        finally
+        {
+            Directory.Delete(programData, recursive: true);
         }
     }
 

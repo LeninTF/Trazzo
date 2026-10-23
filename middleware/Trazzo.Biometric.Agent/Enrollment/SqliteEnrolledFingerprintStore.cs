@@ -1,15 +1,23 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Data.Sqlite;
+using Trazzo.Biometric.Agent.Security;
 
 namespace Trazzo.Biometric.Agent.Enrollment;
 
 /// <summary>
-/// Padrón local de huellas enroladas en SQLite. El template se cifra en reposo con DPAPI
-/// LocalMachine (en Windows); en otras plataformas (dev) se guarda sin cifrar.
+/// Padrón local de huellas enroladas en SQLite. El template se cifra en reposo con DPAPI del usuario
+/// del servicio (LocalSystem) y una entropía que lo liga a su fila; en otras plataformas (dev) se guarda
+/// sin cifrar.
 /// </summary>
 public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, IDisposable
 {
+    // v2: DPAPI CurrentUser + entropía de propósito, persona y dedo. Las filas sin prefijo usaban DPAPI
+    // LocalMachine, que cualquier usuario de la PC podía fabricar: se ignoran y hay que volver a enrolarlas.
+    private const string ProtectedFormatPrefix = "v2:";
+    private const string EntropyPurpose = "Trazzo.Biometric.Agent.EnrolledTemplate.v2";
+
     private readonly string _connectionString;
     private readonly ILogger<SqliteEnrolledFingerprintStore> _logger;
     private readonly SqliteConnection? _keepAliveConnection;
@@ -35,7 +43,8 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
 
     public async Task SaveAsync(EnrolledFingerprint fingerprint, CancellationToken cancellationToken = default)
     {
-        string protectedTemplate = Convert.ToBase64String(ProtectForLocalMachine(fingerprint.Template));
+        string protectedTemplate = ProtectedFormatPrefix + Convert.ToBase64String(ProtectForService(
+            fingerprint.Template, RowEntropy(fingerprint.UserReference, fingerprint.FingerIndex)));
 
         await using SqliteConnection conn = new(_connectionString);
         await conn.OpenAsync(cancellationToken);
@@ -73,15 +82,23 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
             """;
 
         List<EnrolledFingerprint> result = [];
+        int previousFormat = 0;
         await using SqliteDataReader reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             string userRef = reader.GetString(0);
             int fingerIndex = reader.GetInt32(1);
+            string stored = reader.GetString(2);
+            if (!stored.StartsWith(ProtectedFormatPrefix, StringComparison.Ordinal))
+            {
+                previousFormat++;
+                continue;
+            }
+
             byte[] protectedBytes;
             try
             {
-                protectedBytes = Convert.FromBase64String(reader.GetString(2));
+                protectedBytes = Convert.FromBase64String(stored[ProtectedFormatPrefix.Length..]);
             }
             catch (FormatException ex)
             {
@@ -89,27 +106,34 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
                 continue;
             }
 
-            byte[]? template = TryUnprotect(protectedBytes, userRef);
+            byte[]? template = TryUnprotect(protectedBytes, userRef, fingerIndex);
             if (template is null)
                 continue;
 
             result.Add(new EnrolledFingerprint(userRef, fingerIndex, template));
         }
 
+        if (previousFormat > 0)
+        {
+            _logger.LogWarning(
+                "{Count} huellas del padrón local tienen el formato anterior (DPAPI de ámbito máquina) y se ignoran: hay que volver a enrolarlas.",
+                previousFormat);
+        }
+
         return result;
     }
 
-    private byte[]? TryUnprotect(byte[] protectedBytes, string userRef)
+    private byte[]? TryUnprotect(byte[] protectedBytes, string userRef, int fingerIndex)
     {
         try
         {
-            return UnprotectFromLocalMachine(protectedBytes);
+            return UnprotectForService(protectedBytes, RowEntropy(userRef, fingerIndex));
         }
         catch (CryptographicException ex)
         {
             _logger.LogWarning(ex,
-                "No se pudo descifrar un template enrolado (¿copiado de otra máquina?). Usuario={UserRef}. Se omite.",
-                userRef);
+                "No se pudo descifrar un template enrolado (¿copiado de otra máquina o movido de fila?). Usuario={UserRef}, Dedo={FingerIndex}. Se omite.",
+                userRef, fingerIndex);
             return null;
         }
     }
@@ -140,35 +164,38 @@ public sealed class SqliteEnrolledFingerprintStore : IEnrolledFingerprintStore, 
     internal static string BuildConnectionString(IConfiguration configuration, string? defaultBasePath = null)
     {
         string? configuredPath = configuration["Enrollment:LocalStorePath"];
-        string dbPath = string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(
-                defaultBasePath ?? Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "TrazzoAgent", "enrolled.db")
-            : configuredPath;
+        if (string.IsNullOrWhiteSpace(configuredPath))
+            return $"Data Source={Path.Combine(AgentDataDirectory.EnsurePrivate(defaultBasePath), "enrolled.db")};Pooling=True";
 
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
-        return $"Data Source={dbPath};Pooling=True";
+        // Ruta elegida por el operador: debe ser un directorio dedicado y su ACL queda a su cargo.
+        Directory.CreateDirectory(Path.GetDirectoryName(configuredPath)!);
+        return $"Data Source={configuredPath};Pooling=True";
     }
 
-    // DPAPI-LocalMachine: solo procesos de esta máquina descifran. En no-Windows (dev) se
-    // guarda sin cifrar; en producción el agente corre como Windows Service.
-    private static byte[] ProtectForLocalMachine(byte[] plaintext)
+    // El blob solo abre en la fila para la que se selló: movido a otra persona o a otro dedo, falla.
+    private static byte[] RowEntropy(string userReference, int fingerIndex) =>
+        Encoding.UTF8.GetBytes($"{EntropyPurpose}|{fingerIndex}|{userReference}");
+
+    // DPAPI CurrentUser: el servicio corre como LocalSystem, así que solo LocalSystem (o un administrador)
+    // descifra o fabrica un blob; con LocalMachine podía cualquier usuario de la PC. En no-Windows (dev)
+    // se guarda sin cifrar; en producción el agente corre como Windows Service.
+    private static byte[] ProtectForService(byte[] plaintext, byte[] entropy)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
 #pragma warning disable CA1416
-            return ProtectedData.Protect(plaintext, optionalEntropy: null, DataProtectionScope.LocalMachine);
+            return ProtectedData.Protect(plaintext, entropy, DataProtectionScope.CurrentUser);
 #pragma warning restore CA1416
         }
         return plaintext;
     }
 
-    private static byte[] UnprotectFromLocalMachine(byte[] protectedBytes)
+    private static byte[] UnprotectForService(byte[] protectedBytes, byte[] entropy)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
 #pragma warning disable CA1416
-            return ProtectedData.Unprotect(protectedBytes, optionalEntropy: null, DataProtectionScope.LocalMachine);
+            return ProtectedData.Unprotect(protectedBytes, entropy, DataProtectionScope.CurrentUser);
 #pragma warning restore CA1416
         }
         return protectedBytes;
