@@ -1035,15 +1035,15 @@ components:
     CambiarPasswordRequest:
       type: object
       description: |
-        Cambio de contraseña.
-         - Para primer login forzado (`must_change_password = true`) o reset administrativo, `current_password` puede omitirse.
-         - Para cambio voluntario, `current_password` es obligatoria.
-         - `new_password` es requerida cuando el usuario está definiendo su nueva contraseña; en reset administrativo el backend puede generar una temporal.
+        Cambio de la contraseña propia: la actual y la nueva.
+      required:
+        - current_password
+        - new_password
       properties:
         current_password:
           type: string
           format: password
-          description: "Obligatoria para cambios voluntarios. Omitir en primer login forzado o reset administrativo."
+          description: "Contraseña actual (la temporal tras el primer login)."
         new_password:
           type: string
           format: password
@@ -3881,25 +3881,12 @@ paths:
       summary: Cambiar contraseña de un usuario
       operationId: changePassword
       description: |
-        **Dos flujos posibles:**
+        El propio usuario cambia su contraseña enviando la actual (`current_password`) y la nueva
+        (`new_password`); también tras el primer login, con la contraseña temporal como actual. Si la
+        actual no coincide o falta la nueva → `400`. Al cambiarla, `must_change_password` pasa a `false`.
+        No hay reseteo administrativo por este endpoint: la contraseña de otra cuenta → `403`.
 
-        **Flujo 1 — Primer login (forzado):** el JWT tiene `must_change_password = true`.
-        El solicitante es el mismo usuario (`id` del path == `sub` del JWT).
-        No se requiere `current_password`. Al completar, el backend marca
-        `must_change_password = false` y el usuario accede normalmente.
-
-        **Flujo 2 — Cambio voluntario:** `must_change_password = false`.
-        `current_password` es obligatoria. Si es incorrecta → `403`.
-
-        **Flujo 3 — Reset administrativo:** el solicitante es distinto al usuario objetivo
-        y tiene permiso `RESET_PASSWORD`. No requiere `current_password`. El sistema
-        genera nueva contraseña temporal → envía email → marca `must_change_password = true`.
-        En este caso `new_password` se ignora (el backend genera la contraseña).
-
-        Genera registro en `Auditoria_sistema` tipo `UPDATE` (solo el campo `password_hash`,
-        sin valores en `valor_anterior` / `valor_nuevo` por seguridad).
-
-        **Permisos requeridos:** cualquier usuario autenticado del tenant.
+        **Permisos requeridos:** solo el propio usuario (el `id` de la ruta tiene que ser su `tenant_user`).
       requestBody:
         required: true
         content:
@@ -3910,15 +3897,13 @@ paths:
         "204":
           description: Contraseña actualizada exitosamente. Sin cuerpo de respuesta.
         "400":
-          description: Nueva contraseña no cumple políticas mínimas de seguridad.
+          description: La contraseña actual no coincide o falta la nueva.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         "403":
-          description: |
-            `current_password` incorrecta (cuando es requerida),
-            o el rol no tiene permiso `RESET_PASSWORD` para resetear contraseñas de terceros.
+          description: El `id` no es el `tenant_user` de quien llama (contraseña de otra cuenta).
           content:
             application/json:
               schema:
@@ -4618,6 +4603,7 @@ paths:
         Redis (TTL: 5 minutos) para el dashboard del supervisor.
 
         **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
+        Quien no es `APROBADOR` solo ve sus propias incidencias (`scopeAplicado: SELF`).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/IncidentScopeParam'
@@ -4713,6 +4699,7 @@ paths:
         El trabajador siempre puede ver sus propias incidencias (`VIEW_OWN_INCIDENTS`).
 
         **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
+        Quien no es `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       responses:
         "200":
           description: Detalle completo de la incidencia.
@@ -4748,7 +4735,8 @@ paths:
 
         **Redis:** el `comment` se actualiza en Redis al modificarse.
 
-        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa). Quien no es
+        `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       requestBody:
         required: true
         content:
@@ -4867,7 +4855,8 @@ paths:
         - Solo mientras la incidencia está `PENDIENTE`.
         - Formatos permitidos: PDF, Word, imágenes, videos.
 
-        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa). Quien no es
+        `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       requestBody:
         required: true
         content:
@@ -4913,6 +4902,7 @@ paths:
           evidencias de incidencias dentro de su scope.
 
         **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
+        Quien no es `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       responses:
         "200":
           description: Evidencias asociadas a la incidencia (0..1).
@@ -4958,7 +4948,8 @@ paths:
         - La eliminación es lógica (se marca como eliminada en BD).
         El archivo en Cloudflare R2 no se elimina.
 
-        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
+        **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa). Quien no es
+        `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       responses:
         "204":
           description: Evidencia eliminada. Sin cuerpo de respuesta.
@@ -5004,6 +4995,7 @@ paths:
           metadatos registrados en BD (`mime_type`, `file_name`, `file_size`).
 
         **Permisos requeridos:** `incidencias.ver-propias` o `APROBADOR` (`administrador_tenant` siempre pasa).
+        Quien no es `APROBADOR` solo accede a sus propias incidencias (403 si son de otro).
       responses:
         "200":
           description: Contenido binario del archivo.
@@ -6492,7 +6484,8 @@ paths:
         **Caché Redis:** resultados de asistencia por día y tenant cacheados
         (`attendance:{tenant_id}:{date}`, TTL hasta fin del día).
 
-        **Permisos requeridos:** cualquier usuario autenticado del tenant.
+        **Permisos requeridos:** cualquier usuario autenticado del tenant. Sin `VER_ASISTENCIA_TODOS` solo se ve
+        la asistencia propia (`scopeAplicado: SELF`).
       parameters:
         - $ref: '#/components/parameters/TenantIdHeader'
         - $ref: '#/components/parameters/IncidentScopeParam'
@@ -6544,7 +6537,8 @@ paths:
       description: |
         Devuelve el registro de asistencia completo.
         Aplican las mismas reglas de scope que en el listado.
-        **Permisos requeridos:** cualquier usuario autenticado del tenant.
+        **Permisos requeridos:** cualquier usuario autenticado del tenant. Sin `VER_ASISTENCIA_TODOS` solo se ve
+        la asistencia propia (`scopeAplicado: SELF`).
       responses:
         "200":
           description: Registro de asistencia encontrado.
