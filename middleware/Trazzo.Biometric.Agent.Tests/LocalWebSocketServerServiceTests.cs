@@ -623,36 +623,50 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         FakeAgentHealthService? healthService = null,
         bool allowLocalDevelopmentOrigins = true)
     {
-        int port = GetFreePort();
-        _wsUrl = $"ws://localhost:{port}/";
-        _httpUrl = $"http://localhost:{port}/";
-
-        var settings = new Dictionary<string, string?>
+        // http.sys puede mantener unos instantes el prefijo del test anterior aunque el puerto TCP
+        // ya figure libre: si el registro choca, se reintenta con otro puerto.
+        for (int attempt = 1; ; attempt++)
         {
-            ["Agent:WebSocketUrl"] = includeTrailingSlash ? _httpUrl : _httpUrl.TrimEnd('/'),
-            ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString(),
-            // La mayoría de tests actúan como herramienta local (ClientWebSocket no envía Origin).
-            ["Agent:AllowLocalDevelopmentOrigins"] = allowLocalDevelopmentOrigins ? "true" : "false"
-        };
+            int port = GetFreePort();
+            _wsUrl = $"ws://localhost:{port}/";
+            _httpUrl = $"http://localhost:{port}/";
 
-        if (allowedOrigins is { Length: > 0 })
-        {
-            for (int i = 0; i < allowedOrigins.Length; i++)
-                settings[$"Agent:AllowedOrigins:{i}"] = allowedOrigins[i];
+            var settings = new Dictionary<string, string?>
+            {
+                ["Agent:WebSocketUrl"] = includeTrailingSlash ? _httpUrl : _httpUrl.TrimEnd('/'),
+                ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString(),
+                // La mayoría de tests actúan como herramienta local (ClientWebSocket no envía Origin).
+                ["Agent:AllowLocalDevelopmentOrigins"] = allowLocalDevelopmentOrigins ? "true" : "false"
+            };
+
+            if (allowedOrigins is { Length: > 0 })
+            {
+                for (int i = 0; i < allowedOrigins.Length; i++)
+                    settings[$"Agent:AllowedOrigins:{i}"] = allowedOrigins[i];
+            }
+
+            IConfiguration config = new ConfigurationBuilder()
+                .AddInMemoryCollection(settings)
+                .Build();
+
+            _service = new LocalWebSocketServerService(
+                scanner ?? new FakeBiometricScannerService(),
+                healthService ?? new FakeAgentHealthService(),
+                new FakeEventQueue(),
+                config,
+                NullLogger<LocalWebSocketServerService>.Instance);
+
+            try
+            {
+                _ = _service.StartAsync(CancellationToken.None);
+                return;
+            }
+            catch (HttpListenerException) when (attempt < 5)
+            {
+                // El listener no llegó a arrancar: no hay nada que detener.
+                _service = null;
+            }
         }
-
-        IConfiguration config = new ConfigurationBuilder()
-            .AddInMemoryCollection(settings)
-            .Build();
-
-        _service = new LocalWebSocketServerService(
-            scanner ?? new FakeBiometricScannerService(),
-            healthService ?? new FakeAgentHealthService(),
-            new FakeEventQueue(),
-            config,
-            NullLogger<LocalWebSocketServerService>.Instance);
-
-        _ = _service.StartAsync(CancellationToken.None);
     }
 
     private static FingerprintDeviceStatus ConnectedStatus()
