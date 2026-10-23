@@ -139,6 +139,8 @@ public sealed class WorkerTests
         public bool StartCalled { get; private set; }
         public bool StopCalled { get; private set; }
 
+        public Task BroadcastAsync(object message, CancellationToken cancellationToken) => Task.CompletedTask;
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             StartCalled = true;

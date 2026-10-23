@@ -481,7 +481,8 @@ public sealed class WebSocketResponseTests
         FingerprintEnrollResult? enrollResult = null,
         FakeEventQueue? eventQueue = null,
         FakeAttendanceMarkingClient? attendanceClient = null,
-        FakeBiometricScannerService? scannerOverride = null)
+        FakeBiometricScannerService? scannerOverride = null,
+        bool allowLocalWebSocketEnrollment = true)
     {
         FakeBiometricScannerService scanner = scannerOverride ?? new()
         {
@@ -500,8 +501,12 @@ public sealed class WebSocketResponseTests
             EnrollResult = enrollResult ?? FingerprintEnrollResult.Failed("No se pudo enrolar la huella.")
         };
 
+        // Estos tests ejercitan el enrolamiento local por WS (herramienta de desarrollo).
         IConfiguration configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>())
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Enrollment:AllowLocalWebSocketEnrollment"] = allowLocalWebSocketEnrollment ? "true" : "false"
+            })
             .Build();
 
         return new LocalWebSocketServerService(

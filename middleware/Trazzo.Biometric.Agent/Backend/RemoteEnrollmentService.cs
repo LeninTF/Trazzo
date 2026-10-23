@@ -29,12 +29,16 @@ public sealed class RemoteEnrollmentService : BackgroundService
     private readonly string? _deviceCode;
     private readonly TimeSpan _pollingInterval;
     private readonly bool _isEnabled;
+    // Si hay un panel conectado por WebSocket (p. ej. el directorio de personal en la PC del lector),
+    // recibe el progreso y el resultado del enrolamiento que inició en el backend.
+    private readonly IWebSocketServerService? _webSocketServer;
 
     public RemoteEnrollmentService(
         IBiometricScannerService scannerService,
         IConfiguration configuration,
-        ILogger<RemoteEnrollmentService> logger)
-        : this(scannerService, configuration, logger, SharedHttpClient)
+        ILogger<RemoteEnrollmentService> logger,
+        IWebSocketServerService webSocketServer)
+        : this(scannerService, configuration, logger, SharedHttpClient, webSocketServer: webSocketServer)
     {
     }
 
@@ -43,12 +47,14 @@ public sealed class RemoteEnrollmentService : BackgroundService
         IConfiguration configuration,
         ILogger<RemoteEnrollmentService> logger,
         HttpClient httpClient,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        IWebSocketServerService? webSocketServer = null)
     {
         _scannerService = scannerService;
         _logger = logger;
         _httpClient = httpClient;
         _delay = delay ?? Task.Delay;
+        _webSocketServer = webSocketServer;
 
         _pendingEnrollmentUrl = BackendEndpointResolver.EnsureSecureUrl(
             BackendEndpointResolver.ResolvePendingEnrollmentUrl(configuration),
@@ -145,7 +151,7 @@ public sealed class RemoteEnrollmentService : BackgroundService
         }
 
         FingerprintEnrollResult enrollResult = await _scannerService.EnrollFingerprintAsync(
-            (progress, _) =>
+            async (progress, ct) =>
             {
                 if (_logger.IsEnabled(LogLevel.Information))
                     _logger.LogInformation(
@@ -153,7 +159,16 @@ public sealed class RemoteEnrollmentService : BackgroundService
                         progress.Step,
                         progress.TotalSteps,
                         progress.Message);
-                return Task.CompletedTask;
+                await PublishAsync(new
+                {
+                    type = progress.Type,
+                    step = progress.Step,
+                    totalSteps = progress.TotalSteps,
+                    message = progress.Message,
+                    source = "backend",
+                    tenantUserId = pending.TenantUserId,
+                    fingerIndex = pending.FingerIndex
+                }, ct);
             },
             cancellationToken,
             // Puebla el padrón local de identificación 1:N con la referencia del usuario del backend.
@@ -165,10 +180,49 @@ public sealed class RemoteEnrollmentService : BackgroundService
             _logger.LogWarning(
                 "No se pudo completar captura de enrolamiento remoto. Mensaje={Message}.",
                 enrollResult.Message);
+            await PublishResultAsync(pending, success: false, enrollResult.Message, enrollResult.CapturedSamples, cancellationToken);
             return false;
         }
 
-        return await CompleteEnrollmentAsync(pending, enrollResult, cancellationToken);
+        bool completed = await CompleteEnrollmentAsync(pending, enrollResult, cancellationToken);
+        await PublishResultAsync(
+            pending,
+            completed,
+            completed ? "Huella enrolada y registrada en el servidor." : "El servidor rechazó el enrolamiento. Inicie uno nuevo desde el panel.",
+            enrollResult.CapturedSamples,
+            cancellationToken);
+        return completed;
+    }
+
+    // Resultado saneado: nunca incluye el template (ni cifrado), solo el estado para la UI.
+    private Task PublishResultAsync(
+        PendingEnrollSessionResponse pending,
+        bool success,
+        string message,
+        int capturedSamples,
+        CancellationToken cancellationToken) =>
+        PublishAsync(new
+        {
+            type = "fingerprint.enroll.result",
+            success,
+            message,
+            capturedSamples,
+            source = "backend",
+            tenantUserId = pending.TenantUserId,
+            fingerIndex = pending.FingerIndex
+        }, cancellationToken);
+
+    private async Task PublishAsync(object message, CancellationToken cancellationToken)
+    {
+        if (_webSocketServer is null) return;
+        try
+        {
+            await _webSocketServer.BroadcastAsync(message, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "No se pudo notificar el enrolamiento remoto por WebSocket.");
+        }
     }
 
     private async Task<bool> CompleteEnrollmentAsync(

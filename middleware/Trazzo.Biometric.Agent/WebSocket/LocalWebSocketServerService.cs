@@ -36,6 +36,9 @@ public sealed class LocalWebSocketServerService(
     private readonly int _maxPendingOperationsPerClient = Math.Max(1,
         configuration.GetValue("Agent:MaxPendingOperationsPerClient", DefaultMaxPendingOperationsPerClient));
     private bool AllowLocalDevelopmentOrigins => configuration.GetValue("Agent:AllowLocalDevelopmentOrigins", false);
+    // Enrolamiento iniciado por un cliente WS (con userRef propio): solo en desarrollo. En producción la
+    // identidad de la huella la fija la sesión del backend (RemoteEnrollmentService).
+    private bool AllowLocalWebSocketEnrollment => configuration.GetValue("Enrollment:AllowLocalWebSocketEnrollment", false);
     private bool? _monitorLastKnownConnected;
     private DateTimeOffset? _monitorDisconnectedSince;
     private CancellationTokenSource? _serverCts;
@@ -364,7 +367,7 @@ public sealed class LocalWebSocketServerService(
         }
     }
 
-    private async Task BroadcastAsync(object message, CancellationToken cancellationToken)
+    public async Task BroadcastAsync(object message, CancellationToken cancellationToken)
     {
         if (_activeClients.IsEmpty) return;
 
@@ -529,6 +532,13 @@ public sealed class LocalWebSocketServerService(
                 "fingerprint.capture" => await CaptureAndEnqueueAsync(cancellationToken),
                 "fingerprint.identify" => await IdentifyAndEnqueueAsync(cancellationToken),
                 "fingerprint.match" => await MatchAndEnqueueAsync(json, cancellationToken),
+                "fingerprint.enroll.start" when !AllowLocalWebSocketEnrollment => new
+                {
+                    type = "fingerprint.enroll.result",
+                    success = false,
+                    message = "El enrolamiento se inicia desde el panel del tenant (Directorio de personal); "
+                        + "el agente lo toma del servidor y lo completa en este lector."
+                },
                 "fingerprint.enroll.start" => await EnrollAndEnqueueAsync(enrollmentProgressCallback, message.UserRef, message.FingerIndex, cancellationToken),
                 "fingerprint.enroll.cancel" => scannerService.CancelEnrollment(),
                 "queue.status" => new

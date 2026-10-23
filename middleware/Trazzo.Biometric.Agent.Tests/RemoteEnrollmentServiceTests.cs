@@ -89,6 +89,93 @@ public sealed class RemoteEnrollmentServiceTests
     }
 
     [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_EmiteProgresoYResultadoSinTemplatePorWebSocket()
+    {
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(PendingSessionJson()) },
+            new HttpResponseMessage(HttpStatusCode.Created));
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new()
+        {
+            Progress = [FingerprintEnrollProgress.Create(1, 3, "Coloque el dedo.")],
+            EnrollResult = SucceededWithEncryptedTemplate()
+        };
+        RecordingWebSocketServer webSocket = new();
+        RemoteEnrollmentService service = CreateService(scanner, httpClient, webSocket);
+
+        await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        JsonElement progress = webSocket.Messages[0];
+        Assert.Equal("fingerprint.enroll.progress", progress.GetProperty("type").GetString());
+        Assert.Equal(1, progress.GetProperty("step").GetInt32());
+        Assert.Equal("backend", progress.GetProperty("source").GetString());
+
+        JsonElement result = webSocket.Messages[^1];
+        Assert.Equal("fingerprint.enroll.result", result.GetProperty("type").GetString());
+        Assert.True(result.GetProperty("success").GetBoolean());
+        Assert.Equal("backend", result.GetProperty("source").GetString());
+        Assert.Equal(42, result.GetProperty("tenantUserId").GetInt64());
+        Assert.Equal(2, result.GetProperty("fingerIndex").GetInt32());
+        // Nunca se difunde material biométrico, ni cifrado.
+        Assert.False(result.TryGetProperty("encryptedRegisteredTemplate", out _));
+        Assert.False(result.TryGetProperty("registeredTemplateBase64", out _));
+    }
+
+    [Fact]
+    public async Task TryProcessPendingEnrollmentAsync_CuandoBackendRechazaCompletar_EmiteResultadoFallido()
+    {
+        SequenceHttpMessageHandler handler = new(
+            new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(PendingSessionJson()) },
+            new HttpResponseMessage(HttpStatusCode.BadRequest));
+        using HttpClient httpClient = new(handler);
+        CountingScannerService scanner = new() { EnrollResult = SucceededWithEncryptedTemplate() };
+        RecordingWebSocketServer webSocket = new();
+        RemoteEnrollmentService service = CreateService(scanner, httpClient, webSocket);
+
+        await service.TryProcessPendingEnrollmentAsync(CancellationToken.None);
+
+        JsonElement result = webSocket.Messages[^1];
+        Assert.Equal("fingerprint.enroll.result", result.GetProperty("type").GetString());
+        Assert.False(result.GetProperty("success").GetBoolean());
+    }
+
+    private static string PendingSessionJson() => JsonSerializer.Serialize(new
+    {
+        enroll_token = "enroll-token",
+        device_id = 10,
+        device_code = "ZK9500-REMOTE",
+        tenant_user_id = 42,
+        finger_index = 2,
+        expires_at = DateTimeOffset.UtcNow.AddMinutes(2)
+    });
+
+    private static FingerprintEnrollResult SucceededWithEncryptedTemplate() => FingerprintEnrollResult.Succeeded(
+        [1, 2, 3],
+        3,
+        capturedSamples: 3,
+        deviceId: "ZK9500-CAPTURED",
+        encryptedTemplate: new EncryptedPayload(
+            Convert.ToBase64String([50, 51]),
+            "aeskey",
+            Convert.ToBase64String(new byte[12]),
+            Convert.ToBase64String(new byte[16])));
+
+    private sealed class RecordingWebSocketServer : IWebSocketServerService
+    {
+        public List<JsonElement> Messages { get; } = [];
+
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task BroadcastAsync(object message, CancellationToken cancellationToken)
+        {
+            Messages.Add(JsonSerializer.SerializeToElement(message, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task TryProcessPendingEnrollmentAsync_WhenBackendErrors_ReturnsFalse()
     {
         SequenceHttpMessageHandler handler = new(
@@ -299,7 +386,8 @@ public sealed class RemoteEnrollmentServiceTests
 
     private static RemoteEnrollmentService CreateService(
         CountingScannerService scanner,
-        HttpClient httpClient)
+        HttpClient httpClient,
+        IWebSocketServerService? webSocketServer = null)
     {
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -317,7 +405,8 @@ public sealed class RemoteEnrollmentServiceTests
             scanner,
             configuration,
             NullLogger<RemoteEnrollmentService>.Instance,
-            httpClient);
+            httpClient,
+            webSocketServer: webSocketServer);
     }
 
     private sealed class CountingScannerService : IBiometricScannerService
@@ -357,7 +446,9 @@ public sealed class RemoteEnrollmentServiceTests
         public string? LastUserReference { get; private set; }
         public int LastFingerIndex { get; private set; }
 
-        public Task<FingerprintEnrollResult> EnrollFingerprintAsync(
+        public IReadOnlyList<FingerprintEnrollProgress> Progress { get; init; } = [];
+
+        public async Task<FingerprintEnrollResult> EnrollFingerprintAsync(
             Func<FingerprintEnrollProgress, CancellationToken, Task> progressCallback,
             CancellationToken cancellationToken,
             string? userReference = null,
@@ -366,7 +457,9 @@ public sealed class RemoteEnrollmentServiceTests
             EnrollCalls++;
             LastUserReference = userReference;
             LastFingerIndex = fingerIndex;
-            return Task.FromResult(EnrollResult);
+            foreach (FingerprintEnrollProgress progress in Progress)
+                await progressCallback(progress, cancellationToken);
+            return EnrollResult;
         }
 
         public FingerprintEnrollResult CancelEnrollment()

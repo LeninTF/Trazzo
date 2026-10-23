@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Contracts;
@@ -261,6 +262,34 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
 
         Assert.Contains("fingerprint.enroll.progress", progress);
         Assert.Contains("fingerprint.enroll.result", result);
+    }
+
+    [Fact]
+    public async Task WebSocket_CuandoEnrolamientoLocalNoEstaPermitido_RechazaSinCapturar()
+    {
+        // En producción el enrolamiento lo inicia el backend (enroll/iniciar) y el agente lo toma por
+        // polling con la identidad de la sesión; un cliente WS no puede fijar a quién pertenece la huella.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        FakeBiometricScannerService scanner = new()
+        {
+            EnrollmentProgress = FingerprintEnrollProgress.Create(1, 3, "Coloque el dedo."),
+            EnrollResult = FingerprintEnrollResult.Failed("No debería llegar a capturar.")
+        };
+        Start(scanner: scanner, allowLocalWebSocketEnrollment: false);
+        using ClientWebSocket client = new();
+        await client.ConnectAsync(new Uri(_wsUrl), cts.Token);
+
+        await client.SendAsync(
+            Encoding.UTF8.GetBytes("""{"type":"fingerprint.enroll.start","userRef":"cualquiera","fingerIndex":1}"""),
+            WebSocketMessageType.Text,
+            true,
+            cts.Token);
+        string response = await ReceiveStringAsync(client, cts.Token);
+
+        using JsonDocument document = JsonDocument.Parse(response);
+        Assert.Equal("fingerprint.enroll.result", document.RootElement.GetProperty("type").GetString());
+        Assert.False(document.RootElement.GetProperty("success").GetBoolean());
+        Assert.Contains("panel", document.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -621,7 +650,8 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
         int deviceMonitorIntervalSeconds = 3,
         FakeBiometricScannerService? scanner = null,
         FakeAgentHealthService? healthService = null,
-        bool allowLocalDevelopmentOrigins = true)
+        bool allowLocalDevelopmentOrigins = true,
+        bool allowLocalWebSocketEnrollment = true)
     {
         // http.sys puede mantener unos instantes el prefijo del test anterior aunque el puerto TCP
         // ya figure libre: si el registro choca, se reintenta con otro puerto.
@@ -636,7 +666,8 @@ public sealed class LocalWebSocketServerServiceTests : IAsyncDisposable
                 ["Agent:WebSocketUrl"] = includeTrailingSlash ? _httpUrl : _httpUrl.TrimEnd('/'),
                 ["Agent:DeviceMonitorIntervalSeconds"] = deviceMonitorIntervalSeconds.ToString(),
                 // La mayoría de tests actúan como herramienta local (ClientWebSocket no envía Origin).
-                ["Agent:AllowLocalDevelopmentOrigins"] = allowLocalDevelopmentOrigins ? "true" : "false"
+                ["Agent:AllowLocalDevelopmentOrigins"] = allowLocalDevelopmentOrigins ? "true" : "false",
+                ["Enrollment:AllowLocalWebSocketEnrollment"] = allowLocalWebSocketEnrollment ? "true" : "false"
             };
 
             if (allowedOrigins is { Length: > 0 })
