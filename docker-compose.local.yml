@@ -31,6 +31,10 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4000}
       - ABANDONED_TRIAL_HOURS=${ABANDONED_TRIAL_HOURS:-1}
       - ABANDONED_TRIAL_CLEANUP_CRON=${ABANDONED_TRIAL_CLEANUP_CRON:-0 0 * * * *}
+      # Clave RSA biometrica persistente entre reinicios (como en prod).
+      - APP_BIOMETRIC_RSA_KEY_FILE=/app/keys/biometric-rsa.pem
+    volumes:
+      - trazzo-backend-keys-local:/app/keys
     # Margen sobre spring.lifecycle.timeout-per-shutdown-phase (30s) antes del SIGKILL.
     stop_grace_period: 40s
     networks:
@@ -111,3 +115,6 @@ services:
 networks:
   trazzo-local-net:
     driver: bridge
+
+volumes:
+  trazzo-backend-keys-local:

@@ -54,6 +54,11 @@ public class StartupConfigValidator {
         if (!isHttps(env.getProperty("mercadopago.back-url"))) {
             problems.add("mercadopago.back-url must be set and start with https://");
         }
+        if (!StringUtils.hasText(env.getProperty("app.biometric.rsa.private-key"))
+                && !StringUtils.hasText(env.getProperty("app.biometric.rsa.key-file"))) {
+            // Sin una clave RSA persistente, cada reinicio deja indescifrables los templates enrolados.
+            problems.add("app.biometric.rsa.private-key or app.biometric.rsa.key-file must be set");
+        }
         return problems;
     }
 

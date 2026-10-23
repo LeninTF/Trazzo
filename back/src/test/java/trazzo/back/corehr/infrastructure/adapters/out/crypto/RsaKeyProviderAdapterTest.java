@@ -1,65 +1,111 @@
 package trazzo.back.corehr.infrastructure.adapters.out.crypto;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.util.HexFormat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RsaKeyProviderAdapterTest {
 
-    private RsaKeyProviderAdapter adapter;
+    private static KeyPair newKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        return generator.generateKeyPair();
+    }
 
-    @BeforeEach
-    void setUp() {
-        adapter = new RsaKeyProviderAdapter();
-        adapter.init();
+    private static String pkcs8Pem(KeyPair pair) {
+        return "-----BEGIN PRIVATE KEY-----\n"
+                + Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(pair.getPrivate().getEncoded())
+                + "\n-----END PRIVATE KEY-----";
+    }
+
+    // kid esperado calculado a mano: "rsa-" + 16 hex de SHA-256 del SubjectPublicKeyInfo.
+    private static String expectedKid(KeyPair pair) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(pair.getPublic().getEncoded());
+        return "rsa-" + HexFormat.of().formatHex(digest).substring(0, 16);
     }
 
     @Test
-    void getCurrentPublicKey_shouldReturnNonNullPem() {
-        var info = adapter.getCurrentPublicKey();
+    void usesTheConfiguredPrivateKeyAndPublishesItsPublicKey() throws Exception {
+        KeyPair pair = newKeyPair();
 
-        assertThat(info.publicKeyPem()).isNotBlank();
-        assertThat(info.publicKeyPem()).startsWith("-----BEGIN PUBLIC KEY-----");
-        assertThat(info.publicKeyPem()).endsWith("-----END PUBLIC KEY-----");
+        var adapter = new RsaKeyProviderAdapter(pkcs8Pem(pair), "", "");
+
+        assertThat(adapter.getPrivateKey().getEncoded()).isEqualTo(pair.getPrivate().getEncoded());
+        String pem = adapter.getCurrentPublicKey().publicKeyPem();
+        assertThat(pem).startsWith("-----BEGIN PUBLIC KEY-----").endsWith("-----END PUBLIC KEY-----");
+        String body = pem.replace("-----BEGIN PUBLIC KEY-----", "").replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
+        assertThat(Base64.getDecoder().decode(body)).isEqualTo(pair.getPublic().getEncoded());
+        assertThat(adapter.getCurrentKid()).isEqualTo(expectedKid(pair));
+        assertThat(adapter.getCurrentPublicKey().kid()).isEqualTo(expectedKid(pair));
     }
 
     @Test
-    void getCurrentPublicKey_shouldReturnKid() {
-        var info = adapter.getCurrentPublicKey();
+    void createsTheKeyFileOnFirstStartAndReusesItAfterARestart(@TempDir Path dir) {
+        Path keyFile = dir.resolve("keys").resolve("biometric-rsa.pem");
 
-        assertThat(info.kid()).isNotBlank();
-        assertThat(info.kid()).startsWith("key-");
+        var firstStart = new RsaKeyProviderAdapter("", keyFile.toString(), "");
+        var afterRestart = new RsaKeyProviderAdapter("", keyFile.toString(), "");
+
+        assertThat(keyFile).exists();
+        assertThat(afterRestart.getCurrentKid()).isEqualTo(firstStart.getCurrentKid());
+        assertThat(afterRestart.getPrivateKey().getEncoded()).isEqualTo(firstStart.getPrivateKey().getEncoded());
     }
 
     @Test
-    void getPrivateKey_shouldReturnNonNull() {
-        assertThat(adapter.getPrivateKey()).isNotNull();
+    void offersPreviousKeysForDecryptionAfterTheCurrentOne() throws Exception {
+        KeyPair current = newKeyPair();
+        KeyPair previous = newKeyPair();
+        String previousBase64Der = Base64.getEncoder().encodeToString(previous.getPrivate().getEncoded());
+
+        var adapter = new RsaKeyProviderAdapter(pkcs8Pem(current), "", previousBase64Der);
+
+        assertThat(adapter.getDecryptionKeys()).hasSize(2);
+        assertThat(adapter.getDecryptionKeys().get(0).getEncoded()).isEqualTo(current.getPrivate().getEncoded());
+        assertThat(adapter.getDecryptionKeys().get(1).getEncoded()).isEqualTo(previous.getPrivate().getEncoded());
     }
 
     @Test
-    void getCurrentKid_shouldMatchPublicKeyKid() {
-        var info = adapter.getCurrentPublicKey();
-        var kid = adapter.getCurrentKid();
+    void acceptsAPemWithEscapedNewlinesAsWrittenInAnEnvFile() throws Exception {
+        KeyPair pair = newKeyPair();
 
-        assertThat(kid).isEqualTo(info.kid());
+        var adapter = new RsaKeyProviderAdapter(pkcs8Pem(pair).replace("\n", "\\n"), "", "");
+
+        assertThat(adapter.getCurrentKid()).isEqualTo(expectedKid(pair));
     }
 
     @Test
-    void init_shouldGenerateUniqueKidEachTime() throws Exception {
-        var adapter2 = new RsaKeyProviderAdapter();
-        Thread.sleep(1100);
-        adapter2.init();
-
-        assertThat(adapter.getCurrentKid()).isNotEqualTo(adapter2.getCurrentKid());
+    void anInvalidPrivateKeyFailsNamingTheProperty() {
+        assertThatThrownBy(() -> new RsaKeyProviderAdapter("no-es-una-clave", "", ""))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.biometric.rsa.private-key");
     }
 
     @Test
-    void getCurrentPublicKey_shouldReturnConsistentData() {
-        var info1 = adapter.getCurrentPublicKey();
-        var info2 = adapter.getCurrentPublicKey();
+    void anUnreadableKeyFileFailsNamingTheProperty(@TempDir Path dir) throws Exception {
+        Path keyFile = dir.resolve("biometric-rsa.pem");
+        Files.writeString(keyFile, "contenido roto");
 
-        assertThat(info1.publicKeyPem()).isEqualTo(info2.publicKeyPem());
-        assertThat(info1.kid()).isEqualTo(info2.kid());
+        assertThatThrownBy(() -> new RsaKeyProviderAdapter("", keyFile.toString(), ""))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("app.biometric.rsa.key-file");
+    }
+
+    @Test
+    void withoutConfigurationEachStartUsesADifferentEphemeralKey() {
+        var first = new RsaKeyProviderAdapter("", "", "");
+        var second = new RsaKeyProviderAdapter("", "", "");
+
+        assertThat(first.getCurrentKid()).isNotEqualTo(second.getCurrentKid());
+        assertThat(first.getDecryptionKeys()).hasSize(1);
     }
 }

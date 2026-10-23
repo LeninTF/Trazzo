@@ -36,8 +36,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 6. Crear y usar un usuario sin privilegios (Seguridad)
-RUN groupadd -r trazzo && useradd -r -g trazzo trazzo
+# 6. Crear y usar un usuario sin privilegios (Seguridad). /app/keys guarda la clave RSA biométrica
+#    (APP_BIOMETRIC_RSA_KEY_FILE); compose monta ahí un volumen que hereda este dueño la primera vez.
+RUN groupadd -r trazzo && useradd -r -g trazzo trazzo \
+    && mkdir -p /app/keys && chown trazzo:trazzo /app/keys && chmod 700 /app/keys
 
 # 7. Copiar capas: dependencies/ trae lib/*.jar, application/ trae el jar delgado (app.jar)
 COPY --from=builder /build/extracted/dependencies/ ./
