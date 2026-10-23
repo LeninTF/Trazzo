@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import trazzo.back.corehr.application.dto.command.MarkAttendanceCommand;
 import trazzo.back.corehr.application.dto.command.SyncAttendanceBatchItemCommand;
 import trazzo.back.corehr.application.dto.result.AttendanceResult;
@@ -217,6 +218,30 @@ class SyncAttendanceUseCaseTest {
                         && cmd.deviceCode().equals("DEV-02")
                         && cmd.offlineEventId().equals(200)
         ));
+    }
+
+    // Solo los rechazos de negocio viajan al agente: un error interno no expone su detalle (SQL, restricciones…).
+    @Test
+    void syncBatch_anUnexpectedErrorIsReportedWithoutItsInternalDetail() {
+        var item = buildItem("DEV-01", 301);
+        when(attendanceRepository.existsByOfflineEventIdAndDeviceCode(301, "DEV-01")).thenReturn(false);
+        when(markAttendanceUseCase.mark(any(MarkAttendanceCommand.class))).thenThrow(new DataIntegrityViolationException(
+                "could not execute statement [ERROR: duplicate key value violates unique constraint \"idx_attendances_offline_event_device\"]"));
+
+        var result = useCase.syncBatch(List.of(item), 1L);
+
+        assertEquals("Error interno al registrar el evento", result.itemResults().getFirst().error());
+    }
+
+    @Test
+    void syncBatch_aBusinessRejectionKeepsItsMessage() {
+        var item = buildItem("DEV-01", 302);
+        when(attendanceRepository.existsByOfflineEventIdAndDeviceCode(302, "DEV-01")).thenReturn(false);
+        when(markAttendanceUseCase.mark(any(MarkAttendanceCommand.class))).thenThrow(new IllegalArgumentException("Huella no reconocida"));
+
+        var result = useCase.syncBatch(List.of(item), 1L);
+
+        assertEquals("Huella no reconocida", result.itemResults().getFirst().error());
     }
 
     @Test

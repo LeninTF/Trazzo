@@ -53,10 +53,17 @@ public class SyncAttendanceUseCase {
                         result.id(), result.state(), result.minutesLate(),
                         result.checkIn(), item.offlineEventId()));
                 acceptedCount++;
-            } catch (Exception e) {
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                // Rechazo de negocio (huella no reconocida, ya marcó entrada y salida, dispositivo inactivo…):
+                // el mismo mensaje que devuelve la marcación en vivo.
                 log.warn("Failed to sync event offline_event_id={}, device_code={}: {}",
                         item.offlineEventId(), item.deviceCode(), e.getMessage());
                 itemResults.add(SyncItemResult.failure(e.getMessage(), item.offlineEventId()));
+            } catch (Exception e) {
+                // Un error interno (BD, etc.) no viaja al agente: el detalle queda en el log con el correlation_id.
+                log.error("Unexpected error syncing event offline_event_id={}, device_code={}, correlation_id={}",
+                        item.offlineEventId(), item.deviceCode(), correlationId, e);
+                itemResults.add(SyncItemResult.failure("Error interno al registrar el evento", item.offlineEventId()));
             }
         }
 
