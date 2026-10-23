@@ -97,6 +97,9 @@ public sealed class ZKTecoScannerService(
     // referencia de usuario enrolada. Protegido por _enrolledEngineLock porque DBAdd/DBIdentify
     // operan sobre el mismo _databaseHandle y el mapa se lee/escribe desde varias operaciones.
     private readonly Dictionary<int, string> _fingerIdToUserReference = new();
+    // Índice inverso por (usuario, dedo): al re-enrolar un dedo, su huella anterior debe salir
+    // del motor (DBDel); si no, seguiría identificando a ese usuario hasta reiniciar el servicio.
+    private readonly Dictionary<(string UserReference, int FingerIndex), int> _fingerIdByEnrollment = new();
     private readonly object _enrolledEngineLock = new();
     private int _nextFingerId = 1;
 
@@ -168,6 +171,7 @@ public sealed class ZKTecoScannerService(
         lock (_enrolledEngineLock)
         {
             _fingerIdToUserReference.Clear();
+            _fingerIdByEnrollment.Clear();
             _nextFingerId = 1;
             foreach (Enrollment.EnrolledFingerprint fp in enrolled)
             {
@@ -176,6 +180,7 @@ public sealed class ZKTecoScannerService(
                 if (addResult == 0)
                 {
                     _fingerIdToUserReference[fingerId] = fp.UserReference;
+                    _fingerIdByEnrollment[(fp.UserReference, fp.FingerIndex)] = fingerId;
                     loaded++;
                 }
                 else
@@ -208,11 +213,24 @@ public sealed class ZKTecoScannerService(
 
         lock (_enrolledEngineLock)
         {
+            if (_fingerIdByEnrollment.Remove((userReference, fingerIndex), out int previousFingerId))
+            {
+                _fingerIdToUserReference.Remove(previousFingerId);
+                int delResult = sdk.DBDel(_databaseHandle, previousFingerId);
+                if (delResult != 0)
+                {
+                    logger.LogWarning(
+                        "No se pudo quitar del motor la huella anterior (Usuario={UserRef}, Dedo={FingerIndex}). DBDel={Result}.",
+                        userReference, fingerIndex, delResult);
+                }
+            }
+
             int fingerId = _nextFingerId++;
             int addResult = sdk.DBAdd(_databaseHandle, fingerId, template);
             if (addResult == 0)
             {
                 _fingerIdToUserReference[fingerId] = userReference;
+                _fingerIdByEnrollment[(userReference, fingerIndex)] = fingerId;
                 if (logger.IsEnabled(LogLevel.Information))
                     logger.LogInformation(
                         "Huella agregada al motor de identificación. Usuario={UserRef}, Dedo={FingerIndex}.",

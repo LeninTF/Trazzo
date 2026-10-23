@@ -226,6 +226,38 @@ public sealed class ZKTecoScannerServiceTests
     }
 
     [Fact]
+    public async Task EnrollFingerprintAsync_CuandoReenrolaMismoDedo_EliminaLaHuellaAnteriorDelMotor()
+    {
+        byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();
+        FakeZKTecoNativeSdk sdk = new()
+        {
+            DeviceCount = 1,
+            DeviceHandle = new IntPtr(123),
+            DatabaseHandle = new IntPtr(456),
+            CapturedTemplate = capturedTemplate,
+            CaptureResult = 0,
+            DBAddResult = 0,
+            DBIdentifyResult = 0,
+            DBIdentifyFid = 1,        // el motor devuelve la huella del primer enrolamiento
+            DBIdentifyScore = 90
+        };
+        await using ZKTecoScannerService service = CreateService(
+            sdk,
+            new Dictionary<string, string?> { ["Biometric:Identify:RequireLocalMatch"] = "true" });
+        await service.InitializeAsync(CancellationToken.None);
+
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+        await service.EnrollFingerprintAsync(
+            (_, _) => Task.CompletedTask, CancellationToken.None, userReference: "user-1", fingerIndex: 1);
+
+        Assert.Equal([1, 2], sdk.AddedFingerIds);
+        Assert.Equal([1], sdk.DeletedFingerIds);
+        var result = await service.IdentifyFingerprintAsync(CancellationToken.None);
+        Assert.False(result.Matched);
+    }
+
+    [Fact]
     public async Task IdentifyFingerprintAsync_ConMatchLocal_CuandoNoCoincide_RechazaComoNoReconocida()
     {
         byte[] capturedTemplate = Enumerable.Range(0, 512).Select(v => (byte)(v % 255)).ToArray();

@@ -195,6 +195,14 @@ internal sealed class FakeZKTecoNativeSdk : IZKTecoNativeSdk
         return DBAddResult;
     }
 
+    public List<int> DeletedFingerIds { get; } = [];
+
+    public int DBDel(IntPtr databaseHandle, int fingerId)
+    {
+        DeletedFingerIds.Add(fingerId);
+        return 0;
+    }
+
     // Default -1 = "no identificado" (padrón sin coincidencia). Los tests de match lo configuran.
     public int DBIdentifyResult { get; init; } = -1;
     public int DBIdentifyFid { get; init; }

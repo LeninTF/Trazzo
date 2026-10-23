@@ -73,6 +73,8 @@ public sealed class ZKTecoNativeSdk : IZKTecoNativeSdk
         return InvokeStatic<int>("DBAdd", databaseHandle, fingerId, registeredTemplate);
     }
 
+    public int DBDel(IntPtr databaseHandle, int fingerId) => InvokeStatic<int>("DBDel", databaseHandle, fingerId);
+
     public int DBIdentify(IntPtr databaseHandle, byte[] template, ref int fingerId, ref int score)
     {
         EnsureLoaded();
