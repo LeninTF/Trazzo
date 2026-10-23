@@ -20,6 +20,7 @@ public sealed class AutoUpdateService : BackgroundService
     private readonly TimeSpan _checkInterval;
     private readonly string? _manifestUrl;
     private readonly string _expectedPublisherCn;
+    private readonly IReadOnlyCollection<string> _trustedSignerThumbprints;
     private readonly long _maxMsiBytes;
     private readonly HttpClient _httpClient;
     private readonly ILogger<AutoUpdateService> _logger;
@@ -51,6 +52,10 @@ public sealed class AutoUpdateService : BackgroundService
         _checkInterval = TimeSpan.FromMinutes(intervalMinutes);
         _manifestUrl = configuration["AutoUpdate:ManifestUrl"];
         _expectedPublisherCn = configuration["AutoUpdate:PublisherCommonName"] ?? "Trazzo";
+        _trustedSignerThumbprints = (configuration.GetSection("AutoUpdate:TrustedSignerThumbprints").Get<string[]>()
+                ?? [configuration["AutoUpdate:TrustedSignerThumbprints"] ?? string.Empty])
+            .SelectMany(item => item.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .ToArray();
         _maxMsiBytes = configuration.GetValue("AutoUpdate:MaxMsiBytes", DefaultMaxMsiBytes);
         _delay = delay ?? Task.Delay;
         _getCurrentVersion = getCurrentVersion ?? GetCurrentVersion;
@@ -276,47 +281,48 @@ public sealed class AutoUpdateService : BackgroundService
         return tempPath;
     }
 
-    [ExcludeFromCodeCoverage(Justification = "Requires signed MSI to test end-to-end.")]
-    private bool VerifyAuthenticodePublisher(string filePath, string expectedPublisherCn)
+    private bool VerifyAuthenticodePublisher(string filePath, string expectedPublisherCn) =>
+        IsTrustedInstaller(filePath, expectedPublisherCn, _trustedSignerThumbprints, checkRevocation: true, _logger);
+
+    /// <summary>
+    /// El instalador es confiable si (1) WinVerifyTrust valida su firma Authenticode contra el
+    /// contenido actual, la cadena y la revocación; (2) el CN del firmante es el esperado; y (3) si
+    /// hay AutoUpdate:TrustedSignerThumbprints, la huella del firmante está entre ellas.
+    /// </summary>
+    internal static bool IsTrustedInstaller(
+        string filePath,
+        string expectedPublisherCn,
+        IReadOnlyCollection<string> trustedThumbprints,
+        bool checkRevocation,
+        ILogger logger)
     {
+        if (!AuthenticodeVerifier.HasValidSignature(filePath, checkRevocation))
+        {
+            logger.LogWarning("Auto-Update: la firma Authenticode del instalador no es válida para su contenido.");
+            return false;
+        }
+
         try
         {
-            // X509Certificate.CreateFromSignedFile lee el certificado embebido del Authenticode.
-            // No es suficiente por sí solo (no valida cadena/CRL), pero comprobamos que el CN coincide.
-            // El warning SYSLIB0057 sugiere X509CertificateLoader, que aún no expone equivalente para signed files.
-#pragma warning disable SYSLIB0057
-            X509Certificate certificate = X509Certificate.CreateFromSignedFile(filePath);
-            using X509Certificate2 cert2 = new(certificate);
+#pragma warning disable SYSLIB0057 // X509CertificateLoader no expone la lectura de archivos firmados
+            using X509Certificate2 signer = new(X509Certificate.CreateFromSignedFile(filePath));
 #pragma warning restore SYSLIB0057
 
-            string subjectCn = ExtractCommonName(cert2.Subject);
+            string subjectCn = ExtractCommonName(signer.Subject);
             if (!string.Equals(subjectCn, expectedPublisherCn, StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Auto-Update: Publisher CN='{ActualCn}' no coincide con el esperado '{ExpectedCn}'.",
                     subjectCn, expectedPublisherCn);
                 return false;
             }
 
-            // Validación de cadena y confianza contra el trust store del sistema.
-            using X509Chain chain = new()
+            if (trustedThumbprints.Count > 0
+                && !trustedThumbprints.Any(t => string.Equals(t, signer.Thumbprint, StringComparison.OrdinalIgnoreCase)))
             {
-                ChainPolicy =
-                {
-                    RevocationMode = X509RevocationMode.Online,
-                    RevocationFlag = X509RevocationFlag.ExcludeRoot,
-                    VerificationFlags = X509VerificationFlags.NoFlag
-                }
-            };
-            bool chainOk = chain.Build(cert2);
-            if (!chainOk)
-            {
-                foreach (X509ChainStatus status in chain.ChainStatus)
-                {
-                    _logger.LogWarning(
-                        "Auto-Update: cadena de certificados inválida. {Status}: {Info}",
-                        status.Status, status.StatusInformation);
-                }
+                logger.LogWarning(
+                    "Auto-Update: el certificado firmante {Thumbprint} no está en AutoUpdate:TrustedSignerThumbprints.",
+                    signer.Thumbprint);
                 return false;
             }
 
@@ -324,12 +330,7 @@ public sealed class AutoUpdateService : BackgroundService
         }
         catch (CryptographicException ex)
         {
-            _logger.LogError(ex, "Auto-Update: el archivo no está firmado o la firma es inválida.");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Auto-Update: error al validar la firma Authenticode.");
+            logger.LogError(ex, "Auto-Update: el archivo no está firmado o la firma es inválida.");
             return false;
         }
     }
