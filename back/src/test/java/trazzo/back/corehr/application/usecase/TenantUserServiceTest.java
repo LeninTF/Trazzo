@@ -403,10 +403,11 @@ class TenantUserServiceTest {
         when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("oldPass", "old-encoded")).thenReturn(true);
         when(passwordEncoder.encode("newPass")).thenReturn("new-encoded");
-        when(userRepository.save(any())).thenAnswer(inv -> inv.<User>getArgument(0));
 
         assertDoesNotThrow(() -> service.changePassword(1L, "oldPass", "newPass"));
-        verify(userRepository).save(any());
+        // El usuario ya existe: un INSERT (save) chocaba con users_pkey y el cambio respondía 500.
+        verify(userRepository).updatePassword("uuid-1", "new-encoded");
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -422,7 +423,7 @@ class TenantUserServiceTest {
 
         var ex = assertThrows(IllegalArgumentException.class, () -> service.changePassword(1L, "wrongPass", "newPass"));
         assertEquals("Current password is incorrect", ex.getMessage());
-        verify(userRepository, never()).save(any());
+        verify(userRepository, never()).updatePassword(any(), any());
     }
 
     @Test

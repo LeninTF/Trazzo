@@ -125,6 +125,16 @@ public class UserJdbcRepositoryAdapter implements UserRepositoryPort {
         return user;
     }
 
+    @Override
+    public void updatePassword(String userId, String passwordHash) {
+        jdbc.update("""
+                UPDATE users
+                SET password = ?, must_change_password = false, updated_at = ?
+                WHERE id = ?::uuid
+                """,
+                passwordHash, java.time.LocalDateTime.now(), userId);
+    }
+
     private static MapSqlParameterSource filterParams(String search) {
         return new MapSqlParameterSource()
                 .addValue("search", search, Types.VARCHAR);

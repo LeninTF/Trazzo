@@ -138,12 +138,7 @@ public class TenantUserService implements TenantUserUseCase {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
-        userRepository.save(User.restore(
-                user.getId(), user.getPersonId(), user.getTenantId(), user.getEmail(),
-                user.getPhone(), passwordEncoder.encode(newPassword),
-                user.getRoles(), user.getPermissionCodes(), false,
-                user.getCreatedAt(), LocalDateTime.now(), null
-        ));
+        userRepository.updatePassword(user.getId(), passwordEncoder.encode(newPassword));
     }
 
     @Override

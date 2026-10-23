@@ -21,4 +21,7 @@ public interface UserRepositoryPort {
     long countAll(String search);
     User save(User user);
     User update(User user);
+
+    /** Reemplaza el hash de la contraseña y quita must_change_password (update no toca la contraseña). */
+    void updatePassword(String userId, String passwordHash);
 }
