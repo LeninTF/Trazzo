@@ -4331,6 +4331,9 @@ paths:
         `captured_at_utc` es el instante en UTC; la fecha, el ingreso y la tolerancia se evalúan en la zona
         del negocio (`APP_TIMEZONE`, por defecto `America/Lima`), y `check_in`/`check_out` se devuelven en
         esa hora local. Reenviar la misma captura (mismo instante) devuelve la asistencia sin convertirla en salida.
+
+        **Permisos requeridos:** el token del lector (`deviceToken`, solo con su propio `device_code`) o un
+        usuario con `control-asistencia.operador-asistencia` (o `administrador_tenant`); cualquier otro → 403.
       security:
         - deviceToken: []
         - bearerAuth: []
@@ -4364,7 +4367,7 @@ paths:
         "401":
           description: Token de dispositivo desconocido o revocado.
         "403":
-          description: El `device_code` no es el del token del agente.
+          description: El `device_code` no es el del token del agente, o el usuario no tiene el permiso de operador de asistencia.
 
   /asistencia/sync:
     post:
@@ -4381,6 +4384,9 @@ paths:
         ninguno se registró ni estaba ya registrado, la respuesta es 422 (el agente lo reintenta y, al agotar
         los intentos, lo marca como fallido). Un evento ya procesado (`offline_event_id` + `device_code`) es
         `skipped`.
+
+        **Permisos requeridos:** el token del lector (`deviceToken`, solo con su propio `device_code`) o un
+        usuario con `control-asistencia.operador-asistencia` (o `administrador_tenant`); cualquier otro → 403.
       security:
         - deviceToken: []
         - bearerAuth: []
@@ -4406,7 +4412,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/MarcacionSyncResponse"
         "403":
-          description: Algún `device_code` del lote no es el del token del agente.
+          description: Algún `device_code` del lote no es el del token del agente, o el usuario no tiene el permiso de operador de asistencia.
         "422":
           description: Ningún evento del lote se registró ni estaba ya registrado; `items` dice por qué.
           content:
@@ -6301,6 +6307,9 @@ paths:
 
         Las sesiones viven en la tabla `enroll_session` del tenant: sobreviven a un reinicio y se consumen
         una sola vez.
+
+        **Permisos requeridos:** el token del lector (`deviceToken`, solo con su propio `device_code`) o un
+        usuario con `control-asistencia.operador-asistencia` (o `administrador_tenant`); cualquier otro → 403.
       security:
         - deviceToken: []
         - bearerAuth: []
@@ -6323,7 +6332,7 @@ paths:
         "404":
           description: No existe sesion pendiente para ese dispositivo.
         "403":
-          description: El `device_code` no es el del token del agente.
+          description: El `device_code` no es el del token del agente, o el usuario no tiene el permiso de operador de asistencia.
           content:
             application/json:
               schema:
@@ -6353,6 +6362,9 @@ paths:
         El backend descifra el payload, comprueba que sea un template SourceAFIS y lo vuelve a cifrar con la
         clave de almacenamiento (`APP_BIOMETRIC_STORAGE_KEY`, por defecto `APP_ENCRYPTION_KEY`) antes de
         guardarlo: la huella enrolada no depende de la clave RSA de transporte.
+
+        **Permisos requeridos:** el token del lector (`deviceToken`, solo con su propio `device_code`) o un
+        usuario con `control-asistencia.operador-asistencia` (o `administrador_tenant`); cualquier otro → 403.
       security:
         - deviceToken: []
         - bearerAuth: []
@@ -6380,7 +6392,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         "403":
-          description: El `device_code` no es el del token del agente.
+          description: El `device_code` no es el del token del agente, o el usuario no tiene el permiso de operador de asistencia.
 
   /corehr/biometria/{id}:
     parameters:

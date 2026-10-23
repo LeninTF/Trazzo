@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +30,7 @@ public class AttendanceSyncController {
     private final SyncAttendanceUseCase syncAttendanceUseCase;
 
     @PostMapping("/marcar")
+    @PreAuthorize(DeviceAgentPrincipal.AGENT_OR_ATTENDANCE_OPERATOR)
     public ResponseEntity<AttendanceResponse> mark(@Valid @RequestBody BiometricIdentifyRequest request) {
         DeviceAgentPrincipal.requireOwnDevice(request.deviceCode());
         var command = new MarkAttendanceCommand(
@@ -45,6 +47,7 @@ public class AttendanceSyncController {
     }
 
     @PostMapping("/sync")
+    @PreAuthorize(DeviceAgentPrincipal.AGENT_OR_ATTENDANCE_OPERATOR)
     public ResponseEntity<MarcacionSyncResponse> sync(@Valid @RequestBody List<BiometricIdentifyRequest> requests) {
         requests.forEach(r -> DeviceAgentPrincipal.requireOwnDevice(r.deviceCode()));
         var commands = requests.stream()

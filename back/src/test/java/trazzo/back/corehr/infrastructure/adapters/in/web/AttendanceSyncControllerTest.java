@@ -2,6 +2,8 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(AttendanceSyncController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@EnableMethodSecurity
 class AttendanceSyncControllerTest {
 
     @Autowired
@@ -68,6 +71,11 @@ class AttendanceSyncControllerTest {
     }
 
 
+    @BeforeEach
+    void actingAsAnAttendanceOperatorByDefault() {
+        actingAsTenantUserWith("control-asistencia.operador-asistencia");
+    }
+
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
@@ -78,6 +86,38 @@ class AttendanceSyncControllerTest {
         var agent = new DeviceAgentPrincipal(UUID.randomUUID(), "tenant_demo", 7L, deviceCode);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 agent, null, List.of(new SimpleGrantedAuthority("ROLE_AGENT"))));
+    }
+
+    private static void actingAsTenantUserWith(String... authorities) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("usuario@demo", null,
+                java.util.Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()));
+    }
+
+    @Test
+    void mark_aTenantUserWithoutTheOperatorPermissionCannotMark() throws Exception {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear");
+
+        mockMvc.perform(post("/asistencia/marcar").contentType(MediaType.APPLICATION_JSON).content(validRequestJson()))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(markAttendanceUseCase);
+    }
+
+    @Test
+    void sync_aTenantUserWithoutTheOperatorPermissionCannotSync() throws Exception {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear");
+
+        mockMvc.perform(post("/asistencia/sync").contentType(MediaType.APPLICATION_JSON).content("[" + validRequestJson() + "]"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(syncAttendanceUseCase);
+    }
+
+    @Test
+    void mark_theTenantAdministratorCanMark() throws Exception {
+        actingAsTenantUserWith("administrador_tenant");
+        when(markAttendanceUseCase.mark(any())).thenReturn(anAttendanceResult());
+
+        mockMvc.perform(post("/asistencia/marcar").contentType(MediaType.APPLICATION_JSON).content(validRequestJson()))
+                .andExpect(status().isOk());
     }
 
     @Test

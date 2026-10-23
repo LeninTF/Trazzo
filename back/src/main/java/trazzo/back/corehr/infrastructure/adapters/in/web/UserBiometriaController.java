@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import trazzo.back.corehr.application.port.in.UserBiometriaUseCase;
 import trazzo.back.corehr.infrastructure.adapters.in.web.dto.*;
@@ -37,6 +38,7 @@ public class UserBiometriaController {
     }
 
     @GetMapping("/enroll/pendiente")
+    @PreAuthorize(DeviceAgentPrincipal.AGENT_OR_ATTENDANCE_OPERATOR)
     public ResponseEntity<PendingEnrollSessionResponse> pendingEnroll(@RequestParam("device_code") String deviceCode) {
         DeviceAgentPrincipal.requireOwnDevice(deviceCode);
         return userBiometriaUseCase.findPendingEnrollSession(deviceCode)
@@ -46,6 +48,7 @@ public class UserBiometriaController {
     }
 
     @PostMapping("/enroll/completar")
+    @PreAuthorize(DeviceAgentPrincipal.AGENT_OR_ATTENDANCE_OPERATOR)
     public ResponseEntity<UserBiometriaResponse> completeEnroll(@Valid @RequestBody CompleteEnrollHttpRequest request) {
         DeviceAgentPrincipal.requireOwnDevice(request.deviceCode());
         var result = enrollService.completeEnroll(

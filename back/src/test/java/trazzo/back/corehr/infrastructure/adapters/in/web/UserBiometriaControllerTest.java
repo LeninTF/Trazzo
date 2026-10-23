@@ -2,6 +2,8 @@ package trazzo.back.corehr.infrastructure.adapters.in.web;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(UserBiometriaController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@EnableMethodSecurity
 class UserBiometriaControllerTest {
 
     @Autowired
@@ -131,6 +134,11 @@ class UserBiometriaControllerTest {
     }
 
 
+    @BeforeEach
+    void actingAsAnAttendanceOperatorByDefault() {
+        actingAsTenantUserWith("control-asistencia.operador-asistencia");
+    }
+
     @AfterEach
     void clearAuthentication() {
         SecurityContextHolder.clearContext();
@@ -141,6 +149,33 @@ class UserBiometriaControllerTest {
         var agent = new DeviceAgentPrincipal(UUID.randomUUID(), "tenant_demo", 7L, deviceCode);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
                 agent, null, List.of(new SimpleGrantedAuthority("ROLE_AGENT"))));
+    }
+
+    private static void actingAsTenantUserWith(String... authorities) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("usuario@demo", null,
+                java.util.Arrays.stream(authorities).map(SimpleGrantedAuthority::new).toList()));
+    }
+
+    @Test
+    void pendingEnroll_aTenantUserWithoutTheOperatorPermissionIsForbidden() throws Exception {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear");
+
+        mockMvc.perform(get("/corehr/biometria/enroll/pendiente").param("device_code", "DVC-001"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(userBiometriaUseCase);
+    }
+
+    @Test
+    void completeEnroll_aTenantUserWithoutTheOperatorPermissionIsForbidden() throws Exception {
+        actingAsTenantUserWith("incidencias.ver-propias", "incidencias.crear");
+
+        mockMvc.perform(post("/corehr/biometria/enroll/completar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"enroll_token": "tok", "encrypted_template_base64": "dGVtcA==", "encrypted_aes_key_base64": "a2V5", "iv_base64": "aXY=", "tag_base64": "dGFn", "finger_index": 2, "device_code": "DVC-001"}
+                                """))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(enrollService);
     }
 
     @Test
