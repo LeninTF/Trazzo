@@ -49,6 +49,31 @@ class SecurityConfigExtraTest {
         });
     }
 
+    // En la app completa los filtros llegan como proxies CGLIB (observabilidad de Spring Modulith): anclar uno en
+    // la clase del otro (addFilterBefore(x, JwtAuthFilter.class)) impedía arrancar con "does not have a registered order".
+    @Test
+    void theChainStartsAndKeepsTheOrderWhenTheFiltersAreCglibProxies() {
+        runner().withBean("proxyAuthFiltersLikeTheApp", org.springframework.beans.factory.config.BeanPostProcessor.class,
+                        () -> new org.springframework.beans.factory.config.BeanPostProcessor() {
+                            @Override
+                            public Object postProcessAfterInitialization(Object bean, String beanName) {
+                                if (!(bean instanceof JwtAuthFilter) && !(bean instanceof DeviceTokenAuthFilter)) {
+                                    return bean;
+                                }
+                                var factory = new org.springframework.aop.framework.ProxyFactory(bean);
+                                factory.setProxyTargetClass(true);
+                                return factory.getProxy();
+                            }
+                        })
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var filters = context.getBean(SecurityFilterChain.class).getFilters();
+                    assertThat(filters.get(indexOf(filters, JwtAuthFilter.class)).getClass()).isNotEqualTo(JwtAuthFilter.class);
+                    assertThat(indexOf(filters, DeviceTokenAuthFilter.class)).isNotNegative()
+                            .isLessThan(indexOf(filters, JwtAuthFilter.class));
+                });
+    }
+
     private static int indexOf(java.util.List<jakarta.servlet.Filter> filters, Class<?> type) {
         for (int i = 0; i < filters.size(); i++) {
             if (type.isInstance(filters.get(i))) {

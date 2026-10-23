@@ -123,9 +123,11 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) -> res.setStatus(401))
             )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            // El token del dispositivo (trzd_) no es un JWT: se resuelve antes y JwtAuthFilter lo deja pasar.
-            .addFilterBefore(deviceTokenAuthFilter, JwtAuthFilter.class);
+            // Mismo punto de la cadena y en este orden (a igual orden se conserva el de inserción): el token del
+            // dispositivo (trzd_) no es un JWT y se resuelve antes. No se ancla en JwtAuthFilter.class: en la app
+            // los filtros llegan como proxies CGLIB y Spring Security no encontraría su orden.
+            .addFilterBefore(deviceTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         if (tenantContextGuard != null) {
             http.addFilterAfter(tenantContextGuard, UsernamePasswordAuthenticationFilter.class);
