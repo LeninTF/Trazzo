@@ -71,11 +71,9 @@ export class IncidentsService {
   getPresignedUrl(
     fileName: string,
     contentType: string,
-    incidentId?: number
+    incidentId: number
   ): Observable<PresignedUrlResponse> {
-    const body = incidentId != null
-      ? { fileName, contentType, incident_id: incidentId }
-      : { fileName, contentType };
+    const body = { fileName, contentType, incident_id: incidentId };
     return this.http.get<PresignedUrlResponse>(`${this.apiBase}/storage/presigned-url`, { params: params(body) });
   }
 

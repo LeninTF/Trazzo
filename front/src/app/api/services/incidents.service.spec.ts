@@ -147,20 +147,13 @@ describe('IncidentsService', () => {
       req.flush(null);
     });
 
-    it('should get presigned URL with required params', () => {
-      service.getPresignedUrl('a.pdf', 'application/pdf').subscribe();
+    it('should get presigned URL for the incident', () => {
+      service.getPresignedUrl('a.pdf', 'application/pdf', 7).subscribe();
       const req = httpMock.expectOne(r => r.url === `${apiBase}/storage/presigned-url` && r.method === 'GET');
       expect(req.request.params.get('fileName')).toBe('a.pdf');
       expect(req.request.params.get('contentType')).toBe('application/pdf');
-      expect(req.request.params.has('incident_id')).toBeFalse();
-      req.flush({ presigned_url: 'https://r2/presigned', object_key: 'evidences/42/a.pdf' });
-    });
-
-    it('should include incident_id when provided', () => {
-      service.getPresignedUrl('a.pdf', 'application/pdf', 7).subscribe();
-      const req = httpMock.expectOne(r => r.url === `${apiBase}/storage/presigned-url`);
       expect(req.request.params.get('incident_id')).toBe('7');
-      req.flush({ presigned_url: 'u', object_key: 'k' });
+      req.flush({ presigned_url: 'https://r2/presigned', object_key: 'evidences/42/7/uuid/a.pdf' });
     });
 
     it('should upload to R2 via PUT', () => {

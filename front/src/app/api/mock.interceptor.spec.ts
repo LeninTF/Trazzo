@@ -1,4 +1,4 @@
-import { HttpRequest, HttpResponse, HttpParams } from '@angular/common/http';
+import { HttpErrorResponse, HttpRequest, HttpResponse, HttpParams } from '@angular/common/http';
 import { of } from 'rxjs';
 import { mockInterceptor, _setTestApiBase } from './mock.interceptor';
 import { mockAttendance, mockMasterUsers } from './mock-data';
@@ -515,27 +515,53 @@ describe('mockInterceptor', () => {
     });
   });
 
-  it('should mock GET /storage/presigned-url with fileName and contentType', (done) => {
+  it('should mock GET /storage/presigned-url for an incident', (done) => {
     const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
-      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf'),
+      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf').set('incident_id', '7'),
     });
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
       expect(r.status).toBe(200);
-      expect(r.body.object_key).toContain('evidences/42/');
+      expect(r.body.object_key).toContain('evidences/42/7/');
       expect(r.body.object_key).toContain('a.pdf');
       expect(r.body.presigned_url).toContain('https://r2.mock.dev/');
       done();
     });
   });
 
-  it('should include incident_id in object_key when provided to presigned-url', (done) => {
+  // Como el backend (AUD-26): incidencia obligatoria, MIME de la lista blanca y solo el nombre del archivo.
+  it('should reject presigned-url without incident_id', (done) => {
     const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
-      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf').set('incident_id', '7'),
+      params: new HttpParams().set('fileName', 'a.pdf').set('contentType', 'application/pdf'),
+    });
+    mockInterceptor(req, next).subscribe({
+      error: (err: HttpErrorResponse) => {
+        expect(err.status).toBe(400);
+        done();
+      },
+    });
+  });
+
+  it('should reject a presigned-url MIME type outside the evidence whitelist', (done) => {
+    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
+      params: new HttpParams().set('fileName', 'setup.exe').set('contentType', 'application/x-msdownload')
+        .set('incident_id', '7'),
+    });
+    mockInterceptor(req, next).subscribe({
+      error: (err: HttpErrorResponse) => {
+        expect(err.status).toBe(400);
+        done();
+      },
+    });
+  });
+
+  it('should keep only the file name in the presigned object_key', (done) => {
+    const req = new HttpRequest('GET', 'https://api.trazzo.pe/api/v1/storage/presigned-url', {
+      params: new HttpParams().set('fileName', '../../x.pdf').set('contentType', 'application/pdf').set('incident_id', '7'),
     });
     mockInterceptor(req, next).subscribe(res => {
       const r = res as HttpResponse<any>;
-      expect(r.body.object_key).toContain('/7/');
+      expect(r.body.object_key).toMatch(/^evidences\/42\/7\/[^/]+\/x\.pdf$/);
       done();
     });
   });

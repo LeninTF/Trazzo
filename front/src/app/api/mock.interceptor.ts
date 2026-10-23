@@ -12,6 +12,7 @@ import {
 } from './mock-data';
 import type { AuthResponse, MessageResponse, SoftDeleteResponse } from './types';
 import { API_BASE_URL } from './services/helpers';
+import { ALLOWED_MIME_TYPES } from '../shared/storage/file-validator';
 
 const MOCK_DELAY = 200;
 
@@ -622,10 +623,16 @@ function handleStoragePresigned(
   _page: number, _size: number, qp: Record<string, string>,
 ): Observable<HttpEvent<unknown>> | null {
   if (u !== '/storage/presigned-url' || method !== 'GET') return null;
-  const fileName = qp['fileName'] ?? 'archivo';
-  const contentType = qp['contentType'] ?? 'application/octet-stream';
+  // Las mismas reglas que el backend (AUD-26): incidencia obligatoria, MIME de evidencia y solo el nombre.
   const incidentId = qp['incident_id'];
-  const objectKey = `evidences/42/${incidentId ? incidentId + '/' : ''}${crypto.randomUUID()}/${fileName}`;
+  if (!incidentId) return _error(400, 'incident_id es obligatorio');
+  const contentType = qp['contentType'] ?? '';
+  if (!ALLOWED_MIME_TYPES.includes(contentType.trim().toLowerCase())) {
+    return _error(400, 'Tipo de archivo no permitido para una evidencia');
+  }
+  const fileName = (qp['fileName'] ?? '').split(/[/\\]/).pop()?.trim() ?? '';
+  if (!fileName || fileName === '.' || fileName === '..') return _error(400, 'Nombre de archivo no válido');
+  const objectKey = `evidences/42/${incidentId}/${crypto.randomUUID()}/${fileName}`;
   return ok({
     presigned_url: `https://r2.mock.dev/${objectKey}?X-Amz-Mock=1&contentType=${encodeURIComponent(contentType)}`,
     object_key: objectKey,

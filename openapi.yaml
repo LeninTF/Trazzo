@@ -5161,17 +5161,18 @@ paths:
         - Almacenamiento
       summary: Obtener presigned URL para subir archivo a Cloudflare R2
       description: |
-        Genera una presigned URL PUT para que el frontend suba archivos
+        Genera una presigned URL PUT para que el frontend suba la evidencia de una incidencia
         directamente a Cloudflare R2 (bucket privado). La URL expira en 15 minutos.
 
-        El `object_key` retornado incorpora el `tenant_id` del usuario autenticado
-        para aislar los objetos por tenant (`evidences/{tenantId}/...`). Si se
-        proporciona `incident_id`, se anida también en la clave.
+        El `object_key` es `evidences/{tenantUserId}/{incidentId}/{uuid}/{fileName}`: `tenantUserId` es
+        el `tenant_user` que la pide y de `fileName` solo se conserva el nombre (`../../x.pdf` → `x.pdf`).
+        `contentType` tiene que estar en la lista blanca de evidencias y la incidencia tiene que ser
+        del solicitante, salvo para un `APROBADOR`.
 
         **Permisos requeridos:** `incidencias.crear` (`administrador_tenant` siempre pasa).
 
         **Flujo:**
-        1. Frontend solicita `GET /storage/presigned-url?fileName=...&contentType=...`
+        1. Frontend solicita `GET /storage/presigned-url?fileName=...&contentType=...&incident_id=...`
         2. Backend genera una presigned URL con un `objectKey` único.
         3. Frontend sube el archivo vía HTTP PUT a la presigned URL.
         4. Frontend usa el `object_key` retornado en `POST /incidentes/{id}/evidencias`.
@@ -5190,14 +5191,14 @@ paths:
           required: true
           schema:
             type: string
-          description: "Tipo MIME del archivo (debe estar en la whitelist)."
+          description: "Tipo MIME del archivo: PDF, PNG, JPEG, DOC, DOCX, MP4 o QuickTime."
           example: "application/pdf"
         - name: incident_id
           in: query
-          required: false
+          required: true
           schema:
             type: integer
-          description: "ID opcional de la incidencia para anidar en el object_key."
+          description: "Incidencia a la que pertenece la evidencia (propia, salvo para un aprobador)."
           example: 42
       responses:
         "200":
@@ -5215,15 +5216,21 @@ paths:
                   object_key:
                     type: string
                     description: "Object key único que debe enviarse a `POST /incidentes/{id}/evidencias` como `file_key`."
-                    example: "evidences/42/uuid/certificado_medico.pdf"
+                    example: "evidences/42/7/uuid/certificado_medico.pdf"
         "400":
-          description: Parámetros inválidos.
+          description: Falta `incident_id`, el nombre de archivo no tiene nombre o el `contentType` no es de evidencia.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         "403":
-          description: Sin permiso `incidencias.crear`.
+          description: Sin `incidencias.crear`, sin `tenant_user` o la incidencia es de otro usuario (y no es aprobador).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: La incidencia no existe.
           content:
             application/json:
               schema:
