@@ -13,7 +13,10 @@ namespace Trazzo.Biometric.Agent.Security;
 public sealed class HybridCryptographyService : ICryptographyService, IDisposable
 {
     // Prefijo de integridad para el cache: si el archivo no lo tiene, fue escrito por un atacante o versión previa.
-    private const string CacheIntegrityMarker = "TRAZZO_KEY_CACHE_V1|";
+    // V2: DPAPI con alcance del usuario del servicio (LocalSystem) y entropía de propósito; los cachés
+    // V1 (LocalMachine, falsificables por cualquier usuario de la PC) se ignoran y se vuelve a descargar.
+    private const string CacheIntegrityMarker = "TRAZZO_KEY_CACHE_V2|";
+    private static readonly byte[] CacheEntropy = Encoding.UTF8.GetBytes("Trazzo.Biometric.Agent.PublicKeyCache.v2");
     // Dato asociado (AAD) de AES-GCM acordado con el backend: debe coincidir exactamente con
     // `updateAAD("biometric-identify")` de MarkAttendanceUseCase/SourceAfisMatchingAdapter.
     private static readonly byte[] BiometricAssociatedData = Encoding.UTF8.GetBytes("biometric-identify");
@@ -28,6 +31,9 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
     private readonly ILogger<HybridCryptographyService> _logger;
     private readonly string _cacheFilePath;
     private readonly TimeSpan _refreshInterval;
+    // Huellas SHA-256 (hex) del SubjectPublicKeyInfo aceptadas (Security:PinnedPublicKeySha256).
+    // Vacío = sin pinning: se acepta la clave que entregue el backend.
+    private readonly HashSet<string> _pinnedPublicKeySha256;
     private RSA? _rsaPublicKey;
     private readonly object _keyLock = new();
     private Timer? _refreshTimer;
@@ -37,7 +43,8 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         Func<CancellationToken, Task<string?>> keyFetcher,
         ILogger<HybridCryptographyService> logger,
         string? cacheFilePath = null,
-        TimeSpan? refreshInterval = null)
+        TimeSpan? refreshInterval = null,
+        IReadOnlyCollection<string>? pinnedPublicKeySha256 = null)
     {
         _keyFetcher = keyFetcher;
         _logger = logger;
@@ -45,12 +52,32 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
             "TrazzoAgent", "public_key.cache");
         _refreshInterval = refreshInterval ?? TimeSpan.FromHours(24);
+        _pinnedPublicKeySha256 = (pinnedPublicKeySha256 ?? [])
+            .Select(NormalizeFingerprint)
+            .Where(fp => fp.Length > 0)
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     public HybridCryptographyService(IConfiguration configuration, ILogger<HybridCryptographyService> logger)
-        : this(BuildHttpFetcher(configuration, logger, SharedKeyFetchClient), logger)
+        : this(
+            BuildHttpFetcher(configuration, logger, SharedKeyFetchClient),
+            logger,
+            pinnedPublicKeySha256: ReadPinnedFingerprints(configuration))
     {
     }
+
+    // Acepta un array JSON o una lista separada por comas (lo que escribe Configure-Agent.ps1).
+    internal static IReadOnlyCollection<string> ReadPinnedFingerprints(IConfiguration configuration)
+    {
+        IConfigurationSection section = configuration.GetSection("Security:PinnedPublicKeySha256");
+        string[] items = section.Get<string[]>() ?? [section.Value ?? string.Empty];
+        return items
+            .SelectMany(item => item.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .ToArray();
+    }
+
+    private static string NormalizeFingerprint(string fingerprint) =>
+        fingerprint.Replace(":", string.Empty).Replace(" ", string.Empty).Trim().ToLowerInvariant();
 
     public bool IsConfigured { get { lock (_keyLock) return _rsaPublicKey is not null; } }
 
@@ -190,6 +217,19 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
                 return;
             }
 
+            if (_pinnedPublicKeySha256.Count > 0)
+            {
+                string fingerprint = Convert.ToHexString(SHA256.HashData(newRsa.ExportSubjectPublicKeyInfo())).ToLowerInvariant();
+                if (!_pinnedPublicKeySha256.Contains(fingerprint))
+                {
+                    _logger.LogError(
+                        "La clave pública RSA (SHA-256 {Fingerprint}) no está en Security:PinnedPublicKeySha256. Se rechaza.",
+                        fingerprint);
+                    newRsa.Dispose();
+                    return;
+                }
+            }
+
             RSA? oldKey;
             lock (_keyLock)
             {
@@ -217,7 +257,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
                 return null;
 
             byte[] protectedBytes = File.ReadAllBytes(_cacheFilePath);
-            byte[] plaintext = UnprotectFromLocalMachine(protectedBytes);
+            byte[] plaintext = UnprotectForService(protectedBytes);
             try
             {
                 string content = Encoding.UTF8.GetString(plaintext);
@@ -255,7 +295,7 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
             byte[] plaintext = Encoding.UTF8.GetBytes(CacheIntegrityMarker + base64Key);
             try
             {
-                byte[] protectedBytes = ProtectForLocalMachine(plaintext);
+                byte[] protectedBytes = ProtectForService(plaintext);
                 File.WriteAllBytes(_cacheFilePath, protectedBytes);
             }
             finally
@@ -269,25 +309,27 @@ public sealed class HybridCryptographyService : ICryptographyService, IDisposabl
         }
     }
 
-    // DPAPI-LocalMachine: solo procesos en esta máquina pueden desencriptar.
+    // DPAPI con alcance CurrentUser: el servicio corre como LocalSystem, así que solo LocalSystem (o un
+    // administrador) puede producir un blob que el servicio acepte. Con LocalMachine cualquier usuario
+    // de la PC podía fabricarlo y plantar su propia clave pública. La entropía liga el blob a este uso.
     // En no-Windows (desarrollo/Linux) el cache se almacena sin cifrar; no aplica en producción (Windows Service).
-    private static byte[] ProtectForLocalMachine(byte[] plaintext)
+    private static byte[] ProtectForService(byte[] plaintext)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
 #pragma warning disable CA1416 // Platform check hecho arriba
-            return ProtectedData.Protect(plaintext, optionalEntropy: null, DataProtectionScope.LocalMachine);
+            return ProtectedData.Protect(plaintext, CacheEntropy, DataProtectionScope.CurrentUser);
 #pragma warning restore CA1416
         }
         return plaintext;
     }
 
-    private static byte[] UnprotectFromLocalMachine(byte[] protectedBytes)
+    private static byte[] UnprotectForService(byte[] protectedBytes)
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
 #pragma warning disable CA1416
-            return ProtectedData.Unprotect(protectedBytes, optionalEntropy: null, DataProtectionScope.LocalMachine);
+            return ProtectedData.Unprotect(protectedBytes, CacheEntropy, DataProtectionScope.CurrentUser);
 #pragma warning restore CA1416
         }
         return protectedBytes;

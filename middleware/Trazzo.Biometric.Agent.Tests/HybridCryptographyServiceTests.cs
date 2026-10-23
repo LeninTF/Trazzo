@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Trazzo.Biometric.Agent.Contracts;
@@ -284,6 +285,108 @@ public sealed class HybridCryptographyServiceTests
                 _ => Task.FromResult<string?>(null),
                 NullLogger<HybridCryptographyService>.Instance,
                 cachePath);
+
+            await service.InitializeAsync(CancellationToken.None);
+
+            Assert.False(service.IsConfigured);
+        }
+        finally
+        {
+            if (File.Exists(cachePath)) File.Delete(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenCacheWasPlantedWithLocalMachineScope_IgnoresIt()
+    {
+        // DPAPI LocalMachine sin secreto: cualquier usuario de la PC puede fabricar este blob con
+        // el marcador correcto y su propia clave pública (para leer luego los templates cifrados).
+        string cachePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.cache");
+        try
+        {
+            byte[] planted = ProtectedData.Protect(
+                Encoding.UTF8.GetBytes("TRAZZO_KEY_CACHE_V1|" + GenerateTestPublicKeyBase64()),
+                optionalEntropy: null,
+                DataProtectionScope.LocalMachine);
+            await File.WriteAllBytesAsync(cachePath, planted);
+
+            using HybridCryptographyService service = new(
+                _ => Task.FromResult<string?>(null),
+                NullLogger<HybridCryptographyService>.Instance,
+                cachePath);
+
+            await service.InitializeAsync(CancellationToken.None);
+
+            Assert.False(service.IsConfigured);
+        }
+        finally
+        {
+            if (File.Exists(cachePath)) File.Delete(cachePath);
+        }
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenPinnedFingerprintDoesNotMatch_RejectsFetchedKey()
+    {
+        string otherKey = GenerateTestPublicKeyBase64();
+        using HybridCryptographyService service = new(
+            _ => Task.FromResult<string?>(GenerateTestPublicKeyBase64()),
+            NullLogger<HybridCryptographyService>.Instance,
+            NoCache(),
+            pinnedPublicKeySha256: [Sha256Hex(otherKey)]);
+
+        await service.InitializeAsync(CancellationToken.None);
+
+        Assert.False(service.IsConfigured);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenPinnedFingerprintMatches_AcceptsFetchedKey()
+    {
+        string key = GenerateTestPublicKeyBase64();
+        using HybridCryptographyService service = new(
+            _ => Task.FromResult<string?>(key),
+            NullLogger<HybridCryptographyService>.Instance,
+            NoCache(),
+            pinnedPublicKeySha256: [Sha256Hex(key).ToUpperInvariant()]);
+
+        await service.InitializeAsync(CancellationToken.None);
+
+        Assert.True(service.IsConfigured);
+    }
+
+    [Theory]
+    [InlineData("Security:PinnedPublicKeySha256:0", "ab:CD,ef ")]
+    [InlineData("Security:PinnedPublicKeySha256", "ab:CD, ef")]
+    public void ReadPinnedFingerprints_AceptaArrayYListaSeparadaPorComas(string key, string value)
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [key] = value })
+            .Build();
+
+        Assert.Equal(["ab:CD", "ef"], HybridCryptographyService.ReadPinnedFingerprints(configuration));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenCachedKeyIsNotPinned_IgnoresIt()
+    {
+        string cachePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.cache");
+        string cachedKey = GenerateTestPublicKeyBase64();
+        try
+        {
+            using (HybridCryptographyService warmup = new(
+                _ => Task.FromResult<string?>(cachedKey),
+                NullLogger<HybridCryptographyService>.Instance,
+                cachePath))
+            {
+                await warmup.InitializeAsync(CancellationToken.None);
+            }
+
+            using HybridCryptographyService service = new(
+                _ => Task.FromResult<string?>(null),
+                NullLogger<HybridCryptographyService>.Instance,
+                cachePath,
+                pinnedPublicKeySha256: [Sha256Hex(GenerateTestPublicKeyBase64())]);
 
             await service.InitializeAsync(CancellationToken.None);
 
@@ -657,4 +760,8 @@ public sealed class HybridCryptographyServiceTests
         using RSA rsa = RSA.Create(2048);
         return Convert.ToBase64String(rsa.ExportSubjectPublicKeyInfo());
     }
+
+    // Huella esperada calculada a mano sobre el SubjectPublicKeyInfo DER (lo que se pinnea).
+    private static string Sha256Hex(string spkiBase64) =>
+        Convert.ToHexString(SHA256.HashData(Convert.FromBase64String(spkiBase64))).ToLowerInvariant();
 }

@@ -42,6 +42,10 @@ param(
 
     [string[]]$AllowedOrigins = @("https://trazzosaas.noahtechperu.com"),
 
+    # Huellas SHA-256 (hex) de la clave publica del backend que el agente acepta; se muestran en la
+    # pantalla "Dispositivos" al generar el token. Vacio = sin pinning.
+    [string[]]$PinnedPublicKeySha256 = @(),
+
     [string]$ServiceName = "TrazzoAgent",
 
     [switch]$SkipAclHardening,
@@ -279,11 +283,21 @@ $json = Get-Content -LiteralPath $resolvedConfigPath -Raw | ConvertFrom-Json
 $agent = Ensure-ObjectProperty -Object $json -Name "Agent"
 $backend = Ensure-ObjectProperty -Object $json -Name "Backend"
 $queue = Ensure-ObjectProperty -Object $json -Name "Queue"
+$security = Ensure-ObjectProperty -Object $json -Name "Security"
 $endpoints = Ensure-ObjectProperty -Object $backend -Name "Endpoints"
 
 $agent.TenantId = $TenantId.ToString()
 $agent.DeviceCode = $DeviceCode
 $agent.AllowedOrigins = @($AllowedOrigins)
+
+if ($PinnedPublicKeySha256.Count -gt 0) {
+    if (-not $security.PSObject.Properties["PinnedPublicKeySha256"]) {
+        $security | Add-Member -MemberType NoteProperty -Name "PinnedPublicKeySha256" -Value @()
+    }
+    # -File entrega "a,b" como un solo string: se separa aqui para guardar un array limpio.
+    $security.PinnedPublicKeySha256 = @($PinnedPublicKeySha256 | ForEach-Object { $_ -split ',' } |
+        ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
 
 $backend.BaseUrl = $BackendBaseUrl.TrimEnd("/")
 Set-EndpointDefault -Endpoints $endpoints -Name "SecurityPublicKey" -Value "/security/public-key"
