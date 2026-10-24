@@ -1,0 +1,14 @@
+# Contexto del build de la imagen del backend: el Dockerfile solo copia .mvn/, mvnw, pom.xml y src/.
+# Sin esto se envia tambien target/ (cientos de MB tras un build local) y lo que haya del IDE.
+target/
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+*.iml
+*.log
+
+# Secretos locales que nunca deben acabar en una capa de la imagen.
+.env
+.env.*
