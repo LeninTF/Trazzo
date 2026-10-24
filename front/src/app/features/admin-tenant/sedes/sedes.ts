@@ -43,7 +43,7 @@ export class Sedes implements OnInit {
   private readonly modalService = inject(ModalService);
   private readonly orgService = inject(OrgService);
 
-  sedes: Sede[] = [];
+  readonly sedes = signal<Sede[]>([]);
 
   ngOnInit(): void {
     this.cargarSedes();
@@ -73,7 +73,7 @@ export class Sedes implements OnInit {
           deptosByArea.set(d.areaId, list);
         }
 
-        this.sedes = branches.content.map(b => {
+        this.sedes.set(branches.content.map(b => {
           const branchAreas = (areasByBranch.get(b.id) ?? []).map(a => ({
             ...a,
             departamentos: deptosByArea.get(a.id) ?? [],
@@ -85,7 +85,7 @@ export class Sedes implements OnInit {
             estado: b.state ? 'activo' : 'inactivo',
             areas: branchAreas,
           };
-        });
+        }));
         this.loading.set(false);
       },
       error: () => {
@@ -96,15 +96,15 @@ export class Sedes implements OnInit {
   }
 
   get totalSedes(): number {
-    return this.sedes.length;
+    return this.sedes().length;
   }
 
   get totalAreas(): number {
-    return this.sedes.reduce((t, s) => t + s.areas.length, 0);
+    return this.sedes().reduce((t, s) => t + s.areas.length, 0);
   }
 
   get totalDepartamentos(): number {
-    return this.sedes.reduce((t, s) =>
+    return this.sedes().reduce((t, s) =>
       t + s.areas.reduce((sub, a) => sub + a.departamentos.length, 0), 0);
   }
 
@@ -115,7 +115,7 @@ export class Sedes implements OnInit {
   sedeIdParaDepto: number = 0;
 
   get areasDeSedeSeleccionada(): Area[] {
-    return this.sedes.find(s => s.id === this.sedeIdParaDepto)?.areas ?? [];
+    return this.sedes().find(s => s.id === this.sedeIdParaDepto)?.areas ?? [];
   }
 
   sedeForm = {
@@ -173,7 +173,7 @@ export class Sedes implements OnInit {
   }
 
   eliminarSede(id: number): void {
-    const sede = this.sedes.find(s => s.id === id);
+    const sede = this.sedes().find(s => s.id === id);
     if (!sede) return;
     this.orgService.deleteBranch(id).subscribe({
       next: () => {
@@ -191,7 +191,7 @@ export class Sedes implements OnInit {
   }
 
   editarArea(sedeId: number, areaId: number): void {
-    const area = this.sedes.find(s => s.id === sedeId)?.areas.find(a => a.id === areaId);
+    const area = this.sedes().find(s => s.id === sedeId)?.areas.find(a => a.id === areaId);
     if (!area) return;
     this.areaEditando = true;
     this.areaForm = { sedeId, id: areaId, nombre: area.nombre, descripcion: area.descripcion };
@@ -241,7 +241,7 @@ export class Sedes implements OnInit {
   }
 
   editarDepartamento(sedeId: number, areaId: number, deptoId: number): void {
-    const area = this.sedes.find(s => s.id === sedeId)?.areas.find(a => a.id === areaId);
+    const area = this.sedes().find(s => s.id === sedeId)?.areas.find(a => a.id === areaId);
     const depto = area?.departamentos.find(d => d.id === deptoId);
     if (!depto) return;
     this.deptoEditando = true;
@@ -290,7 +290,7 @@ export class Sedes implements OnInit {
   }
 
   onSedeChangeForDepto(sedeId: number): void {
-    const sede = this.sedes.find(s => s.id === sedeId);
+    const sede = this.sedes().find(s => s.id === sedeId);
     this.deptoForm.areaId = sede?.areas[0]?.id ?? 0;
   }
 

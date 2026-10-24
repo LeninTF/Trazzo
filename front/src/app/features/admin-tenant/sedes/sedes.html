@@ -51,7 +51,7 @@
       <div class="sedes-cards-grid">
 
         <!-- SEDES DINÁMICAS -->
-        <div *ngFor="let sede of sedes" class="sede-card">
+        <div *ngFor="let sede of sedes()" class="sede-card">
           <div class="sede-card__header">
             <div class="sede-card__icon" style="background: var(--primary-light); color: var(--primary);">
               <i class="bi bi-building"></i>
@@ -234,7 +234,7 @@
           <label class="form-label" for="area-sede">Sede</label>
           <select id="area-sede" class="form-select" [(ngModel)]="areaForm.sedeId" (change)="onSedeChangeForArea()">
             <option [value]="0" disabled>Seleccione una sede</option>
-            <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+            <option *ngFor="let sede of sedes()" [value]="sede.id">{{ sede.nombre }}</option>
           </select>
         </div>
         <div class="form-group">
@@ -271,7 +271,7 @@
           <label class="form-label" for="depto-sede">Sede</label>
           <select id="depto-sede" class="form-select" [(ngModel)]="sedeIdParaDepto" (change)="onSedeChangeForDepto(sedeIdParaDepto)">
             <option [value]="0" disabled>Seleccione una sede</option>
-            <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+            <option *ngFor="let sede of sedes()" [value]="sede.id">{{ sede.nombre }}</option>
           </select>
         </div>
         <div class="form-group">

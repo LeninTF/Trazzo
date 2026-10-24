@@ -1,5 +1,6 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { Sedes } from './sedes';
 import { OrgService } from '../../../api/services/org.service';
 import { ToastService } from '../../../services/toast.service';
@@ -78,11 +79,11 @@ describe('Sedes', () => {
 
   it('should load sedes on init', () => {
     expect(mockOrg.listBranches).toHaveBeenCalled();
-    expect(component.sedes.length).toBe(3);
+    expect(component.sedes().length).toBe(3);
   });
 
   it('should build tree with areas and departamentos', () => {
-    const sede = component.sedes.find(s => s.id === 1)!;
+    const sede = component.sedes().find(s => s.id === 1)!;
     expect(sede.areas.length).toBe(2);
     expect(sede.areas.find(a => a.id === 1)!.departamentos.length).toBe(2);
   });
@@ -100,7 +101,7 @@ describe('Sedes', () => {
   });
 
   it('should compute totalDepartamentosPorSede', () => {
-    const sede = component.sedes.find(s => s.id === 1)!;
+    const sede = component.sedes().find(s => s.id === 1)!;
     expect(component.totalDepartamentosPorSede(sede)).toBe(2);
   });
 
@@ -137,10 +138,10 @@ describe('Sedes', () => {
   });
 
   it('should guardarSede update existing sede', () => {
-    component.editarSede(component.sedes[0]);
+    component.editarSede(component.sedes()[0]);
     component.sedeForm.nombre = 'Sede Editada';
     component.guardarSede();
-    expect(mockOrg.updateBranch).toHaveBeenCalledWith(1, { name: 'Sede Editada', description: component.sedes[0].descripcion });
+    expect(mockOrg.updateBranch).toHaveBeenCalledWith(1, { name: 'Sede Editada', description: component.sedes()[0].descripcion });
   });
 
   it('should handle guardarSede error', () => {
@@ -229,7 +230,7 @@ describe('Sedes', () => {
 
   it('should onSedeChangeForDepto set first area', () => {
     component.onSedeChangeForDepto(1);
-    expect(component.deptoForm.areaId).toBe(component.sedes[0].areas[0].id);
+    expect(component.deptoForm.areaId).toBe(component.sedes()[0].areas[0].id);
   });
 
   it('should onSedeChangeForDepto set 0 if no areas', () => {
@@ -241,5 +242,33 @@ describe('Sedes', () => {
     mockOrg.listBranches.and.returnValue(throwError(() => new Error('fail')));
     component.cargarSedes();
     expect(component.error()).toBe('Error al cargar las sedes');
+  });
+});
+
+// La app corre sin zone.js (angular.json no lo carga) y estos specs sí lo cargan: aquí se prueba como en producción.
+describe('Sedes sin zone.js', () => {
+  it('pinta las sedes que llegan después de la primera vista', async () => {
+    const branches = new Subject<unknown>();
+    const emptyPage = of({ content: [], page: 0, size: 200, total: 0, totalPages: 1 });
+    await TestBed.configureTestingModule({
+      imports: [Sedes],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: OrgService, useValue: { listBranches: () => branches, listAreas: () => emptyPage, listDepartments: () => emptyPage } },
+        { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error', 'info']) },
+        { provide: ModalService, useValue: jasmine.createSpyObj('ModalService', ['show', 'hide']) },
+      ],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(Sedes);
+    await fixture.whenStable();
+
+    branches.next({
+      content: [{ id: 7, name: 'Sede Norte', description: null, state: true, createdAt: '2025-01-01', updatedAt: '2025-01-01' }],
+      page: 0, size: 200, total: 1, totalPages: 1,
+    });
+    branches.complete();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Sede Norte');
   });
 });
