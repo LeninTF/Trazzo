@@ -46,6 +46,8 @@ build/
 ### Security ###
 .env
 .env.local
+# Override de cada servidor (version fijada o rollback, ver DEPLOY.md)
+docker-compose.override.yml
 
 ### Frontend ###
 # Compiled output
