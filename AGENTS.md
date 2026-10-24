@@ -101,7 +101,9 @@ Notas:
   `@authz.isSelf(#id)` para lo que solo puede tocar su dueño.
   `administrador_tenant` pasa siempre.
 - Las autoridades del JWT son `ROLE_<rol>` más los códigos de permiso del
-  usuario. En Java, `TenantAuthorization.currentTenantUserId()` devuelve el
+  usuario. Los permisos del tenant los nombra su administrador, así que
+  `TenantPermissionJdbcAdapter` descarta los que empiezan por `ROLE_`: un
+  tenant no puede darse un rol de Spring (`ROLE_SAAS_ADMIN`, AUD-31). En Java, `TenantAuthorization.currentTenantUserId()` devuelve el
   `tenant_user` de quien llama (`Optional` vacío si no tiene).
 - Asistencia e incidencias muestran solo lo propio (`scope=SELF`) a quien no
   tiene permiso para ver lo de todos; eso lo decide el controlador, no basta
@@ -151,11 +153,13 @@ Flujo de subida y descarga de archivos de evidencia en buckets privados de R2:
   solo el nombre (vacío, `.` o `..` → 400); el `contentType` debe estar en la
   lista blanca (400); quien llama necesita un `tenant_user` (403), la
   incidencia debe existir (404) y ser suya, salvo que sea aprobador (403).
-- **Descarga (proxy backend)**: el backend nunca expone el objectKey ni la URL
-  pública de R2. El `IncidentEvidenceResult.downloadUrl` contiene una ruta
-  relativa `GET /incidentes/{incId}/evidencias/{evId}/descarga` que valida
-  permisos sobre el incidente + evidence_id + tenant y streamea el archivo
-  desde R2 vía `FileStoragePort.downloadFile(objectKey)`. El frontend usa
+- **Descarga (proxy backend)**: los archivos nunca se sirven con una URL de R2.
+  El `IncidentEvidenceResult.downloadUrl` contiene una ruta relativa
+  `GET /incidentes/{incId}/evidencias/{evId}/descarga` que valida permisos
+  sobre el incidente + evidence_id + tenant y streamea el archivo desde R2 vía
+  `FileStoragePort.downloadFile(objectKey)`. El objectKey sí llega al cliente
+  (`object_key` del presign y `file_key` de cada evidencia), pero solo a quien
+  ya puede ver esa incidencia. El frontend usa
   `downloadWithAuth(downloadUrl)` (`src/app/shared/storage/download.ts`), que
   hace `fetch` con `Authorization: Bearer <token>` y construye un Blob link.
 - **Persistencia**: la columna persistida en `incidencia_evidencia` es

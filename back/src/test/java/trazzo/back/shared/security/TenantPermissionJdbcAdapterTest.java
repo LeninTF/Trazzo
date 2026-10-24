@@ -79,6 +79,18 @@ class TenantPermissionJdbcAdapterTest {
     }
 
     @Test
+    void findPermissionCodes_neverTurnsATenantPermissionIntoASpringRole() {
+        TenantContext.set("tenant_acme");
+        var masterUserId = UUID.randomUUID();
+        when(jdbc.queryForList(anyString(), eq(String.class), eq(masterUserId.toString())))
+                .thenReturn(List.of("incidencias.crear", "ROLE_SAAS_ADMIN", "ROLE_AGENT", "administrador_tenant"));
+
+        var codes = adapter.findPermissionCodesByMasterUserId(masterUserId);
+
+        assertThat(codes).containsExactly("incidencias.crear", "administrador_tenant");
+    }
+
+    @Test
     void findPermissionCodes_usesTenantContextSetBeforeQuery() {
         TenantContext.set("tenant_demo");
         var masterUserId = UUID.randomUUID();
