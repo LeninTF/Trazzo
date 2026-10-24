@@ -7,9 +7,9 @@ import { ToastService } from '../../../services/toast.service';
 import { ExportService } from '../../../services/export.service';
 import { ModalService } from '../../../services/modal.service';
 import { ApiService } from '../../../api/services/api.service';
-import type { InvoiceProfile } from '../../../api/types';
+import type { InvoiceProfile, PaymentStatus } from '../../../api/types';
 
-const ESTADO_LABELS: Record<string, string> = {
+const ESTADO_LABELS: Record<PaymentStatus, string> = {
   PENDIENTE: 'Pendiente',
   COMPLETADO: 'Completado',
   FALLIDO: 'Fallido',
@@ -197,7 +197,7 @@ export class Facturas {
     const headers = ['Cliente', 'RUC', 'Comprobante', 'Fecha', 'Monto', 'Estado'];
     const rows = this.items().map(f =>
       [f.clientName, f.clientTaxId, `${f.invoiceSeries}-${f.consecutiveNumber}`,
-        f.createdAt.slice(0, 10), `S/${f.total.toFixed(2)}`, this.estadoLabels[f.paymentStatus] ?? f.paymentStatus]
+        f.createdAt.slice(0, 10), `S/${f.total.toFixed(2)}`, this.estadoLabels[f.paymentStatus]]
     );
     this.exportService.exportCSV(`facturas-${new Date().toISOString().split('T')[0]}.csv`, headers, rows);
     this.toastService.info('CSV exportado correctamente.');

@@ -5,7 +5,7 @@ import { ApiService } from '../../../api/services/api.service';
 import { ExportService } from '../../../services/export.service';
 import { ToastService } from '../../../services/toast.service';
 import { ModalService } from '../../../services/modal.service';
-import type { InvoiceProfile } from '../../../api/types';
+import type { InvoiceProfile, PaymentStatus } from '../../../api/types';
 
 describe('Facturas', () => {
   let component: Facturas;
@@ -20,7 +20,7 @@ describe('Facturas', () => {
     exportInvoicesPdf: jasmine.Spy;
   };
 
-  const mockInvoice = (id: string, paymentStatus: string, total: number, createdAt = '2026-05-10T00:00:00'): InvoiceProfile => ({
+  const mockInvoice = (id: string, paymentStatus: PaymentStatus, total: number, createdAt = '2026-05-10T00:00:00'): InvoiceProfile => ({
     id,
     tenantId: 'tenant-1',
     clientName: 'Cliente Test',

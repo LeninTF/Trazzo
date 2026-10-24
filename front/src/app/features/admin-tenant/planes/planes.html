@@ -133,7 +133,7 @@
                 </p>
                 <span class="estado-badge" [class.estado-pagada]="factura.paymentStatus === 'COMPLETADO'" [class.estado-pendiente]="factura.paymentStatus === 'PENDIENTE'" [class.estado-vencida]="factura.paymentStatus === 'FALLIDO' || factura.paymentStatus === 'REEMBOLSADO'">
                   <span class="estado-dot"></span>
-                  {{ estadoLabels[factura.paymentStatus] ?? factura.paymentStatus }}
+                  {{ estadoLabels[factura.paymentStatus] }}
                 </span>
               </div>
             </div>
@@ -216,7 +216,7 @@
             <span class="detail-label">Estado</span>
             <span class="estado-badge" [class.estado-pagada]="facturaSeleccionada.paymentStatus === 'COMPLETADO'" [class.estado-pendiente]="facturaSeleccionada.paymentStatus === 'PENDIENTE'">
               <span class="estado-dot"></span>
-              {{ estadoLabels[facturaSeleccionada.paymentStatus] ?? facturaSeleccionada.paymentStatus }}
+              {{ estadoLabels[facturaSeleccionada.paymentStatus] }}
             </span>
           </div>
           <div class="detail-field">

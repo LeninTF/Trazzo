@@ -206,6 +206,8 @@ export interface UpdateSaasRolePermissionsRequest {
 // SECCIÓN: FACTURAS
 // ==========================================
 
+export type PaymentStatus = 'PENDIENTE' | 'COMPLETADO' | 'FALLIDO' | 'REEMBOLSADO';
+
 export interface InvoiceProfile {
   id: string;
   tenantId: string | null;
@@ -217,7 +219,7 @@ export interface InvoiceProfile {
   subTotal: number;
   taxAmount: number;
   total: number;
-  paymentStatus: string;
+  paymentStatus: PaymentStatus;
   expirationDate: string | null;
   createdAt: string;
 }

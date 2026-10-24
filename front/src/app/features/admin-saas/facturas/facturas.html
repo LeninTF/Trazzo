@@ -135,7 +135,7 @@
 								[class.badge--yellow]="f.paymentStatus === 'PENDIENTE'"
 								[class.badge--red]="f.paymentStatus === 'FALLIDO' || f.paymentStatus === 'REEMBOLSADO'">
 								<span class="badge__dot"></span>
-								{{ estadoLabels[f.paymentStatus] ?? f.paymentStatus }}
+								{{ estadoLabels[f.paymentStatus] }}
 							</span>
 						</td>
 						<td class="td-actions" data-label="Acciones">
@@ -203,7 +203,7 @@
 								[class.badge--yellow]="f.paymentStatus === 'PENDIENTE'"
 								[class.badge--red]="f.paymentStatus === 'FALLIDO' || f.paymentStatus === 'REEMBOLSADO'">
 								<span class="badge__dot"></span>
-								{{ estadoLabels[f.paymentStatus] ?? f.paymentStatus }}
+								{{ estadoLabels[f.paymentStatus] }}
 							</span>
 						</div>
 					</div>

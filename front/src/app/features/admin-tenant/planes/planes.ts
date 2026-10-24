@@ -4,9 +4,9 @@ import { forkJoin } from 'rxjs';
 import { ToastService } from '../../../services/toast.service';
 import { RedirectService } from '../../../services/redirect.service';
 import { ApiService } from '../../../api/services/api.service';
-import type { SaasPlanResult, InvoiceProfile } from '../../../api/types';
+import type { SaasPlanResult, InvoiceProfile, PaymentStatus } from '../../../api/types';
 
-const ESTADO_LABELS: Record<string, string> = {
+const ESTADO_LABELS: Record<PaymentStatus, string> = {
   PENDIENTE: 'Pendiente',
   COMPLETADO: 'Pagada',
   FALLIDO: 'Fallida',

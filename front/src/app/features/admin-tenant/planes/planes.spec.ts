@@ -4,7 +4,7 @@ import { Planes } from './planes';
 import { ApiService } from '../../../api/services/api.service';
 import { ToastService } from '../../../services/toast.service';
 import { RedirectService } from '../../../services/redirect.service';
-import type { SaasPlanResult, InvoiceProfile } from '../../../api/types';
+import type { SaasPlanResult, InvoiceProfile, PaymentStatus } from '../../../api/types';
 
 describe('Planes (tenant)', () => {
   let component: Planes;
@@ -19,7 +19,7 @@ describe('Planes (tenant)', () => {
     active: true, createdAt: '2026-01-01', features: { max_trabajadores: 100 },
   };
 
-  const mockFactura = (id: string, paymentStatus: string): InvoiceProfile => ({
+  const mockFactura = (id: string, paymentStatus: PaymentStatus): InvoiceProfile => ({
     id, tenantId: 'tenant-1', clientName: 'Cliente Test', clientTaxId: '20123456789',
     invoiceSeries: 'F001', consecutiveNumber: '1', voucherType: 'FACTURA',
     subTotal: 100, taxAmount: 18, total: 118, paymentStatus, expirationDate: null, createdAt: '2026-05-01',
