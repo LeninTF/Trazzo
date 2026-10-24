@@ -31,7 +31,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Operaciones repetidas | Captura, identificación y enrolamiento pueden repetirse al terminar la operación anterior |
 | CORS WebSocket | Restricción por origen (`Agent:AllowedOrigins`) |
 | Rate-limit WebSocket | Cap por cliente: 256 KB por mensaje, 8 operaciones concurrentes máx. (configurable) |
-| Multi-tenant | `X-Tenant-ID` en cada request al backend (`Agent:TenantId`) |
+| Multi-tenant | El token del dispositivo fija el tenant; el agente envía además `X-Tenant-ID` (`Agent:TenantId`), que el backend no usa |
 | HTTPS obligatorio | Todos los endpoints de backend deben ser HTTPS (loopback permitido para desarrollo) |
 | Guard plaintext template | Templates biométricos nunca viajan sin cifrar salvo `TRAZZO_ALLOW_PLAINTEXT_TEMPLATES=true` |
 | Auto-updater | Descarga MSI desde manifiesto JSON, verifica SHA-256 + firma Authenticode + publisher CN, cap de tamaño (200 MB), instala silencioso |
@@ -52,7 +52,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | `POST /asistencia/sync` | Backend Spring Boot | Recibe array `[{ event_type: "identify", encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc, device_code, offline_event_id?, retry_count? }]` y devuelve aceptación del lote (`202`) |
 | `GET /corehr/biometria` | Backend Spring Boot / Frontend admin | Lista `UserBiometriaListResponse`; no expone templates cifrados |
 | `POST /corehr/biometria/enroll/iniciar` | Backend Spring Boot / Frontend admin | Recibe `{ tenant_user_id, device_id, finger_index }` y devuelve `{ enroll_token, device_id, tenant_user_id, finger_index, expires_at }` |
-| `GET /corehr/biometria/enroll/pendiente` | Backend Spring Boot | Recibe `device_code` por query y `X-Tenant-ID`; devuelve `{ enroll_token, device_id, device_code, tenant_user_id, finger_index, expires_at }` o `204` |
+| `GET /corehr/biometria/enroll/pendiente` | Backend Spring Boot | Recibe por query el `device_code` del token del dispositivo; devuelve `{ enroll_token, device_id, device_code, tenant_user_id, finger_index, expires_at }`, o `404` si no hay sesión pendiente (el agente también acepta `204`) |
 | `POST /corehr/biometria/enroll/completar` | Backend Spring Boot | Recibe `{ enroll_token, device_code, finger_index, encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc }` y devuelve `UserBiometriaProfile` (`201`) |
 | Conexión WebSocket Angular | Frontend | Conectar a `ws://localhost:9001/` y manejar los mensajes JSON del protocolo |
 | Configurar `appsettings.json` por tenant | DevOps / Trazzo | Rellenar `Backend:BaseUrl`, `Agent:TenantId`, `Agent:DeviceCode` y `Queue:AgentTokenProtected` con `Configure-Agent.ps1` |
@@ -226,7 +226,7 @@ Notas:
 
 El path local `fingerprint.match` compara la captura contra los templates recibidos usando el score de `ZKFinger DBMatch` (mayor = más parecido). Acepta la **mejor** coincidencia que supere `Biometric:Match:MinScore` (default **50**). Subir el umbral reduce falsos positivos (menor FAR); bajarlo reduce rechazos de la persona correcta (menor FRR). Calibrar con hardware observando el score en el log `DBMatch contra template índice`.
 
-> El matching 1:N por institución (padrón completo del tenant) es responsabilidad del backend en `POST /asistencia/marcar` (aislado por `X-Tenant-ID`). El path local es para verificación puntual/diagnóstico.
+> El matching 1:N por institución (padrón completo del tenant) es responsabilidad del backend en `POST /asistencia/marcar` (aislado por el tenant del token del dispositivo). El path local es para verificación puntual/diagnóstico.
 
 ### Dos formatos de template: ZKFinger (local) y SourceAFIS (backend)
 
