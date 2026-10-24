@@ -1,7 +1,13 @@
 # Uso: docker compose --env-file .env.local -f docker-compose.local.yml up -d --build
 # --env-file es necesario para la interpolacion ${VAR} de este fichero (compose solo lee
-# .env por defecto); env_file: de cada servicio inyecta .env.local dentro del contenedor.
+# .env por defecto) y para resolver las variables del backend, que se listan una a una.
 # Plantilla de variables: .env.local.example
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   trazzo-backend:
     # 1. build para compilar localmente
@@ -12,12 +18,9 @@ services:
     # 2. Exponemos el puerto para que el frontend local pueda hablarle
     ports:
       - "8080:8080"
-    # Inyecta TODAS las variables necesarias (.env.local) en el entorno del contenedor.
-    # application.properties / application-local.properties referencian cada una via ${VAR}
-    # para que Spring las levante. Las variables que requieren override del host de compose
-    # (p.ej. DB_URL apuntando a postgres-local en vez de localhost) se redefinen abajo.
-    env_file:
-      - .env.local
+    # Lista explicita (no env_file): el contenedor no recibe el resto de .env.local, como la contrasena
+    # del superusuario. Las claves sin valor se toman de .env.local si estan definidas; si no, rige el
+    # default de application-local.properties / application.properties.
     environment:
       - SPRING_PROFILES_ACTIVE=local
       - TZ=UTC
@@ -33,12 +36,39 @@ services:
       - ABANDONED_TRIAL_CLEANUP_CRON=${ABANDONED_TRIAL_CLEANUP_CRON:-0 0 * * * *}
       # Clave RSA biometrica persistente entre reinicios (como en prod).
       - APP_BIOMETRIC_RSA_KEY_FILE=/app/keys/biometric-rsa.pem
+      - APP_BIOMETRIC_RSA_PRIVATE_KEY
+      - APP_BIOMETRIC_RSA_PREVIOUS_KEYS
+      - APP_BIOMETRIC_STORAGE_KEY
+      - APP_JWT_SECRET
+      - APP_ENCRYPTION_KEY
+      - APP_TIMEZONE
+      - DB_POOL_MAX
+      - TENANT_MIGRATIONS_FAIL_ON_ERROR
+      - MERCADOPAGO_REQUIRED
+      - MERCADOPAGO_USE_SANDBOX
+      - MERCADOPAGO_BACK_URL
+      - CLOUDFLARE_R2_ENDPOINT
+      - CLOUDFLARE_R2_ACCESS_KEY_ID
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY
+      - CLOUDFLARE_R2_BUCKET_NAME
+      - CLOUDFLARE_R2_REGION
+      - CLOUDFLARE_R2_PUBLIC_URL
+      - RESEND_API_KEY
+      - RESEND_FROM_EMAIL
+      - REQUESTS_NOTIFICATION_EMAIL
+      - TRAZZO_SEED_ADMIN_EMAIL
+      - TRAZZO_SEED_ADMIN_PASSWORD
+      - TRAZZO_SEED_TENANT_DEMO_EMAIL
+      - TRAZZO_SEED_TENANT_DEMO_PASSWORD
+      - TRAZZO_SEED_TENANT_USUARIO_EMAIL
+      - TRAZZO_SEED_TENANT_USUARIO_PASSWORD
     volumes:
       - trazzo-backend-keys-local:/app/keys
     # Margen sobre spring.lifecycle.timeout-per-shutdown-phase (30s) antes del SIGKILL.
     stop_grace_period: 40s
     networks:
       - trazzo-local-net
+    logging: *default-logging
     depends_on:
       postgres-local:
         condition: service_healthy
@@ -61,6 +91,7 @@ services:
       - "4000:8080"
     networks:
       - trazzo-local-net
+    logging: *default-logging
     depends_on:
       trazzo-backend:
         condition: service_healthy
@@ -84,6 +115,7 @@ services:
       - "5433:5432"
     networks:
       - trazzo-local-net
+    logging: *default-logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$${APP_DB_USER}\" -d \"$${APP_DB_NAME}\""]
       interval: 15s
@@ -108,6 +140,7 @@ services:
     command: ["sh", "/init/01-init-master-db.sh"]
     networks:
       - trazzo-local-net
+    logging: *default-logging
     depends_on:
       postgres-local:
         condition: service_healthy

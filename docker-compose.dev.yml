@@ -2,9 +2,15 @@ services:
   postgres-dev:
     image: postgres:15-alpine
     container_name: trazzo-db-dev
+    # 5434: el stack local (docker-compose.local.yml) ya publica Postgres en 5433.
     ports:
-      - "5433:5432"
+      - "5434:5432"
     environment:
       POSTGRES_USER: trazzo_dev
       POSTGRES_PASSWORD: trazzo_dev_pass
       POSTGRES_DB: trazzo_dev_db
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
