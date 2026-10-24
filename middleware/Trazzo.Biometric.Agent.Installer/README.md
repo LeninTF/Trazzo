@@ -155,19 +155,15 @@ Doble clic en el MSI. Si ya hay una versión instalada (igual o anterior) se des
 
 ### Configuración por tenant
 
-Después de instalar, ejecutar el script de provisioning incluido en el MSI. No editar `appsettings.json` a mano salvo emergencia:
+Después de instalar, ejecutar el script de provisioning incluido en el MSI con el comando que muestra el panel al emitir el token del lector (**Dispositivos** → **Emitir token**), en PowerShell como administrador y en `C:\Program Files\Trazzo\BiometricAgent\`. No editar `appsettings.json` a mano salvo emergencia:
 
 ```powershell
-$token = Read-Host "Queue:AgentToken" -AsSecureString
-& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
-  -TenantId "uuid-del-tenant" `
-  -DeviceCode "codigo-del-device-en-corehr" `
-  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-  -AgentTokenSecure $token `
-  -AllowedOrigins "https://app.trazzo.pe"
+.\Configure-Agent.ps1 -TenantId '00000000-0000-0000-0000-000000000000' -DeviceCode 'ZK-C2PRO-00123' -BackendBaseUrl 'https://trazzosaas.noahtechperu.com/api/v1' -PinnedPublicKeySha256 '<huella-sha256-del-panel>' -AgentTokenSecure (Read-Host "AgentToken" -AsSecureString)
 ```
 
-`Configure-Agent.ps1` guarda el JWT en `Queue:AgentTokenProtected` cifrado con DPAPI `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON, endurece ACL para `SYSTEM` y Administradores, y reinicia `TrazzoAgent`.
+`-AllowedOrigins` vale por defecto `https://trazzosaas.noahtechperu.com`; si el front se sirve en otro dominio, se añade `-AllowedOrigins "https://<dominio-del-front>"`.
+
+`Configure-Agent.ps1` guarda el token del dispositivo (`trzd_…`) en `Queue:AgentTokenProtected` cifrado con DPAPI `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON, endurece ACL para `SYSTEM` y Administradores, y reinicia `TrazzoAgent`.
 
 ### Silenciosa (GPO, SCCM, despliegue masivo)
 

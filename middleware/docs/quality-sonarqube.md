@@ -110,7 +110,7 @@ El flujo en CI (`.github/workflows/middleware-ci.yml`) es:
 
 ## Security Hotspots — acciones manuales pendientes en SonarCloud
 
-Una vez que el análisis de SonarCloud se ejecute en el PR o en `master`, se deben marcar los dos hotspots como revisados:
+Una vez que el análisis de SonarCloud se ejecute en el PR o en `main`, se deben marcar los dos hotspots como revisados:
 
 | Hotspot | Regla | Archivo | Acción en SonarCloud |
 |---------|-------|---------|----------------------|

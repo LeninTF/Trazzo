@@ -40,7 +40,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | Instalador visual | Bienvenida → Selección de ruta → Progreso → Finalizar |
 | Imágenes del instalador | Banner 493×58 px y panel 493×312 px personalizados |
 | CI/CD | GitHub Actions: 2 jobs — `build-test-analyze` (push y PR) + `package-msi` (solo push) |
-| Tests | 345 pruebas xUnit sin necesidad de hardware biométrico |
+| Tests | Pruebas xUnit sin necesidad de hardware biométrico |
 | Reporte de inicio | Log completo del estado de todos los módulos al arrancar |
 
 ### Pendiente para funcionamiento al 100%
@@ -56,7 +56,7 @@ El frontend Angular se conecta a ese WebSocket, solicita operaciones biométrica
 | `POST /corehr/biometria/enroll/completar` | Backend Spring Boot | Recibe `{ enroll_token, device_code, finger_index, encrypted_template_base64, encrypted_aes_key_base64, iv_base64, tag_base64, captured_at_utc }` y devuelve `UserBiometriaProfile` (`201`) |
 | Conexión WebSocket Angular | Frontend | Conectar a `ws://localhost:9001/` y manejar los mensajes JSON del protocolo |
 | Configurar `appsettings.json` por tenant | DevOps / Trazzo | Rellenar `Backend:BaseUrl`, `Agent:TenantId`, `Agent:DeviceCode` y `Queue:AgentTokenProtected` con `Configure-Agent.ps1` |
-| Publicar en GitHub Releases | CI/CD | Agregar paso en el workflow para crear Release pública automáticamente en cada push a master. Sin esto el MSI solo es descargable por miembros del repo |
+| Publicar en GitHub Releases | CI/CD | Agregar paso en el workflow para crear Release pública automáticamente en cada push a main. Sin esto el MSI solo es descargable por miembros del repo |
 | Publicar manifiesto de auto-update | Infraestructura | Hostear el JSON de versiones en HTTPS (puede apuntar a GitHub Releases) para que el auto-updater funcione |
 | Firma digital del MSI | Trazzo | Certificado de firma de código para evitar alertas de SmartScreen en Windows |
 | Publicar en GitHub Releases | CI/CD | Falta el paso que sube el MSI con URL pública accesible para los técnicos de los colegios |
@@ -81,7 +81,7 @@ middleware/
 │   │   └── test-websocket.html          # Herramienta de prueba local
 │   ├── Worker.cs                        # Orquestador principal
 │   └── appsettings.json                 # Configuración
-├── Trazzo.Biometric.Agent.Tests/        # 345 pruebas xUnit
+├── Trazzo.Biometric.Agent.Tests/        # Pruebas xUnit
 └── Trazzo.Biometric.Agent.Installer/    # MSI con WiX Toolset v4
     ├── Resources/
     │   ├── banner.bmp                   # Franja superior del instalador (493×58 px)
@@ -272,10 +272,10 @@ Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger 
 
 | Clave | Descripción |
 |---|---|
-| `Agent:TenantId` | UUID del tenant (institución educativa). Se envía como `X-Tenant-ID` en cada request al backend |
+| `Agent:TenantId` | UUID del tenant (institución educativa). Se envía como `X-Tenant-ID` en cada request al backend, que no lo usa: el tenant sale del token del dispositivo |
 | `Agent:DeviceCode` | Código del lector registrado en CoreHR (`device.code`). Debe coincidir con el valor usado por `/corehr/biometria/enroll/pendiente` |
-| `Agent:AllowedOrigins` | Dominios permitidos para el WebSocket, ej. `["https://app.trazzo.pe"]` |
-| `Backend:BaseUrl` | Base del backend, ej. `https://api.trazzo.pe/api/v1` |
+| `Agent:AllowedOrigins` | Dominios permitidos para el WebSocket, ej. `["https://trazzosaas.noahtechperu.com"]` |
+| `Backend:BaseUrl` | Base del backend, ej. `https://trazzosaas.noahtechperu.com/api/v1` |
 | `Backend:Endpoints:SecurityPublicKey` | Ruta `GET /security/public-key` para llave RSA pública |
 | `Backend:Endpoints:AttendanceMark` | Ruta `POST /asistencia/marcar` para marcación biométrica síncrona |
 | `Backend:Endpoints:AttendanceSync` | Ruta `POST /asistencia/sync` para asistencia biométrica offline |
@@ -294,17 +294,13 @@ Los tiempos están alineados con el demo C# oficial del SDK de ZKTeco (ZKFinger 
 
 `Security:BackendPublicKeyUrl` y `Queue:BackendUrl` siguen aceptándose como URLs absolutas legacy, pero para nuevas instalaciones se recomienda centralizar rutas en `Backend:BaseUrl` + `Backend:Endpoints`. **Todos los endpoints deben usar HTTPS**; los que no lo hagan se deshabilitan al arrancar (excepto loopback, permitido para desarrollo local).
 
-Para configurar una instalación sin editar `appsettings.json` manualmente, use prompt seguro para no dejar el token del dispositivo en el historial de consola:
+Para configurar una instalación sin editar `appsettings.json` manualmente se ejecuta el comando que muestra el panel al emitir el token del lector (**Dispositivos** → **Emitir token**), en PowerShell como administrador y en `C:\Program Files\Trazzo\BiometricAgent\`. El token se pide con un prompt seguro para que no quede en el historial de la consola:
 
 ```powershell
-$token = Read-Host "Queue:AgentToken" -AsSecureString
-& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
-  -TenantId "00000000-0000-0000-0000-000000000000" `
-  -DeviceCode "ZK-C2PRO-00123" `
-  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-  -AgentTokenSecure $token `
-  -AllowedOrigins "https://app.trazzo.pe"
+.\Configure-Agent.ps1 -TenantId '00000000-0000-0000-0000-000000000000' -DeviceCode 'ZK-C2PRO-00123' -BackendBaseUrl 'https://trazzosaas.noahtechperu.com/api/v1' -PinnedPublicKeySha256 '<huella-sha256-del-panel>' -AgentTokenSecure (Read-Host "AgentToken" -AsSecureString)
 ```
+
+`-AllowedOrigins` vale por defecto `https://trazzosaas.noahtechperu.com`; si el front se sirve en otro dominio, se añade `-AllowedOrigins "https://<dominio-del-front>"`.
 
 El script guarda el token del dispositivo en `Queue:AgentTokenProtected` usando DPAPI de Windows con alcance `LocalMachine`, limpia `Queue:AgentToken`, crea backup del JSON y endurece ACL del archivo para `SYSTEM` y Administradores.
 
@@ -315,7 +311,7 @@ El auto-updater consume un JSON en `AutoUpdate:ManifestUrl` con este formato:
 ```json
 {
   "version": "1.1.0",
-  "downloadUrl": "https://releases.trazzo.pe/middleware/TrazzoAgent-1.1.0.msi",
+  "downloadUrl": "https://<servidor-de-releases>/TrazzoAgent-1.1.0.msi",
   "sha256": "a3f1c2d4e5..."
 }
 ```
@@ -340,7 +336,7 @@ dotnet build .\Trazzo.Middleware.slnx -c Release
 dotnet test
 ```
 
-Los 345 tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico. En entornos restringidos, los tests de `LocalWebSocketServerServiceTests` pueden fallar al abrir `HttpListener`; ejecutar `dotnet test --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"` valida los que no dependen del listener local.
+Los tests no necesitan hardware. Usan implementaciones falsas (fakes) del SDK biométrico. En entornos restringidos, los tests de `LocalWebSocketServerServiceTests` pueden fallar al abrir `HttpListener`; ejecutar `dotnet test --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"` valida los que no dependen del listener local.
 
 ---
 
@@ -363,13 +359,13 @@ El MSI es **self-contained**: incluye el runtime de .NET 10. La PC del colegio n
 
 ## CI/CD con GitHub Actions
 
-El pipeline `.github/workflows/middleware-ci.yml` se activa automáticamente en push (ramas `master` y `feature/**`) y en pull requests hacia `master`.
+El pipeline `.github/workflows/middleware-ci.yml` se activa automáticamente en push a `main` (si cambia `middleware/**` o el propio workflow) y en pull requests hacia `main`.
 
 ### Jobs
 
 | Job | Trigger | Runner | Descripción |
 |---|---|---|---|
-| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los 345 tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
+| `build-test-analyze` | push y PR | Windows | Compila, ejecuta los tests con cobertura (Coverlet) y envía análisis a SonarCloud. En push también publica el agente self-contained y sube los binarios como artefacto. |
 | `package-msi` | solo push | Windows | Descarga los binarios del job anterior y genera el MSI con WiX v4 (`-p:SkipAgentPublish=true`). No re-publica el agente. |
 
 El job `package-msi` depende de `build-test-analyze` y sólo corre en push, por lo que en pull requests sólo se ejecuta el primer job.
@@ -379,8 +375,8 @@ El job `package-msi` depende de `build-test-analyze` y sólo corre en push, por 
 Actualmente el MSI generado por CI queda como artefacto interno de GitHub Actions — solo accesible para miembros del repositorio. Para que el técnico del colegio pueda descargarlo con un simple link, falta agregar un paso al workflow que publique en **GitHub Releases**:
 
 ```
-Push a master
-  → CI compila y ejecuta 345 tests
+Push a main
+  → CI compila y ejecuta los tests
   → CI genera MSI self-contained
   → CI publica GitHub Release con URL pública   ← pendiente de implementar
        ↓

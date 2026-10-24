@@ -75,7 +75,7 @@ logs/**/*.log
 testem.log
 /typings
 __screenshots__/
-.42c
+.42c/scan/
 
 # System files
 .DS_Store

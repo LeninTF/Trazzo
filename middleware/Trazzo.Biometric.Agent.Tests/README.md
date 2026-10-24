@@ -2,7 +2,7 @@
 
 Suite de pruebas xUnit para el **Trazzo Biometric Agent**. Cubre toda la lógica de negocio sin necesitar hardware real ni base de datos externa.
 
-**345 pruebas**. No requieren lector ZK9500, DLL nativa ni conexión al backend. En entornos restringidos pueden fallar las pruebas de `LocalWebSocketServerServiceTests` que abren `HttpListener`; el resto son unitarias o de integración in-process.
+Se ejecutan con `dotnet test Trazzo.Middleware.slnx` (desde `middleware/`). No requieren lector ZK9500, DLL nativa ni conexión al backend. En entornos restringidos pueden fallar las pruebas de `LocalWebSocketServerServiceTests` que abren `HttpListener`; el resto son unitarias o de integración in-process.
 
 ---
 

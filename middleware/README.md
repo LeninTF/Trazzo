@@ -5,7 +5,7 @@ Documentación completa en cada subcarpeta:
 | README | Contenido |
 |--------|-----------|
 | [Trazzo.Biometric.Agent](./Trazzo.Biometric.Agent/README.md) | Arquitectura, configuración, protocolo WebSocket, seguridad, errores comunes |
-| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (345 pruebas), cobertura, fakes |
+| [Trazzo.Biometric.Agent.Tests](./Trazzo.Biometric.Agent.Tests/README.md) | Tests xUnit (`dotnet test Trazzo.Middleware.slnx`), cobertura, fakes |
 | [Trazzo.Biometric.Agent.Installer](./Trazzo.Biometric.Agent.Installer/README.md) | Generación del MSI con WiX v4, flujo del instalador, imágenes |
 | [Native/x64](./Trazzo.Biometric.Agent/Native/x64/README.md) | Cómo colocar la DLL del SDK ZKTeco |
 | [Dev handoff](./docs/README-dev-handoff.md) | Pendientes de integración: WebSocket, backend real, hardware, despliegue |
@@ -78,16 +78,12 @@ Debe responder:
 
 ### Configurar tenant sin editar JSON
 
-Después de instalar el MSI, configurar el colegio con token protegido:
+Después de instalar el MSI, en el panel del tenant: **Dispositivos** → **Emitir token**. El panel muestra una sola vez el token y el comando de configuración, con el tenant, el lector, el backend y la huella de su clave pública. Se ejecuta en PowerShell como administrador, en `C:\Program Files\Trazzo\BiometricAgent\`:
 
 ```powershell
-$token = Read-Host "Queue:AgentToken" -AsSecureString
-& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
-  -TenantId "uuid-del-tenant" `
-  -DeviceCode "codigo-del-device-en-corehr" `
-  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-  -AgentTokenSecure $token `
-  -AllowedOrigins "https://app.trazzo.pe"
+.\Configure-Agent.ps1 -TenantId '00000000-0000-0000-0000-000000000000' -DeviceCode 'ZK-C2PRO-00123' -BackendBaseUrl 'https://trazzosaas.noahtechperu.com/api/v1' -PinnedPublicKeySha256 '<huella-sha256-del-panel>' -AgentTokenSecure (Read-Host "AgentToken" -AsSecureString)
 ```
+
+`-AllowedOrigins` vale por defecto `https://trazzosaas.noahtechperu.com`; si el front se sirve en otro dominio, se añade `-AllowedOrigins "https://<dominio-del-front>"`.
 
 El script guarda el token del dispositivo (`trzd_…`, pantalla «Dispositivos» del panel) cifrado en `Queue:AgentTokenProtected` usando DPAPI `LocalMachine`; no deja el token en claro en `Queue:AgentToken`.

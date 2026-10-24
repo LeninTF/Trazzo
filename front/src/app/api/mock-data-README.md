@@ -1,6 +1,6 @@
 # Mock Data — `mock-data.ts`
 
-Datos simulados para el interceptor HTTP de desarrollo (`mock.interceptor.ts`) y las pruebas unitarias.
+Datos simulados para el interceptor HTTP mock (`mock.interceptor.ts`) y las pruebas unitarias. El interceptor no está registrado en la app (`main.ts` solo usa `authInterceptor`): lo ejercita `mock.interceptor.spec.ts`, y solo responde en `isDevMode()`.
 
 ## Mocks exportados
 
@@ -22,6 +22,8 @@ Datos simulados para el interceptor HTTP de desarrollo (`mock.interceptor.ts`) y
 | `mockTenantContacts` | `TenantContactProfile[]` | 3 | Contactos del tenant (RRHH, Soporte Técnico, Director). |
 | `mockUserDepartments` | `TenantUserDepartmentProfile[]` | 6 | Asignaciones departamento-usuario. |
 | `mockPublicKey` | `PublicKeyResponse` | 1 | Llave RSA pública mock para `/security/public-key`. |
+| `mockMonthlyClosures` | `MonthlyClosure[]` | 3 | Cierres mensuales (abril, mayo y junio de 2026) con sus URL de Excel y PDF. |
+| `mockMonthlyClosureDetails` | `MonthlyClosureDetail[]` | 4 | Detalle por trabajador del cierre de junio (horas, tardanzas, faltas, horas extra). |
 | `paginate` | `fn` | — | Helper: `paginate(items, page, size)` → `PageResponse<T>`. |
 
 ## Datos internos (no exportados)

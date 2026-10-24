@@ -4,16 +4,19 @@ Este documento resume el estado actual del middleware y lo que falta para cerrar
 
 ## Estado Actual
 
-El middleware ya compila y genera MSI Release. El agente tiene configuradas las 6 rutas del modulo biometrico/asistencia en `appsettings.json`:
+El middleware ya compila y genera MSI Release. El agente tiene configuradas en `appsettings.json` (`Backend:Endpoints`) las 7 rutas del modulo biometrico/asistencia. Las que llama el agente van con `Authorization: Bearer trzd_...`, el token del dispositivo que emite el panel (pantalla "Dispositivos"); el backend solo acepta ese token en las rutas del agente.
 
 | Contrato OpenAPI | Estado middleware |
 |---|---|
+| `GET /security/public-key` | Implementado. Devuelve `{ publicKey, kid }`; con `Security:PinnedPublicKeySha256` el agente rechaza una clave con otra huella. |
 | `POST /asistencia/marcar` | Implementado. `fingerprint.identify` intenta marcacion sincrona primero. |
 | `POST /asistencia/sync` | Implementado. Fallback offline desde cola SQLite. |
-| `GET /corehr/biometria` | Configurado/documentado. Es admin/frontend; el agente no lo consume. |
-| `POST /corehr/biometria/enroll/iniciar` | Configurado/documentado. Es admin/frontend; el agente no lo invoca. |
+| `GET /corehr/biometria` | Configurado/documentado. Es del panel (JWT); el agente no lo consume. |
+| `POST /corehr/biometria/enroll/iniciar` | Configurado/documentado. Es del panel (JWT); el agente no lo invoca. |
 | `GET /corehr/biometria/enroll/pendiente` | Implementado. Polling por `device_code`. |
 | `POST /corehr/biometria/enroll/completar` | Implementado. Envia template enrolado cifrado. |
+
+El cifrado (RSA-OAEP + AES-GCM, `iv` y `tag` separados) es el de la seccion "Criptografia biometrica (normativa)" de `openapi.yaml`. `captured_at_utc` va en UTC y sin offset, porque el backend lo lee como `LocalDateTime`.
 
 Campos enviados por asistencia:
 
@@ -24,10 +27,12 @@ Campos enviados por asistencia:
   "encrypted_aes_key_base64": "...",
   "iv_base64": "...",
   "tag_base64": "...",
-  "captured_at_utc": "2026-07-01T00:00:00.0000000Z",
+  "captured_at_utc": "2026-07-01T00:00:00.000",
   "device_code": "ZK-C2PRO-00123"
 }
 ```
+
+En `/asistencia/sync` el cuerpo es un array de esos objetos, y cada uno lleva ademas `offline_event_id` y `retry_count` (trazabilidad de la cola offline).
 
 Campos enviados por `enroll/completar`:
 
@@ -40,7 +45,7 @@ Campos enviados por `enroll/completar`:
   "encrypted_aes_key_base64": "...",
   "iv_base64": "...",
   "tag_base64": "...",
-  "captured_at_utc": "2026-07-01T00:00:00.0000000Z"
+  "captured_at_utc": "2026-07-01T00:00:00.000"
 }
 ```
 
@@ -48,30 +53,30 @@ Campos enviados por `enroll/completar`:
 
 Estos puntos no bloquean el MSI actual. Son tareas de integración/decisión para cerrar el flujo real con backend, frontend y hardware.
 
-### 1. WebSocket local debe decidir si expone respuesta del backend
+### 1. WebSocket local: respuesta del backend
 
-Hoy el WebSocket local devuelve el resultado de captura del agente (`fingerprint.identify.result`) y el middleware usa el backend solo como exito/fallo HTTP.
+`fingerprint.identify.result` ya dice que paso con la marcacion: `deliveryStatus` es `marked` (el backend la registro), `queued` (quedo en la cola offline) o `not_transmitted` (no se envio, p. ej. sin clave RSA), y `matched`, `matchedUserReference` y `matchScore` dicen si la huella coincidio con una enrolada. El frontend puede distinguir "asistencia registrada" de "solo se capturo la huella".
 
-Pendiente si frontend necesita mostrar datos del backend:
+Pendiente solo si el frontend necesita mostrar datos del backend:
 
 - Parsear la respuesta de `POST /asistencia/marcar` (`AttendanceProfile`).
 - Incluir esa respuesta, o un resumen, en el mensaje WebSocket de `fingerprint.identify`.
-- Definir comportamiento cuando `/asistencia/marcar` falla y el evento queda en cola offline: el frontend debe ver "pendiente de sincronizacion", no asistencia confirmada.
 - Agregar tests para respuesta WebSocket con asistencia confirmada y con fallback offline.
 
-No cambiar esto si el frontend solo necesita saber que la captura fue tomada y el backend maneja la notificacion por sus propios canales.
+No cambiar esto si al frontend le basta `deliveryStatus` y el backend maneja la notificacion por sus propios canales.
 
 ### 2. Validacion con backend real
 
-Probar contra ambiente real/staging:
+Hecho contra el backend real levantado en Docker (stack local), con un agente simulado que cifra como el middleware:
 
-- `GET /security/public-key` devuelve `{ publicKey, kid }`.
-- `POST /asistencia/marcar` acepta payload `identify` y responde `AttendanceProfile`.
-- `POST /asistencia/sync` acepta array y responde `202`.
-- `GET /corehr/biometria/enroll/pendiente?device_code=...` devuelve `204` sin sesion y `200` con sesion.
-- `POST /corehr/biometria/enroll/completar` responde `201` y crea `UserBiometriaProfile`.
-- Backend rechaza correctamente dispositivos inactivos (`device.state = false`).
-- Backend valida `X-Tenant-ID`, token bearer del agente y `device_code`.
+- Emision del token del dispositivo (el backend guarda solo su SHA-256), 401 sin token o con token revocado.
+- `enroll/iniciar` + `enroll/pendiente` + `enroll/completar` con un template SourceAFIS generado en .NET.
+- La clave RSA se conserva al reiniciar el backend.
+- `POST /asistencia/marcar` responde 200 (`PUNTUAL`, `check_in` en hora de Lima) y el reenvio es idempotente.
+- `POST /asistencia/sync` responde 202 con el resultado por item, y 422 si ningun evento del lote se pudo registrar (el agente lo reintenta).
+- El token fija tenant y lector: un `device_code` distinto del del token responde 403.
+
+Falta repetirlo en staging o produccion con el MSI instalado y el lector real.
 
 ### 3. Validacion con hardware real
 
@@ -89,19 +94,15 @@ El WebSocket ya no aplica rate limit artificial entre `fingerprint.capture`, `fi
 
 ### 4. Configuracion por tenant antes de entregar MSI
 
-No es obligatorio editar `appsettings.json` a mano. El publish/MSI incluye `Configure-Agent.ps1`, que actualiza el JSON instalado, crea backup y reinicia el servicio. El JWT no queda en claro: se guarda en `Queue:AgentTokenProtected` cifrado con DPAPI `LocalMachine` y el script limpia `Queue:AgentToken`.
+No es obligatorio editar `appsettings.json` a mano. El publish/MSI incluye `Configure-Agent.ps1`, que actualiza el JSON instalado, crea backup y reinicia el servicio. El token del dispositivo no queda en claro: se guarda en `Queue:AgentTokenProtected` cifrado con DPAPI `LocalMachine` y el script limpia `Queue:AgentToken`.
 
-Ejemplo:
+El panel genera el comando al emitir el token (Dispositivos → Emitir token), con la huella de la clave publica del backend. Se ejecuta en PowerShell como administrador, en `C:\Program Files\Trazzo\BiometricAgent\`:
 
 ```powershell
-$token = Read-Host "Queue:AgentToken" -AsSecureString
-& "C:\Program Files\Trazzo\BiometricAgent\Configure-Agent.ps1" `
-  -TenantId "00000000-0000-0000-0000-000000000000" `
-  -DeviceCode "ZK-C2PRO-00123" `
-  -BackendBaseUrl "https://api.trazzo.pe/api/v1" `
-  -AgentTokenSecure $token `
-  -AllowedOrigins "https://app.trazzo.pe"
+.\Configure-Agent.ps1 -TenantId '00000000-0000-0000-0000-000000000000' -DeviceCode 'ZK-C2PRO-00123' -BackendBaseUrl 'https://trazzosaas.noahtechperu.com/api/v1' -PinnedPublicKeySha256 '<huella-sha256-del-panel>' -AgentTokenSecure (Read-Host "AgentToken" -AsSecureString)
 ```
+
+`-AllowedOrigins` vale por defecto `https://trazzosaas.noahtechperu.com`; para pruebas locales se anade `http://localhost:4200` (ng serve) o `http://localhost:4000` (docker-compose.local.yml).
 
 El resultado esperado en `appsettings.json` es:
 
@@ -110,10 +111,13 @@ El resultado esperado en `appsettings.json` es:
   "Agent": {
     "TenantId": "uuid-del-tenant",
     "DeviceCode": "codigo-del-device-en-corehr",
-    "AllowedOrigins": ["https://app.trazzo.pe"]
+    "AllowedOrigins": ["https://trazzosaas.noahtechperu.com"]
   },
   "Backend": {
-    "BaseUrl": "https://api.trazzo.pe/api/v1"
+    "BaseUrl": "https://trazzosaas.noahtechperu.com/api/v1"
+  },
+  "Security": {
+    "PinnedPublicKeySha256": ["<huella-sha256-del-panel>"]
   },
   "Queue": {
     "AgentToken": "",
@@ -124,7 +128,7 @@ El resultado esperado en `appsettings.json` es:
 
 `Agent:DeviceCode` debe coincidir con `device.code` en CoreHR. Si falta, el agente no debe enviar payloads invalidos al backend.
 
-El script tambien endurece ACL del archivo de configuracion para `SYSTEM` y Administradores. Si se quiere capturar estos valores dentro del instalador visual, falta crear una pantalla custom WiX y una accion custom que escriba el JSON sin exponer el JWT en propiedades/logs MSI.
+El script tambien endurece ACL del archivo de configuracion para `SYSTEM` y Administradores. Si se quiere capturar estos valores dentro del instalador visual, falta crear una pantalla custom WiX y una accion custom que escriba el JSON sin exponer el token en propiedades/logs MSI.
 
 ### 5. Despliegue y actualizaciones
 
@@ -132,18 +136,17 @@ Pendiente de infraestructura/release:
 
 - Publicar MSI en GitHub Releases o storage con URL estable.
 - Publicar manifiesto de auto-update HTTPS.
-- Firmar digitalmente el MSI para reducir alertas de SmartScreen.
-- Definir como se inyecta/configura `appsettings.json` por tenant en instalacion real.
+- Firmar digitalmente el MSI: reduce las alertas de SmartScreen y el auto-update (apagado por defecto, `AutoUpdate:Enabled`) solo instala un MSI con firma Authenticode del publisher esperado.
 
 ### 6. Tests de entorno
 
-La suite tiene 345 tests. En este entorno se verifico:
+```powershell
+dotnet test middleware\Trazzo.Middleware.slnx
+```
 
-- `dotnet build Trazzo.Biometric.Agent.Tests\Trazzo.Biometric.Agent.Tests.csproj --no-restore`: OK.
-- `dotnet test ... --filter "FullyQualifiedName!~LocalWebSocketServerServiceTests"`: 311/311 OK.
-- Los 34 tests restantes son de `LocalWebSocketServerServiceTests` (listener local real).
+La suite corre en serie (`DisableTestParallelization`): un gate estatico compartido (`BiometricSecurityGates.AllowPlaintextTemplateFallback`) hacia fallar tests en paralelo.
 
-Los tests que levantan `HttpListener` pueden fallar en entornos restringidos con:
+Los tests de `LocalWebSocketServerServiceTests` levantan `HttpListener` y pueden fallar en entornos restringidos con:
 
 ```text
 System.Net.HttpListenerException: Controlador no valido.
@@ -151,20 +154,13 @@ System.Net.HttpListenerException: Controlador no valido.
 
 Eso es restriccion del entorno de Windows/runner, no necesariamente bug funcional del middleware. Validar esos tests en una maquina Windows con permisos normales para abrir listener local.
 
-## MSI Actual
+## MSI
 
-El ultimo build local genero:
+El build Release genera:
 
 ```text
 Trazzo.Biometric.Agent.Installer\bin\Release\es-ES\Trazzo.Biometric.Agent.msi
 Trazzo.Biometric.Agent.Installer\bin\Release\en-US\Trazzo.Biometric.Agent.msi
-```
-
-Hashes SHA-256:
-
-```text
-es-ES: A4298480CD4358D396EFB40A72F348CE1FE9CE59CE099E57013A6866FC12C454
-en-US: 5144C298E8840988093AF7CDE2EB9A71DE8D30F055F1E73AEF065334C7D53D74
 ```
 
 Comando:

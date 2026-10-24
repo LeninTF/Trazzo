@@ -1,0 +1,11 @@
+apis:
+  openapi.yaml:
+    alias: trazzo-saas-integrated-api-contr
+  openapi-organization.yaml:
+    alias: trazzo-organization-api
+  openapi-reports.yaml:
+    alias: trazzo-reports-api
+  openapi-saas.yaml:
+    alias: trazzo-saas-api
+  apicontractoAudit.yaml:
+    alias: trazzo-audit-api
