@@ -83,6 +83,11 @@ Notas:
 
 - Backend: sin comentarios innecesarios. Lombok `@Getter`/`@RequiredArgsConstructor`
   en records y servicios. DTOs web como `record` con `@JsonProperty` en snake_case.
+  Excepción heredada: casi todos los DTO de `saasglobal` (incluido el login),
+  `organization` y `reports`, y el `publicKey` de `/security/public-key` que
+  lee el agente, van en camelCase. El front y el agente dependen de esos
+  nombres: no se renombran sin migrarlos a la vez. Los YAML describen los
+  nombres reales.
 - Frontend: signals (`signal()`/`computed()`) en componentes. Imports sólo los
   necesarios del módulo forms si se usa `[(ngModel)]`; aquí se prefiere signal
   binding `(input)` + `signal.set()` para evitar `FormsModule` cuando es viable.
