@@ -44,8 +44,10 @@ info:
   contact:
     name: Equipo Trazzo
 servers:
-  - url: https://api.trazzo.pe/api/v1
-    description: Producción
+  - url: https://trazzosaas.noahtechperu.com/api/v1
+    description: Produccion (la API se sirve bajo /api del frontend)
+  - url: http://localhost:8080/api/v1
+    description: Local (docker-compose.local.yml)
 
 components:
   securitySchemes:

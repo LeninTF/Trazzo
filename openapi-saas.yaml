@@ -25,8 +25,10 @@ info:
   contact:
     name: Equipo Trazzo
 servers:
-  - url: https://api.trazzo.pe/api/v1
-    description: Producción
+  - url: https://trazzosaas.noahtechperu.com/api/v1
+    description: Produccion (la API se sirve bajo /api del frontend)
+  - url: http://localhost:8080/api/v1
+    description: Local (docker-compose.local.yml)
 
 components:
   securitySchemes:
@@ -227,32 +229,6 @@ components:
           type: [string, "null"]
           example: "#1D4ED8"
 
-    UpdateBrandingRequest:
-      type: object
-      properties:
-        logoUrl:
-          type: [string, "null"]
-          format: uri
-        slogan:
-          type: [string, "null"]
-          example: "Conectando personas"
-        primaryColor:
-          type: [string, "null"]
-          example: "#3B82F6"
-        secondaryColor:
-          type: [string, "null"]
-          example: "#1D4ED8"
-
-    ActivateSubscriptionRequest:
-      type: object
-      required: [dateEnd]
-      properties:
-        dateEnd:
-          type: string
-          format: date
-          description: Fecha de fin de la suscripción activa.
-          example: "2027-06-30"
-
     # ── Responses ─────────────────────────────────────────────────────────────
     AuthMeResponse:
       type: object
@@ -340,35 +316,6 @@ components:
           type: string
           format: date-time
 
-    TenantResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: "a1b2c3d4-0000-0000-0000-000000000001"
-        subDomain:
-          type: string
-          example: "mi-empresa"
-        planId:
-          type: integer
-          example: 1
-        holdingId:
-          type: integer
-          example: 1
-        activated:
-          type: boolean
-          example: false
-        activatedAt:
-          type: [string, "null"]
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
     TenantTrialResponse:
       type: object
       properties:
@@ -392,40 +339,6 @@ components:
           type: string
           format: date-time
 
-    SubscriptionResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: "b2c3d4e5-0000-0000-0000-000000000002"
-        planId:
-          type: integer
-          example: 1
-        tenantId:
-          type: string
-          format: uuid
-          example: "a1b2c3d4-0000-0000-0000-000000000001"
-        dateStart:
-          type: string
-          format: date
-          example: "2026-06-27"
-        dateEnd:
-          type: [string, "null"]
-          format: date
-          example: "2027-06-27"
-        status:
-          type: string
-          enum: [TRIAL, ACTIVE, SUSPENDED, CANCELED]
-          example: "TRIAL"
-        purchasePrice:
-          type: number
-          format: double
-          example: 99.00
-        createdAt:
-          type: string
-          format: date-time
-
     ErrorResponse:
       type: object
       properties:
@@ -435,6 +348,443 @@ components:
         status:
           type: integer
           example: 404
+    PlanResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        price:
+          type: number
+        priceAnnual:
+          type: number
+        currency:
+          type: string
+        billingPeriod:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        features:
+          type: object
+          additionalProperties: {}
+    SubmitRequestRequest:
+      type: object
+      required:
+        - type
+        - name
+        - lastName
+        - email
+        - phoneNumber
+        - taxId
+        - companyName
+        - message
+      properties:
+        type:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phoneNumber:
+          type: string
+          minLength: 1
+        taxId:
+          type: string
+          minLength: 1
+        companyName:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+    RequestResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        contact:
+          $ref: '#/components/schemas/RequestContactResult'
+    RequestContactResult:
+      type: object
+      properties:
+        name:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        taxId:
+          type: string
+        companyName:
+          type: string
+    InvoiceResult:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        invoiceSeries:
+          type: string
+        consecutiveNumber:
+          type: string
+        voucherType:
+          type: string
+        clientTaxId:
+          type: string
+        clientName:
+          type: string
+        subTotal:
+          type: number
+        taxAmount:
+          type: number
+        total:
+          type: number
+        paymentStatus:
+          type: string
+        expirationDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+    RequestDetailResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        contact:
+          $ref: '#/components/schemas/RequestContactResult'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestCommentResult'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestRecordResult'
+    RequestCommentResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        comment:
+          type: string
+        authorUserId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RequestRecordResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        status:
+          type: string
+        userId:
+          type: string
+        changeReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ChangeRequestStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          minLength: 1
+        comment:
+          type: string
+    AddRequestCommentRequest:
+      type: object
+      required:
+        - comment
+      properties:
+        comment:
+          type: string
+          minLength: 1
+    SaasRoleResult:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        systemManaged:
+          type: boolean
+    CreateRoleRequest:
+      type: object
+      required:
+        - name
+        - displayName
+      properties:
+        name:
+          type: string
+          minLength: 1
+        displayName:
+          type: string
+          minLength: 1
+        description:
+          type: string
+    UpdateRoleRequest:
+      type: object
+      required:
+        - name
+        - displayName
+      properties:
+        name:
+          type: string
+          minLength: 1
+        displayName:
+          type: string
+          minLength: 1
+        description:
+          type: string
+    UpdateRolePermissionsRequest:
+      type: object
+      required:
+        - permissions
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+    TenantResult:
+      type: object
+      properties:
+        id:
+          type: string
+        subDomain:
+          type: string
+        holdingId:
+          type: integer
+          format: int32
+        holdingName:
+          type: string
+        planId:
+          type: integer
+          format: int32
+        planName:
+          type: string
+        status:
+          type: string
+        activatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    TenantMetricsResult:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int64
+        crecimientoPct:
+          type: number
+        activos:
+          type: integer
+          format: int64
+        porcentajeActivos:
+          type: number
+        nuevos30d:
+          type: integer
+          format: int64
+        nuevosMeta:
+          type: integer
+          format: int32
+        tasaChurnPct:
+          type: number
+        variacionChurnPct:
+          type: number
+    UpdateTenantBrandingRequest:
+      type: object
+      properties:
+        logoUrl:
+          type: string
+        slogan:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+    ShopCheckoutRequest:
+      type: object
+      required:
+        - planId
+        - firstName
+        - lastNamePaterno
+        - lastNameMaterno
+        - documentType
+        - documentNumber
+        - email
+        - phone
+        - ruc
+        - companyName
+        - businessName
+      properties:
+        planId:
+          type: integer
+          format: int32
+        firstName:
+          type: string
+          minLength: 1
+        lastNamePaterno:
+          type: string
+          minLength: 1
+        lastNameMaterno:
+          type: string
+          minLength: 1
+        documentType:
+          type: string
+          minLength: 1
+        documentNumber:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          minLength: 1
+        ruc:
+          type: string
+          minLength: 1
+        companyName:
+          type: string
+          minLength: 1
+        businessName:
+          type: string
+          minLength: 1
+        address:
+          type: string
+        anotherAdmin:
+          type: boolean
+        adminFirstName:
+          type: string
+        adminLastNamePaterno:
+          type: string
+        adminLastNameMaterno:
+          type: string
+        adminDocumentType:
+          type: string
+        adminDocumentNumber:
+          type: string
+        adminEmail:
+          type: string
+        adminPhone:
+          type: string
+    ShopCheckoutResponse:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        subDomain:
+          type: string
+        initPoint:
+          type: string
+    SubscriptionResult:
+      type: object
+      properties:
+        id:
+          type: string
+        tenantId:
+          type: string
+        tenantName:
+          type: string
+        planId:
+          type: integer
+          format: int32
+        planName:
+          type: string
+        dateStart:
+          type: string
+          format: date
+        dateEnd:
+          type: string
+          format: date
+        status:
+          type: string
+        purchasePrice:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    SubscribeRequest:
+      type: object
+      required:
+        - planId
+      properties:
+        planId:
+          type: integer
+          format: int32
+    SubscribeResponse:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+        initPoint:
+          type: string
 
 security:
   - bearerAuth: []
@@ -466,26 +816,6 @@ paths:
   # ----------------------------------------
   # Tenants
   # ----------------------------------------
-  /tenants:
-    get:
-      tags:
-        - Tenants
-      summary: Listar tenants
-      description: |
-        Devuelve todos los tenants no eliminados.
-        **Requiere rol:** `ADMIN_SAAS`
-      responses:
-        "200":
-          description: Lista de tenants.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TenantResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
   /tenants/trial:
     post:
       tags:
@@ -525,293 +855,6 @@ paths:
         "403":
           description: Sin permiso para crear tenants.
 
-  /tenants/{id}:
-    get:
-      tags:
-        - Tenants
-      summary: Obtener tenant por ID
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-      responses:
-        "200":
-          description: Datos del tenant.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-        "404":
-          description: Tenant no encontrado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-    delete:
-      tags:
-        - Tenants
-      summary: Eliminar tenant (baja lógica)
-      description: |
-        Marca el tenant como eliminado (`deleted_at = NOW()`).
-        No elimina el registro físicamente.
-        **Requiere rol:** `ADMIN_SAAS`
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-      responses:
-        "204":
-          description: Tenant eliminado exitosamente.
-        "404":
-          description: Tenant no encontrado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /tenants/{id}/activate:
-    put:
-      tags:
-        - Tenants
-      summary: Activar tenant
-      description: |
-        Activa un tenant en estado TRIAL. Requiere que el tenant
-        tenga configuración de base de datos asignada (`settings`).
-        **Requiere rol:** `ADMIN_SAAS`
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-      responses:
-        "200":
-          description: Tenant activado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-        "400":
-          description: Tenant ya activado o sin configuración de DB.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "404":
-          description: Tenant no encontrado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /tenants/{id}/branding:
-    put:
-      tags:
-        - Tenants
-      summary: Actualizar branding del tenant
-      description: Actualiza logo, slogan y colores corporativos del tenant.
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateBrandingRequest'
-      responses:
-        "200":
-          description: Branding actualizado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TenantResponse'
-        "404":
-          description: Tenant no encontrado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /tenants/{id}/subscriptions:
-    get:
-      tags:
-        - Subscriptions
-      summary: Listar suscripciones de un tenant
-      description: Devuelve el historial de suscripciones de un tenant específico.
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-      responses:
-        "200":
-          description: Lista de suscripciones del tenant.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SubscriptionResponse'
-        "404":
-          description: Tenant no encontrado.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  # ----------------------------------------
-  # Subscriptions
-  # ----------------------------------------
-  /subscriptions:
-    get:
-      tags:
-        - Subscriptions
-      summary: Listar todas las suscripciones
-      description: |
-        Devuelve todas las suscripciones registradas en `master_db`.
-        **Requiere rol:** `ADMIN_SAAS`
-      responses:
-        "200":
-          description: Lista de suscripciones.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SubscriptionResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /subscriptions/{id}:
-    get:
-      tags:
-        - Subscriptions
-      summary: Obtener suscripción por ID
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
-      responses:
-        "200":
-          description: Datos de la suscripción.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionResponse'
-        "404":
-          description: Suscripción no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /subscriptions/{id}/activate:
-    put:
-      tags:
-        - Subscriptions
-      summary: Activar suscripción
-      description: |
-        Transiciona la suscripción de TRIAL → ACTIVE.
-        Requiere fecha de fin (`dateEnd`).
-        **Requiere rol:** `ADMIN_SAAS`
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ActivateSubscriptionRequest'
-      responses:
-        "200":
-          description: Suscripción activada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionResponse'
-        "400":
-          description: La suscripción no está en estado TRIAL.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "404":
-          description: Suscripción no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /subscriptions/{id}/suspend:
-    put:
-      tags:
-        - Subscriptions
-      summary: Suspender suscripción
-      description: |
-        Transiciona la suscripción de ACTIVE → SUSPENDED.
-        El tenant pierde acceso hasta que sea reactivado.
-        **Requiere rol:** `ADMIN_SAAS`
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
-      responses:
-        "200":
-          description: Suscripción suspendida.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionResponse'
-        "400":
-          description: La suscripción no está en estado ACTIVE.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "404":
-          description: Suscripción no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  /subscriptions/{id}/cancel:
-    put:
-      tags:
-        - Subscriptions
-      summary: Cancelar suscripción
-      description: |
-        Transiciona la suscripción a CANCELED (estado terminal).
-        No puede revertirse.
-        **Requiere rol:** `ADMIN_SAAS`
-      parameters:
-        - $ref: '#/components/parameters/SubscriptionId'
-      responses:
-        "200":
-          description: Suscripción cancelada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubscriptionResponse'
-        "400":
-          description: La suscripción ya está cancelada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "404":
-          description: Suscripción no encontrada.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: Token JWT inválido o expirado.
-
-  # ----------------------------------------
-  # Holdings
-  # ----------------------------------------
   /saas/holdings:
     get:
       tags:
@@ -1326,3 +1369,1329 @@ paths:
           description: Token JWT inválido o expirado.
         "403":
           description: Sin permiso para eliminar features.
+  /webhooks/mercadopago:
+    post:
+      tags:
+        - Público
+      summary: Notificación de Mercado Pago
+      operationId: receiveMercadoPagoWebhook
+      description: >
+        Mercado Pago envía `x-signature` y `x-request-id`; con `MERCADOPAGO_WEBHOOK_SECRET` se valida la firma
+        (401 si no coincide).
+  
+  
+        Público: sin autenticación.
+      parameters:
+        - name: x-signature
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: x-request-id
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Firma de Mercado Pago inválida.
+      security: []
+  /public/plans:
+    get:
+      tags:
+        - Público
+      summary: Planes activos para la web pública
+      operationId: listPublicPlans
+      description: |
+        Público: sin autenticación.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanResult'
+      security: []
+  /requests:
+    post:
+      tags:
+        - Público
+      summary: Enviar el formulario de contacto
+      operationId: submitContactRequest
+      description: |
+        Público: sin autenticación.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRequestRequest'
+      responses:
+        '201':
+          description: Creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security: []
+  /saas/invoices:
+    get:
+      tags:
+        - SaaS - Facturas
+      summary: Listar facturas
+      operationId: listSaasInvoices
+      description: |
+        **Permisos requeridos:** admin SaaS con `billing-suscripciones.historial-facturacion`.
+      parameters:
+        - name: paymentStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InvoiceResult'
+                  page:
+                    type: integer
+                    format: int32
+                  size:
+                    type: integer
+                    format: int32
+                  totalElements:
+                    type: integer
+                    format: int64
+                  totalPages:
+                    type: integer
+                    format: int32
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/invoices/{id}:
+    get:
+      tags:
+        - SaaS - Facturas
+      summary: Obtener una factura
+      operationId: getSaasInvoice
+      description: |
+        **Permisos requeridos:** admin SaaS con `billing-suscripciones.historial-facturacion`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/invoices/export/excel:
+    get:
+      tags:
+        - SaaS - Facturas
+      summary: Exportar facturas a Excel
+      operationId: exportSaasInvoicesExcel
+      description: |
+        **Permisos requeridos:** admin SaaS con `billing-suscripciones.historial-facturacion`.
+      parameters:
+        - name: paymentStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="facturas.xlsx"
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/invoices/export/pdf:
+    get:
+      tags:
+        - SaaS - Facturas
+      summary: Exportar facturas a PDF
+      operationId: exportSaasInvoicesPdf
+      description: |
+        **Permisos requeridos:** admin SaaS con `billing-suscripciones.historial-facturacion`.
+      parameters:
+        - name: paymentStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="facturas.pdf"
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/requests:
+    get:
+      tags:
+        - SaaS - Solicitudes
+      summary: Listar solicitudes del formulario de contacto
+      operationId: listSaasRequests
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RequestResult'
+                  page:
+                    type: integer
+                    format: int32
+                  size:
+                    type: integer
+                    format: int32
+                  totalElements:
+                    type: integer
+                    format: int64
+                  totalPages:
+                    type: integer
+                    format: int32
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/requests/{id}:
+    get:
+      tags:
+        - SaaS - Solicitudes
+      summary: Obtener una solicitud con sus comentarios
+      operationId: getSaasRequest
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestDetailResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/requests/{id}/status:
+    patch:
+      tags:
+        - SaaS - Solicitudes
+      summary: Cambiar el estado de una solicitud
+      operationId: changeSaasRequestStatus
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeRequestStatusRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/requests/{id}/comments:
+    post:
+      tags:
+        - SaaS - Solicitudes
+      summary: Comentar una solicitud
+      operationId: addSaasRequestComment
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddRequestCommentRequest'
+      responses:
+        '201':
+          description: Creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestCommentResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/roles:
+    get:
+      tags:
+        - SaaS - Roles
+      summary: Listar roles de la consola SaaS
+      operationId: listSaasRoles
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SaasRoleResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - SaaS - Roles
+      summary: Crear un rol
+      operationId: createSaasRole
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaasRoleResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/roles/{id}:
+    get:
+      tags:
+        - SaaS - Roles
+      summary: Obtener un rol
+      operationId: getSaasRole
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaasRoleResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - SaaS - Roles
+      summary: Actualizar un rol
+      operationId: updateSaasRole
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaasRoleResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - SaaS - Roles
+      summary: Eliminar un rol
+      operationId: deleteSaasRole
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Sin contenido.
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/roles/{id}/permissions:
+    put:
+      tags:
+        - SaaS - Roles
+      summary: Reemplazar los permisos de un rol
+      operationId: updateSaasRolePermissions
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRolePermissionsRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaasRoleResult'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants:
+    get:
+      tags:
+        - SaaS - Tenants
+      summary: Listar tenants
+      operationId: listSaasTenants
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: planId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TenantResult'
+                  page:
+                    type: integer
+                    format: int32
+                  size:
+                    type: integer
+                    format: int32
+                  totalElements:
+                    type: integer
+                    format: int64
+                  totalPages:
+                    type: integer
+                    format: int32
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants/metrics:
+    get:
+      tags:
+        - SaaS - Tenants
+      summary: Métricas de los tenants
+      operationId: getSaasTenantMetrics
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantMetricsResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants/{id}:
+    get:
+      tags:
+        - SaaS - Tenants
+      summary: Obtener un tenant
+      operationId: getSaasTenant
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - SaaS - Tenants
+      summary: Eliminar un tenant
+      operationId: deleteSaasTenant
+      description: |
+        Borra el tenant y su schema.
+  
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Sin contenido.
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants/{id}/suspend:
+    put:
+      tags:
+        - SaaS - Tenants
+      summary: Suspender un tenant
+      operationId: suspendSaasTenant
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants/{id}/reactivate:
+    put:
+      tags:
+        - SaaS - Tenants
+      summary: Reactivar un tenant suspendido
+      operationId: reactivateSaasTenant
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /saas/tenants/{id}/branding:
+    put:
+      tags:
+        - SaaS - Tenants
+      summary: Actualizar el branding de un tenant
+      operationId: updateSaasTenantBranding
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenantBrandingRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /shop/checkout:
+    post:
+      tags:
+        - Público
+      summary: Iniciar la compra de un plan (Mercado Pago)
+      operationId: shopCheckout
+      description: |
+        Público: sin autenticación.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopCheckoutRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopCheckoutResponse'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security: []
+  /saas/subscriptions:
+    get:
+      tags:
+        - SaaS - Suscripciones
+      summary: Listar suscripciones
+      operationId: listSaasSubscriptions
+      description: |
+        **Permisos requeridos:** admin SaaS (`ROLE_SAAS_ADMIN`, como todo `/saas/**`).
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubscriptionResult'
+                  page:
+                    type: integer
+                    format: int32
+                  size:
+                    type: integer
+                    format: int32
+                  totalElements:
+                    type: integer
+                    format: int64
+                  totalPages:
+                    type: integer
+                    format: int32
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /org/billing/plan:
+    get:
+      tags:
+        - Facturación del tenant
+      summary: Plan actual del tenant
+      operationId: getTenantBillingPlan
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /org/billing/plans:
+    get:
+      tags:
+        - Facturación del tenant
+      summary: Planes disponibles para cambiar
+      operationId: listTenantBillingPlans
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlanResult'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /org/billing/subscribe:
+    post:
+      tags:
+        - Facturación del tenant
+      summary: Suscribir el tenant a un plan
+      operationId: subscribeTenantToPlan
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscribeResponse'
+        '400':
+          description: Petición inválida.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /org/billing/invoices:
+    get:
+      tags:
+        - Facturación del tenant
+      summary: Facturas del propio tenant
+      operationId: listTenantBillingInvoices
+      description: |
+        **Permisos requeridos:** solo `administrador_tenant`.
+      parameters:
+        - name: paymentStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: dateTo
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+      responses:
+        '200':
+          description: OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InvoiceResult'
+                  page:
+                    type: integer
+                    format: int32
+                  size:
+                    type: integer
+                    format: int32
+                  totalElements:
+                    type: integer
+                    format: int64
+                  totalPages:
+                    type: integer
+                    format: int32
+        '401':
+          description: Sin token o token inválido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Sin el permiso requerido.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
